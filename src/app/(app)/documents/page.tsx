@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 /* ────────────────────────── types ────────────────────────── */
 interface Document {
@@ -10,51 +10,32 @@ interface Document {
   createdAt: string;
   status: '초안' | '완료';
   sourceCount: number;
+  content?: string;
 }
 
 interface Template {
   id: string;
   name: string;
-  icon: string;
   description: string;
 }
 
 interface SourceFile {
   id: string;
   name: string;
-  type: string;
+  original_name: string;
 }
 
-/* ────────────────────────── mock ─────────────────────────── */
-const MOCK_DOCS: Document[] = [
-  { id: '1', title: '2026년 1분기 경영 보고서', template: '분기 보고서', createdAt: '2026-03-25', status: '완료', sourceCount: 5 },
-  { id: '2', title: '프로젝트 A 제안서 초안', template: '프로젝트 제안서', createdAt: '2026-03-24', status: '초안', sourceCount: 3 },
-  { id: '3', title: '3월 전사 회의 요약', template: '회의록 요약', createdAt: '2026-03-23', status: '완료', sourceCount: 2 },
-  { id: '4', title: '신규 거래처 계약 검토', template: '계약서 분석', createdAt: '2026-03-22', status: '초안', sourceCount: 4 },
-  { id: '5', title: '마케팅 성과 리포트', template: '성과 리포트', createdAt: '2026-03-21', status: '완료', sourceCount: 6 },
-];
-
-const MOCK_TEMPLATES: Template[] = [
-  { id: 't1', name: '분기 보고서', icon: '📊', description: '분기별 경영 성과 보고서를 자동으로 생성합니다.' },
-  { id: 't2', name: '회의록 요약', icon: '📝', description: '회의 내용을 핵심 위주로 요약합니다.' },
-  { id: 't3', name: '프로젝트 제안서', icon: '💡', description: '프로젝트 제안서를 구조화하여 생성합니다.' },
-  { id: 't4', name: '계약서 분석', icon: '📋', description: '계약서의 주요 조항을 분석합니다.' },
-  { id: 't5', name: '성과 리포트', icon: '📈', description: '부서별 성과를 정리한 리포트를 생성합니다.' },
-  { id: 't6', name: '이메일 초안', icon: '✉️', description: '비즈니스 이메일 초안을 작성합니다.' },
-];
-
-const MOCK_SOURCE_FILES: SourceFile[] = [
-  { id: 'f1', name: '2026년 1분기 실적보고서.pdf', type: 'PDF' },
-  { id: 'f2', name: '프로젝트 제안서_v3.docx', type: 'DOCX' },
-  { id: 'f3', name: '3월 회의록.md', type: 'MD' },
-  { id: 'f4', name: '계약서_최종.pdf', type: 'PDF' },
-  { id: 'f5', name: '마케팅 전략 보고서.pptx', type: 'PPTX' },
-  { id: 'f6', name: '급여 명세서_3월.xlsx', type: 'XLSX' },
-];
-
 const statusColor: Record<string, string> = {
-  '초안': 'bg-amber-100 text-amber-700',
-  '완료': 'bg-green-100 text-green-700',
+  '초안': 'bg-[#f5f5f7] text-[#ff9f0a]',
+  '완료': 'bg-[#f5f5f7] text-[#30d158]',
+};
+
+const TEMPLATE_ICONS: Record<string, string> = {
+  '주간업무보고서': '📊',
+  '회의록': '📝',
+  '기술설계문서': '💡',
+  '마케팅_캠페인_기획서': '🎯',
+  '채용공고_양식': '👥',
 };
 
 /* ────────────────────────── page ─────────────────────────── */
@@ -66,23 +47,73 @@ export default function DocumentsPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [instructions, setInstructions] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [generatedDoc, setGeneratedDoc] = useState<Document | null>(null);
+
+  // View modal state
+  const [viewDoc, setViewDoc] = useState<Document | null>(null);
+
+  // Templates and source files from API
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [sourceFiles, setSourceFiles] = useState<SourceFile[]>([]);
+
+  const loadDocs = useCallback(async () => {
+    try {
+      const res = await fetch('/api/documents');
+      if (res.ok) {
+        const data = await res.json();
+        setDocs(data.documents ?? []);
+      }
+    } catch {
+      // silent
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadTemplates = useCallback(async () => {
+    try {
+      const res = await fetch('/api/templates');
+      if (res.ok) {
+        const data = await res.json();
+        const tmplData = data.data ?? data.templates ?? [];
+        setTemplates(
+          tmplData.map((t: Record<string, unknown>) => ({
+            id: t.id as string,
+            name: t.name as string,
+            description: t.description as string,
+          }))
+        );
+      }
+    } catch {
+      // silent
+    }
+  }, []);
+
+  const loadFiles = useCallback(async () => {
+    try {
+      const res = await fetch('/api/files');
+      if (res.ok) {
+        const data = await res.json();
+        const fileData = data.data ?? data.files ?? [];
+        setSourceFiles(
+          fileData.map((f: Record<string, unknown>) => ({
+            id: f.id as string,
+            name: f.name as string,
+            original_name: f.original_name as string,
+          }))
+        );
+      }
+    } catch {
+      // silent
+    }
+  }, []);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch('/api/documents');
-        if (res.ok) {
-          const data = await res.json();
-          setDocs(data.documents ?? MOCK_DOCS);
-        } else throw new Error();
-      } catch {
-        setDocs(MOCK_DOCS);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, []);
+    loadDocs();
+    loadTemplates();
+    loadFiles();
+  }, [loadDocs, loadTemplates, loadFiles]);
 
   const resetModal = () => {
     setShowModal(false);
@@ -90,6 +121,8 @@ export default function DocumentsPage() {
     setSelectedTemplate(null);
     setSelectedFiles(new Set());
     setInstructions('');
+    setGenerating(false);
+    setGeneratedDoc(null);
   };
 
   const toggleFile = (id: string) => {
@@ -106,13 +139,66 @@ export default function DocumentsPage() {
     return true;
   };
 
+  const handleGenerate = async () => {
+    setGenerating(true);
+    try {
+      const res = await fetch('/api/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          templateId: selectedTemplate,
+          sourceFileIds: Array.from(selectedFiles),
+          instructions: instructions.trim() || undefined,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const newDoc = data.document;
+        if (newDoc) {
+          setGeneratedDoc(newDoc);
+          setDocs((prev) => [newDoc, ...prev]);
+          setStep(5); // Show generated result
+        }
+      }
+    } catch {
+      // silent
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('이 문서를 삭제하시겠습니까?')) return;
+    try {
+      const res = await fetch(`/api/documents?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setDocs((prev) => prev.filter((d) => d.id !== id));
+      }
+    } catch {
+      // silent
+    }
+  };
+
+  const handleDownload = (doc: Document) => {
+    const content = doc.content ?? `# ${doc.title}\n\n문서 내용이 여기에 표시됩니다.`;
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${doc.title}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) {
     return (
       <div className="space-y-6 animate-pulse">
-        <div className="h-8 w-48 bg-[#DDE3EC] rounded-lg" />
+        <div className="h-8 w-48 bg-[#e5e5e7] rounded-lg" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-40 bg-white rounded-2xl border border-[#DDE3EC]" />
+            <div key={i} className="h-40 bg-white rounded-2xl border border-[#e5e5e7]" />
           ))}
         </div>
       </div>
@@ -124,12 +210,12 @@ export default function DocumentsPage() {
       {/* header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#0A1628]">문서 생성</h1>
-          <p className="text-[#6B7A8D] mt-1">AI를 활용하여 문서를 자동으로 생성하세요</p>
+          <h1 className="text-2xl font-bold text-[#1d1d1f]">문서 생성</h1>
+          <p className="text-[#6e6e73] mt-1">AI를 활용하여 문서를 자동으로 생성하세요</p>
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#4B8FD4] text-white text-sm font-medium hover:bg-[#3A7DC2] transition-colors shadow-sm"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors shadow-sm"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -141,26 +227,26 @@ export default function DocumentsPage() {
       {/* document list */}
       {docs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-24 h-24 rounded-full bg-[#EBF2FA] flex items-center justify-center mb-4">
-            <svg className="w-10 h-10 text-[#4B8FD4]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+          <div className="w-24 h-24 rounded-full bg-[#f5f5f7] flex items-center justify-center mb-4">
+            <svg className="w-10 h-10 text-[#0071e3]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-[#0A1628] mb-1">생성된 문서가 없습니다</h3>
-          <p className="text-[#6B7A8D] text-sm mb-4">새 문서 생성 버튼을 눌러 첫 문서를 만들어 보세요</p>
-          <button onClick={() => setShowModal(true)} className="px-5 py-2.5 rounded-xl bg-[#4B8FD4] text-white text-sm font-medium hover:bg-[#3A7DC2] transition-colors">
+          <h3 className="text-lg font-semibold text-[#1d1d1f] mb-1">생성된 문서가 없습니다</h3>
+          <p className="text-[#6e6e73] text-sm mb-4">새 문서 생성 버튼을 눌러 첫 문서를 만들어 보세요</p>
+          <button onClick={() => setShowModal(true)} className="px-5 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors">
             새 문서 생성
           </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {docs.map((d) => (
-            <div key={d.id} className="bg-white rounded-2xl border border-[#DDE3EC] p-5 shadow-sm hover:shadow-md transition-shadow">
+            <div key={d.id} className="bg-white rounded-2xl border border-[#e5e5e7] p-5 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between mb-3">
-                <h3 className="font-semibold text-[#0A1628] truncate pr-2">{d.title}</h3>
+                <h3 className="font-semibold text-[#1d1d1f] truncate pr-2">{d.title}</h3>
                 <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${statusColor[d.status]}`}>{d.status}</span>
               </div>
-              <div className="space-y-2 text-sm text-[#6B7A8D]">
+              <div className="space-y-2 text-sm text-[#6e6e73]">
                 <div className="flex items-center gap-2">
                   <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6z" /></svg>
                   <span>템플릿: {d.template}</span>
@@ -174,13 +260,70 @@ export default function DocumentsPage() {
                   <span>소스 파일 {d.sourceCount}개</span>
                 </div>
               </div>
-              <div className="flex gap-2 mt-4 pt-3 border-t border-[#F2F5F9]">
-                <button className="px-3 py-1.5 rounded-lg text-sm text-[#4B8FD4] hover:bg-[#EBF2FA] transition-colors">보기</button>
-                <button className="px-3 py-1.5 rounded-lg text-sm text-[#4B8FD4] hover:bg-[#EBF2FA] transition-colors">다운로드</button>
-                <button className="px-3 py-1.5 rounded-lg text-sm text-red-500 hover:bg-red-50 transition-colors">삭제</button>
+              <div className="flex gap-2 mt-4 pt-3 border-t border-[#f5f5f7]">
+                <button
+                  onClick={() => setViewDoc(d)}
+                  className="px-3 py-1.5 rounded-lg text-sm text-[#0071e3] hover:bg-[#f5f5f7] transition-colors"
+                >
+                  보기
+                </button>
+                <button
+                  onClick={() => handleDownload(d)}
+                  className="px-3 py-1.5 rounded-lg text-sm text-[#0071e3] hover:bg-[#f5f5f7] transition-colors"
+                >
+                  다운로드
+                </button>
+                <button
+                  onClick={() => handleDelete(d.id)}
+                  className="px-3 py-1.5 rounded-lg text-sm text-[#ff3b30] hover:bg-[#f5f5f7] transition-colors"
+                >
+                  삭제
+                </button>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── View Document Modal ── */}
+      {viewDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-[#e5e5e7] flex items-center justify-between sticky top-0 bg-white rounded-t-2xl z-10">
+              <div>
+                <h2 className="text-lg font-semibold text-[#1d1d1f]">{viewDoc.title}</h2>
+                <div className="flex gap-2 mt-1">
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusColor[viewDoc.status]}`}>{viewDoc.status}</span>
+                  <span className="text-xs text-[#6e6e73]">{viewDoc.createdAt}</span>
+                </div>
+              </div>
+              <button onClick={() => setViewDoc(null)} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="px-6 py-6">
+              <div className="prose prose-sm max-w-none">
+                {(viewDoc.content ?? '문서 내용이 없습니다.').split('\n').map((line, i) => {
+                  if (line.startsWith('## ')) return <h2 key={i} className="text-lg font-bold text-[#1d1d1f] mt-4 mb-2">{line.replace('## ', '')}</h2>;
+                  if (line.startsWith('# ')) return <h1 key={i} className="text-xl font-bold text-[#1d1d1f] mt-4 mb-2">{line.replace('# ', '')}</h1>;
+                  if (line.startsWith('- ')) return <li key={i} className="text-sm text-[#1d1d1f] ml-4">{line.replace('- ', '')}</li>;
+                  if (line.startsWith('*')) return <p key={i} className="text-sm text-[#6e6e73] italic">{line.replace(/\*/g, '')}</p>;
+                  if (line.trim() === '---') return <hr key={i} className="my-3 border-[#e5e5e7]" />;
+                  if (line.trim() === '') return <br key={i} />;
+                  return <p key={i} className="text-sm text-[#1d1d1f] leading-relaxed">{line}</p>;
+                })}
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-[#e5e5e7] flex justify-end gap-3">
+              <button
+                onClick={() => handleDownload(viewDoc)}
+                className="px-4 py-2 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
+              >
+                다운로드
+              </button>
+              <button onClick={() => setViewDoc(null)} className="px-5 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors">닫기</button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -189,127 +332,180 @@ export default function DocumentsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
             {/* modal header */}
-            <div className="px-6 py-4 border-b border-[#DDE3EC] flex items-center justify-between sticky top-0 bg-white rounded-t-2xl z-10">
-              <h2 className="text-lg font-semibold text-[#0A1628]">새 문서 생성</h2>
-              <button onClick={resetModal} className="p-1 rounded-lg hover:bg-[#F2F5F9] text-[#6B7A8D]">
+            <div className="px-6 py-4 border-b border-[#e5e5e7] flex items-center justify-between sticky top-0 bg-white rounded-t-2xl z-10">
+              <h2 className="text-lg font-semibold text-[#1d1d1f]">새 문서 생성</h2>
+              <button onClick={resetModal} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
 
             {/* steps indicator */}
-            <div className="px-6 py-4">
-              <div className="flex items-center gap-2">
-                {[1, 2, 3, 4].map((s) => (
-                  <div key={s} className="flex items-center gap-2 flex-1">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium shrink-0 ${step >= s ? 'bg-[#4B8FD4] text-white' : 'bg-[#F2F5F9] text-[#6B7A8D]'}`}>
-                      {s}
+            {step <= 4 && (
+              <div className="px-6 py-4">
+                <div className="flex items-center gap-2">
+                  {[1, 2, 3, 4].map((s) => (
+                    <div key={s} className="flex items-center gap-2 flex-1">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium shrink-0 ${step >= s ? 'bg-[#1d1d1f] text-white' : 'bg-[#f5f5f7] text-[#6e6e73]'}`}>
+                        {step > s ? (
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                        ) : (
+                          s
+                        )}
+                      </div>
+                      {s < 4 && <div className={`h-0.5 flex-1 rounded ${step > s ? 'bg-[#1d1d1f]' : 'bg-[#e5e5e7]'}`} />}
                     </div>
-                    {s < 4 && <div className={`h-0.5 flex-1 rounded ${step > s ? 'bg-[#4B8FD4]' : 'bg-[#DDE3EC]'}`} />}
-                  </div>
-                ))}
+                  ))}
+                </div>
+                <div className="flex justify-between text-xs text-[#6e6e73] mt-2">
+                  <span>템플릿 선택</span>
+                  <span>소스 파일</span>
+                  <span>추가 지시</span>
+                  <span>확인</span>
+                </div>
               </div>
-              <div className="flex justify-between text-xs text-[#6B7A8D] mt-2">
-                <span>템플릿 선택</span>
-                <span>소스 파일</span>
-                <span>추가 지시</span>
-                <span>미리보기</span>
-              </div>
-            </div>
+            )}
 
             <div className="px-6 pb-6">
-              {/* Step 1 */}
+              {/* Step 1: Select template */}
               {step === 1 && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {MOCK_TEMPLATES.map((t) => (
+                  {templates.map((t) => (
                     <button
                       key={t.id}
                       onClick={() => setSelectedTemplate(t.id)}
-                      className={`p-4 rounded-xl border text-left transition-all ${selectedTemplate === t.id ? 'border-[#4B8FD4] bg-[#EBF2FA] ring-2 ring-[#4B8FD4]/30' : 'border-[#DDE3EC] hover:border-[#4B8FD4]'}`}
+                      className={`p-4 rounded-xl border text-left transition-all ${selectedTemplate === t.id ? 'border-[#0071e3] bg-[#f5f5f7] ring-2 ring-[#0071e3]/30' : 'border-[#e5e5e7] hover:border-[#0071e3]'}`}
                     >
-                      <span className="text-2xl">{t.icon}</span>
-                      <h4 className="font-medium text-[#0A1628] text-sm mt-2">{t.name}</h4>
-                      <p className="text-xs text-[#6B7A8D] mt-1 line-clamp-2">{t.description}</p>
+                      <span className="text-2xl">{TEMPLATE_ICONS[t.name] ?? '📄'}</span>
+                      <h4 className="font-medium text-[#1d1d1f] text-sm mt-2">{t.name}</h4>
+                      <p className="text-xs text-[#6e6e73] mt-1 line-clamp-2">{t.description}</p>
                     </button>
                   ))}
                 </div>
               )}
 
-              {/* Step 2 */}
+              {/* Step 2: Select source files */}
               {step === 2 && (
                 <div className="space-y-2">
-                  <p className="text-sm text-[#6B7A8D] mb-3">문서 생성에 사용할 소스 파일을 선택하세요</p>
-                  {MOCK_SOURCE_FILES.map((f) => (
+                  <p className="text-sm text-[#6e6e73] mb-3">문서 생성에 사용할 소스 파일을 선택하세요 ({selectedFiles.size}개 선택됨)</p>
+                  {sourceFiles.map((f) => (
                     <label
                       key={f.id}
-                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${selectedFiles.has(f.id) ? 'border-[#4B8FD4] bg-[#EBF2FA]' : 'border-[#DDE3EC] hover:bg-[#F8FAFC]'}`}
+                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${selectedFiles.has(f.id) ? 'border-[#0071e3] bg-[#f5f5f7]' : 'border-[#e5e5e7] hover:bg-[#f5f5f7]'}`}
                     >
-                      <input type="checkbox" checked={selectedFiles.has(f.id)} onChange={() => toggleFile(f.id)} className="rounded border-[#DDE3EC] text-[#4B8FD4] focus:ring-[#4B8FD4]" />
-                      <svg className="w-5 h-5 text-[#6B7A8D] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <input type="checkbox" checked={selectedFiles.has(f.id)} onChange={() => toggleFile(f.id)} className="rounded border-[#e5e5e7] text-[#0071e3] focus:ring-[#0071e3]" />
+                      <svg className="w-5 h-5 text-[#6e6e73] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                       </svg>
-                      <span className="text-sm text-[#0A1628] truncate">{f.name}</span>
-                      <span className="ml-auto text-xs text-[#6B7A8D] shrink-0">{f.type}</span>
+                      <span className="text-sm text-[#1d1d1f] truncate">{f.original_name}</span>
                     </label>
                   ))}
                 </div>
               )}
 
-              {/* Step 3 */}
+              {/* Step 3: Instructions */}
               {step === 3 && (
                 <div>
-                  <p className="text-sm text-[#6B7A8D] mb-3">추가 지시사항을 입력하세요 (선택)</p>
+                  <p className="text-sm text-[#6e6e73] mb-3">추가 지시사항을 입력하세요 (선택)</p>
                   <textarea
                     value={instructions}
                     onChange={(e) => setInstructions(e.target.value)}
                     placeholder="예: 핵심 수치 위주로 요약해 주세요. 표 형태로 정리해 주세요."
                     rows={6}
-                    className="w-full px-4 py-3 rounded-xl border border-[#DDE3EC] bg-white text-sm text-[#0A1628] placeholder:text-[#6B7A8D] focus:outline-none focus:ring-2 focus:ring-[#4B8FD4] resize-none"
+                    className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none"
                   />
                 </div>
               )}
 
-              {/* Step 4 - Preview */}
+              {/* Step 4: Confirm */}
               {step === 4 && (
                 <div className="space-y-4">
-                  <div className="bg-[#F8FAFC] rounded-xl p-4 space-y-3 text-sm">
+                  <div className="bg-[#f5f5f7] rounded-xl p-4 space-y-3 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-[#6B7A8D]">템플릿</span>
-                      <span className="text-[#0A1628] font-medium">{MOCK_TEMPLATES.find((t) => t.id === selectedTemplate)?.name}</span>
+                      <span className="text-[#6e6e73]">템플릿</span>
+                      <span className="text-[#1d1d1f] font-medium">{templates.find((t) => t.id === selectedTemplate)?.name}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-[#6B7A8D]">소스 파일</span>
-                      <span className="text-[#0A1628] font-medium">{selectedFiles.size}개</span>
+                      <span className="text-[#6e6e73]">소스 파일</span>
+                      <span className="text-[#1d1d1f] font-medium">{selectedFiles.size}개</span>
                     </div>
                     {instructions && (
                       <div>
-                        <span className="text-[#6B7A8D]">추가 지시사항</span>
-                        <p className="text-[#0A1628] mt-1">{instructions}</p>
+                        <span className="text-[#6e6e73]">추가 지시사항</span>
+                        <p className="text-[#1d1d1f] mt-1">{instructions}</p>
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-[#6B7A8D] text-center">생성 버튼을 누르면 AI가 문서를 생성합니다. 수 분이 소요될 수 있습니다.</p>
+                  {generating && (
+                    <div className="flex flex-col items-center py-6 gap-3">
+                      <div className="w-8 h-8 border-3 border-[#e5e5e7] border-t-[#0071e3] rounded-full animate-spin" />
+                      <p className="text-sm text-[#6e6e73]">AI가 문서를 생성하고 있습니다...</p>
+                    </div>
+                  )}
+                  {!generating && (
+                    <p className="text-xs text-[#6e6e73] text-center">생성 버튼을 누르면 AI가 문서를 생성합니다.</p>
+                  )}
+                </div>
+              )}
+
+              {/* Step 5: Generated result */}
+              {step === 5 && generatedDoc && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-[#f5f5f7] border border-[#e5e5e7]">
+                    <svg className="w-6 h-6 text-[#30d158] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <div>
+                      <h4 className="font-semibold text-[#1d1d1f]">문서가 생성되었습니다!</h4>
+                      <p className="text-sm text-[#6e6e73]">{generatedDoc.title}</p>
+                    </div>
+                  </div>
+                  <div className="bg-[#f5f5f7] rounded-xl p-4 max-h-60 overflow-y-auto">
+                    <div className="text-sm text-[#1d1d1f] leading-relaxed whitespace-pre-wrap">
+                      {generatedDoc.content ?? '내용 없음'}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
 
             {/* modal footer */}
-            <div className="px-6 py-4 border-t border-[#DDE3EC] flex items-center justify-between sticky bottom-0 bg-white rounded-b-2xl">
+            <div className="px-6 py-4 border-t border-[#e5e5e7] flex items-center justify-between sticky bottom-0 bg-white rounded-b-2xl">
               <button
-                onClick={() => (step === 1 ? resetModal() : setStep(step - 1))}
-                className="px-4 py-2 rounded-xl border border-[#DDE3EC] text-sm text-[#6B7A8D] hover:bg-[#F2F5F9] transition-colors"
-              >
-                {step === 1 ? '취소' : '이전'}
-              </button>
-              <button
-                disabled={!canNext()}
                 onClick={() => {
-                  if (step < 4) setStep(step + 1);
-                  else resetModal(); // would call generate API
+                  if (step === 1 || step === 5) resetModal();
+                  else setStep(step - 1);
                 }}
-                className="px-5 py-2 rounded-xl bg-[#4B8FD4] text-white text-sm font-medium hover:bg-[#3A7DC2] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-4 py-2 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
               >
-                {step === 4 ? '문서 생성' : '다음'}
+                {step === 1 || step === 5 ? '닫기' : '이전'}
               </button>
+              {step < 4 && (
+                <button
+                  disabled={!canNext()}
+                  onClick={() => setStep(step + 1)}
+                  className="px-5 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  다음
+                </button>
+              )}
+              {step === 4 && (
+                <button
+                  disabled={generating}
+                  onClick={handleGenerate}
+                  className="px-5 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {generating ? '생성 중...' : '문서 생성'}
+                </button>
+              )}
+              {step === 5 && (
+                <button
+                  onClick={() => {
+                    if (generatedDoc) setViewDoc(generatedDoc);
+                    resetModal();
+                  }}
+                  className="px-5 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors"
+                >
+                  문서 보기
+                </button>
+              )}
             </div>
           </div>
         </div>

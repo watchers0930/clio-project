@@ -13,12 +13,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko" className="h-full antialiased">
-      <head>
-        <link
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/gh/niceplugin/Paperlogy/css/Paperlogy.css"
-        />
-      </head>
       <body className="h-full">{children}</body>
     </html>
   );

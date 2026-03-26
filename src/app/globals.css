@@ -1,122 +1,168 @@
 @import "tailwindcss";
 
+/* Paperlogy Font */
+@font-face { font-family: 'Paperlogy'; font-weight: 400; font-display: swap; src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-4Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Paperlogy'; font-weight: 500; font-display: swap; src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-5Medium.woff2') format('woff2'); }
+@font-face { font-family: 'Paperlogy'; font-weight: 600; font-display: swap; src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-6SemiBold.woff2') format('woff2'); }
+@font-face { font-family: 'Paperlogy'; font-weight: 700; font-display: swap; src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-7Bold.woff2') format('woff2'); }
+@font-face { font-family: 'Paperlogy'; font-weight: 800; font-display: swap; src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-8ExtraBold.woff2') format('woff2'); }
+
 @theme inline {
-  /* CLIO Enterprise 4-Color Palette */
-  --color-navy: #1B1F2B;
-  --color-navy-light: #252A38;
-  --color-navy-lighter: #2F3545;
-  --color-accent: #2E6FF2;
-  --color-accent-hover: #1A5AD9;
-  --color-clio-bg: #F7F8FA;
-  --color-clio-border: #E2E5EA;
-  --color-clio-text: #1B1F2B;
-  --color-clio-text-secondary: #7C8494;
-  --color-success: #22C55E;
-  --color-warning: #F59E0B;
-  --color-danger: #EF4444;
-  --color-info: #3B82F6;
-  --letter-spacing-wordmark: 0.22em;
-
-  /* Font families */
-  --font-sans: 'Paperlogy', 'Verdana', system-ui, -apple-system, sans-serif;
+  --color-background: #ffffff;
+  --color-foreground: #1d1d1f;
+  --color-primary: #0071e3;
+  --color-primary-dark: #0058b0;
+  --color-primary-light: #2997ff;
+  --color-secondary: #6e6e73;
+  --color-success: #30d158;
+  --color-warning: #ff9f0a;
+  --color-danger: #ff3b30;
+  --color-sidebar: #1d1d1f;
+  --color-sidebar-hover: #2d2d2f;
+  --color-sidebar-active: #0071e3;
+  --color-sidebar-accent: #2997ff;
+  --color-sidebar-active-from: #1a3a5c;
+  --color-sidebar-active-to: #1d1d1f;
+  --color-sidebar-surface: #2d2d2f;
+  --color-sidebar-group: #86868b;
+  --color-card: #ffffff;
+  --color-border: #e5e5e7;
+  --color-muted: #6e6e73;
+  --color-page-bg: #f5f5f7;
+  --font-sans: 'Paperlogy', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-/* Paperlogy font loaded via layout.tsx <link> tag */
-
-:root {
-  --navy: #1B1F2B;
-  --accent: #2E6FF2;
-  --bg: #F7F8FA;
-  --border: #E2E5EA;
-  --text: #1B1F2B;
-  --text-secondary: #7C8494;
-  --white: #FFFFFF;
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html {
-  scroll-behavior: smooth;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  background-color: var(--bg);
-  color: var(--text);
-  font-family: 'Paperlogy', 'Verdana', system-ui, -apple-system, sans-serif;
+  background: var(--color-page-bg);
+  color: var(--color-foreground);
+  font-family: 'Paperlogy', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  font-size: 14px;
-  line-height: 1.6;
 }
 
-/* Numbers and English: Verdana */
-.font-num,
-.font-en {
-  font-family: 'Verdana', 'Geneva', sans-serif;
+/* Verdana for EN/Numbers */
+.font-num, .font-en {
+  font-family: 'Verdana', 'Geneva', sans-serif !important;
+  letter-spacing: 0;
 }
 
-/* Custom scrollbar - minimal enterprise style */
-::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
-}
-
-/* Smooth transitions */
-button,
-a,
-input,
-textarea,
-select {
-  transition: all 0.2s ease;
-}
-
-/* Focus ring - enterprise blue */
-*:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
+/* Focus */
+*:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 
 /* Selection */
-::selection {
-  background-color: #2E6FF222;
-  color: var(--text);
-}
+::selection { background: rgba(0, 113, 227, 0.15); }
 
-/* Enterprise table styles */
-table {
-  border-collapse: collapse;
-  width: 100%;
-}
+/* ═══════════════════════════════════════════════
+   20px Spacing System — Applied Everywhere
+   ═══════════════════════════════════════════════ */
 
+/* Table: 20px cell padding */
+table { border-collapse: collapse; width: 100%; }
 th {
   font-weight: 600;
   text-align: left;
   font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+  color: #6e6e73;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e5e7;
+  background: #f5f5f7;
+  white-space: nowrap;
+}
+td {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e5e7;
+  font-size: 14px;
+  vertical-align: middle;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(0,0,0,0.01); }
+
+/* Card: 24px padding */
+.clio-card {
+  background: #ffffff;
+  border: 1px solid #e5e5e7;
+  border-radius: 16px;
+  padding: 24px;
 }
 
-/* Stat numbers - always Verdana */
-[data-stat],
-.stat-number {
-  font-family: 'Verdana', 'Geneva', sans-serif;
+/* Inputs: 40px height, 16px padding */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+select,
+textarea {
+  font-family: inherit;
+  font-size: 14px;
+}
+
+/* Buttons */
+button { font-family: inherit; }
+
+/* Card hover */
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+.card-hover:hover {
+  transform: scale(1.01);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+}
+
+/* Sidebar dark scrollbar */
+.sidebar-scroll::-webkit-scrollbar { width: 4px; }
+.sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+.sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* Sidebar active accent bar */
+.sidebar-active-accent {
+  position: relative;
+  background: linear-gradient(to right, var(--color-sidebar-active-from), var(--color-sidebar-active-to));
+}
+.sidebar-active-accent::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 4px; bottom: 4px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--color-sidebar-accent);
+  box-shadow: 0 0 8px rgba(59,130,246,0.15);
+}
+
+/* Stat numbers */
+[data-stat], .stat-number {
+  font-family: 'Verdana', 'Geneva', sans-serif !important;
   font-variant-numeric: tabular-nums;
+}
+
+/* Animations */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+.spinner {
+  width: 24px; height: 24px;
+  border: 2.5px solid #e5e5e7;
+  border-top-color: #0071e3;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #e5e5e7 25%, #f0f0f2 50%, #e5e5e7 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease infinite;
+  border-radius: 8px;
 }

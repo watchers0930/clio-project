@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Search, Bell, ChevronRight, Menu } from 'lucide-react';
+import { Search, Bell, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Avatar } from '@/components/ui/avatar';
 
 interface BreadcrumbItem {
   label: string;
@@ -18,139 +17,95 @@ interface HeaderProps {
 }
 
 function Header({
-  breadcrumbs = [],
-  notificationCount = 0,
+  notificationCount = 3,
   onMenuClick,
 }: HeaderProps) {
-  const [searchOpen, setSearchOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   return (
-    <header className="flex items-center justify-between h-16 px-6 bg-white border-b border-clio-border flex-shrink-0">
-      {/* Left: hamburger + breadcrumb */}
-      <div className="flex items-center gap-3">
-        {/* Mobile menu button */}
-        <button
-          onClick={onMenuClick}
-          className="lg:hidden p-2 rounded-lg text-clio-text-secondary hover:bg-clio-bg cursor-pointer"
-        >
-          <Menu size={20} />
-        </button>
-
-        {/* Breadcrumbs */}
-        <nav className="flex items-center gap-1.5 text-sm">
-          {breadcrumbs.map((crumb, index) => {
-            const isLast = index === breadcrumbs.length - 1;
-            return (
-              <span key={index} className="flex items-center gap-1.5">
-                {index > 0 && (
-                  <ChevronRight
-                    size={14}
-                    className="text-clio-text-secondary/50"
-                  />
-                )}
-                {crumb.href && !isLast ? (
-                  <Link
-                    href={crumb.href}
-                    className="text-clio-text-secondary hover:text-clio-text transition-colors"
-                  >
-                    {crumb.label}
-                  </Link>
-                ) : (
-                  <span
-                    className={cn(
-                      isLast
-                        ? 'font-medium text-clio-text'
-                        : 'text-clio-text-secondary'
-                    )}
-                  >
-                    {crumb.label}
-                  </span>
-                )}
-              </span>
-            );
-          })}
-        </nav>
-      </div>
-
-      {/* Right: search + notifications + avatar */}
-      <div className="flex items-center gap-2">
-        {/* Search */}
-        <div className="relative hidden sm:block">
-          <Search
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-clio-text-secondary/60"
-          />
-          <input
-            type="text"
-            placeholder="검색..."
-            className={cn(
-              'h-9 w-48 rounded-lg border border-clio-border bg-clio-bg pl-9 pr-3 text-sm',
-              'placeholder:text-clio-text-secondary/50',
-              'focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent',
-              'focus:w-64 transition-all'
-            )}
-          />
+    <header className="h-[64px] bg-white border-b border-border flex-shrink-0">
+      <div className="flex items-center h-full" style={{ padding: '0 40px' }}>
+        {/* Left — mobile menu only */}
+        <div className="flex items-center">
+          <button
+            onClick={onMenuClick}
+            className="lg:hidden p-2.5 rounded-xl text-muted hover:bg-page-bg cursor-pointer transition-colors"
+          >
+            <Menu size={20} strokeWidth={1.5} />
+          </button>
         </div>
 
-        {/* Mobile search toggle */}
-        <button
-          onClick={() => setSearchOpen(!searchOpen)}
-          className="sm:hidden p-2 rounded-lg text-clio-text-secondary hover:bg-clio-bg cursor-pointer"
-        >
-          <Search size={20} />
-        </button>
+        {/* Spacer */}
+        <div className="flex-1" />
 
-        {/* Notifications */}
-        <button className="relative p-2 rounded-lg text-clio-text-secondary hover:bg-clio-bg transition-colors cursor-pointer">
-          <Bell size={20} />
-          {notificationCount > 0 && (
-            <span className="absolute top-1 right-1 flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-danger text-white text-[10px] font-bold px-1">
-              {notificationCount > 99 ? '99+' : notificationCount}
-            </span>
-          )}
-        </button>
+        {/* Right */}
+        <div className="flex items-center gap-4">
+          {/* Search */}
+          <div className="relative hidden sm:block">
+            <Search size={15} strokeWidth={1.5} className="absolute top-1/2 -translate-y-1/2 text-muted pointer-events-none" style={{ left: 12 }} />
+            <input
+              type="text"
+              placeholder="검색..."
+              style={{ paddingLeft: 34, paddingRight: 14, height: 36, width: 200 }}
+              className={cn(
+                'rounded-xl border border-border bg-page-bg text-[14px]',
+                'placeholder:text-muted/60',
+                'focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary',
+                'transition-all duration-300'
+              )}
+            />
+          </div>
 
-        {/* User avatar / dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setUserMenuOpen(!userMenuOpen)}
-            className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-clio-bg transition-colors cursor-pointer"
-          >
-            <Avatar name="사용자" size="sm" />
+          {/* Notification */}
+          <button className="relative p-2.5 rounded-xl text-muted hover:bg-page-bg transition-colors cursor-pointer">
+            <Bell size={20} strokeWidth={1.5} />
+            {notificationCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-danger text-white text-[10px] font-bold font-num" style={{ padding: '0 4px' }}>
+                {notificationCount > 99 ? '99+' : notificationCount}
+              </span>
+            )}
           </button>
 
-          {userMenuOpen && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setUserMenuOpen(false)}
-              />
-              <div className="absolute right-0 top-full mt-1 w-48 rounded-xl border border-clio-border bg-white shadow-lg z-50 py-1">
-                <Link
-                  href="/settings"
-                  className="block px-4 py-2.5 text-sm text-clio-text hover:bg-clio-bg transition-colors"
-                  onClick={() => setUserMenuOpen(false)}
-                >
-                  설정
-                </Link>
-                <Link
-                  href="/settings/profile"
-                  className="block px-4 py-2.5 text-sm text-clio-text hover:bg-clio-bg transition-colors"
-                  onClick={() => setUserMenuOpen(false)}
-                >
-                  프로필
-                </Link>
-                <hr className="my-1 border-clio-border" />
-                <button
-                  className="block w-full text-left px-4 py-2.5 text-sm text-danger hover:bg-danger/5 transition-colors cursor-pointer"
-                  onClick={() => setUserMenuOpen(false)}
-                >
-                  로그아웃
-                </button>
+          {/* User */}
+          <div className="relative">
+            <button
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-page-bg transition-colors cursor-pointer"
+            >
+              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-[13px] font-semibold text-primary">
+                김
               </div>
-            </>
-          )}
+            </button>
+
+            {userMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
+                <div className="absolute right-0 top-full mt-2 w-52 rounded-xl border border-border bg-white shadow-lg z-50 py-2">
+                  <div className="px-4 py-3 border-b border-border">
+                    <p className="text-[14px] font-semibold text-foreground">김관리</p>
+                    <p className="text-[12px] text-muted font-en">admin@clio.kr</p>
+                  </div>
+                  <Link href="/settings" className="block px-4 py-2.5 text-[14px] text-foreground hover:bg-page-bg transition-colors" onClick={() => setUserMenuOpen(false)}>
+                    설정
+                  </Link>
+                  <Link href="/settings" className="block px-4 py-2.5 text-[14px] text-foreground hover:bg-page-bg transition-colors" onClick={() => setUserMenuOpen(false)}>
+                    프로필
+                  </Link>
+                  <hr className="my-1 border-border" />
+                  <button
+                    className="block w-full text-left px-4 py-2.5 text-[14px] text-danger hover:bg-danger/5 transition-colors cursor-pointer"
+                    onClick={() => {
+                      localStorage.removeItem('clio_token');
+                      localStorage.removeItem('clio_user');
+                      window.location.href = '/login';
+                    }}
+                  >
+                    로그아웃
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </header>

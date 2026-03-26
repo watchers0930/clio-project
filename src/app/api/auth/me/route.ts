@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { ApiResponse, User } from '@/lib/supabase/types';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { users } from '@/lib/mock-data';
 
-function extractUserId(request: NextRequest): string | null {
+// ---------------------------------------------------------------------------
+// Mock helper – extract user id from mock token
+// ---------------------------------------------------------------------------
+function extractMockUserId(request: NextRequest): string | null {
   const auth = request.headers.get('authorization');
   if (!auth?.startsWith('Bearer ')) return null;
 
@@ -17,7 +21,48 @@ function extractUserId(request: NextRequest): string | null {
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = extractUserId(request);
+    // ---------------------------------------------------------------------
+    // Supabase Auth
+    // ---------------------------------------------------------------------
+    const supabase = await createServerSupabaseClient();
+
+    if (supabase) {
+      const {
+        data: { user: authUser },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError || !authUser) {
+        return NextResponse.json<ApiResponse>(
+          { success: false, error: '인증 토큰이 필요합니다.' },
+          { status: 401 },
+        );
+      }
+
+      // Fetch profile with department info
+      const { data: profile } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
+
+      const user: User = profile ?? {
+        id: authUser.id,
+        email: authUser.email!,
+        name: authUser.user_metadata?.name ?? authUser.email!.split('@')[0],
+        department: authUser.user_metadata?.department ?? '',
+        role: authUser.user_metadata?.role ?? 'user',
+        avatar_url: null,
+        created_at: authUser.created_at,
+      };
+
+      return NextResponse.json<ApiResponse<User>>({ success: true, data: user });
+    }
+
+    // ---------------------------------------------------------------------
+    // Mock fallback
+    // ---------------------------------------------------------------------
+    const userId = extractMockUserId(request);
 
     if (!userId) {
       return NextResponse.json<ApiResponse>(

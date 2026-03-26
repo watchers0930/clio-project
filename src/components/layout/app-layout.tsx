@@ -1,26 +1,19 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { cn } from '@/lib/utils';
 import { Sidebar } from './sidebar';
-import { Header, type BreadcrumbItem } from './header';
+import { Header } from './header';
 
 interface AppLayoutProps {
   children: ReactNode;
-  breadcrumbs?: BreadcrumbItem[];
-  notificationCount?: number;
 }
 
-function AppLayout({
-  children,
-  breadcrumbs = [{ label: 'CLIO', href: '/dashboard' }],
-  notificationCount = 0,
-}: AppLayoutProps) {
+function AppLayout({ children }: AppLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-clio-bg">
+    <div className="flex h-screen overflow-hidden bg-page-bg">
       {/* Desktop sidebar */}
       <div className="hidden lg:flex flex-shrink-0">
         <Sidebar
@@ -29,11 +22,11 @@ function AppLayout({
         />
       </div>
 
-      {/* Mobile sidebar overlay */}
+      {/* Mobile sidebar */}
       {mobileMenuOpen && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-navy/40 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
             onClick={() => setMobileMenuOpen(false)}
           />
           <div className="fixed inset-y-0 left-0 z-50 lg:hidden">
@@ -42,14 +35,14 @@ function AppLayout({
         </>
       )}
 
-      {/* Main area */}
+      {/* Main */}
       <div className="flex flex-col flex-1 min-w-0">
-        <Header
-          breadcrumbs={breadcrumbs}
-          notificationCount={notificationCount}
-          onMenuClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <Header onMenuClick={() => setMobileMenuOpen(!mobileMenuOpen)} />
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-6xl mx-auto" style={{ padding: '32px 40px' }}>
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );
