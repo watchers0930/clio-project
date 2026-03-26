@@ -43,7 +43,7 @@ function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     <aside
       className={cn(
         'flex flex-col h-full bg-sidebar text-white transition-all duration-300 ease-out',
-        collapsed ? 'w-[56px]' : 'w-[140px]'
+        collapsed ? 'w-[56px]' : 'w-[182px]'
       )}
     >
       {/* Logo */}
@@ -51,7 +51,7 @@ function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
         'flex items-center h-[56px] flex-shrink-0',
         collapsed ? 'justify-center' : ''
       )} style={collapsed ? undefined : { paddingLeft: 20 }}>
-        <span className="text-[28px] tracking-[0.22em] text-white select-none" style={{ fontWeight: 800 }}>
+        <span className="text-[28px] tracking-[0.3em] text-white select-none" style={{ fontWeight: 300, fontFamily: '"Times New Roman", Times, serif' }}>
           {collapsed ? 'C' : 'CLIO'}
         </span>
       </div>

@@ -22,6 +22,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // 개발 환경에서는 인증 건너뛰기
+  if (process.env.NODE_ENV === 'development') {
+    return NextResponse.next();
+  }
+
   // Supabase 세션 갱신 시도
   const result = await updateSession(request);
 
