@@ -37,9 +37,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center" style={{ padding: 20 }}>
-      <div className="w-full" style={{ maxWidth: 580 }}>
+      <div className="w-full" style={{ maxWidth: 740 }}>
         {/* Logo */}
-        <div className="text-center" style={{ marginBottom: 56 }}>
+        <div className="text-center" style={{ marginBottom: 36 }}>
           <h1
             className="text-[#1d1d1f] select-none"
             style={{ fontSize: 44, fontWeight: 300, letterSpacing: '0.3em', fontFamily: '"Times New Roman", Times, serif' }}
@@ -54,7 +54,7 @@ export default function LoginPage() {
         {/* Login Card */}
         <div
           className="bg-white rounded-2xl border border-[#e5e5e7]"
-          style={{ padding: '40px 56px' }}
+          style={{ padding: '56px 144px' }}
         >
           <h2
             className="text-[#1d1d1f]"
