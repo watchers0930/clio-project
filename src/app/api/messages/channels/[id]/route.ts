@@ -23,7 +23,7 @@ export async function GET(
 
     let query = admin
       .from('messages')
-      .select('*, users:sender_id(name, avatar_url), documents:document_id(id, title, status)')
+      .select('*, users:sender_id(name, avatar_url), documents:document_id(id, title, status), shared_file:shared_file_id(id, name, type, size)')
       .eq('channel_id', channelId)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -36,7 +36,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: '메시지 조회 실패' }, { status: 500 });
     }
 
-    interface MsgRow { id: string; channel_id: string; sender_id?: string | null; content: string; created_at: string; users?: { name: string; avatar_url: string | null } | null; documents?: { id: string; title: string; status: string } | null }
+    interface MsgRow { id: string; channel_id: string; sender_id?: string | null; content: string; created_at: string; attachment_name?: string | null; attachment_size?: string | null; users?: { name: string; avatar_url: string | null } | null; documents?: { id: string; title: string; status: string } | null; shared_file?: { id: string; name: string; type: string | null; size: number } | null }
     const rows = (data ?? []) as MsgRow[];
     const messages = rows.reverse().map((m) => ({
       id: m.id,
@@ -47,6 +47,9 @@ export async function GET(
       content: m.content,
       createdAt: m.created_at,
       document: m.documents ?? null,
+      sharedFile: m.shared_file ?? null,
+      attachmentName: m.attachment_name ?? null,
+      attachmentSize: m.attachment_size ?? null,
     }));
 
     // last_read_at 갱신 (이 채널을 읽었음을 표시)

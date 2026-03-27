@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { ApiResponse } from '@/lib/supabase/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { canDeleteFile, getUserRoleInfo } from '@/lib/permissions';
 
@@ -21,7 +22,10 @@ export async function GET(
       return NextResponse.json<ApiResponse>({ success: false, error: '인증이 필요합니다.' }, { status: 401 });
     }
 
-    const { data, error } = await supabase
+    // adminClient로 파일 조회 (공유받은 파일도 접근 가능하도록)
+    const admin = createAdminSupabaseClient();
+
+    const { data, error } = await admin
       .from('files')
       .select('*, departments:department_id(name), uploader:uploaded_by(name)')
       .eq('id', id)
@@ -38,12 +42,48 @@ export async function GET(
     const dept = deptJoin as { name: string } | null;
     const user = userJoin as { name: string } | null;
 
+    // 접근 권한 판별
+    const isOwner = (fileData.uploaded_by as string) === authUserId;
+    let accessType = isOwner ? 'owner' : 'none';
+    let shareInfo = null;
+
+    if (!isOwner) {
+      // 같은 부서 체크
+      const { data: currentUser } = await admin.from('users').select('department_id').eq('id', authUserId).single();
+      if (currentUser?.department_id && currentUser.department_id === (fileData.department_id as string)) {
+        accessType = 'department';
+      } else {
+        // 공유 권한 체크
+        const { data: share } = await admin
+          .from('file_shares')
+          .select('id, permission, expires_at')
+          .eq('file_id', id)
+          .eq('shared_with', authUserId)
+          .gt('expires_at', new Date().toISOString())
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (share) {
+          accessType = 'shared';
+          shareInfo = { permission: share.permission, expiresAt: share.expires_at };
+        } else {
+          return NextResponse.json<ApiResponse>(
+            { success: false, error: '이 파일에 대한 접근 권한이 없습니다.' },
+            { status: 403 },
+          );
+        }
+      }
+    }
+
     return NextResponse.json<ApiResponse>({
       success: true,
       data: {
         ...fileData,
         department_name: dept?.name,
         uploader_name: user?.name,
+        accessType,
+        share: shareInfo,
       },
     });
   } catch {

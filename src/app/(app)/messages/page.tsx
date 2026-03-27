@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Search, MessageCircle, Send, Paperclip, ChevronRight, ChevronDown, Building2, User, Trash2 } from 'lucide-react';
+import { Plus, Search, MessageCircle, Send, Paperclip, ChevronRight, ChevronDown, Building2, User, Trash2, FileText, X, Clock, Eye, FolderOpen } from 'lucide-react';
 
 /* ── types ── */
 interface Channel { id: string; name: string; type: 'department' | 'dm' | 'group'; unread: number; lastMessage?: string; avatar?: string }
-interface Msg { id: string; sender: string; avatar: string; content: string; time: string; isOwn: boolean; attachment?: { name: string; size: string } }
+interface SharedFileInfo { id: string; name: string; type: string | null; size: number }
+interface Msg { id: string; sender: string; avatar: string; content: string; time: string; isOwn: boolean; attachment?: { name: string; size: string }; sharedFile?: SharedFileInfo | null }
 interface DeptTree { id: string; name: string; members: { id: string; name: string; email: string }[] }
+interface MyFile { id: string; name: string; type: string; size: string }
 
 export default function MessagesPage() {
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -21,6 +23,18 @@ export default function MessagesPage() {
   const [deptTree, setDeptTree] = useState<DeptTree[]>([]);
   const [expandedDepts, setExpandedDepts] = useState<Set<string>>(new Set());
   const [unassigned, setUnassigned] = useState<{ id: string; name: string; email: string }[]>([]);
+
+  // 파일 공유 모달
+  const [showFileModal, setShowFileModal] = useState(false);
+  const [myFiles, setMyFiles] = useState<MyFile[]>([]);
+  const [filesLoading, setFilesLoading] = useState(false);
+  const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
+  const [expiresInDays, setExpiresInDays] = useState(7);
+  const [sharing, setSharing] = useState(false);
+
+  // 파일 상세 보기 모달
+  const [viewingFile, setViewingFile] = useState<{ id: string; name: string; content?: string } | null>(null);
+  const [fileViewLoading, setFileViewLoading] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -122,15 +136,21 @@ export default function MessagesPage() {
       const res = await fetch(`/api/messages/channels/${channelId}`);
       if (res.ok) {
         const json = await res.json();
-        const apiMsgs = (json.data ?? []).map((m: { id: string; userId: string; userName: string; content: string; createdAt: string }) => ({
+        const apiMsgs = (json.data ?? []).map((m: { id: string; userId: string; userName: string; content: string; createdAt: string; sharedFile?: SharedFileInfo | null; attachmentName?: string | null; attachmentSize?: string | null }) => ({
           id: m.id, sender: m.userName, avatar: m.userName?.charAt(0) ?? '?', content: m.content,
           time: new Date(m.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
           isOwn: m.userId === currentUser?.id,
+          sharedFile: m.sharedFile ?? null,
+          attachment: m.attachmentName ? { name: m.attachmentName, size: m.attachmentSize ?? '' } : undefined,
         }));
         setMessagesMap(prev => {
           const old = prev[channelId] ?? [];
-          // 메시지 수가 같으면 업데이트 안 함 (불필요한 리렌더 방지)
-          if (old.length === apiMsgs.length) return prev;
+          // 폴링 레이스 컨디션 방지: 구버전 데이터(메시지 수 감소)로 덮어쓰지 않음
+          if (apiMsgs.length < old.length) return prev;
+          // 같은 수 + 같은 마지막 메시지면 변경 없음
+          if (apiMsgs.length === old.length) {
+            if (old.length === 0 || old[old.length - 1]?.id === apiMsgs[apiMsgs.length - 1]?.id) return prev;
+          }
           // 새 메시지가 있으면 브라우저 알림
           if (old.length > 0 && apiMsgs.length > old.length) {
             const newest = apiMsgs[apiMsgs.length - 1];
@@ -198,17 +218,73 @@ export default function MessagesPage() {
     try { await fetch('/api/messages/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ channelId: activeChannel, content }) }); } catch {}
   };
 
+  // 내 파일 목록 로드
+  const loadMyFiles = async () => {
+    setFilesLoading(true);
+    try {
+      const res = await fetch('/api/files?limit=50');
+      if (res.ok) {
+        const json = await res.json();
+        setMyFiles((json.files ?? []).map((f: { id: string; name: string; type: string; size: string }) => ({
+          id: f.id, name: f.name, type: f.type, size: f.size,
+        })));
+      }
+    } catch {} finally { setFilesLoading(false); }
+  };
+
+  // 파일 공유 모달 열기
+  const openFileModal = () => {
+    setSelectedFileId(null);
+    setExpiresInDays(7);
+    setShowFileModal(true);
+    loadMyFiles();
+  };
+
+  // 파일 공유 전송
+  const shareFile = async () => {
+    if (!selectedFileId || !activeChannel || sharing) return;
+    setSharing(true);
+    try {
+      const res = await fetch('/api/messages/share-file', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelId: activeChannel, fileId: selectedFileId, expiresInDays }),
+      });
+      if (res.ok) {
+        setShowFileModal(false);
+        await fetchMessages(activeChannel);
+      }
+    } catch {} finally { setSharing(false); }
+  };
+
+  // 공유 파일 열람
+  const viewSharedFile = async (fileId: string, fileName: string) => {
+    setFileViewLoading(true);
+    setViewingFile({ id: fileId, name: fileName });
+    try {
+      const res = await fetch(`/api/files/${fileId}`);
+      if (res.ok) {
+        const json = await res.json();
+        setViewingFile({
+          id: fileId,
+          name: fileName,
+          content: `파일명: ${json.data.name}\n유형: ${json.data.type ?? '알 수 없음'}\n크기: ${json.data.size}\n업로더: ${json.data.uploader_name ?? json.data.department_name ?? '알 수 없음'}\n접근: ${json.data.accessType === 'shared' ? `공유 (${new Date(json.data.share?.expiresAt).toLocaleDateString('ko-KR')}까지)` : json.data.accessType === 'owner' ? '소유자' : '부서'}`,
+        });
+      } else {
+        const json = await res.json().catch(() => ({ error: '접근 실패' }));
+        setViewingFile({ id: fileId, name: fileName, content: `접근 불가: ${json.error}` });
+      }
+    } catch {
+      setViewingFile({ id: fileId, name: fileName, content: '파일 정보를 불러올 수 없습니다.' });
+    } finally { setFileViewLoading(false); }
+  };
+
   const handleAttachFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !activeChannel) return;
-    const timeStr = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-    const sizeStr = file.size < 1024 * 1024 ? `${(file.size / 1024).toFixed(0)} KB` : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
-    const newMsg: Msg = {
-      id: `m_${Date.now()}`, sender: currentUser?.name ?? '나', avatar: (currentUser?.name ?? '나').charAt(0),
-      content: '파일을 공유했습니다.', time: timeStr, isOwn: true, attachment: { name: file.name, size: sizeStr },
-    };
-    setMessagesMap(prev => ({ ...prev, [activeChannel]: [...(prev[activeChannel] ?? []), newMsg] }));
     if (fileInputRef.current) fileInputRef.current.value = '';
+    // 기존 로컬 파일 첨부는 파일 공유 모달로 대체
+    openFileModal();
   };
 
   const activeChannelData = channels.find(c => c.id === activeChannel);
@@ -221,6 +297,92 @@ export default function MessagesPage() {
   return (
     <div className="flex gap-4 h-[calc(100vh-120px)]">
       <input ref={fileInputRef} type="file" className="hidden" onChange={handleAttachFile} />
+
+      {/* ── 파일 공유 모달 ── */}
+      {showFileModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={() => setShowFileModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-[#e5e5e7] flex items-center justify-between">
+              <h3 className="text-base font-semibold text-[#1d1d1f]">파일 공유</h3>
+              <button onClick={() => setShowFileModal(false)} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]"><X size={18} /></button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-5 py-3">
+              <p className="text-xs text-[#6e6e73] mb-3">내 파일함에서 공유할 파일을 선택하세요. 파일은 이동되지 않고 읽기 권한만 부여됩니다.</p>
+
+              {filesLoading ? (
+                <div className="py-8 text-center text-sm text-[#6e6e73]">파일 목록 불러오는 중...</div>
+              ) : myFiles.length === 0 ? (
+                <div className="py-8 text-center text-sm text-[#6e6e73]">업로드한 파일이 없습니다.</div>
+              ) : (
+                <div className="space-y-1.5">
+                  {myFiles.map(f => (
+                    <button key={f.id} onClick={() => setSelectedFileId(f.id)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${selectedFileId === f.id ? 'bg-[#0071e3]/10 border border-[#0071e3] ring-1 ring-[#0071e3]/30' : 'hover:bg-[#f5f5f7] border border-transparent'}`}>
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${selectedFileId === f.id ? 'bg-[#0071e3]' : 'bg-[#f5f5f7]'}`}>
+                        <FileText size={16} className={selectedFileId === f.id ? 'text-white' : 'text-[#6e6e73]'} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-[#1d1d1f] truncate">{f.name}</p>
+                        <p className="text-xs text-[#6e6e73]">{f.type} · {f.size}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 만료 기간 설정 */}
+            <div className="px-5 py-3 border-t border-[#e5e5e7]">
+              <div className="flex items-center gap-3 mb-3">
+                <Clock size={14} className="text-[#6e6e73] shrink-0" />
+                <label className="text-xs text-[#6e6e73]">공유 기간</label>
+                <select value={expiresInDays} onChange={e => setExpiresInDays(Number(e.target.value))}
+                  className="ml-auto px-3 py-1.5 rounded-lg border border-[#e5e5e7] text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0071e3]">
+                  <option value={1}>1일</option>
+                  <option value={3}>3일</option>
+                  <option value={7}>7일</option>
+                  <option value={14}>14일</option>
+                  <option value={30}>30일</option>
+                  <option value={90}>90일</option>
+                </select>
+              </div>
+              <button onClick={shareFile} disabled={!selectedFileId || sharing}
+                className="w-full py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                {sharing ? '공유 중...' : '파일 공유하기'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 파일 열람 모달 ── */}
+      {viewingFile && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={() => setViewingFile(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-[#e5e5e7] flex items-center justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <FileText size={18} className="text-[#0071e3] shrink-0" />
+                <h3 className="text-base font-semibold text-[#1d1d1f] truncate">{viewingFile.name}</h3>
+              </div>
+              <button onClick={() => setViewingFile(null)} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]"><X size={18} /></button>
+            </div>
+            <div className="px-5 py-4">
+              {fileViewLoading ? (
+                <p className="text-sm text-[#6e6e73] text-center py-6">파일 정보를 불러오는 중...</p>
+              ) : (
+                <pre className="text-sm text-[#1d1d1f] whitespace-pre-wrap bg-[#f5f5f7] rounded-xl px-4 py-3 leading-relaxed">{viewingFile.content}</pre>
+              )}
+            </div>
+            <div className="px-5 py-3 border-t border-[#e5e5e7]">
+              <button onClick={() => { if (viewingFile) window.open(`/files?highlight=${viewingFile.id}`, '_blank'); }}
+                className="w-full py-2.5 rounded-xl bg-[#f5f5f7] text-[#1d1d1f] text-sm font-medium hover:bg-[#e5e5e7] transition-colors">
+                파일함에서 열기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Left Panel: 부서 트리 + DM ── */}
       <div className={`${showSidebar ? 'fixed inset-0 z-40 bg-black/40' : 'hidden'} lg:hidden`} onClick={() => setShowSidebar(false)} />
@@ -350,15 +512,37 @@ export default function MessagesPage() {
                   <div className={`max-w-[70%] ${m.isOwn ? 'items-end' : ''}`}>
                     {!m.isOwn && <p className="text-xs text-[#6e6e73] mb-1">{m.sender}</p>}
                     <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${m.isOwn ? 'bg-[#1d1d1f] text-white rounded-tr-md' : 'bg-[#f5f5f7] text-[#1d1d1f] rounded-tl-md'}`}>
-                      {m.content}
-                      {m.attachment && (
-                        <div className={`mt-2 flex items-center gap-2 px-3 py-2 rounded-lg ${m.isOwn ? 'bg-[#6e6e73]/30' : 'bg-white border border-[#e5e5e7]'}`}>
-                          <Paperclip size={14} className="shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-xs font-medium truncate">{m.attachment.name}</p>
-                            <p className={`text-xs ${m.isOwn ? 'text-white/70' : 'text-[#6e6e73]'}`}>{m.attachment.size}</p>
-                          </div>
-                        </div>
+                      {m.sharedFile ? (
+                        <>
+                          <p className="mb-2">{m.content.replace(/📎\s*/, '')}</p>
+                          <button onClick={() => viewSharedFile(m.sharedFile!.id, m.sharedFile!.name)}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${m.isOwn ? 'bg-white/10 hover:bg-white/20' : 'bg-white border border-[#e5e5e7] hover:border-[#0071e3] hover:bg-blue-50/50'}`}>
+                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${m.isOwn ? 'bg-white/20' : 'bg-[#0071e3]/10'}`}>
+                              <FileText size={18} className={m.isOwn ? 'text-white' : 'text-[#0071e3]'} />
+                            </div>
+                            <div className="min-w-0 flex-1 text-left">
+                              <p className="text-xs font-semibold truncate">{m.sharedFile.name}</p>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <Eye size={10} className={m.isOwn ? 'text-white/60' : 'text-[#6e6e73]'} />
+                                <span className={`text-[10px] ${m.isOwn ? 'text-white/60' : 'text-[#6e6e73]'}`}>읽기 전용 · {m.attachment?.size ?? ''}</span>
+                              </div>
+                            </div>
+                            <ChevronRight size={14} className={`shrink-0 ${m.isOwn ? 'text-white/40' : 'text-[#a1a1a6]'}`} />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          {m.content}
+                          {m.attachment && !m.sharedFile && (
+                            <div className={`mt-2 flex items-center gap-2 px-3 py-2 rounded-lg ${m.isOwn ? 'bg-[#6e6e73]/30' : 'bg-white border border-[#e5e5e7]'}`}>
+                              <Paperclip size={14} className="shrink-0" />
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium truncate">{m.attachment.name}</p>
+                                <p className={`text-xs ${m.isOwn ? 'text-white/70' : 'text-[#6e6e73]'}`}>{m.attachment.size}</p>
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                     <p className={`text-xs text-[#6e6e73] mt-1 ${m.isOwn ? 'text-right' : ''}`}>{m.time}</p>
@@ -370,7 +554,7 @@ export default function MessagesPage() {
 
             <div className="px-4 py-3 border-t border-[#e5e5e7]">
               <div className="flex items-center gap-2">
-                <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-xl hover:bg-[#f5f5f7] text-[#6e6e73] transition-colors shrink-0"><Paperclip size={20} /></button>
+                <button onClick={openFileModal} className="p-2 rounded-xl hover:bg-[#f5f5f7] text-[#6e6e73] transition-colors shrink-0" title="파일 공유"><FolderOpen size={20} /></button>
                 <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
                   placeholder="메시지를 입력하세요..." className="flex-1 px-4 py-2.5 rounded-xl border border-[#e5e5e7] bg-[#f5f5f7] text-sm placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3]" />
                 <button onClick={sendMessage} disabled={!input.trim()} className="p-2.5 rounded-xl bg-[#1d1d1f] text-white hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"><Send size={20} /></button>
