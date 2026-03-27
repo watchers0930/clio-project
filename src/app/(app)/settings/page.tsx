@@ -510,9 +510,9 @@ export default function SettingsPage() {
                 style={{ padding: '12px 24px', fontSize: 15, fontWeight: 500, borderRadius: 12, border: 'none', backgroundColor: 'transparent', color: '#6e6e73', cursor: 'pointer' }}>
                 취소
               </button>
-              <button onClick={saveUser} disabled={userSaving || !userName.trim() || !userEmail.trim() || !userPassword.trim()}
+              <button onClick={saveUser} disabled={userSaving || !userName.trim() || !userEmail.trim() || (!editUser && !userPassword.trim())}
                 className="hover:bg-[#0071e3] transition-colors"
-                style={{ padding: '12px 32px', fontSize: 15, fontWeight: 600, borderRadius: 12, border: 'none', backgroundColor: '#1d1d1f', color: '#fff', cursor: 'pointer', opacity: (userSaving || !userName.trim() || !userEmail.trim() || !userPassword.trim()) ? 0.4 : 1 }}>
+                style={{ padding: '12px 32px', fontSize: 15, fontWeight: 600, borderRadius: 12, border: 'none', backgroundColor: '#1d1d1f', color: '#fff', cursor: 'pointer', opacity: (userSaving || !userName.trim() || !userEmail.trim() || (!editUser && !userPassword.trim())) ? 0.4 : 1 }}>
                 {userSaving ? '저장 중...' : (editUser ? '수정' : '추가')}
               </button>
             </div>
