@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Search, MessageCircle, Send, Paperclip, ChevronRight, ChevronDown, Building2, User, Trash2, FileText, X, Clock, Eye, FolderOpen } from 'lucide-react';
+import { Plus, Search, MessageCircle, Send, Paperclip, ChevronRight, ChevronDown, Building2, User, Trash2, FileText, X, Clock, Eye, FolderOpen, Download, Loader2 } from 'lucide-react';
 
 /* ── types ── */
 interface Channel { id: string; name: string; type: 'department' | 'dm' | 'group'; unread: number; lastMessage?: string; avatar?: string }
@@ -35,6 +35,9 @@ export default function MessagesPage() {
   // 파일 상세 보기 모달
   const [viewingFile, setViewingFile] = useState<{ id: string; name: string; content?: string } | null>(null);
   const [fileViewLoading, setFileViewLoading] = useState(false);
+
+  // 첨부파일 업로드 상태
+  const [uploading, setUploading] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -279,12 +282,78 @@ export default function MessagesPage() {
     } finally { setFileViewLoading(false); }
   };
 
-  const handleAttachFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAttachFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !activeChannel) return;
     if (fileInputRef.current) fileInputRef.current.value = '';
-    // 기존 로컬 파일 첨부는 파일 공유 모달로 대체
-    openFileModal();
+
+    if (file.size > 50 * 1024 * 1024) {
+      alert('파일 크기는 50MB 이하여야 합니다.');
+      return;
+    }
+
+    setUploading(true);
+
+    // Optimistic UI: 업로드 중 임시 메시지
+    const timeStr = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    const tempId = `upload_${Date.now()}`;
+    const tempMsg: Msg = {
+      id: tempId, sender: currentUser?.name ?? '나', avatar: (currentUser?.name ?? '나').charAt(0),
+      content: `📎 ${file.name}`, time: timeStr, isOwn: true,
+      attachment: { name: file.name, size: '업로드 중...' },
+    };
+    setMessagesMap(prev => ({ ...prev, [activeChannel]: [...(prev[activeChannel] ?? []), tempMsg] }));
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('channelId', activeChannel);
+
+      const res = await fetch('/api/messages/upload-attachment', { method: 'POST', body: formData });
+      if (res.ok) {
+        // 업로드 성공 → 서버 메시지로 교체
+        await fetchMessages(activeChannel);
+      } else {
+        const json = await res.json().catch(() => ({ error: '업로드 실패' }));
+        // 실패 시 임시 메시지 제거
+        setMessagesMap(prev => ({
+          ...prev,
+          [activeChannel]: (prev[activeChannel] ?? []).filter(m => m.id !== tempId),
+        }));
+        alert(json.error ?? '파일 업로드에 실패했습니다.');
+      }
+    } catch {
+      setMessagesMap(prev => ({
+        ...prev,
+        [activeChannel]: (prev[activeChannel] ?? []).filter(m => m.id !== tempId),
+      }));
+      alert('파일 업로드 중 오류가 발생했습니다.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // 첨부파일 다운로드
+  const downloadAttachment = async (fileId: string, fileName: string) => {
+    try {
+      const res = await fetch(`/api/files/${fileId}/download`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.url) {
+          const a = document.createElement('a');
+          a.href = json.url;
+          a.download = fileName;
+          a.target = '_blank';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+      } else {
+        alert('다운로드 링크를 가져올 수 없습니다.');
+      }
+    } catch {
+      alert('다운로드 중 오류가 발생했습니다.');
+    }
   };
 
   const activeChannelData = channels.find(c => c.id === activeChannel);
@@ -515,20 +584,28 @@ export default function MessagesPage() {
                       {m.sharedFile ? (
                         <>
                           <p className="mb-2">{m.content.replace(/📎\s*/, '')}</p>
-                          <button onClick={() => viewSharedFile(m.sharedFile!.id, m.sharedFile!.name)}
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${m.isOwn ? 'bg-white/10 hover:bg-white/20' : 'bg-white border border-[#e5e5e7] hover:border-[#0071e3] hover:bg-blue-50/50'}`}>
+                          <div className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${m.isOwn ? 'bg-white/10' : 'bg-white border border-[#e5e5e7]'}`}>
                             <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${m.isOwn ? 'bg-white/20' : 'bg-[#0071e3]/10'}`}>
                               <FileText size={18} className={m.isOwn ? 'text-white' : 'text-[#0071e3]'} />
                             </div>
                             <div className="min-w-0 flex-1 text-left">
                               <p className="text-xs font-semibold truncate">{m.sharedFile.name}</p>
                               <div className="flex items-center gap-1.5 mt-0.5">
-                                <Eye size={10} className={m.isOwn ? 'text-white/60' : 'text-[#6e6e73]'} />
-                                <span className={`text-[10px] ${m.isOwn ? 'text-white/60' : 'text-[#6e6e73]'}`}>읽기 전용 · {m.attachment?.size ?? ''}</span>
+                                <Paperclip size={10} className={m.isOwn ? 'text-white/60' : 'text-[#6e6e73]'} />
+                                <span className={`text-[10px] ${m.isOwn ? 'text-white/60' : 'text-[#6e6e73]'}`}>{m.attachment?.size ?? ''}</span>
                               </div>
                             </div>
-                            <ChevronRight size={14} className={`shrink-0 ${m.isOwn ? 'text-white/40' : 'text-[#a1a1a6]'}`} />
-                          </button>
+                            <button onClick={() => downloadAttachment(m.sharedFile!.id, m.sharedFile!.name)}
+                              className={`p-1.5 rounded-lg shrink-0 transition-colors ${m.isOwn ? 'hover:bg-white/20 text-white/80' : 'hover:bg-[#f5f5f7] text-[#6e6e73]'}`}
+                              title="다운로드">
+                              <Download size={16} />
+                            </button>
+                            <button onClick={() => viewSharedFile(m.sharedFile!.id, m.sharedFile!.name)}
+                              className={`p-1.5 rounded-lg shrink-0 transition-colors ${m.isOwn ? 'hover:bg-white/20 text-white/80' : 'hover:bg-[#f5f5f7] text-[#6e6e73]'}`}
+                              title="상세 보기">
+                              <ChevronRight size={16} />
+                            </button>
+                          </div>
                         </>
                       ) : (
                         <>
@@ -536,10 +613,17 @@ export default function MessagesPage() {
                           {m.attachment && !m.sharedFile && (
                             <div className={`mt-2 flex items-center gap-2 px-3 py-2 rounded-lg ${m.isOwn ? 'bg-[#6e6e73]/30' : 'bg-white border border-[#e5e5e7]'}`}>
                               <Paperclip size={14} className="shrink-0" />
-                              <div className="min-w-0">
+                              <div className="min-w-0 flex-1">
                                 <p className="text-xs font-medium truncate">{m.attachment.name}</p>
                                 <p className={`text-xs ${m.isOwn ? 'text-white/70' : 'text-[#6e6e73]'}`}>{m.attachment.size}</p>
                               </div>
+                              {m.attachment.size !== '업로드 중...' && (
+                                <button onClick={(e) => { e.stopPropagation(); downloadAttachment(m.id, m.attachment!.name); }}
+                                  className={`p-1 rounded-lg shrink-0 transition-colors ${m.isOwn ? 'hover:bg-white/20 text-white/80' : 'hover:bg-[#f5f5f7] text-[#6e6e73]'}`}
+                                  title="다운로드">
+                                  <Download size={14} />
+                                </button>
+                              )}
                             </div>
                           )}
                         </>
@@ -554,10 +638,13 @@ export default function MessagesPage() {
 
             <div className="px-4 py-3 border-t border-[#e5e5e7]">
               <div className="flex items-center gap-2">
-                <button onClick={openFileModal} className="p-2 rounded-xl hover:bg-[#f5f5f7] text-[#6e6e73] transition-colors shrink-0" title="파일 공유"><FolderOpen size={20} /></button>
+                <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="p-2 rounded-xl hover:bg-[#f5f5f7] text-[#6e6e73] transition-colors shrink-0 disabled:opacity-40" title="파일 첨부">
+                  {uploading ? <Loader2 size={20} className="animate-spin" /> : <Paperclip size={20} />}
+                </button>
+                <button onClick={openFileModal} className="p-2 rounded-xl hover:bg-[#f5f5f7] text-[#6e6e73] transition-colors shrink-0" title="파일함에서 공유"><FolderOpen size={20} /></button>
                 <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
                   placeholder="메시지를 입력하세요..." className="flex-1 px-4 py-2.5 rounded-xl border border-[#e5e5e7] bg-[#f5f5f7] text-sm placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3]" />
-                <button onClick={sendMessage} disabled={!input.trim()} className="p-2.5 rounded-xl bg-[#1d1d1f] text-white hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"><Send size={20} /></button>
+                <button onClick={sendMessage} disabled={!input.trim() || uploading} className="p-2.5 rounded-xl bg-[#1d1d1f] text-white hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"><Send size={20} /></button>
               </div>
             </div>
           </>
