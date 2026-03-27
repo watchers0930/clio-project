@@ -255,3 +255,51 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ success: false, error: '사용자 수정 중 오류' }, { status: 500 });
   }
 }
+
+/**
+ * DELETE /api/users — 사용자 비활성화/삭제
+ * admin만 가능. query: ?id=xxx
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = await createServerSupabaseClient();
+    if (!supabase) return NextResponse.json({ success: false, error: 'DB 미설정' }, { status: 503 });
+
+    const authUserId = await getAuthUserId(supabase);
+    if (!authUserId) return NextResponse.json({ success: false, error: '인증 필요' }, { status: 401 });
+
+    const myRole = await getUserRoleInfo(supabase, authUserId);
+    if (!myRole || !isAdmin(myRole.role)) {
+      return NextResponse.json({ success: false, error: '관리자 권한이 필요합니다.' }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) return NextResponse.json({ success: false, error: '사용자 ID 필수' }, { status: 400 });
+
+    // 자기 자신은 삭제 불가
+    if (id === authUserId) {
+      return NextResponse.json({ success: false, error: '자기 자신은 삭제할 수 없습니다.' }, { status: 400 });
+    }
+
+    // 비활성화 (소프트 삭제)
+    const { error } = await supabase.from('users').update({ is_active: false }).eq('id', id);
+    if (error) {
+      return NextResponse.json({ success: false, error: '사용자 비활성화 실패: ' + error.message }, { status: 500 });
+    }
+
+    try {
+      await supabase.from('audit_logs').insert({
+        user_id: authUserId,
+        action: 'user.delete',
+        target_type: 'user',
+        target_id: id,
+        details: {},
+      });
+    } catch {}
+
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ success: false, error: '사용자 삭제 중 오류' }, { status: 500 });
+  }
+}

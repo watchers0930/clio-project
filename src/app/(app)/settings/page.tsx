@@ -44,8 +44,9 @@ export default function SettingsPage() {
   const [deptDesc, setDeptDesc] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // 사용자 추가 모달
+  // 사용자 추가/수정 모달
   const [showUserModal, setShowUserModal] = useState(false);
+  const [editUser, setEditUser] = useState<UserItem | null>(null);
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [userPassword, setUserPassword] = useState('');
@@ -122,42 +123,88 @@ export default function SettingsPage() {
     await loadDepartments();
   };
 
-  /* ── 사용자 추가 ── */
-  const openUserModal = () => {
-    setUserName('');
-    setUserEmail('');
+  /* ── 사용자 추가/수정 ── */
+  const openUserModal = (user?: UserItem) => {
+    setEditUser(user ?? null);
+    setUserName(user?.name ?? '');
+    setUserEmail(user?.email ?? '');
     setUserPassword('');
-    setUserDeptId('');
-    setUserRole('user');
+    setUserDeptId(user?.department_id ?? '');
+    setUserRole(user?.role ?? 'user');
     setShowUserModal(true);
   };
 
   const saveUser = async () => {
-    if (!userName.trim() || !userEmail.trim() || !userPassword.trim()) return;
-    setUserSaving(true);
+    if (editUser) {
+      // 수정 모드
+      if (!userName.trim()) return;
+      setUserSaving(true);
+      try {
+        const res = await fetch('/api/users', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editUser.id,
+            name: userName,
+            departmentId: userDeptId || null,
+            role: userRole,
+          }),
+        });
+        const json = await res.json();
+        if (!res.ok || !json.success) {
+          alert(json.error ?? '사용자 수정에 실패했습니다.');
+          return;
+        }
+        await loadUsers();
+        setShowUserModal(false);
+      } catch {
+        alert('사용자 수정 중 오류가 발생했습니다.');
+      } finally {
+        setUserSaving(false);
+      }
+    } else {
+      // 추가 모드
+      if (!userName.trim() || !userEmail.trim() || !userPassword.trim()) return;
+      setUserSaving(true);
+      try {
+        const res = await fetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: userName,
+            email: userEmail,
+            password: userPassword,
+            departmentId: userDeptId || null,
+            role: userRole,
+          }),
+        });
+        const json = await res.json();
+        if (!res.ok || !json.success) {
+          alert(json.error ?? '사용자 추가에 실패했습니다.');
+          return;
+        }
+        await loadUsers();
+        setShowUserModal(false);
+      } catch {
+        alert('사용자 추가 중 오류가 발생했습니다.');
+      } finally {
+        setUserSaving(false);
+      }
+    }
+  };
+
+  const deleteUser = async (id: string, name: string) => {
+    if (!confirm(`"${name}" 사용자를 비활성화하시겠습니까?`)) return;
     try {
-      const res = await fetch('/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: userName,
-          email: userEmail,
-          password: userPassword,
-          departmentId: userDeptId || null,
-          role: userRole,
-        }),
-      });
+      const res = await fetch(`/api/users?id=${id}`, { method: 'DELETE' });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        alert(json.error ?? '사용자 추가에 실패했습니다.');
+        alert(json.error ?? '사용자 비활성화에 실패했습니다.');
         return;
       }
       await loadUsers();
-      setShowUserModal(false);
     } catch {
-      alert('사용자 추가 중 오류가 발생했습니다.');
-    } finally {
-      setUserSaving(false);
+      alert('사용자 삭제 중 오류가 발생했습니다.');
     }
   };
 
@@ -286,6 +333,7 @@ export default function SettingsPage() {
                 <th className="text-left px-6 py-3 text-[12px] font-semibold text-muted uppercase">부서</th>
                 <th className="text-left px-6 py-3 text-[12px] font-semibold text-muted uppercase">역할</th>
                 <th className="text-left px-6 py-3 text-[12px] font-semibold text-muted uppercase">상태</th>
+                <th className="text-right px-6 py-3 text-[12px] font-semibold text-muted uppercase">관리</th>
               </tr>
             </thead>
             <tbody>
@@ -323,6 +371,10 @@ export default function SettingsPage() {
                     >
                       {u.is_active ? '활성' : '비활성'}
                     </button>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button onClick={() => openUserModal(u)} className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]"><Pencil size={14} /></button>
+                    <button onClick={() => deleteUser(u.id, u.name)} className="p-1.5 rounded-lg hover:bg-red-50 text-[#6e6e73] hover:text-red-500 ml-1"><Trash2 size={14} /></button>
                   </td>
                 </tr>
               ))}
@@ -399,8 +451,8 @@ export default function SettingsPage() {
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowUserModal(false)} />
           <div style={{ position: 'relative', width: '100%', maxWidth: 480, backgroundColor: '#fff', borderRadius: 16, border: '1px solid #e5e5e7', padding: '40px 48px' }}>
-            <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8, color: '#1d1d1f' }}>사용자 추가</h2>
-            <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 32 }}>새로운 사용자 계정을 생성합니다.</p>
+            <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8, color: '#1d1d1f' }}>{editUser ? '사용자 수정' : '사용자 추가'}</h2>
+            <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 32 }}>{editUser ? '사용자 정보를 수정합니다.' : '새로운 사용자 계정을 생성합니다.'}</p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
               <div>
@@ -408,16 +460,26 @@ export default function SettingsPage() {
                 <input value={userName} onChange={(e) => setUserName(e.target.value)} placeholder="홍길동"
                   style={{ width: '100%', height: 52, padding: '0 18px', fontSize: 15, borderRadius: 12, backgroundColor: '#f5f5f7', border: '1px solid #e5e5e7', color: '#1d1d1f', outline: 'none' }} />
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>이메일 *</label>
-                <input value={userEmail} onChange={(e) => setUserEmail(e.target.value)} placeholder="name@company.com" type="email"
-                  style={{ width: '100%', height: 52, padding: '0 18px', fontSize: 15, borderRadius: 12, backgroundColor: '#f5f5f7', border: '1px solid #e5e5e7', color: '#1d1d1f', outline: 'none', fontFamily: 'Verdana, sans-serif' }} />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>비밀번호 *</label>
-                <input value={userPassword} onChange={(e) => setUserPassword(e.target.value)} placeholder="6자 이상" type="password"
-                  style={{ width: '100%', height: 52, padding: '0 18px', fontSize: 15, borderRadius: 12, backgroundColor: '#f5f5f7', border: '1px solid #e5e5e7', color: '#1d1d1f', outline: 'none' }} />
-              </div>
+              {!editUser && (
+                <>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>이메일 *</label>
+                    <input value={userEmail} onChange={(e) => setUserEmail(e.target.value)} placeholder="name@company.com" type="email"
+                      style={{ width: '100%', height: 52, padding: '0 18px', fontSize: 15, borderRadius: 12, backgroundColor: '#f5f5f7', border: '1px solid #e5e5e7', color: '#1d1d1f', outline: 'none', fontFamily: 'Verdana, sans-serif' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>비밀번호 *</label>
+                    <input value={userPassword} onChange={(e) => setUserPassword(e.target.value)} placeholder="6자 이상" type="password"
+                      style={{ width: '100%', height: 52, padding: '0 18px', fontSize: 15, borderRadius: 12, backgroundColor: '#f5f5f7', border: '1px solid #e5e5e7', color: '#1d1d1f', outline: 'none' }} />
+                  </div>
+                </>
+              )}
+              {editUser && (
+                <div>
+                  <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>이메일</label>
+                  <p style={{ height: 52, padding: '0 18px', fontSize: 15, borderRadius: 12, backgroundColor: '#f0f0f2', border: '1px solid #e5e5e7', color: '#6e6e73', display: 'flex', alignItems: 'center', fontFamily: 'Verdana, sans-serif' }}>{editUser.email}</p>
+                </div>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>부서</label>
@@ -449,7 +511,7 @@ export default function SettingsPage() {
               <button onClick={saveUser} disabled={userSaving || !userName.trim() || !userEmail.trim() || !userPassword.trim()}
                 className="hover:bg-[#0071e3] transition-colors"
                 style={{ padding: '12px 32px', fontSize: 15, fontWeight: 600, borderRadius: 12, border: 'none', backgroundColor: '#1d1d1f', color: '#fff', cursor: 'pointer', opacity: (userSaving || !userName.trim() || !userEmail.trim() || !userPassword.trim()) ? 0.4 : 1 }}>
-                {userSaving ? '생성 중...' : '추가'}
+                {userSaving ? '저장 중...' : (editUser ? '수정' : '추가')}
               </button>
             </div>
           </div>
