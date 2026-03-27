@@ -280,16 +280,22 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ success: false, error: '사용자 ID 필수' }, { status: 400 });
 
-    // 자기 자신은 삭제 불가
     if (id === authUserId) {
       return NextResponse.json({ success: false, error: '자기 자신은 삭제할 수 없습니다.' }, { status: 400 });
     }
 
-    // 비활성화 (소프트 삭제)
-    const { error } = await supabase.from('users').update({ is_active: false }).eq('id', id);
+    // 채널 멤버십 제거
+    try { await supabase.from('channel_members').delete().eq('user_id', id); } catch {}
+
+    // users 테이블에서 완전 삭제
+    const { error } = await supabase.from('users').delete().eq('id', id);
     if (error) {
-      return NextResponse.json({ success: false, error: '사용자 비활성화 실패: ' + error.message }, { status: 500 });
+      return NextResponse.json({ success: false, error: '사용자 삭제 실패: ' + error.message }, { status: 500 });
     }
+
+    // Supabase Auth에서도 삭제
+    const adminClient = createAdminSupabaseClient();
+    try { await adminClient.auth.admin.deleteUser(id); } catch {}
 
     try {
       await supabase.from('audit_logs').insert({

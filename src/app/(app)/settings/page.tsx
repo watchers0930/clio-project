@@ -118,7 +118,7 @@ export default function SettingsPage() {
   };
 
   const deleteDept = async (id: string) => {
-    if (!confirm('이 부서를 비활성화하시겠습니까?')) return;
+    if (!confirm('이 부서를 삭제하시겠습니까? (직원이 있으면 삭제 불가)')) return;
     await fetch(`/api/departments?id=${id}`, { method: 'DELETE' });
     await loadDepartments();
   };
@@ -287,7 +287,6 @@ export default function SettingsPage() {
                 <th className="text-left px-6 py-3 text-[12px] font-semibold text-muted uppercase">코드</th>
                 <th className="text-left px-6 py-3 text-[12px] font-semibold text-muted uppercase">설명</th>
                 <th className="text-left px-6 py-3 text-[12px] font-semibold text-muted uppercase">인원</th>
-                <th className="text-left px-6 py-3 text-[12px] font-semibold text-muted uppercase">상태</th>
                 <th className="text-right px-6 py-3 text-[12px] font-semibold text-muted uppercase">관리</th>
               </tr>
             </thead>
@@ -298,11 +297,6 @@ export default function SettingsPage() {
                   <td className="px-6 py-4 text-sm text-muted font-num">{d.code}</td>
                   <td className="px-6 py-4 text-sm text-muted">{d.description || '-'}</td>
                   <td className="px-6 py-4 text-sm font-num">{d.memberCount}명</td>
-                  <td className="px-6 py-4">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${d.is_active !== false ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
-                      {d.is_active !== false ? '활성' : '비활성'}
-                    </span>
-                  </td>
                   <td className="px-6 py-4 text-right">
                     <button onClick={() => openDeptModal(d)} className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]"><Pencil size={14} /></button>
                     <button onClick={() => deleteDept(d.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-[#6e6e73] hover:text-red-500 ml-1"><Trash2 size={14} /></button>
@@ -333,7 +327,6 @@ export default function SettingsPage() {
                 <th className="text-left px-6 py-3 text-[12px] font-semibold text-muted uppercase">이메일</th>
                 <th className="text-left px-6 py-3 text-[12px] font-semibold text-muted uppercase">부서</th>
                 <th className="text-left px-6 py-3 text-[12px] font-semibold text-muted uppercase">역할</th>
-                <th className="text-left px-6 py-3 text-[12px] font-semibold text-muted uppercase">상태</th>
                 <th className="text-right px-6 py-3 text-[12px] font-semibold text-muted uppercase">관리</th>
               </tr>
             </thead>
@@ -364,14 +357,6 @@ export default function SettingsPage() {
                         <option key={r.value} value={r.value}>{r.label}</option>
                       ))}
                     </select>
-                  </td>
-                  <td className="px-6 py-4">
-                    <button
-                      onClick={() => toggleUserActive(u.id, !u.is_active)}
-                      className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-colors ${u.is_active ? 'bg-green-50 text-green-600 hover:bg-red-50 hover:text-red-500' : 'bg-gray-100 text-gray-400 hover:bg-green-50 hover:text-green-600'}`}
-                    >
-                      {u.is_active ? '활성' : '비활성'}
-                    </button>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <button onClick={() => openUserModal(u)} className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]"><Pencil size={14} /></button>

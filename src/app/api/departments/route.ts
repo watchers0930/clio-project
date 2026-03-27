@@ -121,8 +121,22 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ success: false, error: 'ID 필수' }, { status: 400 });
 
-    const { error: delErr } = await supabase.from('departments').update({ is_active: false }).eq('id', id);
-    if (delErr) return NextResponse.json({ success: false, error: '부서 비활성화 실패: ' + delErr.message }, { status: 500 });
+    // 부서에 직원이 있는지 확인
+    const { count } = await supabase
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .eq('department_id', id);
+
+    if ((count ?? 0) > 0) {
+      return NextResponse.json({ success: false, error: `부서에 직원이 ${count}명 있어서 삭제할 수 없습니다. 먼저 직원을 다른 부서로 이동하세요.` }, { status: 400 });
+    }
+
+    // 연결된 채널 삭제
+    try { await supabase.from('channels').delete().eq('department_id', id).eq('type', 'department'); } catch {}
+
+    // 부서 완전 삭제
+    const { error: delErr } = await supabase.from('departments').delete().eq('id', id);
+    if (delErr) return NextResponse.json({ success: false, error: '부서 삭제 실패: ' + delErr.message }, { status: 500 });
 
     try { await supabase.from('audit_logs').insert({ user_id: authUserId, action: 'dept.delete', target_type: 'department', target_id: id, details: {} }); } catch {}
 
