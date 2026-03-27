@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { getUserRoleInfo, isAdmin, isManagerOrAbove } from '@/lib/permissions';
 
@@ -51,6 +52,90 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, data: users });
   } catch {
     return NextResponse.json({ success: false, error: '사용자 목록 조회 중 오류' }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/users — 사용자 생성 (admin만)
+ * body: { email, password, name, departmentId?, role? }
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = await createServerSupabaseClient();
+    if (!supabase) return NextResponse.json({ success: false, error: 'DB 미설정' }, { status: 503 });
+
+    const authUserId = await getAuthUserId(supabase);
+    if (!authUserId) return NextResponse.json({ success: false, error: '인증 필요' }, { status: 401 });
+
+    const roleInfo = await getUserRoleInfo(supabase, authUserId);
+    if (!roleInfo || !isAdmin(roleInfo.role)) {
+      return NextResponse.json({ success: false, error: '관리자 권한이 필요합니다.' }, { status: 403 });
+    }
+
+    const { email, password, name, departmentId, role } = await request.json();
+
+    if (!email || !password || !name) {
+      return NextResponse.json({ success: false, error: '이메일, 비밀번호, 이름은 필수입니다.' }, { status: 400 });
+    }
+
+    // Service Role로 Auth 사용자 생성 (RLS bypass)
+    const adminClient = createAdminSupabaseClient();
+
+    const { data: authData, error: authErr } = await adminClient.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { name },
+    });
+
+    if (authErr || !authData.user) {
+      return NextResponse.json({ success: false, error: authErr?.message ?? '계정 생성에 실패했습니다.' }, { status: 500 });
+    }
+
+    // users 테이블에 프로필 INSERT
+    const { data: newUser, error: insertErr } = await adminClient.from('users').insert({
+      id: authData.user.id,
+      email,
+      name,
+      department_id: departmentId ?? null,
+      role: role ?? 'user',
+      avatar_url: null,
+    }).select().single();
+
+    if (insertErr) {
+      console.error('[users/POST] insert error:', insertErr.message);
+      return NextResponse.json({ success: false, error: '프로필 저장에 실패했습니다: ' + insertErr.message }, { status: 500 });
+    }
+
+    // 부서가 있으면 채널 멤버십 자동 추가
+    if (departmentId) {
+      const { data: channel } = await adminClient
+        .from('channels')
+        .select('id')
+        .eq('department_id', departmentId)
+        .eq('type', 'department')
+        .single();
+
+      if (channel) {
+        await adminClient.from('channel_members').upsert(
+          { channel_id: channel.id, user_id: authData.user.id },
+          { onConflict: 'channel_id,user_id' }
+        ).catch(() => {});
+      }
+    }
+
+    // audit_logs
+    await adminClient.from('audit_logs').insert({
+      user_id: authUserId,
+      action: 'user.create',
+      target_type: 'user',
+      target_id: authData.user.id,
+      details: { email, name, role: role ?? 'user' },
+    }).catch(() => {});
+
+    return NextResponse.json({ success: true, data: newUser }, { status: 201 });
+  } catch (err) {
+    return NextResponse.json({ success: false, error: '사용자 생성 중 오류: ' + (err instanceof Error ? err.message : String(err)) }, { status: 500 });
   }
 }
 

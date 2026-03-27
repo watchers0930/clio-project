@@ -44,6 +44,15 @@ export default function SettingsPage() {
   const [deptDesc, setDeptDesc] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // 사용자 추가 모달
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [userName, setUserName] = useState('');
+  const [userEmail, setUserEmail] = useState('');
+  const [userPassword, setUserPassword] = useState('');
+  const [userDeptId, setUserDeptId] = useState('');
+  const [userRole, setUserRole] = useState('user');
+  const [userSaving, setUserSaving] = useState(false);
+
   const loadDepartments = useCallback(async () => {
     try {
       const res = await fetch('/api/departments');
@@ -111,6 +120,45 @@ export default function SettingsPage() {
     if (!confirm('이 부서를 비활성화하시겠습니까?')) return;
     await fetch(`/api/departments?id=${id}`, { method: 'DELETE' });
     await loadDepartments();
+  };
+
+  /* ── 사용자 추가 ── */
+  const openUserModal = () => {
+    setUserName('');
+    setUserEmail('');
+    setUserPassword('');
+    setUserDeptId('');
+    setUserRole('user');
+    setShowUserModal(true);
+  };
+
+  const saveUser = async () => {
+    if (!userName.trim() || !userEmail.trim() || !userPassword.trim()) return;
+    setUserSaving(true);
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: userName,
+          email: userEmail,
+          password: userPassword,
+          departmentId: userDeptId || null,
+          role: userRole,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        alert(json.error ?? '사용자 추가에 실패했습니다.');
+        return;
+      }
+      await loadUsers();
+      setShowUserModal(false);
+    } catch {
+      alert('사용자 추가 중 오류가 발생했습니다.');
+    } finally {
+      setUserSaving(false);
+    }
   };
 
   /* ── 사용자 수정 ── */
@@ -221,8 +269,14 @@ export default function SettingsPage() {
       {/* 사용자 관리 */}
       {tab === 'users' && (
         <div className="bg-card rounded-2xl border border-border overflow-hidden">
-          <div className="px-6 py-4 border-b border-border">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border">
             <h2 className="text-[16px] font-semibold">사용자 목록</h2>
+            <button
+              onClick={openUserModal}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors"
+            >
+              <Plus size={16} /> 사용자 추가
+            </button>
           </div>
           <table className="w-full">
             <thead>
@@ -334,6 +388,68 @@ export default function SettingsPage() {
                 style={{ padding: '12px 32px', fontSize: 15, fontWeight: 600, borderRadius: 12, border: 'none', backgroundColor: '#1d1d1f', color: '#fff', cursor: 'pointer', opacity: (saving || !deptName.trim() || !deptCode.trim()) ? 0.4 : 1 }}
               >
                 {saving ? '저장 중...' : (editDept ? '수정' : '추가')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 사용자 추가 모달 — 로그인 페이지 스타일 */}
+      {showUserModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowUserModal(false)} />
+          <div style={{ position: 'relative', width: '100%', maxWidth: 480, backgroundColor: '#fff', borderRadius: 16, border: '1px solid #e5e5e7', padding: '40px 48px' }}>
+            <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8, color: '#1d1d1f' }}>사용자 추가</h2>
+            <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 32 }}>새로운 사용자 계정을 생성합니다.</p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>이름 *</label>
+                <input value={userName} onChange={(e) => setUserName(e.target.value)} placeholder="홍길동"
+                  style={{ width: '100%', height: 52, padding: '0 18px', fontSize: 15, borderRadius: 12, backgroundColor: '#f5f5f7', border: '1px solid #e5e5e7', color: '#1d1d1f', outline: 'none' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>이메일 *</label>
+                <input value={userEmail} onChange={(e) => setUserEmail(e.target.value)} placeholder="name@company.com" type="email"
+                  style={{ width: '100%', height: 52, padding: '0 18px', fontSize: 15, borderRadius: 12, backgroundColor: '#f5f5f7', border: '1px solid #e5e5e7', color: '#1d1d1f', outline: 'none', fontFamily: 'Verdana, sans-serif' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>비밀번호 *</label>
+                <input value={userPassword} onChange={(e) => setUserPassword(e.target.value)} placeholder="6자 이상" type="password"
+                  style={{ width: '100%', height: 52, padding: '0 18px', fontSize: 15, borderRadius: 12, backgroundColor: '#f5f5f7', border: '1px solid #e5e5e7', color: '#1d1d1f', outline: 'none' }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>부서</label>
+                  <select value={userDeptId} onChange={(e) => setUserDeptId(e.target.value)}
+                    style={{ width: '100%', height: 52, padding: '0 14px', fontSize: 15, borderRadius: 12, backgroundColor: '#f5f5f7', border: '1px solid #e5e5e7', color: '#1d1d1f', outline: 'none' }}>
+                    <option value="">미배정</option>
+                    {departments.filter((d) => d.is_active !== false).map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>역할</label>
+                  <select value={userRole} onChange={(e) => setUserRole(e.target.value)}
+                    style={{ width: '100%', height: 52, padding: '0 14px', fontSize: 15, borderRadius: 12, backgroundColor: '#f5f5f7', border: '1px solid #e5e5e7', color: '#1d1d1f', outline: 'none' }}>
+                    <option value="user">사용자</option>
+                    <option value="manager">매니저</option>
+                    <option value="admin">관리자</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 32 }}>
+              <button onClick={() => setShowUserModal(false)} className="hover:bg-[#f5f5f7] transition-colors"
+                style={{ padding: '12px 24px', fontSize: 15, fontWeight: 500, borderRadius: 12, border: 'none', backgroundColor: 'transparent', color: '#6e6e73', cursor: 'pointer' }}>
+                취소
+              </button>
+              <button onClick={saveUser} disabled={userSaving || !userName.trim() || !userEmail.trim() || !userPassword.trim()}
+                className="hover:bg-[#0071e3] transition-colors"
+                style={{ padding: '12px 32px', fontSize: 15, fontWeight: 600, borderRadius: 12, border: 'none', backgroundColor: '#1d1d1f', color: '#fff', cursor: 'pointer', opacity: (userSaving || !userName.trim() || !userEmail.trim() || !userPassword.trim()) ? 0.4 : 1 }}>
+                {userSaving ? '생성 중...' : '추가'}
               </button>
             </div>
           </div>
