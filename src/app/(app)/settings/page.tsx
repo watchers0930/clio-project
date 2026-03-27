@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Building2, Users, Plus, Pencil, Trash2, Shield, Loader2 } from 'lucide-react';
+import { Building2, Users, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Modal } from '@/components/ui/modal';
 
 /* ── types ── */
 interface Department {
@@ -278,34 +279,34 @@ export default function SettingsPage() {
       )}
 
       {/* 부서 추가/수정 모달 */}
-      {showDeptModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowDeptModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-semibold mb-4">{editDept ? '부서 수정' : '부서 추가'}</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">부서명 *</label>
-                <input value={deptName} onChange={(e) => setDeptName(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-[#e5e5e7] text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3]" placeholder="경영기획팀" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">코드 *</label>
-                <input value={deptCode} onChange={(e) => setDeptCode(e.target.value.toUpperCase())} className="w-full px-3 py-2 rounded-xl border border-[#e5e5e7] text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3] uppercase" placeholder="BIZ" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">설명</label>
-                <input value={deptDesc} onChange={(e) => setDeptDesc(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-[#e5e5e7] text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3]" placeholder="부서 설명" />
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setShowDeptModal(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-[#6e6e73] hover:bg-[#f5f5f7]">취소</button>
-              <button onClick={saveDept} disabled={saving || !deptName.trim() || !deptCode.trim()} className="px-4 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] disabled:opacity-40 transition-colors">
-                {saving ? '저장 중...' : (editDept ? '수정' : '추가')}
-              </button>
-            </div>
+      <Modal
+        open={showDeptModal}
+        onClose={() => setShowDeptModal(false)}
+        title={editDept ? '부서 수정' : '부서 추가'}
+        description={editDept ? '부서 정보를 수정합니다.' : '새로운 부서를 추가합니다.'}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-clio-text mb-1.5">부서명 *</label>
+            <input value={deptName} onChange={(e) => setDeptName(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-clio-border bg-clio-bg text-sm placeholder:text-clio-text-secondary focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent" placeholder="경영기획팀" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-clio-text mb-1.5">코드 *</label>
+            <input value={deptCode} onChange={(e) => setDeptCode(e.target.value.toUpperCase())} className="w-full px-3 py-2.5 rounded-xl border border-clio-border bg-clio-bg text-sm placeholder:text-clio-text-secondary focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent uppercase" placeholder="BIZ" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-clio-text mb-1.5">설명</label>
+            <input value={deptDesc} onChange={(e) => setDeptDesc(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-clio-border bg-clio-bg text-sm placeholder:text-clio-text-secondary focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent" placeholder="부서 설명을 입력하세요" />
           </div>
         </div>
-      )}
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-clio-border">
+          <button onClick={() => setShowDeptModal(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-clio-text-secondary hover:bg-clio-bg transition-colors">취소</button>
+          <button onClick={saveDept} disabled={saving || !deptName.trim() || !deptCode.trim()} className="px-4 py-2 rounded-xl bg-navy text-white text-sm font-medium hover:bg-accent disabled:opacity-40 transition-colors">
+            {saving ? '저장 중...' : (editDept ? '수정' : '추가')}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }
