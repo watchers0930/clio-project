@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: { ...dept, memberCount: 0 } }, { status: 201 });
   } catch {
-    return NextResponse.json({ success: false, error: '부서 생성 중 오류' }, { status: 500 });
+    return NextResponse.json({ success: false, error: '부서 생성 중 오류: ' + (err instanceof Error ? err.message : String(err)) }, { status: 500 });
   }
 }
 
