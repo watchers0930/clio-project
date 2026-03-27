@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Search, Bell, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -21,6 +21,14 @@ function Header({
   onMenuClick,
 }: HeaderProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('clio_user');
+      if (stored) setUser(JSON.parse(stored));
+    } catch {}
+  }, []);
 
   return (
     <header className="h-[64px] bg-white border-b border-border flex-shrink-0">
@@ -73,7 +81,7 @@ function Header({
               className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-page-bg transition-colors cursor-pointer"
             >
               <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-[13px] font-semibold text-primary">
-                김
+                {user?.name?.charAt(0) ?? '?'}
               </div>
             </button>
 
@@ -82,8 +90,8 @@ function Header({
                 <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
                 <div className="absolute right-0 top-full mt-2 w-52 rounded-xl border border-border bg-white shadow-lg z-50 py-2">
                   <div className="px-4 py-3 border-b border-border">
-                    <p className="text-[14px] font-semibold text-foreground">김관리</p>
-                    <p className="text-[12px] text-muted font-en">admin@clio.kr</p>
+                    <p className="text-[14px] font-semibold text-foreground">{user?.name ?? '사용자'}</p>
+                    <p className="text-[12px] text-muted font-en">{user?.email ?? ''}</p>
                   </div>
                   <Link href="/settings" className="block px-4 py-2.5 text-[14px] text-foreground hover:bg-page-bg transition-colors" onClick={() => setUserMenuOpen(false)}>
                     설정

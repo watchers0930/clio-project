@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -38,6 +39,14 @@ interface SidebarProps {
 
 function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const pathname = usePathname();
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('clio_user');
+      if (stored) setUser(JSON.parse(stored));
+    } catch {}
+  }, []);
 
   return (
     <aside
@@ -90,13 +99,13 @@ function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
           collapsed ? 'justify-center px-0' : ''
         )} style={collapsed ? undefined : { paddingLeft: 20, paddingRight: 12 }}>
           <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-[11px] font-semibold text-primary-light flex-shrink-0">
-            김
+            {user?.name?.charAt(0) ?? '?'}
           </div>
           {!collapsed && (
             <>
               <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-medium text-white truncate">김관리</p>
-                <p className="text-[10px] text-white/40 truncate">경영지원팀</p>
+                <p className="text-[12px] font-medium text-white truncate">{user?.name ?? '사용자'}</p>
+                <p className="text-[10px] text-white/40 truncate">{user?.email ?? ''}</p>
               </div>
               <button
                 onClick={onToggle}
