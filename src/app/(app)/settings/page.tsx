@@ -320,7 +320,7 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between px-6 py-4 border-b border-border">
             <h2 className="text-[16px] font-semibold">사용자 목록</h2>
             <button
-              onClick={openUserModal}
+              onClick={() => openUserModal()}
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors"
             >
               <Plus size={16} /> 사용자 추가
