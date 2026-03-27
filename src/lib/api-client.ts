@@ -89,7 +89,7 @@ class ApiClient {
     return this.request<FileRecord & { uploader_name?: string; department_name?: string }>(`/api/files/${id}`);
   }
 
-  async uploadFile(data: { name: string; original_name: string; mime_type: string; size: number; department_id: string; user_id?: string }) {
+  async uploadFile(data: { name: string; type?: string; size: number; department_id?: string }) {
     return this.request<FileRecord>('/api/files', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -129,7 +129,7 @@ class ApiClient {
     return this.request<Document & { author_name?: string; template_name?: string }>(`/api/documents/${id}`);
   }
 
-  async generateDocument(data: { template_id: string; title: string; content?: string; source_file_ids?: string[]; user_id?: string }) {
+  async generateDocument(data: { templateId: string; sourceFileIds?: string[]; instructions?: string; content?: string }) {
     return this.request<Document>('/api/documents', {
       method: 'POST',
       body: JSON.stringify(data),

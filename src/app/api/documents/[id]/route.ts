@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import type { ApiResponse, Document } from '@/lib/supabase/types';
+import type { ApiResponse } from '@/lib/supabase/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { documents, users, templates } from '@/lib/mock-data';
+import { getAuthUserId } from '@/lib/auth-helper';
 
 export async function GET(
   _request: NextRequest,
@@ -10,54 +10,35 @@ export async function GET(
   try {
     const { id } = await params;
 
-    /* ── Supabase 연동 ── */
     const supabase = await createServerSupabaseClient();
-    if (supabase) {
-      const { data, error } = await supabase
-        .from('documents')
-        .select('*, templates:template_id(name)')
-        .eq('id', id)
-        .single();
-
-      if (error || !data) {
-        return NextResponse.json<ApiResponse>(
-          { success: false, error: '문서를 찾을 수 없습니다.' },
-          { status: 404 },
-        );
-      }
-
-      const { templates: tmplJoin, ...docData } = data as Record<string, unknown>;
-      const tmpl = tmplJoin as { name: string } | null;
-
-      return NextResponse.json<ApiResponse>({
-        success: true,
-        data: {
-          ...docData,
-          template_name: tmpl?.name,
-        },
-      });
+    if (!supabase) {
+      return NextResponse.json<ApiResponse>({ success: false, error: '데이터베이스가 설정되지 않았습니다.' }, { status: 503 });
     }
 
-    /* ── 폴백: mock 데이터 ── */
-    const doc = documents.find((d) => d.id === id);
+    const authUserId = await getAuthUserId(supabase);
+    if (!authUserId) {
+      return NextResponse.json<ApiResponse>({ success: false, error: '인증이 필요합니다.' }, { status: 401 });
+    }
 
-    if (!doc) {
+    const { data, error } = await supabase
+      .from('documents')
+      .select('*, templates:template_id(name)')
+      .eq('id', id)
+      .single();
+
+    if (error || !data) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: '문서를 찾을 수 없습니다.' },
         { status: 404 },
       );
     }
 
-    const author = users.find((u) => u.id === doc.user_id);
-    const template = templates.find((t) => t.id === doc.template_id);
+    const { templates: tmplJoin, ...docData } = data as Record<string, unknown>;
+    const tmpl = tmplJoin as { name: string } | null;
 
-    return NextResponse.json<ApiResponse<Document & { author_name?: string; template_name?: string }>>({
+    return NextResponse.json<ApiResponse>({
       success: true,
-      data: {
-        ...doc,
-        author_name: author?.name,
-        template_name: template?.name,
-      },
+      data: { ...docData, template_name: tmpl?.name },
     });
   } catch {
     return NextResponse.json<ApiResponse>(
@@ -68,37 +49,35 @@ export async function GET(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
 
-    /* ── Supabase 연동 ── */
     const supabase = await createServerSupabaseClient();
-    if (supabase) {
-      const { error } = await supabase
-        .from('documents')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      // audit_logs 기록 (실패해도 무시)
-      try {
-        await supabase.from('audit_logs').insert({
-          user_id: 'user-1',
-          action: 'document.delete',
-          target_type: 'document',
-          target_id: id,
-          details: {},
-        } as Record<string, unknown>);
-      } catch { /* audit 실패는 무시 */ }
-
-      return NextResponse.json<ApiResponse>({ success: true, data: { id } });
+    if (!supabase) {
+      return NextResponse.json<ApiResponse>({ success: false, error: '데이터베이스가 설정되지 않았습니다.' }, { status: 503 });
     }
 
-    /* ── 폴백 ── */
+    const authUserId = await getAuthUserId(supabase);
+
+    const { error } = await supabase.from('documents').delete().eq('id', id);
+    if (error) {
+      console.error('[documents/[id]/DELETE]', error.message);
+      return NextResponse.json<ApiResponse>({ success: false, error: '문서 삭제에 실패했습니다.' }, { status: 500 });
+    }
+
+    if (authUserId) {
+      await supabase.from('audit_logs').insert({
+        user_id: authUserId,
+        action: 'document.delete',
+        target_type: 'document',
+        target_id: id,
+        details: {},
+      }).catch(() => {});
+    }
+
     return NextResponse.json<ApiResponse>({ success: true, data: { id } });
   } catch {
     return NextResponse.json<ApiResponse>(

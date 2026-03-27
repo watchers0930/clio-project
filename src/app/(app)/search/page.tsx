@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 /* ────────────────────────── types ────────────────────────── */
 interface SearchResult {
@@ -15,9 +15,6 @@ interface SearchResult {
 }
 
 /* ────────────────────────── constants ────────────────────── */
-const SUGGESTIONS = ['최근 회의록', '계약서 템플릿', '분기 보고서', '인사 관련 문서', '프로젝트 현황', '마케팅 전략', '예산', '채용'];
-
-const DEPARTMENTS = ['전체', '경영지원팀', '총무팀', '개발팀', '마케팅팀', '인사팀'];
 const FILE_TYPES = ['전체', 'PDF', 'DOCX', 'PPTX', 'XLSX', 'MD', 'M4A'];
 const SORT_OPTIONS = ['관련도순', '최신순', '오래된순', '이름순'];
 
@@ -37,9 +34,28 @@ export default function SearchPage() {
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [department, setDepartment] = useState('전체');
+  const [departments, setDepartments] = useState<string[]>(['전체']);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [fileType, setFileType] = useState('전체');
   const [sort, setSort] = useState('관련도순');
   const [expandedSummary, setExpandedSummary] = useState<string | null>(null);
+
+  // 부서 목록 + 검색 제안어를 API에서 로드
+  useEffect(() => {
+    fetch('/api/departments').then(r => r.json()).then(json => {
+      const names = (json.data ?? [])
+        .filter((d: { is_active: boolean }) => d.is_active !== false)
+        .map((d: { name: string }) => d.name);
+      setDepartments(['전체', ...names]);
+    }).catch(() => {});
+    // 최근 템플릿명을 검색 제안어로 사용
+    fetch('/api/templates').then(r => r.json()).then(json => {
+      const names = (json.templates ?? []).map((t: { name: string }) => t.name);
+      setSuggestions(names.length > 0 ? names : ['회의록', '보고서', '계약서', '제안서', '공문']);
+    }).catch(() => {
+      setSuggestions(['회의록', '보고서', '계약서', '제안서', '공문']);
+    });
+  }, []);
 
   const doSearch = useCallback(
     async (q: string) => {
@@ -82,12 +98,12 @@ export default function SearchPage() {
     }
   });
 
-  // Re-search when filters change (if already searched)
-  const handleFilterChange = (setter: (v: string) => void, value: string) => {
-    setter(value);
-    // We trigger a new search on next render via effect-like approach
-    // Instead, call doSearch directly after state updates
-  };
+  // 필터 변경 시 자동 재검색
+  useEffect(() => {
+    if (searched && query.trim()) {
+      doSearch(query);
+    }
+  }, [department, fileType]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }} className="pb-10">
@@ -127,27 +143,17 @@ export default function SearchPage() {
       <div className="flex flex-wrap items-center" style={{ gap: 12 }}>
         <select
           value={department}
-          onChange={(e) => {
-            setDepartment(e.target.value);
-            if (searched && query.trim()) {
-              setTimeout(() => doSearch(query), 0);
-            }
-          }}
+          onChange={(e) => setDepartment(e.target.value)}
           className="rounded-xl border border-[#e5e5e7] bg-white text-[14px] text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3]"
           style={{ padding: '8px 16px' }}
         >
-          {DEPARTMENTS.map((d) => (
+          {departments.map((d) => (
             <option key={d}>{d}</option>
           ))}
         </select>
         <select
           value={fileType}
-          onChange={(e) => {
-            setFileType(e.target.value);
-            if (searched && query.trim()) {
-              setTimeout(() => doSearch(query), 0);
-            }
-          }}
+          onChange={(e) => setFileType(e.target.value)}
           className="rounded-xl border border-[#e5e5e7] bg-white text-[14px] text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3]"
           style={{ padding: '8px 16px' }}
         >
@@ -160,7 +166,7 @@ export default function SearchPage() {
       {/* ── suggestions ── */}
       {!searched && (
         <div className="flex flex-wrap" style={{ gap: 8 }}>
-          {SUGGESTIONS.map((s) => (
+          {suggestions.map((s) => (
             <button
               key={s}
               onClick={() => {

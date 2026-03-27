@@ -22,44 +22,7 @@ interface Message {
   attachment?: { name: string; size: string };
 }
 
-/* ────────────────────────── mock ─────────────────────────── */
-const MOCK_CHANNELS: Channel[] = [
-  { id: 'c1', name: '경영기획팀', type: 'department', unread: 3, lastMessage: '내일 보고서 마감입니다' },
-  { id: 'c2', name: '개발팀', type: 'department', unread: 0, lastMessage: '배포 완료했습니다' },
-  { id: 'c3', name: '마케팅팀', type: 'department', unread: 1, lastMessage: '캠페인 결과 공유드립니다' },
-  { id: 'c4', name: '인사팀', type: 'department', unread: 0, lastMessage: '면접 일정 확인 부탁드립니다' },
-  { id: 'c5', name: '법무팀', type: 'department', unread: 0, lastMessage: '계약서 검토 완료' },
-  { id: 'd1', name: '김민수', type: 'dm', unread: 2, lastMessage: '보고서 파일 보내드렸습니다', avatar: '김' },
-  { id: 'd2', name: '이지은', type: 'dm', unread: 0, lastMessage: '감사합니다!', avatar: '이' },
-  { id: 'd3', name: '박준형', type: 'dm', unread: 1, lastMessage: '미팅 시간 변경 가능할까요?', avatar: '박' },
-];
-
-const MOCK_MESSAGES: Record<string, Message[]> = {
-  c1: [
-    { id: 'm1', sender: '김민수', avatar: '김', content: '안녕하세요, 1분기 실적보고서 초안을 공유합니다.', time: '오전 9:30', isOwn: false },
-    { id: 'm2', sender: '김관리', avatar: '관', content: '감사합니다. 확인 후 피드백 드리겠습니다.', time: '오전 9:35', isOwn: true },
-    { id: 'm3', sender: '이지은', avatar: '이', content: '저도 검토해 보겠습니다. 마케팅 파트는 제가 수정할게요.', time: '오전 10:00', isOwn: false },
-    { id: 'm4', sender: '김민수', avatar: '김', content: '네, 내일 보고서 마감입니다. 오늘 중으로 최종 확인 부탁드립니다.', time: '오전 10:15', isOwn: false },
-    { id: 'm5', sender: '김관리', avatar: '관', content: '알겠습니다. 오후 3시까지 최종본 공유하겠습니다.', time: '오전 10:20', isOwn: true },
-  ],
-  c2: [
-    { id: 'm6', sender: '박준형', avatar: '박', content: 'v2.1.0 배포 완료했습니다. 테스트 부탁드립니다.', time: '오후 2:00', isOwn: false },
-    { id: 'm7', sender: '김관리', avatar: '관', content: '수고하셨습니다! 바로 확인하겠습니다.', time: '오후 2:05', isOwn: true },
-  ],
-  c3: [
-    { id: 'm8', sender: '강마케', avatar: '강', content: 'Q1 캠페인 결과 리포트입니다.', time: '오전 11:00', isOwn: false, attachment: { name: 'Q1_캠페인_결과.pdf', size: '3.2 MB' } },
-    { id: 'm9', sender: '김관리', avatar: '관', content: '확인하겠습니다. 수고하셨어요!', time: '오전 11:30', isOwn: true },
-  ],
-  d1: [
-    { id: 'm10', sender: '김민수', avatar: '김', content: '보고서 파일 보내드렸습니다. 확인 부탁드립니다.', time: '오후 1:00', isOwn: false, attachment: { name: '실적보고서_초안.docx', size: '1.8 MB' } },
-    { id: 'm11', sender: '김관리', avatar: '관', content: '감사합니다. 확인하겠습니다.', time: '오후 1:15', isOwn: true },
-  ],
-  d3: [
-    { id: 'm12', sender: '박준형', avatar: '박', content: '내일 미팅 시간 변경 가능할까요? 2시에서 3시로요.', time: '오후 4:00', isOwn: false },
-  ],
-};
-
-const CURRENT_USER = '김관리';
+/* ────────────────────────── (mock data removed, using API) ── */
 
 /* ────────────────────────── page ─────────────────────────── */
 export default function MessagesPage() {
@@ -79,18 +42,20 @@ export default function MessagesPage() {
       try {
         const res = await fetch('/api/messages/channels');
         if (res.ok) {
-          const data = await res.json();
-          setChannels(data.channels ?? MOCK_CHANNELS);
-        } else throw new Error();
-      } catch {
-        setChannels(MOCK_CHANNELS);
-      } finally {
-        setLoading(false);
-      }
+          const json = await res.json();
+          const apiChannels = (json.data ?? []).map((c: { id: string; name: string; type: string }) => ({
+            id: c.id,
+            name: c.name,
+            type: c.type === 'direct' ? 'dm' as const : 'department' as const,
+            unread: 0,
+            lastMessage: '',
+          }));
+          setChannels(apiChannels);
+        }
+      } catch { /* ignore */ }
+      finally { setLoading(false); }
     }
     load();
-    // Pre-load all mock messages
-    setMessagesMap({ ...MOCK_MESSAGES });
   }, []);
 
   const messages = activeChannel ? (messagesMap[activeChannel] ?? []) : [];
@@ -99,36 +64,68 @@ export default function MessagesPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const openChannel = (channelId: string) => {
+  const openChannel = async (channelId: string) => {
     setActiveChannel(channelId);
     setShowSidebar(false);
-    // Decrease unread to 0 for this channel
     setChannels((prev) =>
       prev.map((c) => (c.id === channelId ? { ...c, unread: 0 } : c))
     );
+
+    // API에서 메시지 로드
+    if (!messagesMap[channelId]) {
+      try {
+        const res = await fetch(`/api/messages/channels/${channelId}`);
+        if (res.ok) {
+          const json = await res.json();
+          const currentUser = JSON.parse(localStorage.getItem('clio_user') ?? '{}');
+          const apiMsgs = (json.data ?? []).map((m: { id: string; userId: string; userName: string; content: string; createdAt: string }) => ({
+            id: m.id,
+            sender: m.userName,
+            avatar: m.userName?.charAt(0) ?? '?',
+            content: m.content,
+            time: new Date(m.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+            isOwn: m.userId === currentUser?.id,
+          }));
+          setMessagesMap((prev) => ({ ...prev, [channelId]: apiMsgs }));
+        }
+      } catch { /* ignore */ }
+    }
   };
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (!input.trim() || !activeChannel) return;
+    const content = input.trim();
+    setInput('');
+
     const now = new Date();
     const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-    const newMsg: Message = {
+    const currentUser = JSON.parse(localStorage.getItem('clio_user') ?? '{}');
+
+    // 낙관적 업데이트
+    const tempMsg: Message = {
       id: `m_${Date.now()}`,
-      sender: CURRENT_USER,
-      avatar: '관',
-      content: input.trim(),
+      sender: currentUser?.name ?? '나',
+      avatar: (currentUser?.name ?? '나').charAt(0),
+      content,
       time: timeStr,
       isOwn: true,
     };
     setMessagesMap((prev) => ({
       ...prev,
-      [activeChannel]: [...(prev[activeChannel] ?? []), newMsg],
+      [activeChannel]: [...(prev[activeChannel] ?? []), tempMsg],
     }));
-    // Update last message in channel
     setChannels((prev) =>
-      prev.map((c) => (c.id === activeChannel ? { ...c, lastMessage: input.trim() } : c))
+      prev.map((c) => (c.id === activeChannel ? { ...c, lastMessage: content } : c))
     );
-    setInput('');
+
+    // API 전송
+    try {
+      await fetch('/api/messages/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelId: activeChannel, content }),
+      });
+    } catch { /* 낙관적 업데이트 유지 */ }
   };
 
   const handleAttachFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -139,10 +136,12 @@ export default function MessagesPage() {
     const sizeStr = file.size < 1024 * 1024
       ? `${(file.size / 1024).toFixed(0)} KB`
       : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+    const currentUser = JSON.parse(localStorage.getItem('clio_user') ?? '{}');
+    const userName = currentUser?.name ?? '나';
     const newMsg: Message = {
       id: `m_${Date.now()}`,
-      sender: CURRENT_USER,
-      avatar: '관',
+      sender: userName,
+      avatar: userName.charAt(0),
       content: `파일을 공유했습니다.`,
       time: timeStr,
       isOwn: true,

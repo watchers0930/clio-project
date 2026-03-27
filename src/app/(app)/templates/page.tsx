@@ -16,19 +16,14 @@ interface Template {
   placeholders: string[];
 }
 
-const DEPARTMENTS = [
-  { id: 'dept-1', name: '경영지원팀' },
-  { id: 'dept-2', name: '총무팀' },
-  { id: 'dept-3', name: '개발팀' },
-  { id: 'dept-4', name: '마케팅팀' },
-  { id: 'dept-5', name: '인사팀' },
-];
+/* DEPARTMENTS: API에서 동적 로드 */
 
 const ICON_OPTIONS = ['📊', '📝', '💡', '📋', '📈', '✉️', '👥', '🎯', '📄', '🔧', '🗂️', '📌'];
 
 /* ────────────────────────── page ─────────────────────────── */
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [deptList, setDeptList] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'전사 공용' | '부서 전용'>('전사 공용');
 
@@ -37,7 +32,7 @@ export default function TemplatesPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [formName, setFormName] = useState('');
   const [formDescription, setFormDescription] = useState('');
-  const [formDepartmentId, setFormDepartmentId] = useState('dept-1');
+  const [formDepartmentId, setFormDepartmentId] = useState('');
   const [formScope, setFormScope] = useState<'전사 공용' | '부서 전용'>('전사 공용');
   const [formIcon, setFormIcon] = useState('📄');
   const [saving, setSaving] = useState(false);
@@ -72,6 +67,14 @@ export default function TemplatesPage() {
 
   useEffect(() => {
     loadTemplates();
+    // 부서 목록 로드
+    fetch('/api/departments').then(r => r.json()).then(json => {
+      const depts = (json.data ?? [])
+        .filter((d: { is_active: boolean }) => d.is_active !== false)
+        .map((d: { id: string; name: string }) => ({ id: d.id, name: d.name }));
+      setDeptList(depts);
+      if (depts.length > 0 && !formDepartmentId) setFormDepartmentId(depts[0].id);
+    }).catch(() => {});
   }, [loadTemplates]);
 
   function getIconForName(name: string): string {
@@ -92,7 +95,7 @@ export default function TemplatesPage() {
     setEditId(null);
     setFormName('');
     setFormDescription('');
-    setFormDepartmentId('dept-1');
+    setFormDepartmentId(deptList[0]?.id ?? '');
     setFormScope('전사 공용');
     setFormIcon('📄');
     setSaving(false);
@@ -377,7 +380,7 @@ export default function TemplatesPage() {
                   onChange={(e) => setFormDepartmentId(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3]"
                 >
-                  {DEPARTMENTS.map((d) => (
+                  {deptList.map((d) => (
                     <option key={d.id} value={d.id}>{d.name}</option>
                   ))}
                 </select>

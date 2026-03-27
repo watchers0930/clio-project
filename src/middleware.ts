@@ -22,17 +22,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 개발 환경에서는 인증 건너뛰기
-  if (process.env.NODE_ENV === 'development') {
-    return NextResponse.next();
-  }
-
   // Supabase 세션 갱신 시도
   const result = await updateSession(request);
 
-  // Supabase 미설정 시 mock 모드 — 모든 접근 허용
+  // Supabase 미설정 시 로그인 페이지로 리다이렉트
   if (!result) {
-    return NextResponse.next();
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = '/login';
+    return NextResponse.redirect(loginUrl);
   }
 
   const { user, response } = result;

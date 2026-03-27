@@ -113,6 +113,7 @@ export interface DbMessage {
   content: string;
   attachment_name: string | null;
   attachment_size: string | null;
+  document_id: string | null;
   created_at: string;
 }
 
@@ -197,8 +198,8 @@ export interface Database {
       };
       messages: {
         Row: DbMessage;
-        Insert: { id?: string; channel_id: string; sender_id?: string | null; content: string; attachment_name?: string | null; attachment_size?: string | null; created_at?: string };
-        Update: { content?: string; attachment_name?: string | null; attachment_size?: string | null };
+        Insert: { id?: string; channel_id: string; sender_id?: string | null; content: string; attachment_name?: string | null; attachment_size?: string | null; document_id?: string | null; created_at?: string };
+        Update: { content?: string; attachment_name?: string | null; attachment_size?: string | null; document_id?: string | null };
         Relationships: [];
       };
       audit_logs: {
@@ -209,7 +210,12 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      match_file_chunks: {
+        Args: { query_embedding: string; match_count: number; match_threshold: number };
+        Returns: { id: string; file_id: string; content: string; chunk_index: number; token_count: number; similarity: number }[];
+      };
+    };
   };
 }
 
@@ -340,6 +346,7 @@ export interface Message {
   content: string;
   attachment_name?: string | null;
   attachment_size?: string | null;
+  document_id?: string | null;
   is_read?: boolean;
   created_at: string;
 }

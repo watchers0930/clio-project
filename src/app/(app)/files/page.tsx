@@ -15,23 +15,7 @@ interface FileItem {
   status: '완료' | '처리중' | '오류';
 }
 
-/* ────────────────────────── mock data ────────────────────── */
-const MOCK_FILES: FileItem[] = [
-  { id: '1', name: '2026년 1분기 실적보고서.pdf', type: 'PDF', department: '경영기획팀', size: '2.4 MB', uploadDate: '2026-03-25', status: '완료' },
-  { id: '2', name: '프로젝트 제안서_v3.docx', type: 'DOCX', department: '개발팀', size: '1.8 MB', uploadDate: '2026-03-25', status: '완료' },
-  { id: '3', name: '3월 회의록.md', type: 'MD', department: '인사팀', size: '256 KB', uploadDate: '2026-03-24', status: '처리중' },
-  { id: '4', name: '계약서_최종.pdf', type: 'PDF', department: '법무팀', size: '3.1 MB', uploadDate: '2026-03-24', status: '완료' },
-  { id: '5', name: '마케팅 전략 보고서.pptx', type: 'PPTX', department: '마케팅팀', size: '5.6 MB', uploadDate: '2026-03-23', status: '오류' },
-  { id: '6', name: '급여 명세서_3월.xlsx', type: 'XLSX', department: '인사팀', size: '890 KB', uploadDate: '2026-03-23', status: '완료' },
-  { id: '7', name: '제품 스펙 문서.pdf', type: 'PDF', department: '개발팀', size: '4.2 MB', uploadDate: '2026-03-22', status: '완료' },
-  { id: '8', name: '고객 분석 리포트.pptx', type: 'PPTX', department: '마케팅팀', size: '7.3 MB', uploadDate: '2026-03-22', status: '완료' },
-  { id: '9', name: 'NDA 계약서_A사.pdf', type: 'PDF', department: '법무팀', size: '1.2 MB', uploadDate: '2026-03-21', status: '완료' },
-  { id: '10', name: '시스템 아키텍처 설계서.md', type: 'MD', department: '개발팀', size: '340 KB', uploadDate: '2026-03-21', status: '처리중' },
-  { id: '11', name: '회사 규정집_2026.pdf', type: 'PDF', department: '인사팀', size: '8.1 MB', uploadDate: '2026-03-20', status: '완료' },
-  { id: '12', name: '브랜드 가이드라인.pptx', type: 'PPTX', department: '마케팅팀', size: '12.4 MB', uploadDate: '2026-03-19', status: '완료' },
-];
-
-const DEPARTMENTS = ['전체', '경영기획팀', '개발팀', '마케팅팀', '인사팀', '법무팀'];
+/* ────────────────────────── constants ────────────────────── */
 const TYPES = ['전체', 'PDF', 'DOCX', 'PPTX', 'XLSX', 'MD'];
 const STATUSES = ['전체', '완료', '처리중', '오류'];
 
@@ -91,6 +75,7 @@ function FilesPage() {
   const router = useRouter();
 
   const [files, setFiles] = useState<FileItem[]>([]);
+  const [departments, setDepartments] = useState<string[]>(['전체']);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'list' | 'grid'>('list');
   const [search, setSearch] = useState('');
@@ -118,13 +103,23 @@ function FilesPage() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('/api/files');
-        if (res.ok) {
-          const data = await res.json();
-          setFiles(data.files ?? MOCK_FILES);
-        } else throw new Error();
+        const [filesRes, deptsRes] = await Promise.all([
+          fetch('/api/files'),
+          fetch('/api/departments'),
+        ]);
+        if (filesRes.ok) {
+          const data = await filesRes.json();
+          setFiles(data.files ?? []);
+        }
+        if (deptsRes.ok) {
+          const data = await deptsRes.json();
+          const deptNames = (data.data ?? [])
+            .filter((d: { is_active: boolean }) => d.is_active !== false)
+            .map((d: { name: string }) => d.name);
+          setDepartments(['전체', ...deptNames]);
+        }
       } catch {
-        setFiles(MOCK_FILES);
+        setFiles([]);
       } finally {
         setLoading(false);
       }
@@ -181,32 +176,36 @@ function FilesPage() {
     if (file) handleFileSelect(file);
   };
 
-  const simulateUpload = () => {
+  const simulateUpload = async () => {
     if (!selectedFile) return;
-    setUploadProgress(0);
-    const iv = setInterval(() => {
-      setUploadProgress((p) => {
-        if (p === null || p >= 100) {
-          clearInterval(iv);
-          return 100;
-        }
-        return Math.min(p + 12, 100);
-      });
-    }, 250);
+    setUploadProgress(10);
 
-    // After ~2.5s, add file to list
-    setTimeout(() => {
-      const newFile: FileItem = {
-        id: `new-${Date.now()}`,
-        name: selectedFile.name,
-        type: getFileType(selectedFile.name),
-        department: '경영기획팀',
-        size: formatFileSize(selectedFile.size),
-        sizeBytes: selectedFile.size,
-        uploadDate: new Date().toISOString().split('T')[0],
-        status: '완료',
-      };
-      setFiles((prev) => [newFile, ...prev]);
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      setUploadProgress(40);
+
+      const res = await fetch('/api/files', {
+        method: 'POST',
+        body: formData,
+      });
+
+      setUploadProgress(80);
+
+      if (!res.ok) {
+        throw new Error('업로드 실패');
+      }
+
+      setUploadProgress(100);
+
+      // 파일 목록 갱신
+      const listRes = await fetch('/api/files');
+      if (listRes.ok) {
+        const data = await listRes.json();
+        setFiles(data.files ?? []);
+      }
+
       setTimeout(() => {
         setUploadProgress(null);
         setShowUpload(false);
@@ -214,21 +213,27 @@ function FilesPage() {
         setPage(1);
         if (fileInputRef.current) fileInputRef.current.value = '';
       }, 600);
-    }, 2800);
+    } catch {
+      setUploadProgress(null);
+      alert('파일 업로드에 실패했습니다.');
+    }
   };
 
   const handleDelete = (file: FileItem) => {
     setDeleteConfirm(file);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteConfirm) return;
-    setFiles((prev) => prev.filter((f) => f.id !== deleteConfirm.id));
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      next.delete(deleteConfirm.id);
-      return next;
-    });
+    try {
+      await fetch(`/api/files/${deleteConfirm.id}`, { method: 'DELETE' });
+      setFiles((prev) => prev.filter((f) => f.id !== deleteConfirm.id));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(deleteConfirm.id);
+        return next;
+      });
+    } catch { /* ignore */ }
     setDeleteConfirm(null);
   };
 
@@ -304,7 +309,7 @@ function FilesPage() {
           />
         </div>
         <select value={deptFilter} onChange={(e) => { setDeptFilter(e.target.value); setPage(1); }} className="px-3 py-2.5 rounded-xl border border-[#e5e5e7] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3]">
-          {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
+          {departments.map((d) => <option key={d}>{d}</option>)}
         </select>
         <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }} className="px-3 py-2.5 rounded-xl border border-[#e5e5e7] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3]">
           {TYPES.map((t) => <option key={t}>{t}</option>)}

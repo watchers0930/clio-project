@@ -22,7 +22,6 @@ interface Template {
 interface SourceFile {
   id: string;
   name: string;
-  original_name: string;
 }
 
 const statusColor: Record<string, string> = {
@@ -99,8 +98,7 @@ export default function DocumentsPage() {
         setSourceFiles(
           fileData.map((f: Record<string, unknown>) => ({
             id: f.id as string,
-            name: f.name as string,
-            original_name: f.original_name as string,
+            name: (f.name as string) ?? '',
           }))
         );
       }
@@ -396,7 +394,7 @@ export default function DocumentsPage() {
                       <svg className="w-5 h-5 text-[#6e6e73] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                       </svg>
-                      <span className="text-sm text-[#1d1d1f] truncate">{f.original_name}</span>
+                      <span className="text-sm text-[#1d1d1f] truncate">{f.name}</span>
                     </label>
                   ))}
                 </div>

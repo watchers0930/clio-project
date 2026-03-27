@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { templates as mockTemplates, departments } from '@/lib/mock-data';
-
-// Supabase 미설정 시 세션 내 임시 저장용
-let sessionTemplates = [...mockTemplates];
+import { getAuthUserId } from '@/lib/auth-helper';
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,74 +8,46 @@ export async function GET(request: NextRequest) {
     const departmentId = searchParams.get('department_id');
     const type = searchParams.get('type');
 
-    /* ── Supabase 연동 ── */
     const supabase = await createServerSupabaseClient();
-    if (supabase) {
-      let query = supabase
-        .from('templates')
-        .select('*, departments:department_id(name)');
-
-      if (departmentId) {
-        query = query.eq('department_id', departmentId);
-      }
-      // scope 또는 type 필터
-      if (type) {
-        // DB 스키마: scope 컬럼 / 레거시: type 컬럼
-        query = query.or(`scope.eq.${type},type.eq.${type}`);
-      }
-
-      const { data: rows, error } = await query;
-      if (error) throw error;
-
-      const tplList = (rows ?? []).map((t) => {
-        const deptJoin = (t as Record<string, unknown>).departments as { name: string } | null;
-        // content가 문자열이면 placeholders는 별도 필드, 객체면 레거시 형태
-        const placeholders = Array.isArray(t.placeholders)
-          ? t.placeholders
-          : typeof t.content === 'object' && t.content !== null
-            ? (t.content as { placeholders?: string[] }).placeholders ?? []
-            : [];
-        return {
-          id: t.id,
-          name: t.name,
-          description: t.description,
-          department: deptJoin?.name ?? '전사',
-          departmentId: t.department_id,
-          scope: (t.scope ?? t.type) === 'company' ? '전사 공용' : '부서 전용',
-          placeholders,
-          lastUpdated: t.updated_at.split('T')[0],
-          usageCount: 0, // TODO: 실사용 집계
-        };
-      });
-
-      return NextResponse.json({ templates: tplList });
+    if (!supabase) {
+      return NextResponse.json({ templates: [], error: '데이터베이스가 설정되지 않았습니다.' }, { status: 503 });
     }
 
-    /* ── 폴백: mock 데이터 ── */
-    let filtered = sessionTemplates.filter((t) => t.is_active);
+    const authUserId = await getAuthUserId(supabase);
+    if (!authUserId) {
+      return NextResponse.json({ templates: [], error: '인증이 필요합니다.' }, { status: 401 });
+    }
+
+    let query = supabase
+      .from('templates')
+      .select('*, departments:department_id(name)');
 
     if (departmentId) {
-      filtered = filtered.filter((t) => t.department_id === departmentId);
+      query = query.eq('department_id', departmentId);
     }
     if (type) {
-      filtered = filtered.filter((t) => t.type === type);
+      query = query.eq('scope', type);
     }
 
-    const tplList = filtered.map((t) => {
-      const dept = departments.find((d) => d.id === t.department_id);
-      const placeholders = typeof t.content === 'object' && t.content !== null
-        ? (t.content as { placeholders?: string[] }).placeholders ?? []
-        : [];
+    const { data: rows, error } = await query;
+    if (error) {
+      console.error('[templates/GET]', error.message);
+      return NextResponse.json({ templates: [], error: '템플릿 목록 조회 중 오류가 발생했습니다.' }, { status: 500 });
+    }
+
+    const tplList = (rows ?? []).map((t) => {
+      const deptJoin = (t as Record<string, unknown>).departments as { name: string } | null;
+      const placeholders = Array.isArray(t.placeholders) ? t.placeholders : [];
       return {
         id: t.id,
         name: t.name,
         description: t.description,
-        department: dept?.name ?? '전사',
+        department: deptJoin?.name ?? '전사',
         departmentId: t.department_id,
-        scope: t.type === 'company' ? '전사 공용' : '부서 전용',
+        scope: t.scope === 'company' ? '전사 공용' : '부서 전용',
         placeholders,
         lastUpdated: t.updated_at.split('T')[0],
-        usageCount: Math.floor(Math.random() * 80) + 10,
+        usageCount: 0,
       };
     });
 
@@ -97,67 +66,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '이름을 입력해주세요.' }, { status: 400 });
     }
 
-    const scopeValue = scope === '부서 전용' ? 'department' : 'company';
-    const deptId = departmentId || 'dept-1';
-
-    /* ── Supabase 연동 ── */
     const supabase = await createServerSupabaseClient();
-    if (supabase) {
-      const { data: newTmpl, error } = await supabase.from('templates').insert({
-        name,
-        description: description ?? '',
-        department_id: deptId,
-        scope: scopeValue,
-        content: '',
-        placeholders: [],
-      } as Record<string, unknown>).select('*, departments:department_id(name)').single();
-
-      if (error) throw error;
-
-      const deptJoin = (newTmpl as Record<string, unknown>).departments as { name: string } | null;
-
-      return NextResponse.json({
-        template: {
-          id: newTmpl.id,
-          name: newTmpl.name,
-          description: newTmpl.description,
-          department: deptJoin?.name ?? '전사',
-          departmentId: newTmpl.department_id,
-          scope: scope ?? '전사 공용',
-          placeholders: [],
-          lastUpdated: newTmpl.updated_at.split('T')[0],
-          usageCount: 0,
-        },
-      }, { status: 201 });
+    if (!supabase) {
+      return NextResponse.json({ error: '데이터베이스가 설정되지 않았습니다.' }, { status: 503 });
     }
 
-    /* ── 폴백: mock ── */
-    const dept = departments.find((d) => d.id === deptId);
-    const now = new Date().toISOString();
-    const newTemplate = {
-      id: `tmpl-${Date.now()}`,
+    const scopeValue = scope === '부서 전용' ? 'department' : 'company';
+
+    const { data: newTmpl, error } = await supabase.from('templates').insert({
       name,
       description: description ?? '',
-      department_id: deptId,
-      type: scopeValue as 'department' | 'company',
-      content: { placeholders: [] as string[], structure: {} },
-      is_active: true,
-      created_at: now,
-      updated_at: now,
-    };
+      department_id: departmentId || null,
+      scope: scopeValue,
+      content: '',
+      placeholders: [],
+    }).select('*, departments:department_id(name)').single();
 
-    sessionTemplates.push(newTemplate);
+    if (error) {
+      console.error('[templates/POST]', error.message);
+      return NextResponse.json({ error: '템플릿 생성에 실패했습니다.' }, { status: 500 });
+    }
+
+    const deptJoin = (newTmpl as Record<string, unknown>).departments as { name: string } | null;
 
     return NextResponse.json({
       template: {
-        id: newTemplate.id,
-        name: newTemplate.name,
-        description: newTemplate.description,
-        department: dept?.name ?? '전사',
-        departmentId: newTemplate.department_id,
+        id: newTmpl.id,
+        name: newTmpl.name,
+        description: newTmpl.description,
+        department: deptJoin?.name ?? '전사',
+        departmentId: newTmpl.department_id,
         scope: scope ?? '전사 공용',
         placeholders: [],
-        lastUpdated: now.split('T')[0],
+        lastUpdated: newTmpl.updated_at.split('T')[0],
         usageCount: 0,
       },
     }, { status: 201 });
@@ -175,76 +116,43 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'ID가 필요합니다.' }, { status: 400 });
     }
 
-    /* ── Supabase 연동 ── */
     const supabase = await createServerSupabaseClient();
-    if (supabase) {
-      const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
-      if (name !== undefined) updateData.name = name;
-      if (description !== undefined) updateData.description = description;
-      if (departmentId !== undefined) updateData.department_id = departmentId;
-      if (scope !== undefined) updateData.scope = scope === '부서 전용' ? 'department' : 'company';
-
-      const { data, error } = await supabase
-        .from('templates')
-        .update(updateData)
-        .eq('id', id)
-        .select('*, departments:department_id(name)')
-        .single();
-
-      if (error) throw error;
-
-      const deptJoin = (data as Record<string, unknown>).departments as { name: string } | null;
-      const placeholders = Array.isArray(data.placeholders)
-        ? data.placeholders
-        : typeof data.content === 'object' && data.content !== null
-          ? ((data.content as Record<string, unknown>).placeholders as string[] ?? [])
-          : [];
-
-      return NextResponse.json({
-        template: {
-          id: data.id,
-          name: data.name,
-          description: data.description,
-          department: deptJoin?.name ?? '전사',
-          departmentId: data.department_id,
-          scope: (data.scope ?? data.type) === 'company' ? '전사 공용' : '부서 전용',
-          placeholders,
-          lastUpdated: data.updated_at.split('T')[0],
-          usageCount: 0,
-        },
-      });
+    if (!supabase) {
+      return NextResponse.json({ error: '데이터베이스가 설정되지 않았습니다.' }, { status: 503 });
     }
 
-    /* ── 폴백: mock ── */
-    const idx = sessionTemplates.findIndex((t) => t.id === id);
-    if (idx === -1) {
-      return NextResponse.json({ error: '템플릿을 찾을 수 없습니다.' }, { status: 404 });
+    const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (departmentId !== undefined) updateData.department_id = departmentId;
+    if (scope !== undefined) updateData.scope = scope === '부서 전용' ? 'department' : 'company';
+
+    const { data, error } = await supabase
+      .from('templates')
+      .update(updateData)
+      .eq('id', id)
+      .select('*, departments:department_id(name)')
+      .single();
+
+    if (error) {
+      console.error('[templates/PUT]', error.message);
+      return NextResponse.json({ error: '템플릿 수정에 실패했습니다.' }, { status: 500 });
     }
 
-    const now = new Date().toISOString();
-    if (name !== undefined) sessionTemplates[idx].name = name;
-    if (description !== undefined) sessionTemplates[idx].description = description;
-    if (departmentId !== undefined) sessionTemplates[idx].department_id = departmentId;
-    if (scope !== undefined) sessionTemplates[idx].type = scope === '부서 전용' ? 'department' : 'company';
-    sessionTemplates[idx].updated_at = now;
-
-    const t = sessionTemplates[idx];
-    const dept = departments.find((d) => d.id === t.department_id);
-    const placeholders = typeof t.content === 'object' && t.content !== null
-      ? (t.content as { placeholders?: string[] }).placeholders ?? []
-      : [];
+    const deptJoin = (data as Record<string, unknown>).departments as { name: string } | null;
+    const placeholders = Array.isArray(data.placeholders) ? data.placeholders : [];
 
     return NextResponse.json({
       template: {
-        id: t.id,
-        name: t.name,
-        description: t.description,
-        department: dept?.name ?? '전사',
-        departmentId: t.department_id,
-        scope: t.type === 'company' ? '전사 공용' : '부서 전용',
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        department: deptJoin?.name ?? '전사',
+        departmentId: data.department_id,
+        scope: data.scope === 'company' ? '전사 공용' : '부서 전용',
         placeholders,
-        lastUpdated: now.split('T')[0],
-        usageCount: Math.floor(Math.random() * 80) + 10,
+        lastUpdated: data.updated_at.split('T')[0],
+        usageCount: 0,
       },
     });
   } catch {
@@ -261,25 +169,17 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'ID가 필요합니다.' }, { status: 400 });
     }
 
-    /* ── Supabase 연동 ── */
     const supabase = await createServerSupabaseClient();
-    if (supabase) {
-      const { error } = await supabase
-        .from('templates')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      return NextResponse.json({ success: true });
+    if (!supabase) {
+      return NextResponse.json({ error: '데이터베이스가 설정되지 않았습니다.' }, { status: 503 });
     }
 
-    /* ── 폴백: mock ── */
-    const idx = sessionTemplates.findIndex((t) => t.id === id);
-    if (idx === -1) {
-      return NextResponse.json({ error: '템플릿을 찾을 수 없습니다.' }, { status: 404 });
+    const { error } = await supabase.from('templates').delete().eq('id', id);
+    if (error) {
+      console.error('[templates/DELETE]', error.message);
+      return NextResponse.json({ error: '템플릿 삭제에 실패했습니다.' }, { status: 500 });
     }
 
-    sessionTemplates.splice(idx, 1);
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: '템플릿 삭제 중 오류가 발생했습니다.' }, { status: 500 });
