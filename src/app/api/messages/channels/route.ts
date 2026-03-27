@@ -110,3 +110,34 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: '채널 생성 중 오류' }, { status: 500 });
   }
 }
+
+/**
+ * DELETE /api/messages/channels — DM 채널 삭제
+ * query: ?id=xxx
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = await createServerSupabaseClient();
+    if (!supabase) return NextResponse.json({ success: false, error: 'DB 미설정' }, { status: 503 });
+
+    const authUserId = await getAuthUserId(supabase);
+    if (!authUserId) return NextResponse.json({ success: false, error: '인증 필요' }, { status: 401 });
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) return NextResponse.json({ success: false, error: '채널 ID 필수' }, { status: 400 });
+
+    const admin = createAdminSupabaseClient();
+
+    // 메시지 삭제 → 멤버십 삭제 → 채널 삭제
+    try { await admin.from('messages').delete().eq('channel_id', id); } catch {}
+    try { await admin.from('channel_members').delete().eq('channel_id', id); } catch {}
+    const { error } = await admin.from('channels').delete().eq('id', id);
+
+    if (error) return NextResponse.json({ success: false, error: '채널 삭제 실패' }, { status: 500 });
+
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ success: false, error: '채널 삭제 중 오류' }, { status: 500 });
+  }
+}

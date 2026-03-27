@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Search, MessageCircle, Send, Paperclip, ChevronRight, ChevronDown, Building2, User } from 'lucide-react';
+import { Plus, Search, MessageCircle, Send, Paperclip, ChevronRight, ChevronDown, Building2, User, Trash2 } from 'lucide-react';
 
 /* ── types ── */
 interface Channel { id: string; name: string; type: 'department' | 'dm' | 'group'; unread: number; lastMessage?: string; avatar?: string }
@@ -284,26 +284,31 @@ export default function MessagesPage() {
             </div>
           )}
 
-          {/* 진행 중인 대화 */}
+          {/* 이전 대화 목록 */}
           {dmChannels.length > 0 && (
             <>
               <div className="px-4 pt-4 pb-1">
-                <p className="text-xs font-semibold text-[#6e6e73] uppercase tracking-wide">진행 중인 대화</p>
+                <p className="text-xs font-semibold text-[#6e6e73] uppercase tracking-wide">이전 대화 목록</p>
               </div>
               {dmChannels.map(c => (
-                <button key={c.id} onClick={() => openChannel(c.id)}
-                  className={`w-full px-4 py-2.5 flex items-center gap-3 text-left hover:bg-[#f5f5f7] transition-colors ${activeChannel === c.id ? 'bg-[#f5f5f7] border-l-2 border-[#0071e3]' : ''}`}>
-                  <div className="w-8 h-8 rounded-full bg-[#1d1d1f] flex items-center justify-center shrink-0">
-                    <span className="text-xs font-medium text-white">{c.avatar}</span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className={`text-sm truncate ${c.unread > 0 ? 'font-semibold' : 'font-medium'} text-[#1d1d1f]`}>{c.name}</span>
-                      {c.unread > 0 && <span className="ml-2 w-5 h-5 rounded-full bg-[#ff3b30] text-white text-xs flex items-center justify-center shrink-0 font-num">{c.unread}</span>}
+                <div key={c.id} className={`group w-full px-4 py-2.5 flex items-center gap-3 hover:bg-[#f5f5f7] transition-colors ${activeChannel === c.id ? 'bg-[#f5f5f7] border-l-2 border-[#0071e3]' : ''}`}>
+                  <button onClick={() => openChannel(c.id)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+                    <div className="w-8 h-8 rounded-full bg-[#1d1d1f] flex items-center justify-center shrink-0">
+                      <span className="text-xs font-medium text-white">{c.avatar}</span>
                     </div>
-                    {c.lastMessage && <p className="text-xs text-[#6e6e73] truncate">{c.lastMessage}</p>}
-                  </div>
-                </button>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-sm truncate ${c.unread > 0 ? 'font-semibold' : 'font-medium'} text-[#1d1d1f]`}>{c.name}</span>
+                        {c.unread > 0 && <span className="ml-2 w-5 h-5 rounded-full bg-[#ff3b30] text-white text-xs flex items-center justify-center shrink-0 font-num">{c.unread}</span>}
+                      </div>
+                      {c.lastMessage && <p className="text-xs text-[#6e6e73] truncate">{c.lastMessage}</p>}
+                    </div>
+                  </button>
+                  <button onClick={async (e) => { e.stopPropagation(); if (!confirm('이 대화를 삭제하시겠습니까?')) return; try { const admin = await fetch('/api/messages/channels?id=' + c.id, { method: 'DELETE' }); if (admin.ok) { if (activeChannel === c.id) setActiveChannel(null); await loadData(); } } catch {} }}
+                    className="p-1 rounded-lg text-transparent group-hover:text-[#a1a1a6] hover:!text-[#ff3b30] hover:bg-red-50 transition-all shrink-0">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               ))}
             </>
           )}
