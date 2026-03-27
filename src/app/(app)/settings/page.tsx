@@ -47,11 +47,15 @@ export default function SettingsPage() {
   const loadDepartments = useCallback(async () => {
     try {
       const res = await fetch('/api/departments');
-      if (res.ok) {
-        const json = await res.json();
-        setDepartments(json.data ?? []);
+      const json = await res.json();
+      if (res.ok && json.data) {
+        setDepartments(json.data);
+      } else {
+        console.error('[settings] departments load:', json.error);
       }
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error('[settings] departments load error:', err);
+    }
   }, []);
 
   const loadUsers = useCallback(async () => {
@@ -81,21 +85,23 @@ export default function SettingsPage() {
     if (!deptName.trim() || !deptCode.trim()) return;
     setSaving(true);
     try {
-      if (editDept) {
-        await fetch('/api/departments', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: editDept.id, name: deptName, code: deptCode, description: deptDesc }),
-        });
-      } else {
-        await fetch('/api/departments', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: deptName, code: deptCode, description: deptDesc }),
-        });
+      const res = await fetch('/api/departments', {
+        method: editDept ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editDept
+          ? { id: editDept.id, name: deptName, code: deptCode, description: deptDesc }
+          : { name: deptName, code: deptCode, description: deptDesc }
+        ),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        alert(json.error ?? '부서 저장에 실패했습니다.');
+        return;
       }
       await loadDepartments();
       setShowDeptModal(false);
+    } catch {
+      alert('부서 저장 중 오류가 발생했습니다.');
     } finally {
       setSaving(false);
     }
