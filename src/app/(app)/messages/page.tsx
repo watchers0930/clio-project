@@ -97,8 +97,11 @@ export default function MessagesPage() {
     setExpandedDepts(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   };
 
-  // 사용자 클릭 → DM 생성/열기
+  // 사용자 클릭 → DM 생성/열기 (중복 호출 방지)
+  const dmCreatingRef = useRef(false);
   const openDmWith = async (targetUserId: string) => {
+    if (dmCreatingRef.current) return;
+    dmCreatingRef.current = true;
     try {
       const res = await fetch('/api/messages/channels', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -109,7 +112,9 @@ export default function MessagesPage() {
         await loadData();
         if (json.data?.id) openChannel(json.data.id);
       }
-    } catch {}
+    } catch {} finally {
+      dmCreatingRef.current = false;
+    }
   };
 
   const fetchMessages = useCallback(async (channelId: string) => {
