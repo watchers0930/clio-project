@@ -70,6 +70,16 @@ export default function MessagesPage() {
 
   useEffect(() => { if (currentUser) loadData(); }, [currentUser, loadData]);
 
+  // 페이지 전환/탭 활성화 시 트리 갱신 (설정에서 부서 변경 후 돌아올 때)
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible' && currentUser) loadData(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', () => { if (currentUser) loadData(); });
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [currentUser, loadData]);
+
   const messages = activeChannel ? (messagesMap[activeChannel] ?? []) : [];
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
