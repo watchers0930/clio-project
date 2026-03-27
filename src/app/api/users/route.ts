@@ -160,7 +160,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, error: '관리자 권한이 필요합니다.' }, { status: 403 });
     }
 
-    const { id, departmentId, role, name, isActive } = await request.json();
+    const { id, departmentId, role, name, email, isActive } = await request.json();
     if (!id) return NextResponse.json({ success: false, error: '사용자 ID 필수' }, { status: 400 });
 
     // 대상 사용자 현재 정보
@@ -184,6 +184,7 @@ export async function PUT(request: NextRequest) {
 
     const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name;
+    if (email !== undefined) updateData.email = email;
     if (role !== undefined) updateData.role = role;
     if (isActive !== undefined) updateData.is_active = isActive;
 
@@ -219,7 +220,7 @@ export async function PUT(request: NextRequest) {
             .delete()
             .eq('channel_id', oldChannel.id)
             .eq('user_id', id)
-            .catch(() => {});
+            ; // ignore error
         }
       }
 
@@ -236,23 +237,25 @@ export async function PUT(request: NextRequest) {
           await supabase
             .from('channel_members')
             .upsert({ channel_id: newChannel.id, user_id: id }, { onConflict: 'channel_id,user_id' })
-            .catch(() => {});
+            ; // ignore error
         }
       }
     }
 
     // audit_logs
-    await supabase.from('audit_logs').insert({
-      user_id: authUserId,
-      action: 'user.edit',
-      target_type: 'user',
-      target_id: id,
-      details: { changes: updateData },
-    }).catch(() => {});
+    try {
+      await supabase.from('audit_logs').insert({
+        user_id: authUserId,
+        action: 'user.edit',
+        target_type: 'user',
+        target_id: id,
+        details: { changes: updateData },
+      });
+    } catch {}
 
     return NextResponse.json({ success: true, data });
-  } catch {
-    return NextResponse.json({ success: false, error: '사용자 수정 중 오류' }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ success: false, error: '사용자 수정 중 오류: ' + (err instanceof Error ? err.message : String(err)) }, { status: 500 });
   }
 }
 
