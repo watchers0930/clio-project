@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { Sidebar } from './sidebar';
 import { Header } from './header';
+import { Footer } from './footer';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -38,10 +39,11 @@ function AppLayout({ children }: AppLayoutProps) {
       {/* Main */}
       <div className="flex flex-col flex-1 min-w-0">
         <Header onMenuClick={() => setMobileMenuOpen(!mobileMenuOpen)} />
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-6xl mx-auto" style={{ padding: '32px 40px' }}>
+        <main className="flex-1 overflow-y-auto flex flex-col">
+          <div className="flex-1 max-w-6xl mx-auto w-full" style={{ padding: '32px 40px' }}>
             {children}
           </div>
+          <Footer />
         </main>
       </div>
     </div>
