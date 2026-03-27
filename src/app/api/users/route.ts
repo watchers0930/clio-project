@@ -117,21 +117,25 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (channel) {
-        await adminClient.from('channel_members').upsert(
-          { channel_id: channel.id, user_id: authData.user.id },
-          { onConflict: 'channel_id,user_id' }
-        ).catch(() => {});
+        try {
+          await adminClient.from('channel_members').upsert(
+            { channel_id: channel.id, user_id: authData.user.id },
+            { onConflict: 'channel_id,user_id' }
+          );
+        } catch {}
       }
     }
 
     // audit_logs
-    await adminClient.from('audit_logs').insert({
-      user_id: authUserId,
-      action: 'user.create',
-      target_type: 'user',
-      target_id: authData.user.id,
-      details: { email, name, role: role ?? 'user' },
-    }).catch(() => {});
+    try {
+      await adminClient.from('audit_logs').insert({
+        user_id: authUserId,
+        action: 'user.create',
+        target_type: 'user',
+        target_id: authData.user.id,
+        details: { email, name, role: role ?? 'user' },
+      });
+    } catch {}
 
     return NextResponse.json({ success: true, data: newUser }, { status: 201 });
   } catch (err) {
