@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Search, MessageCircle, Send, Paperclip, ChevronRight, ChevronDown, Building2, User, Trash2, FileText, X, Clock, Eye, FolderOpen, Download, Loader2 } from 'lucide-react';
+import { Plus, Search, MessageCircle, Send, Paperclip, ChevronRight, ChevronDown, Building2, User, Trash2, FileText, X, Clock, Eye, FolderOpen, Loader2 } from 'lucide-react';
 
 /* ── types ── */
 interface Channel { id: string; name: string; type: 'department' | 'dm' | 'group'; unread: number; lastMessage?: string; avatar?: string }
@@ -333,28 +333,6 @@ export default function MessagesPage() {
     }
   };
 
-  // 첨부파일 다운로드
-  const downloadAttachment = async (fileId: string, fileName: string) => {
-    try {
-      const res = await fetch(`/api/files/${fileId}/download`);
-      if (res.ok) {
-        const json = await res.json();
-        if (json.url) {
-          const a = document.createElement('a');
-          a.href = json.url;
-          a.download = fileName;
-          a.target = '_blank';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-        }
-      } else {
-        alert('다운로드 링크를 가져올 수 없습니다.');
-      }
-    } catch {
-      alert('다운로드 중 오류가 발생했습니다.');
-    }
-  };
 
   const activeChannelData = channels.find(c => c.id === activeChannel);
   const dmChannels = channels.filter(c => c.type === 'dm' || c.type === 'group');
@@ -584,28 +562,20 @@ export default function MessagesPage() {
                       {m.sharedFile ? (
                         <>
                           <p className="mb-2">{m.content.replace(/📎\s*/, '')}</p>
-                          <div className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${m.isOwn ? 'bg-white/10' : 'bg-white border border-[#e5e5e7]'}`}>
+                          <button onClick={() => viewSharedFile(m.sharedFile!.id, m.sharedFile!.name)}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${m.isOwn ? 'bg-white/10 hover:bg-white/20' : 'bg-white border border-[#e5e5e7] hover:border-[#0071e3] hover:bg-blue-50/50'}`}>
                             <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${m.isOwn ? 'bg-white/20' : 'bg-[#0071e3]/10'}`}>
                               <FileText size={18} className={m.isOwn ? 'text-white' : 'text-[#0071e3]'} />
                             </div>
                             <div className="min-w-0 flex-1 text-left">
                               <p className="text-xs font-semibold truncate">{m.sharedFile.name}</p>
                               <div className="flex items-center gap-1.5 mt-0.5">
-                                <Paperclip size={10} className={m.isOwn ? 'text-white/60' : 'text-[#6e6e73]'} />
-                                <span className={`text-[10px] ${m.isOwn ? 'text-white/60' : 'text-[#6e6e73]'}`}>{m.attachment?.size ?? ''}</span>
+                                <Eye size={10} className={m.isOwn ? 'text-white/60' : 'text-[#6e6e73]'} />
+                                <span className={`text-[10px] ${m.isOwn ? 'text-white/60' : 'text-[#6e6e73]'}`}>읽기 전용 · {m.attachment?.size ?? ''}</span>
                               </div>
                             </div>
-                            <button onClick={() => downloadAttachment(m.sharedFile!.id, m.sharedFile!.name)}
-                              className={`p-1.5 rounded-lg shrink-0 transition-colors ${m.isOwn ? 'hover:bg-white/20 text-white/80' : 'hover:bg-[#f5f5f7] text-[#6e6e73]'}`}
-                              title="다운로드">
-                              <Download size={16} />
-                            </button>
-                            <button onClick={() => viewSharedFile(m.sharedFile!.id, m.sharedFile!.name)}
-                              className={`p-1.5 rounded-lg shrink-0 transition-colors ${m.isOwn ? 'hover:bg-white/20 text-white/80' : 'hover:bg-[#f5f5f7] text-[#6e6e73]'}`}
-                              title="상세 보기">
-                              <ChevronRight size={16} />
-                            </button>
-                          </div>
+                            <ChevronRight size={14} className={`shrink-0 ${m.isOwn ? 'text-white/40' : 'text-[#a1a1a6]'}`} />
+                          </button>
                         </>
                       ) : (
                         <>
@@ -613,17 +583,10 @@ export default function MessagesPage() {
                           {m.attachment && !m.sharedFile && (
                             <div className={`mt-2 flex items-center gap-2 px-3 py-2 rounded-lg ${m.isOwn ? 'bg-[#6e6e73]/30' : 'bg-white border border-[#e5e5e7]'}`}>
                               <Paperclip size={14} className="shrink-0" />
-                              <div className="min-w-0 flex-1">
+                              <div className="min-w-0">
                                 <p className="text-xs font-medium truncate">{m.attachment.name}</p>
                                 <p className={`text-xs ${m.isOwn ? 'text-white/70' : 'text-[#6e6e73]'}`}>{m.attachment.size}</p>
                               </div>
-                              {m.attachment.size !== '업로드 중...' && (
-                                <button onClick={(e) => { e.stopPropagation(); downloadAttachment(m.id, m.attachment!.name); }}
-                                  className={`p-1 rounded-lg shrink-0 transition-colors ${m.isOwn ? 'hover:bg-white/20 text-white/80' : 'hover:bg-[#f5f5f7] text-[#6e6e73]'}`}
-                                  title="다운로드">
-                                  <Download size={14} />
-                                </button>
-                              )}
                             </div>
                           )}
                         </>

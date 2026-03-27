@@ -11,6 +11,7 @@ function formatSize(bytes: number): string {
 }
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const DEFAULT_SHARE_DAYS = 7;
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,8 +32,9 @@ export async function POST(request: NextRequest) {
     }
 
     const admin = createAdminSupabaseClient();
+    const expiresAt = new Date(Date.now() + DEFAULT_SHARE_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
-    // 1. Storage에 파일 업로드
+    // 1. Storage에 파일 업로드 (파일서버까지만)
     const storagePath = `attachments/${channelId}/${Date.now()}_${file.name}`;
     const { error: uploadError } = await admin.storage
       .from('files')
@@ -58,12 +60,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: '파일 정보 저장 실패' }, { status: 500 });
     }
 
-    // 3. messages 테이블에 첨부 메시지 저장
+    // 3. 메시지 생성
     const sizeStr = formatSize(file.size);
     const { data: msgData, error: msgError } = await admin.from('messages').insert({
       channel_id: channelId,
       sender_id: authUserId,
-      content: `📎 ${file.name}`,
+      content: `📎 파일을 공유했습니다: ${file.name}`,
       attachment_name: file.name,
       attachment_size: sizeStr,
       shared_file_id: fileData.id,
@@ -74,6 +76,44 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: '메시지 전송 실패' }, { status: 500 });
     }
 
+    // 4. 채널 멤버에게 읽기 권한 부여 (본인 제외)
+    const { data: members } = await admin
+      .from('channel_members')
+      .select('user_id')
+      .eq('channel_id', channelId)
+      .neq('user_id', authUserId);
+
+    if (members && members.length > 0) {
+      const shareInserts = members.map(m => ({
+        file_id: fileData.id,
+        shared_by: authUserId,
+        shared_with: m.user_id,
+        message_id: msgData.id,
+        permission: 'read',
+        expires_at: expiresAt,
+      }));
+
+      const { error: shareErr } = await admin.from('file_shares').insert(shareInserts);
+      if (shareErr) {
+        console.error('[upload-attachment] share insert:', shareErr.message);
+      }
+    }
+
+    // 5. 감사 로그
+    await admin.from('audit_logs').insert({
+      user_id: authUserId,
+      action: 'file.share',
+      target_type: 'file',
+      target_id: fileData.id,
+      details: {
+        file_name: file.name,
+        channel_id: channelId,
+        shared_with: (members ?? []).map(m => m.user_id),
+        expires_at: expiresAt,
+        via: 'attachment',
+      },
+    }).then(() => {}, () => {});
+
     return NextResponse.json({
       success: true,
       data: {
@@ -81,6 +121,8 @@ export async function POST(request: NextRequest) {
         fileId: fileData.id,
         fileName: file.name,
         fileSize: sizeStr,
+        sharedWith: members?.length ?? 0,
+        expiresAt,
       },
     }, { status: 201 });
   } catch {
