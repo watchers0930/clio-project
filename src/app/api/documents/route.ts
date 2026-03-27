@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
       target_type: 'document',
       target_id: newDoc.id,
       details: { title },
-    }).catch(() => {});
+    }).then(() => {}, () => {});
 
     return NextResponse.json({
       document: {
@@ -195,7 +195,7 @@ export async function DELETE(request: NextRequest) {
         target_type: 'document',
         target_id: id,
         details: {},
-      }).catch(() => {});
+      }).then(() => {}, () => {});
     }
 
     return NextResponse.json({ success: true });

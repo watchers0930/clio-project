@@ -107,7 +107,7 @@ ${transcript}`;
       target_type: 'document',
       target_id: newDoc?.id ?? null,
       details: { title, source: 'stt', audioFile: file.name },
-    }).catch(() => {});
+    }).then(() => {}, () => {});
 
     return NextResponse.json({
       success: true,

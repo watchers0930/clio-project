@@ -75,7 +75,7 @@ export async function DELETE(
         target_type: 'document',
         target_id: id,
         details: {},
-      }).catch(() => {});
+      }).then(() => {}, () => {});
     }
 
     return NextResponse.json<ApiResponse>({ success: true, data: { id } });

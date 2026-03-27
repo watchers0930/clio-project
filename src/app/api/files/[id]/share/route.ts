@@ -92,7 +92,7 @@ export async function POST(
       target_type: 'file',
       target_id: fileId,
       details: { shared_with_user: userId, shared_with_dept: departmentId, permission: permission ?? 'read' },
-    }).catch(() => {});
+    }).then(() => {}, () => {});
 
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch {

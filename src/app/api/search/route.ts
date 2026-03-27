@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
         action: 'search',
         target_type: 'search',
         details: { query, resultCount: results.length },
-      }).catch(() => {});
+      }).then(() => {}, () => {});
     }
 
     return NextResponse.json({ results, total: results.length });

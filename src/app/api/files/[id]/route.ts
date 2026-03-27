@@ -114,7 +114,7 @@ export async function DELETE(
       target_type: 'file',
       target_id: id,
       details: { file_name: file.name },
-    }).catch(() => {});
+    }).then(() => {}, () => {});
 
     return NextResponse.json<ApiResponse>({ success: true, data: { id } });
   } catch {

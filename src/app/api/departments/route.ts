@@ -3,25 +3,14 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { getUserRoleInfo, isAdmin, isManagerOrAbove } from '@/lib/permissions';
 
-/**
- * GET /api/departments — 부서 목록 (멤버 수 포함)
- */
 export async function GET() {
   try {
     const supabase = await createServerSupabaseClient();
     if (!supabase) return NextResponse.json({ success: false, error: 'DB 미설정' }, { status: 503 });
 
-    const { data: depts, error } = await supabase
-      .from('departments')
-      .select('*')
-      .order('name');
+    const { data: depts, error } = await supabase.from('departments').select('*').order('name');
+    if (error) return NextResponse.json({ success: false, error: '부서 목록 조회 실패' }, { status: 500 });
 
-    if (error) {
-      console.error('[departments/GET]', error.message);
-      return NextResponse.json({ success: false, error: '부서 목록 조회 실패' }, { status: 500 });
-    }
-
-    // 부서별 멤버 수 조회
     const { data: users } = await supabase.from('users').select('id, department_id, is_active');
     const memberCounts = new Map<string, number>();
     for (const u of (users ?? [])) {
@@ -30,21 +19,13 @@ export async function GET() {
       }
     }
 
-    const departments = (depts ?? []).map((d) => ({
-      ...d,
-      memberCount: memberCounts.get(d.id) ?? 0,
-    }));
-
+    const departments = (depts ?? []).map((d) => ({ ...d, memberCount: memberCounts.get(d.id) ?? 0 }));
     return NextResponse.json({ success: true, data: departments });
   } catch {
     return NextResponse.json({ success: false, error: '부서 목록 조회 중 오류' }, { status: 500 });
   }
 }
 
-/**
- * POST /api/departments — 부서 생성 + 메신저 채널 자동 생성
- * admin만 가능
- */
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
@@ -59,57 +40,30 @@ export async function POST(request: NextRequest) {
     }
 
     const { name, code, description, managerId } = await request.json();
-    if (!name || !code) {
-      return NextResponse.json({ success: false, error: '부서명과 코드는 필수입니다.' }, { status: 400 });
-    }
+    if (!name || !code) return NextResponse.json({ success: false, error: '부서명과 코드는 필수입니다.' }, { status: 400 });
 
-    // 부서 생성
     const { data: dept, error: deptErr } = await supabase.from('departments').insert({
-      name,
-      code: code.toUpperCase(),
-      description: description ?? null,
-      manager_id: managerId ?? null,
+      name, code: code.toUpperCase(), description: description ?? null, manager_id: managerId ?? null,
     }).select().single();
 
-    if (deptErr) {
-      console.error('[departments/POST]', deptErr.message, deptErr.code, deptErr.details);
-      return NextResponse.json({ success: false, error: '부서 생성 실패: ' + deptErr.message }, { status: 500 });
-    }
+    if (deptErr) return NextResponse.json({ success: false, error: '부서 생성 실패: ' + deptErr.message }, { status: 500 });
 
-    // 메신저 채널 자동 생성
     const { data: channel } = await supabase.from('channels').insert({
-      name,
-      type: 'department',
-      department_id: dept.id,
+      name, type: 'department', department_id: dept.id,
     }).select().single();
 
-    // 부서장이 있으면 채널 멤버로 추가
     if (managerId && channel) {
-      await supabase.from('channel_members').insert({
-        channel_id: channel.id,
-        user_id: managerId,
-      }).catch(() => {});
+      try { await supabase.from('channel_members').insert({ channel_id: channel.id, user_id: managerId }); } catch {}
     }
 
-    // audit_logs
-    await supabase.from('audit_logs').insert({
-      user_id: authUserId,
-      action: 'dept.create',
-      target_type: 'department',
-      target_id: dept.id,
-      details: { name, code },
-    }).catch(() => {});
+    try { await supabase.from('audit_logs').insert({ user_id: authUserId, action: 'dept.create', target_type: 'department', target_id: dept.id, details: { name, code } }); } catch {}
 
     return NextResponse.json({ success: true, data: { ...dept, memberCount: 0 } }, { status: 201 });
-  } catch {
+  } catch (err) {
     return NextResponse.json({ success: false, error: '부서 생성 중 오류: ' + (err instanceof Error ? err.message : String(err)) }, { status: 500 });
   }
 }
 
-/**
- * PUT /api/departments — 부서 수정
- * admin 또는 해당 부서 manager
- */
 export async function PUT(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
@@ -124,7 +78,6 @@ export async function PUT(request: NextRequest) {
     const { id, name, code, description, managerId, isActive } = await request.json();
     if (!id) return NextResponse.json({ success: false, error: 'ID 필수' }, { status: 400 });
 
-    // 권한: admin 또는 해당 부서 manager
     if (!isAdmin(roleInfo.role)) {
       if (!isManagerOrAbove(roleInfo.role) || roleInfo.department_id !== id) {
         return NextResponse.json({ success: false, error: '권한이 없습니다.' }, { status: 403 });
@@ -138,37 +91,19 @@ export async function PUT(request: NextRequest) {
     if (managerId !== undefined) updateData.manager_id = managerId;
     if (isActive !== undefined) updateData.is_active = isActive;
 
-    const { data, error } = await supabase
-      .from('departments')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
+    const { data, error } = await supabase.from('departments').update(updateData).eq('id', id).select().single();
+    if (error) return NextResponse.json({ success: false, error: '부서 수정 실패: ' + error.message }, { status: 500 });
 
-    if (error) {
-      console.error('[departments/PUT]', error.message);
-      return NextResponse.json({ success: false, error: '부서 수정 실패' }, { status: 500 });
-    }
-
-    // 채널 이름도 동기화
     if (name) {
-      await supabase.from('channels')
-        .update({ name })
-        .eq('department_id', id)
-        .eq('type', 'department')
-        .catch(() => {});
+      try { await supabase.from('channels').update({ name }).eq('department_id', id).eq('type', 'department'); } catch {}
     }
 
     return NextResponse.json({ success: true, data });
-  } catch {
-    return NextResponse.json({ success: false, error: '부서 수정 중 오류' }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ success: false, error: '부서 수정 중 오류: ' + (err instanceof Error ? err.message : String(err)) }, { status: 500 });
   }
 }
 
-/**
- * DELETE /api/departments — 부서 비활성화
- * admin만 가능
- */
 export async function DELETE(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
@@ -186,21 +121,10 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ success: false, error: 'ID 필수' }, { status: 400 });
 
-    // 비활성화 (소프트 삭제)
     const { error: delErr } = await supabase.from('departments').update({ is_active: false }).eq('id', id);
-    if (delErr) {
-      console.error('[departments/DELETE]', delErr.message);
-      return NextResponse.json({ success: false, error: '부서 비활성화에 실패했습니다.' }, { status: 500 });
-    }
+    if (delErr) return NextResponse.json({ success: false, error: '부서 비활성화 실패: ' + delErr.message }, { status: 500 });
 
-    // audit_logs
-    await supabase.from('audit_logs').insert({
-      user_id: authUserId,
-      action: 'dept.delete',
-      target_type: 'department',
-      target_id: id,
-      details: {},
-    }).catch(() => {});
+    try { await supabase.from('audit_logs').insert({ user_id: authUserId, action: 'dept.delete', target_type: 'department', target_id: id, details: {} }); } catch {}
 
     return NextResponse.json({ success: true });
   } catch {

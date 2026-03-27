@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
         target_type: 'file',
         target_id: data.id,
         details: { file_name: file.name, size: file.size },
-      }).catch(() => {});
+      }).then(() => {}, () => {});
 
       // 백그라운드 파일 처리 (텍스트 추출 → 청킹 → 임베딩)
       const baseUrl = request.nextUrl.origin;
@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileId: data.id }),
-      }).catch(() => {});
+      }).then(() => {}, () => {});
 
       return NextResponse.json({ success: true, data }, { status: 201 });
     }
@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
       target_type: 'file',
       target_id: data.id,
       details: { file_name: body.name },
-    }).catch(() => {});
+    }).then(() => {}, () => {});
 
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch {
