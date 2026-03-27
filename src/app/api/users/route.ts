@@ -160,7 +160,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, error: '관리자 권한이 필요합니다.' }, { status: 403 });
     }
 
-    const { id, departmentId, role, name, email, isActive } = await request.json();
+    const { id, departmentId, role, name, email, password, isActive } = await request.json();
     if (!id) return NextResponse.json({ success: false, error: '사용자 ID 필수' }, { status: 400 });
 
     // 대상 사용자 현재 정보
@@ -201,6 +201,16 @@ export async function PUT(request: NextRequest) {
     if (error) {
       console.error('[users/PUT]', error.message);
       return NextResponse.json({ success: false, error: '사용자 수정 실패' }, { status: 500 });
+    }
+
+    // 비밀번호 변경 (admin만 가능 — Auth 레벨)
+    if (password && isAdmin(myRole.role)) {
+      const adminClient = createAdminSupabaseClient();
+      const { error: pwErr } = await adminClient.auth.admin.updateUserById(id, { password });
+      if (pwErr) {
+        console.error('[users/PUT] password update:', pwErr.message);
+        return NextResponse.json({ success: false, error: '비밀번호 변경 실패: ' + pwErr.message }, { status: 500 });
+      }
     }
 
     // 부서 변경 시 채널 멤버십 이동

@@ -88,9 +88,19 @@ function Header({
                   <Link href="/settings" className="block px-4 py-2.5 text-[14px] text-foreground hover:bg-page-bg transition-colors" onClick={() => setUserMenuOpen(false)}>
                     설정
                   </Link>
-                  <Link href="/settings" className="block px-4 py-2.5 text-[14px] text-foreground hover:bg-page-bg transition-colors" onClick={() => setUserMenuOpen(false)}>
-                    프로필
-                  </Link>
+                  <button
+                    className="block w-full text-left px-4 py-2.5 text-[14px] text-foreground hover:bg-page-bg transition-colors cursor-pointer"
+                    onClick={async () => {
+                      setUserMenuOpen(false);
+                      const newPw = prompt('새 비밀번호를 입력하세요 (6자 이상)');
+                      if (!newPw || newPw.length < 6) { if (newPw !== null) alert('비밀번호는 6자 이상이어야 합니다.'); return; }
+                      const res = await fetch('/api/auth/password', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ newPassword: newPw }) });
+                      const json = await res.json();
+                      alert(json.success ? '비밀번호가 변경되었습니다.' : (json.error ?? '비밀번호 변경에 실패했습니다.'));
+                    }}
+                  >
+                    비밀번호 변경
+                  </button>
                   <hr className="my-1 border-border" />
                   <button
                     className="block w-full text-left px-4 py-2.5 text-[14px] text-danger hover:bg-danger/5 transition-colors cursor-pointer"
