@@ -104,6 +104,8 @@ export async function POST(request: NextRequest) {
 
     if (insertErr) {
       console.error('[users/POST] insert error:', insertErr.message);
+      // Auth 계정도 롤백 (고아 방지)
+      try { await adminClient.auth.admin.deleteUser(authData.user.id); } catch {}
       return NextResponse.json({ success: false, error: '프로필 저장에 실패했습니다: ' + insertErr.message }, { status: 500 });
     }
 
@@ -203,13 +205,16 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, error: '사용자 수정 실패' }, { status: 500 });
     }
 
-    // 비밀번호 변경 (admin만 가능 — Auth 레벨)
-    if (password && isAdmin(myRole.role)) {
+    // Auth 동기화 (비밀번호/이메일 변경 — admin만)
+    if (isAdmin(myRole.role) && (password || email)) {
       const adminClient = createAdminSupabaseClient();
-      const { error: pwErr } = await adminClient.auth.admin.updateUserById(id, { password });
-      if (pwErr) {
-        console.error('[users/PUT] password update:', pwErr.message);
-        return NextResponse.json({ success: false, error: '비밀번호 변경 실패: ' + pwErr.message }, { status: 500 });
+      const authUpdate: Record<string, string> = {};
+      if (password) authUpdate.password = password;
+      if (email) authUpdate.email = email;
+      const { error: authErr } = await adminClient.auth.admin.updateUserById(id, authUpdate);
+      if (authErr) {
+        console.error('[users/PUT] auth update:', authErr.message);
+        // Auth 실패해도 users 업데이트는 이미 반영됨 — 경고만
       }
     }
 
