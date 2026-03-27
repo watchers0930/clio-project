@@ -72,8 +72,8 @@ export async function POST(request: NextRequest) {
     }).select().single();
 
     if (deptErr) {
-      console.error('[departments/POST]', deptErr.message);
-      return NextResponse.json({ success: false, error: '부서 생성 실패' }, { status: 500 });
+      console.error('[departments/POST]', deptErr.message, deptErr.code, deptErr.details);
+      return NextResponse.json({ success: false, error: '부서 생성 실패: ' + deptErr.message }, { status: 500 });
     }
 
     // 메신저 채널 자동 생성
