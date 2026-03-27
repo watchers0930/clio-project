@@ -81,7 +81,14 @@ export default function MessagesPage() {
   }, [currentUser, loadData]);
 
   const messages = activeChannel ? (messagesMap[activeChannel] ?? []) : [];
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  const msgCountRef = useRef(0);
+  useEffect(() => {
+    // 메시지 수가 실제로 증가했을 때만 스크롤
+    if (messages.length > msgCountRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+    msgCountRef.current = messages.length;
+  }, [messages.length]);
 
   const toggleDept = (id: string) => {
     setExpandedDepts(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -114,10 +121,12 @@ export default function MessagesPage() {
         }));
         setMessagesMap(prev => {
           const old = prev[channelId] ?? [];
+          // 메시지 수가 같으면 업데이트 안 함 (불필요한 리렌더 방지)
+          if (old.length === apiMsgs.length) return prev;
           // 새 메시지가 있으면 브라우저 알림
           if (old.length > 0 && apiMsgs.length > old.length) {
             const newest = apiMsgs[apiMsgs.length - 1];
-            if (newest && !newest.isOwn && Notification.permission === 'granted') {
+            if (newest && !newest.isOwn && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
               new Notification('CLIO 새 메시지', { body: `${newest.sender}: ${newest.content}`, icon: '/favicon.ico' });
             }
           }
