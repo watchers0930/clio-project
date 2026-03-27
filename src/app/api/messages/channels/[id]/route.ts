@@ -49,6 +49,14 @@ export async function GET(
       document: m.documents ?? null,
     }));
 
+    // last_read_at 갱신 (이 채널을 읽었음을 표시)
+    try {
+      await admin.from('channel_members')
+        .update({ last_read_at: new Date().toISOString() })
+        .eq('channel_id', channelId)
+        .eq('user_id', authUserId);
+    } catch {}
+
     return NextResponse.json({ success: true, data: messages });
   } catch {
     return NextResponse.json({ success: false, error: '메시지 조회 중 오류' }, { status: 500 });

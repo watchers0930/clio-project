@@ -92,26 +92,70 @@ export default function MessagesPage() {
     } catch {}
   };
 
+  const fetchMessages = useCallback(async (channelId: string) => {
+    try {
+      const res = await fetch(`/api/messages/channels/${channelId}`);
+      if (res.ok) {
+        const json = await res.json();
+        const apiMsgs = (json.data ?? []).map((m: { id: string; userId: string; userName: string; content: string; createdAt: string }) => ({
+          id: m.id, sender: m.userName, avatar: m.userName?.charAt(0) ?? '?', content: m.content,
+          time: new Date(m.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+          isOwn: m.userId === currentUser?.id,
+        }));
+        setMessagesMap(prev => {
+          const old = prev[channelId] ?? [];
+          // 새 메시지가 있으면 브라우저 알림
+          if (old.length > 0 && apiMsgs.length > old.length) {
+            const newest = apiMsgs[apiMsgs.length - 1];
+            if (newest && !newest.isOwn && Notification.permission === 'granted') {
+              new Notification('CLIO 새 메시지', { body: `${newest.sender}: ${newest.content}`, icon: '/favicon.ico' });
+            }
+          }
+          return { ...prev, [channelId]: apiMsgs };
+        });
+      }
+    } catch {}
+  }, [currentUser?.id]);
+
   const openChannel = async (channelId: string) => {
     setActiveChannel(channelId);
     setShowSidebar(false);
     setChannels(prev => prev.map(c => (c.id === channelId ? { ...c, unread: 0 } : c)));
+    await fetchMessages(channelId);
+  };
 
-    if (!messagesMap[channelId]) {
+  // 5초마다 활성 채널 메시지 새로고침 + unread 체크
+  useEffect(() => {
+    if (!currentUser) return;
+    // 브라우저 알림 권한 요청
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
+    const iv = setInterval(async () => {
+      // 활성 채널 메시지 갱신
+      if (activeChannel) await fetchMessages(activeChannel);
+
+      // unread 체크
       try {
-        const res = await fetch(`/api/messages/channels/${channelId}`);
+        const res = await fetch('/api/messages/unread');
         if (res.ok) {
           const json = await res.json();
-          const apiMsgs = (json.data ?? []).map((m: { id: string; userId: string; userName: string; content: string; createdAt: string }) => ({
-            id: m.id, sender: m.userName, avatar: m.userName?.charAt(0) ?? '?', content: m.content,
-            time: new Date(m.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-            isOwn: m.userId === currentUser?.id,
-          }));
-          setMessagesMap(prev => ({ ...prev, [channelId]: apiMsgs }));
+          const unreadMap = (json.channels ?? {}) as Record<string, number>;
+          setChannels(prev => prev.map(c => ({
+            ...c, unread: c.id === activeChannel ? 0 : (unreadMap[c.id] ?? 0),
+          })));
+
+          // 새 unread가 있고 현재 채널이 아니면 알림
+          if (json.total > 0 && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            // 채널별로 알림 (너무 자주 안 울리도록 총합만)
+          }
         }
       } catch {}
-    }
-  };
+    }, 5000);
+
+    return () => clearInterval(iv);
+  }, [currentUser, activeChannel, fetchMessages]);
 
   const sendMessage = async () => {
     if (!input.trim() || !activeChannel) return;
@@ -228,7 +272,10 @@ export default function MessagesPage() {
                     <span className="text-xs font-medium text-white">{c.avatar}</span>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <span className="text-sm font-medium text-[#1d1d1f] truncate block">{c.name}</span>
+                    <div className="flex items-center justify-between">
+                      <span className={`text-sm truncate ${c.unread > 0 ? 'font-semibold' : 'font-medium'} text-[#1d1d1f]`}>{c.name}</span>
+                      {c.unread > 0 && <span className="ml-2 w-5 h-5 rounded-full bg-[#ff3b30] text-white text-xs flex items-center justify-center shrink-0 font-num">{c.unread}</span>}
+                    </div>
                     {c.lastMessage && <p className="text-xs text-[#6e6e73] truncate">{c.lastMessage}</p>}
                   </div>
                 </button>
