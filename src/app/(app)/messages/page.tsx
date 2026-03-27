@@ -53,13 +53,16 @@ export default function MessagesPage() {
 
         const tree: DeptTree[] = depts
           .filter((d: { is_active: boolean }) => d.is_active !== false)
-          .map((d: { id: string; name: string }) => ({
-            id: d.id, name: d.name,
-            members: users.filter((u: { department_id: string | null; id: string }) => u.department_id === d.id && u.id !== currentUser?.id)
-              .map((u: { id: string; name: string; email: string }) => ({ id: u.id, name: u.name, email: u.email })),
-          }));
+          .map((d: { id: string; name: string }) => {
+            const deptUsers = users
+              .filter((u: { department_id: string | null }) => u.department_id === d.id)
+              .map((u: { id: string; name: string; email: string }) => ({ id: u.id, name: u.name, email: u.email }));
+            // 본인을 맨 위로
+            deptUsers.sort((a: { id: string }, b: { id: string }) => a.id === currentUser?.id ? -1 : b.id === currentUser?.id ? 1 : 0);
+            return { id: d.id, name: d.name, members: deptUsers };
+          });
         setDeptTree(tree);
-        setUnassigned(users.filter((u: { department_id: string | null; id: string }) => !u.department_id && u.id !== currentUser?.id)
+        setUnassigned(users.filter((u: { department_id: string | null }) => !u.department_id)
           .map((u: { id: string; name: string; email: string }) => ({ id: u.id, name: u.name, email: u.email })));
         // 모든 부서 기본 펼침
         setExpandedDepts(new Set(tree.map((d: DeptTree) => d.id)));
@@ -245,18 +248,21 @@ export default function MessagesPage() {
                 <span className="text-sm font-medium text-[#1d1d1f]">{dept.name}</span>
                 <span className="text-xs text-[#a1a1a6] ml-auto">{dept.members.length}</span>
               </button>
-              {expandedDepts.has(dept.id) && dept.members.map(member => (
-                <button key={member.id} onClick={() => openDmWith(member.id)}
-                  className="w-full pl-10 pr-4 py-2 flex items-center gap-2.5 text-left hover:bg-[#f5f5f7] transition-colors">
-                  <div className="w-7 h-7 rounded-full bg-[#1d1d1f] flex items-center justify-center shrink-0">
-                    <span className="text-xs font-medium text-white">{member.name.charAt(0)}</span>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm text-[#1d1d1f] truncate">{member.name}</p>
-                    <p className="text-[10px] text-[#a1a1a6] truncate">{member.email}</p>
-                  </div>
-                </button>
-              ))}
+              {expandedDepts.has(dept.id) && dept.members.map(member => {
+                const isMe = member.id === currentUser?.id;
+                return (
+                  <button key={member.id} onClick={() => !isMe && openDmWith(member.id)}
+                    className={`w-full pl-10 pr-4 py-2 flex items-center gap-2.5 text-left transition-colors ${isMe ? 'cursor-default' : 'hover:bg-[#f5f5f7]'}`}>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${isMe ? 'bg-[#0071e3]' : 'bg-[#1d1d1f]'}`}>
+                      <span className="text-xs font-medium text-white">{member.name.charAt(0)}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm text-[#1d1d1f] truncate">{member.name}{isMe && <span className="text-[#0071e3] ml-1 text-xs">(나)</span>}</p>
+                      <p className="text-[10px] text-[#a1a1a6] truncate">{member.email}</p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           ))}
 
