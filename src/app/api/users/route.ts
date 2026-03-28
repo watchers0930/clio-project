@@ -193,7 +193,9 @@ export async function PUT(request: NextRequest) {
     const oldDeptId = target.department_id;
     if (departmentId !== undefined) updateData.department_id = departmentId;
 
-    const { data, error } = await supabase
+    // admin이 다른 사용자를 수정할 때 RLS bypass 필요
+    const dbClient = (isAdmin(myRole.role) && id !== authUserId) ? createAdminSupabaseClient() : supabase;
+    const { data, error } = await dbClient
       .from('users')
       .update(updateData)
       .eq('id', id)
@@ -218,11 +220,12 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // 부서 변경 시 채널 멤버십 이동
+    // 부서 변경 시 채널 멤버십 이동 (adminClient로 RLS bypass)
     if (departmentId !== undefined && departmentId !== oldDeptId) {
+      const admin = createAdminSupabaseClient();
       // 이전 부서 채널에서 제거
       if (oldDeptId) {
-        const { data: oldChannel } = await supabase
+        const { data: oldChannel } = await admin
           .from('channels')
           .select('id')
           .eq('department_id', oldDeptId)
@@ -230,7 +233,7 @@ export async function PUT(request: NextRequest) {
           .single();
 
         if (oldChannel) {
-          await supabase
+          await admin
             .from('channel_members')
             .delete()
             .eq('channel_id', oldChannel.id)
@@ -241,7 +244,7 @@ export async function PUT(request: NextRequest) {
 
       // 새 부서 채널에 추가
       if (departmentId) {
-        const { data: newChannel } = await supabase
+        const { data: newChannel } = await admin
           .from('channels')
           .select('id')
           .eq('department_id', departmentId)
@@ -249,7 +252,7 @@ export async function PUT(request: NextRequest) {
           .single();
 
         if (newChannel) {
-          await supabase
+          await admin
             .from('channel_members')
             .upsert({ channel_id: newChannel.id, user_id: id }, { onConflict: 'channel_id,user_id' })
             ; // ignore error
