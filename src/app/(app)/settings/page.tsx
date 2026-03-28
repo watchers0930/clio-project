@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Building2, Users, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Building2, Users, Plus, Pencil, Trash2, Loader2, Check, Save } from 'lucide-react';
 
 /* ── types ── */
 interface Department {
@@ -43,6 +43,11 @@ export default function SettingsPage() {
   const [deptCode, setDeptCode] = useState('');
   const [deptDesc, setDeptDesc] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // 사용자 인라인 편집 (부서/역할 변경 → 저장 버튼)
+  const [pendingChanges, setPendingChanges] = useState<Record<string, { department_id?: string | null; role?: string }>>({});
+  const [savingUserId, setSavingUserId] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   // 사용자 추가/수정 모달
   const [showUserModal, setShowUserModal] = useState(false);
@@ -210,32 +215,56 @@ export default function SettingsPage() {
     }
   };
 
-  /* ── 사용자 수정 ── */
-  const updateUserRole = async (userId: string, role: string) => {
-    await fetch('/api/users', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: userId, role }),
-    });
-    await loadUsers();
+  /* ── 사용자 인라인 수정 (로컬 → 저장) ── */
+  const setPendingDept = (userId: string, departmentId: string | null) => {
+    setPendingChanges((prev) => ({
+      ...prev,
+      [userId]: { ...prev[userId], department_id: departmentId },
+    }));
   };
 
-  const updateUserDept = async (userId: string, departmentId: string | null) => {
-    await fetch('/api/users', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: userId, departmentId }),
-    });
-    await loadUsers();
+  const setPendingRole = (userId: string, role: string) => {
+    setPendingChanges((prev) => ({
+      ...prev,
+      [userId]: { ...prev[userId], role },
+    }));
   };
 
-  const toggleUserActive = async (userId: string, isActive: boolean) => {
-    await fetch('/api/users', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: userId, isActive }),
-    });
-    await loadUsers();
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2000);
+  };
+
+  const saveUserChanges = async (userId: string) => {
+    const changes = pendingChanges[userId];
+    if (!changes) return;
+    setSavingUserId(userId);
+    try {
+      const body: Record<string, unknown> = { id: userId };
+      if (changes.department_id !== undefined) body.departmentId = changes.department_id;
+      if (changes.role !== undefined) body.role = changes.role;
+      const res = await fetch('/api/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        alert(json.error ?? '저장에 실패했습니다.');
+        return;
+      }
+      setPendingChanges((prev) => {
+        const next = { ...prev };
+        delete next[userId];
+        return next;
+      });
+      await loadUsers();
+      showToast('저장되었습니다');
+    } catch {
+      alert('저장 중 오류가 발생했습니다.');
+    } finally {
+      setSavingUserId(null);
+    }
   };
 
   if (loading) {
@@ -332,39 +361,55 @@ export default function SettingsPage() {
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
-                <tr key={u.id} className="border-b border-border last:border-b-0 hover:bg-page-bg/50">
-                  <td className="px-6 py-4 text-sm font-medium">{u.name}</td>
-                  <td className="px-6 py-4 text-sm text-muted">{u.email}</td>
-                  <td className="px-6 py-4">
-                    <select
-                      value={u.department_id ?? ''}
-                      onChange={(e) => updateUserDept(u.id, e.target.value || null)}
-                      className="text-sm border border-border rounded-lg px-2 py-1 bg-transparent"
-                    >
-                      <option value="">미배정</option>
-                      {departments.filter((d) => d.is_active !== false).map((d) => (
-                        <option key={d.id} value={d.id}>{d.name}</option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-6 py-4">
-                    <select
-                      value={u.role}
-                      onChange={(e) => updateUserRole(u.id, e.target.value)}
-                      className="text-sm border border-border rounded-lg px-2 py-1 bg-transparent"
-                    >
-                      {ROLES.map((r) => (
-                        <option key={r.value} value={r.value}>{r.label}</option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button onClick={() => openUserModal(u)} className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]"><Pencil size={14} /></button>
-                    <button onClick={() => deleteUser(u.id, u.name)} className="p-1.5 rounded-lg hover:bg-red-50 text-[#6e6e73] hover:text-red-500 ml-1"><Trash2 size={14} /></button>
-                  </td>
-                </tr>
-              ))}
+              {users.map((u) => {
+                const pending = pendingChanges[u.id];
+                const hasPending = !!pending;
+                const displayDept = pending?.department_id !== undefined ? (pending.department_id ?? '') : (u.department_id ?? '');
+                const displayRole = pending?.role !== undefined ? pending.role : u.role;
+                return (
+                  <tr key={u.id} className={`border-b border-border last:border-b-0 transition-colors ${hasPending ? 'bg-blue-50/60' : 'hover:bg-page-bg/50'}`}>
+                    <td className="px-6 py-4 text-sm font-medium">{u.name}</td>
+                    <td className="px-6 py-4 text-sm text-muted">{u.email}</td>
+                    <td className="px-6 py-4">
+                      <select
+                        value={displayDept}
+                        onChange={(e) => setPendingDept(u.id, e.target.value || null)}
+                        className={`text-sm border rounded-lg px-2 py-1 bg-transparent ${hasPending && pending?.department_id !== undefined ? 'border-blue-400' : 'border-border'}`}
+                      >
+                        <option value="">미배정</option>
+                        {departments.filter((d) => d.is_active !== false).map((d) => (
+                          <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-6 py-4">
+                      <select
+                        value={displayRole}
+                        onChange={(e) => setPendingRole(u.id, e.target.value)}
+                        className={`text-sm border rounded-lg px-2 py-1 bg-transparent ${hasPending && pending?.role !== undefined ? 'border-blue-400' : 'border-border'}`}
+                      >
+                        {ROLES.map((r) => (
+                          <option key={r.value} value={r.value}>{r.label}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-6 py-4 text-right flex items-center justify-end gap-1">
+                      {hasPending && (
+                        <button
+                          onClick={() => saveUserChanges(u.id)}
+                          disabled={savingUserId === u.id}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#0071e3] text-white text-xs font-medium hover:bg-[#0077ED] transition-colors disabled:opacity-50"
+                        >
+                          {savingUserId === u.id ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                          저장
+                        </button>
+                      )}
+                      <button onClick={() => openUserModal(u)} className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]"><Pencil size={14} /></button>
+                      <button onClick={() => deleteUser(u.id, u.name)} className="p-1.5 rounded-lg hover:bg-red-50 text-[#6e6e73] hover:text-red-500"><Trash2 size={14} /></button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -510,6 +555,13 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* 토스트 */}
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', zIndex: 100, display: 'flex', alignItems: 'center', gap: 8, padding: '12px 24px', backgroundColor: '#1d1d1f', color: '#fff', borderRadius: 12, fontSize: 14, fontWeight: 500, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+          <Check size={16} style={{ color: '#34c759' }} />
+          {toast}
         </div>
       )}
     </div>
