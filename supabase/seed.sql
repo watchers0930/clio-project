@@ -21,7 +21,7 @@ insert into public.channels (id, name, type, department_id) values
 -- 템플릿 5개
 insert into public.templates (id, name, description, scope, icon, content, placeholders) values
   (
-    't0000001-0000-0000-0000-000000000001',
+    '10000001-0000-0000-0000-000000000001',
     '회의록',
     '팀 회의 및 프로젝트 회의록 작성용 템플릿',
     'company',
@@ -30,7 +30,7 @@ insert into public.templates (id, name, description, scope, icon, content, place
     '["회의명","일시","참석자","장소","안건","논의내용","결정사항","후속조치"]'::jsonb
   ),
   (
-    't0000001-0000-0000-0000-000000000002',
+    '10000001-0000-0000-0000-000000000002',
     '계약서',
     '표준 계약서 작성용 템플릿',
     'company',
@@ -39,7 +39,7 @@ insert into public.templates (id, name, description, scope, icon, content, place
     '["계약명","계약일","갑","을","목적","기간","금액","특약사항"]'::jsonb
   ),
   (
-    't0000001-0000-0000-0000-000000000003',
+    '10000001-0000-0000-0000-000000000003',
     '제안서',
     '프로젝트 및 사업 제안서 템플릿',
     'company',
@@ -48,7 +48,7 @@ insert into public.templates (id, name, description, scope, icon, content, place
     '["제안명","제안일","부서","담당자","배경","내용","기대효과","예산일정","참고자료"]'::jsonb
   ),
   (
-    't0000001-0000-0000-0000-000000000004',
+    '10000001-0000-0000-0000-000000000004',
     '보고서',
     '업무 보고서 및 분석 리포트 템플릿',
     'company',
@@ -57,7 +57,7 @@ insert into public.templates (id, name, description, scope, icon, content, place
     '["보고서명","작성일","작성자","보고대상","요약","현황","성과","개선사항","계획"]'::jsonb
   ),
   (
-    't0000001-0000-0000-0000-000000000005',
+    '10000001-0000-0000-0000-000000000005',
     '공문',
     '대외 공문 및 협조 요청서 템플릿',
     'company',

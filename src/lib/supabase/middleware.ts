@@ -44,10 +44,17 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  // getUser()를 호출해 세션 자동 갱신 트리거
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  return { user, response: supabaseResponse };
+  // getUser()를 호출해 세션 자동 갱신 트리거 (타임아웃 방어)
+  try {
+    const { data: { user } } = await Promise.race([
+      supabase.auth.getUser(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Auth timeout')), 5000),
+      ),
+    ]);
+    return { user, response: supabaseResponse };
+  } catch {
+    // Supabase 응답 지연 시 미인증 처리 (로그인 페이지로 리다이렉트됨)
+    return { user: null, response: supabaseResponse };
+  }
 }
