@@ -247,7 +247,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Bottom Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 20 }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr]" style={{ gap: 20 }}>
         {/* Activity */}
         <div className="bg-card rounded-2xl border border-border overflow-hidden">
           <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e5e7' }}>
