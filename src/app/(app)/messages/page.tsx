@@ -18,65 +18,7 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [showSidebar, setShowSidebar] = useState(false);
 
-  /* ── 스와이프 드로어 제스처 (네이티브 이벤트) ── */
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const swipeRef = useRef({ startX: 0, startY: 0, dragging: false, translateX: 0 });
-  const showSidebarRef = useRef(showSidebar);
-  showSidebarRef.current = showSidebar;
-
-  useEffect(() => {
-    const sw = swipeRef.current;
-
-    const onTouchStart = (e: TouchEvent) => {
-      sw.startX = e.touches[0].clientX;
-      sw.startY = e.touches[0].clientY;
-      sw.dragging = false;
-      sw.translateX = 0;
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      const dx = e.touches[0].clientX - sw.startX;
-      const dy = e.touches[0].clientY - sw.startY;
-      if (!sw.dragging && Math.abs(dy) > Math.abs(dx)) return;
-      sw.dragging = true;
-
-      if (showSidebarRef.current && sidebarRef.current) {
-        const translate = Math.min(0, dx);
-        sw.translateX = translate;
-        sidebarRef.current.style.transform = `translateX(${translate}px)`;
-        sidebarRef.current.style.transition = 'none';
-      }
-    };
-
-    const onTouchEnd = (e: TouchEvent) => {
-      const dx = e.changedTouches[0].clientX - sw.startX;
-
-      // 드로어 닫기: 열린 상태에서 왼쪽 80px+ 드래그
-      if (showSidebarRef.current && sw.dragging && sw.translateX < -80) {
-        setShowSidebar(false);
-      }
-      // 드로어 열기: 왼쪽 가장자리(50px)에서 오른쪽 60px+ 스와이프
-      if (!showSidebarRef.current && sw.startX < 50 && dx > 60) {
-        setShowSidebar(true);
-      }
-
-      if (sidebarRef.current) {
-        sidebarRef.current.style.transform = '';
-        sidebarRef.current.style.transition = '';
-      }
-      sw.dragging = false;
-      sw.translateX = 0;
-    };
-
-    document.addEventListener('touchstart', onTouchStart, { passive: true });
-    document.addEventListener('touchmove', onTouchMove, { passive: true });
-    document.addEventListener('touchend', onTouchEnd, { passive: true });
-    return () => {
-      document.removeEventListener('touchstart', onTouchStart);
-      document.removeEventListener('touchmove', onTouchMove);
-      document.removeEventListener('touchend', onTouchEnd);
-    };
-  }, []);
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string } | null>(null);
 
   // 부서 트리
@@ -675,6 +617,17 @@ export default function MessagesPage() {
           </>
         )}
       </main>
+
+      {/* ── 모바일 플로팅 버튼: 조직도 열기 ── */}
+      {!showSidebar && (
+        <button
+          onClick={() => setShowSidebar(true)}
+          className="fixed right-5 bottom-6 z-30 w-14 h-14 rounded-full bg-[#0071e3] text-white shadow-lg shadow-[#0071e3]/30 flex items-center justify-center active:scale-95 transition-transform lg:hidden"
+          aria-label="조직도 열기"
+        >
+          <User size={24} />
+        </button>
+      )}
     </div>
   );
 }
