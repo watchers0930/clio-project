@@ -622,7 +622,8 @@ export default function MessagesPage() {
       {!showSidebar && (
         <button
           onClick={() => setShowSidebar(true)}
-          className="fixed right-5 bottom-6 z-30 w-14 h-14 rounded-full bg-[#0071e3] text-white shadow-lg shadow-[#0071e3]/30 flex items-center justify-center active:scale-95 transition-transform lg:hidden"
+          style={{ position: 'fixed', right: 20, bottom: 80, zIndex: 9999, width: 56, height: 56, borderRadius: '50%', backgroundColor: '#0071e3', color: '#fff', border: 'none', boxShadow: '0 4px 16px rgba(0,113,227,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          className="lg:hidden active:scale-95 transition-transform"
           aria-label="조직도 열기"
         >
           <User size={24} />
