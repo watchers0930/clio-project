@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, type TouchEvent as ReactTouchEvent } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, Search, MessageCircle, Send, Paperclip, ChevronRight, ChevronDown, Building2, User, Trash2, FileText, X, Clock, Eye, FolderOpen, Loader2 } from 'lucide-react';
 
 /* ── types ── */
@@ -18,61 +18,65 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [showSidebar, setShowSidebar] = useState(false);
 
-  /* ── 스와이프 드로어 제스처 ── */
-  const touchStartX = useRef(0);
-  const touchStartY = useRef(0);
+  /* ── 스와이프 드로어 제스처 (네이티브 이벤트) ── */
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const drawerTranslateX = useRef(0);
-  const isDragging = useRef(false);
+  const swipeRef = useRef({ startX: 0, startY: 0, dragging: false, translateX: 0 });
+  const showSidebarRef = useRef(showSidebar);
+  showSidebarRef.current = showSidebar;
 
-  const handleTouchStart = useCallback((e: ReactTouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-    isDragging.current = false;
-  }, []);
+  useEffect(() => {
+    const sw = swipeRef.current;
 
-  const handleTouchMove = useCallback((e: ReactTouchEvent) => {
-    const dx = e.touches[0].clientX - touchStartX.current;
-    const dy = e.touches[0].clientY - touchStartY.current;
-    // 수직 스크롤이 더 크면 무시
-    if (!isDragging.current && Math.abs(dy) > Math.abs(dx)) return;
-    isDragging.current = true;
+    const onTouchStart = (e: TouchEvent) => {
+      sw.startX = e.touches[0].clientX;
+      sw.startY = e.touches[0].clientY;
+      sw.dragging = false;
+      sw.translateX = 0;
+    };
 
-    if (showSidebar) {
-      // 드로어 열린 상태: 왼쪽으로 밀어서 닫기
-      const translate = Math.min(0, dx);
-      drawerTranslateX.current = translate;
-      if (sidebarRef.current) {
+    const onTouchMove = (e: TouchEvent) => {
+      const dx = e.touches[0].clientX - sw.startX;
+      const dy = e.touches[0].clientY - sw.startY;
+      if (!sw.dragging && Math.abs(dy) > Math.abs(dx)) return;
+      sw.dragging = true;
+
+      if (showSidebarRef.current && sidebarRef.current) {
+        const translate = Math.min(0, dx);
+        sw.translateX = translate;
         sidebarRef.current.style.transform = `translateX(${translate}px)`;
         sidebarRef.current.style.transition = 'none';
       }
-    }
-  }, [showSidebar]);
+    };
 
-  const handleTouchEnd = useCallback(() => {
-    if (!isDragging.current) return;
-    if (showSidebar && drawerTranslateX.current < -80) {
-      setShowSidebar(false);
-    }
-    if (sidebarRef.current) {
-      sidebarRef.current.style.transform = '';
-      sidebarRef.current.style.transition = '';
-    }
-    drawerTranslateX.current = 0;
-    isDragging.current = false;
-  }, [showSidebar]);
+    const onTouchEnd = (e: TouchEvent) => {
+      const dx = e.changedTouches[0].clientX - sw.startX;
 
-  // 페이지 터치: 왼쪽 가장자리에서 오른쪽으로 스와이프 → 드로어 열기
-  const pageTouchStartX = useRef(0);
-  const handlePageTouchStart = useCallback((e: ReactTouchEvent) => {
-    pageTouchStartX.current = e.touches[0].clientX;
+      // 드로어 닫기: 열린 상태에서 왼쪽 80px+ 드래그
+      if (showSidebarRef.current && sw.dragging && sw.translateX < -80) {
+        setShowSidebar(false);
+      }
+      // 드로어 열기: 왼쪽 가장자리(50px)에서 오른쪽 60px+ 스와이프
+      if (!showSidebarRef.current && sw.startX < 50 && dx > 60) {
+        setShowSidebar(true);
+      }
+
+      if (sidebarRef.current) {
+        sidebarRef.current.style.transform = '';
+        sidebarRef.current.style.transition = '';
+      }
+      sw.dragging = false;
+      sw.translateX = 0;
+    };
+
+    document.addEventListener('touchstart', onTouchStart, { passive: true });
+    document.addEventListener('touchmove', onTouchMove, { passive: true });
+    document.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      document.removeEventListener('touchstart', onTouchStart);
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+    };
   }, []);
-  const handlePageTouchEnd = useCallback((e: ReactTouchEvent) => {
-    const dx = e.changedTouches[0].clientX - pageTouchStartX.current;
-    if (pageTouchStartX.current < 30 && dx > 60 && !showSidebar) {
-      setShowSidebar(true);
-    }
-  }, [showSidebar]);
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string } | null>(null);
 
   // 부서 트리
@@ -398,7 +402,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-120px)]" onTouchStart={handlePageTouchStart} onTouchEnd={handlePageTouchEnd}>
+    <div className="flex gap-4 h-[calc(100vh-120px)]">
       <input ref={fileInputRef} type="file" className="hidden" onChange={handleAttachFile} />
 
       {/* ── 파일 공유 모달 ── */}
@@ -491,9 +495,6 @@ export default function MessagesPage() {
       <div className={`fixed inset-0 z-40 bg-black/40 transition-opacity duration-300 lg:hidden ${showSidebar ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setShowSidebar(false)} />
       <aside
         ref={sidebarRef}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
         className={`fixed left-0 top-0 bottom-0 z-50 w-80 bg-white rounded-r-2xl border-r border-[#e5e5e7] shadow-xl flex flex-col shrink-0 overflow-hidden transition-transform duration-300 ease-out lg:relative lg:translate-x-0 lg:rounded-2xl lg:border lg:shadow-sm ${showSidebar ? 'translate-x-0' : '-translate-x-full'} lg:!transform-none`}>
         {/* 내 프로필 */}
         {currentUser && (
