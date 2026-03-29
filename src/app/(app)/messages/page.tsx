@@ -536,11 +536,11 @@ export default function MessagesPage() {
       {/* ── Right Panel ── */}
       <main className="flex-1 bg-white rounded-2xl border border-[#e5e5e7] shadow-sm flex flex-col overflow-hidden">
         {!activeChannel ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
-            <MessageCircle size={32} className="text-[#e5e5e7] mb-5" />
-            <h3 className="text-lg font-semibold text-[#1d1d1f] mb-3">대화를 선택하세요</h3>
-            <p className="text-sm text-[#6e6e73] mb-5">왼쪽 조직도에서 대화할 사람을 클릭하세요.</p>
-            <button onClick={() => setShowSidebar(true)} className="mt-4 px-4 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium lg:hidden hover:bg-[#0071e3] transition-colors">
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-6" style={{ marginTop: -30 }}>
+            <MessageCircle size={32} className="text-[#e5e5e7]" style={{ marginBottom: 20 }} />
+            <h3 className="text-lg font-semibold text-[#1d1d1f]" style={{ marginBottom: 20 }}>대화를 선택하세요</h3>
+            <p className="text-sm text-[#6e6e73]" style={{ marginBottom: 20 }}>왼쪽 조직도에서 대화할 사람을 클릭하세요.</p>
+            <button onClick={() => setShowSidebar(true)} className="px-4 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium lg:hidden hover:bg-[#0071e3] transition-colors">
               조직도 보기
             </button>
           </div>
