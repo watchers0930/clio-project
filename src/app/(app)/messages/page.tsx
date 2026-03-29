@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, type TouchEvent as ReactTouchEvent } from 'react';
 import { Plus, Search, MessageCircle, Send, Paperclip, ChevronRight, ChevronDown, Building2, User, Trash2, FileText, X, Clock, Eye, FolderOpen, Loader2 } from 'lucide-react';
 
 /* ── types ── */
@@ -17,6 +17,62 @@ export default function MessagesPage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [showSidebar, setShowSidebar] = useState(false);
+
+  /* ── 스와이프 드로어 제스처 ── */
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const drawerTranslateX = useRef(0);
+  const isDragging = useRef(false);
+
+  const handleTouchStart = useCallback((e: ReactTouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    isDragging.current = false;
+  }, []);
+
+  const handleTouchMove = useCallback((e: ReactTouchEvent) => {
+    const dx = e.touches[0].clientX - touchStartX.current;
+    const dy = e.touches[0].clientY - touchStartY.current;
+    // 수직 스크롤이 더 크면 무시
+    if (!isDragging.current && Math.abs(dy) > Math.abs(dx)) return;
+    isDragging.current = true;
+
+    if (showSidebar) {
+      // 드로어 열린 상태: 왼쪽으로 밀어서 닫기
+      const translate = Math.min(0, dx);
+      drawerTranslateX.current = translate;
+      if (sidebarRef.current) {
+        sidebarRef.current.style.transform = `translateX(${translate}px)`;
+        sidebarRef.current.style.transition = 'none';
+      }
+    }
+  }, [showSidebar]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (!isDragging.current) return;
+    if (showSidebar && drawerTranslateX.current < -80) {
+      setShowSidebar(false);
+    }
+    if (sidebarRef.current) {
+      sidebarRef.current.style.transform = '';
+      sidebarRef.current.style.transition = '';
+    }
+    drawerTranslateX.current = 0;
+    isDragging.current = false;
+  }, [showSidebar]);
+
+  // 페이지 터치: 왼쪽 가장자리에서 오른쪽으로 스와이프 → 드로어 열기
+  const pageTouchStartX = useRef(0);
+  const handlePageTouchStart = useCallback((e: ReactTouchEvent) => {
+    pageTouchStartX.current = e.touches[0].clientX;
+  }, []);
+  const handlePageTouchEnd = useCallback((e: ReactTouchEvent) => {
+    const dx = e.changedTouches[0].clientX - pageTouchStartX.current;
+    if (pageTouchStartX.current < 30 && dx > 60 && !showSidebar) {
+      setShowSidebar(true);
+    }
+  }, [showSidebar]);
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string } | null>(null);
 
   // 부서 트리
@@ -342,7 +398,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-120px)]">
+    <div className="flex gap-4 h-[calc(100vh-120px)]" onTouchStart={handlePageTouchStart} onTouchEnd={handlePageTouchEnd}>
       <input ref={fileInputRef} type="file" className="hidden" onChange={handleAttachFile} />
 
       {/* ── 파일 공유 모달 ── */}
@@ -432,8 +488,13 @@ export default function MessagesPage() {
       )}
 
       {/* ── Left Panel: 부서 트리 + DM ── */}
-      <div className={`${showSidebar ? 'fixed inset-0 z-40 bg-black/40' : 'hidden'} lg:hidden`} onClick={() => setShowSidebar(false)} />
-      <aside className={`${showSidebar ? 'fixed left-0 top-0 bottom-0 z-50' : 'hidden'} lg:relative lg:block w-80 bg-white rounded-2xl border border-[#e5e5e7] shadow-sm flex flex-col shrink-0 overflow-hidden`}>
+      <div className={`fixed inset-0 z-40 bg-black/40 transition-opacity duration-300 lg:hidden ${showSidebar ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setShowSidebar(false)} />
+      <aside
+        ref={sidebarRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        className={`fixed left-0 top-0 bottom-0 z-50 w-80 bg-white rounded-r-2xl border-r border-[#e5e5e7] shadow-xl flex flex-col shrink-0 overflow-hidden transition-transform duration-300 ease-out lg:relative lg:translate-x-0 lg:rounded-2xl lg:border lg:shadow-sm ${showSidebar ? 'translate-x-0' : '-translate-x-full'} lg:!transform-none`}>
         {/* 내 프로필 */}
         {currentUser && (
           <div className="px-4 pt-4 pb-2 flex items-center gap-3 border-b border-[#e5e5e7]">
