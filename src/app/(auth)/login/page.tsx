@@ -66,7 +66,7 @@ export default function LoginPage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ width: '100%', maxWidth: 740 }}>
+      <div style={{ width: isMobile ? '80vw' : '100%', maxWidth: 740 }}>
 
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
