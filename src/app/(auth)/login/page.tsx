@@ -58,10 +58,10 @@ export default function LoginPage() {
 
   const inputStyle: React.CSSProperties = {
     ...INPUT_BASE,
-    height: isMobile ? 156 : 52,
-    fontSize: isMobile ? 32 : 15,
-    borderRadius: isMobile ? 20 : 12,
-    padding: isMobile ? '0 24px' : '0 18px',
+    height: 52,
+    fontSize: 15,
+    borderRadius: 12,
+    padding: '0 18px',
   };
 
   return (
@@ -79,7 +79,7 @@ export default function LoginPage() {
         </div>
 
         {/* Login Card */}
-        <div style={{ backgroundColor: '#fff', borderRadius: 16, border: '1px solid #e5e5e7', padding: '56px 144px' }}>
+        <div style={{ backgroundColor: '#fff', borderRadius: 16, border: '1px solid #e5e5e7', padding: isMobile ? '36px 20px' : '56px 144px' }}>
 
           <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 36, color: '#1d1d1f' }}>
             로그인
