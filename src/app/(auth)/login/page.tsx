@@ -1,16 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 
-const inputStyle: React.CSSProperties = {
+const INPUT_BASE: React.CSSProperties = {
   width: '100%',
-  height: 52,
   padding: '0 18px',
-  fontSize: 15,
-  borderRadius: 12,
   backgroundColor: '#f5f5f7',
   border: '1px solid #e5e5e7',
   color: '#1d1d1f',
@@ -18,9 +15,22 @@ const inputStyle: React.CSSProperties = {
   fontFamily: 'Verdana, sans-serif',
 };
 
+// 모바일 감지는 CSS media query 대신 window.innerWidth 기반
+function useIsMobile() {
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+  return mobile;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const { login, isLoading: storeLoading, error: storeError, clearError } = useAuthStore();
+  const isMobile = useIsMobile();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -44,6 +54,14 @@ export default function LoginPage() {
     } catch {
       setLocalError('서버에 연결할 수 없습니다.');
     }
+  };
+
+  const inputStyle: React.CSSProperties = {
+    ...INPUT_BASE,
+    height: isMobile ? 156 : 52,
+    fontSize: isMobile ? 32 : 15,
+    borderRadius: isMobile ? 20 : 12,
+    padding: isMobile ? '0 24px' : '0 18px',
   };
 
   return (
