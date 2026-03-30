@@ -368,7 +368,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-120px)]">
+    <div className="relative flex gap-4 h-[calc(100vh-120px)]">
       <input ref={fileInputRef} type="file" className="hidden" onChange={handleAttachFile} />
 
       {/* ── 파일 공유 모달 ── */}
@@ -645,15 +645,15 @@ export default function MessagesPage() {
         )}
       </main>
 
-      {/* ── 모바일 플로팅 버튼: 조직도 열기 ── */}
+      {/* ── 모바일 플로팅 버튼: 조직도 열기 (대화창 우하단) ── */}
       {!showSidebar && (
         <button
           onClick={() => setShowSidebar(true)}
-          style={{ position: 'fixed', right: 20, bottom: 80, zIndex: 9999, width: 56, height: 56, borderRadius: '50%', backgroundColor: '#0071e3', color: '#fff', border: 'none', boxShadow: '0 4px 16px rgba(0,113,227,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          style={{ position: 'absolute', right: 20, bottom: 20, zIndex: 30, width: 48, height: 48, borderRadius: '50%', backgroundColor: '#0071e3', color: '#fff', border: 'none', boxShadow: '0 4px 16px rgba(0,113,227,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           className="lg:hidden active:scale-95 transition-transform"
           aria-label="조직도 열기"
         >
-          <User size={24} />
+          <User size={22} />
         </button>
       )}
     </div>
