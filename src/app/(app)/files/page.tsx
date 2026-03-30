@@ -330,7 +330,7 @@ function FilesPage() {
       </div>
 
       {/* result count */}
-      <p className="text-sm text-[#6e6e73]" style={{ marginTop: 12 }}>총 <span className="font-num font-medium text-[#1d1d1f]">{filtered.length}</span>개 파일</p>
+      <p className="text-sm text-[#6e6e73]" style={{ marginTop: 12, marginBottom: 8 }}>총 <span className="font-num font-medium text-[#1d1d1f]">{filtered.length}</span>개 파일</p>
 
       {/* ── LIST VIEW ── */}
       {view === 'list' && (
