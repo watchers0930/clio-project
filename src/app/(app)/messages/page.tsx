@@ -316,13 +316,15 @@ export default function MessagesPage() {
         // 업로드 성공 → 서버 메시지로 교체
         await fetchMessages(activeChannel);
       } else {
-        const json = await res.json().catch(() => ({ error: '업로드 실패' }));
+        const text = await res.text().catch(() => '');
+        let errMsg = `업로드 실패 (${res.status})`;
+        try { const json = JSON.parse(text); errMsg = json.error || errMsg; } catch { errMsg = text.slice(0, 200) || errMsg; }
         // 실패 시 임시 메시지 제거
         setMessagesMap(prev => ({
           ...prev,
           [activeChannel]: (prev[activeChannel] ?? []).filter(m => m.id !== tempId),
         }));
-        alert(json.error ?? '파일 업로드에 실패했습니다.');
+        alert(errMsg);
       }
     } catch {
       setMessagesMap(prev => ({

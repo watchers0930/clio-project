@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     if (uploadError) {
       console.error('[upload-attachment] storage:', uploadError.message);
-      return NextResponse.json({ success: false, error: '파일 업로드 실패' }, { status: 500 });
+      return NextResponse.json({ success: false, error: `스토리지 업로드 실패: ${uploadError.message}` }, { status: 500 });
     }
 
     // 2. files 테이블에 메타데이터 저장
@@ -125,7 +125,9 @@ export async function POST(request: NextRequest) {
         expiresAt,
       },
     }, { status: 201 });
-  } catch {
-    return NextResponse.json({ success: false, error: '첨부파일 업로드 중 오류' }, { status: 500 });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '알 수 없는 오류';
+    console.error('[upload-attachment] catch:', msg);
+    return NextResponse.json({ success: false, error: `첨부파일 오류: ${msg}` }, { status: 500 });
   }
 }
