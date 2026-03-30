@@ -261,7 +261,7 @@ function FilesPage() {
   return (
     <div className="space-y-6 pb-10">
       {/* header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3" style={{ marginBottom: 15 }}>
         <h1 className="text-2xl font-bold text-[#1d1d1f]">파일 관리</h1>
         <button
           onClick={() => setShowUpload(true)}
