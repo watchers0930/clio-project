@@ -34,8 +34,9 @@ export async function POST(request: NextRequest) {
     const admin = createAdminSupabaseClient();
     const expiresAt = new Date(Date.now() + DEFAULT_SHARE_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
-    // 1. Storage에 파일 업로드 (파일서버까지만)
-    const storagePath = `attachments/${channelId}/${Date.now()}_${file.name}`;
+    // 1. Storage에 파일 업로드 — 경로는 ASCII만 사용 (한글 파일명 호환)
+    const ext = file.name.includes('.') ? '.' + file.name.split('.').pop() : '';
+    const storagePath = `attachments/${channelId}/${Date.now()}_${crypto.randomUUID().slice(0, 8)}${ext}`;
     const { error: uploadError } = await admin.storage
       .from('files')
       .upload(storagePath, file);
