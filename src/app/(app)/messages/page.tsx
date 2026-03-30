@@ -454,16 +454,19 @@ export default function MessagesPage() {
       <aside
         ref={sidebarRef}
         className={`fixed left-0 top-0 bottom-0 z-50 w-80 bg-white rounded-r-2xl border-r border-[#e5e5e7] shadow-xl flex flex-col shrink-0 overflow-hidden transition-transform duration-300 ease-out lg:relative lg:translate-x-0 lg:rounded-2xl lg:border lg:shadow-sm ${showSidebar ? 'translate-x-0' : '-translate-x-full'} lg:!transform-none`}>
-        {/* 내 프로필 */}
+        {/* 내 프로필 + 닫기 */}
         {currentUser && (
           <div className="px-4 pt-4 pb-2 flex items-center gap-3 border-b border-[#e5e5e7]">
             <div className="w-9 h-9 rounded-full bg-[#0071e3] flex items-center justify-center shrink-0">
               <span className="text-sm font-medium text-white">{currentUser.name.charAt(0)}</span>
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-[#1d1d1f] truncate">{currentUser.name}</p>
               <p className="text-xs text-[#6e6e73] truncate">{currentUser.email}</p>
             </div>
+            <button onClick={() => setShowSidebar(false)} className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73] transition-colors lg:hidden shrink-0">
+              <X size={18} />
+            </button>
           </div>
         )}
 
