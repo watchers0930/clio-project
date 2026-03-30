@@ -286,13 +286,13 @@ export default function SettingsPage() {
       <div className="flex gap-1 bg-[#f5f5f7] rounded-xl p-1 w-fit">
         <button
           onClick={() => setTab('departments')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === 'departments' ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-[#6e6e73] hover:text-[#1d1d1f]'}`}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${tab === 'departments' ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-[#6e6e73] hover:text-[#1d1d1f]'}`}
         >
           <Building2 size={16} /> 부서 관리
         </button>
         <button
           onClick={() => setTab('users')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === 'users' ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-[#6e6e73] hover:text-[#1d1d1f]'}`}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${tab === 'users' ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-[#6e6e73] hover:text-[#1d1d1f]'}`}
         >
           <Users size={16} /> 사용자 관리
         </button>
@@ -313,20 +313,20 @@ export default function SettingsPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-page-bg">
-                <th className="text-left px-6 py-3 text-[12px] font-semibold text-muted uppercase">부서명</th>
-                <th className="text-left px-6 py-3 text-[12px] font-semibold text-muted uppercase">코드</th>
-                <th className="text-left px-6 py-3 text-[12px] font-semibold text-muted uppercase">설명</th>
-                <th className="text-left px-6 py-3 text-[12px] font-semibold text-muted uppercase">인원</th>
-                <th className="text-right px-6 py-3 text-[12px] font-semibold text-muted uppercase">관리</th>
+                <th className="text-left px-6 py-4 text-[12px] font-semibold text-muted uppercase">부서명</th>
+                <th className="text-left px-6 py-4 text-[12px] font-semibold text-muted uppercase">코드</th>
+                <th className="text-left px-6 py-4 text-[12px] font-semibold text-muted uppercase">설명</th>
+                <th className="text-left px-6 py-4 text-[12px] font-semibold text-muted uppercase">인원</th>
+                <th className="text-right px-6 py-4 text-[12px] font-semibold text-muted uppercase">관리</th>
               </tr>
             </thead>
             <tbody>
               {departments.map((d) => (
                 <tr key={d.id} className="border-b border-border last:border-b-0 hover:bg-page-bg/50">
-                  <td className="px-6 py-4 text-sm font-medium">{d.name}</td>
-                  <td className="px-6 py-4 text-sm text-muted font-num">{d.code}</td>
-                  <td className="px-6 py-4 text-sm text-muted">{d.description || '-'}</td>
-                  <td className="px-6 py-4 text-sm font-num">{d.memberCount}명</td>
+                  <td className="px-6 py-5 text-sm font-medium">{d.name}</td>
+                  <td className="px-6 py-5 text-sm text-muted font-num">{d.code}</td>
+                  <td className="px-6 py-5 text-sm text-muted">{d.description || '-'}</td>
+                  <td className="px-6 py-5 text-sm font-num">{d.memberCount}명</td>
                   <td className="px-6 py-4 text-right">
                     <button onClick={() => openDeptModal(d)} className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]"><Pencil size={14} /></button>
                     <button onClick={() => deleteDept(d.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-[#6e6e73] hover:text-red-500 ml-1"><Trash2 size={14} /></button>
@@ -353,11 +353,11 @@ export default function SettingsPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-page-bg">
-                <th className="text-left px-6 py-3 text-[12px] font-semibold text-muted uppercase">이름</th>
-                <th className="text-left px-6 py-3 text-[12px] font-semibold text-muted uppercase">이메일</th>
-                <th className="text-left px-6 py-3 text-[12px] font-semibold text-muted uppercase">부서</th>
-                <th className="text-left px-6 py-3 text-[12px] font-semibold text-muted uppercase">역할</th>
-                <th className="text-right px-6 py-3 text-[12px] font-semibold text-muted uppercase">관리</th>
+                <th className="text-left px-6 py-4 text-[12px] font-semibold text-muted uppercase">이름</th>
+                <th className="text-left px-6 py-4 text-[12px] font-semibold text-muted uppercase">이메일</th>
+                <th className="text-left px-6 py-4 text-[12px] font-semibold text-muted uppercase">부서</th>
+                <th className="text-left px-6 py-4 text-[12px] font-semibold text-muted uppercase">역할</th>
+                <th className="text-right px-6 py-4 text-[12px] font-semibold text-muted uppercase">관리</th>
               </tr>
             </thead>
             <tbody>
@@ -368,8 +368,8 @@ export default function SettingsPage() {
                 const displayRole = pending?.role !== undefined ? pending.role : u.role;
                 return (
                   <tr key={u.id} className={`border-b border-border last:border-b-0 transition-colors ${hasPending ? 'bg-blue-50/60' : 'hover:bg-page-bg/50'}`}>
-                    <td className="px-6 py-4 text-sm font-medium">{u.name}</td>
-                    <td className="px-6 py-4 text-sm text-muted">{u.email}</td>
+                    <td className="px-6 py-5 text-sm font-medium">{u.name}</td>
+                    <td className="px-6 py-5 text-sm text-muted">{u.email}</td>
                     <td className="px-6 py-4">
                       <select
                         value={displayDept}

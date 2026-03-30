@@ -213,7 +213,7 @@ export default function DocumentsPage() {
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors shadow-sm"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors shadow-sm"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -232,7 +232,7 @@ export default function DocumentsPage() {
           </div>
           <h3 className="text-lg font-semibold text-[#1d1d1f] mb-1">생성된 문서가 없습니다</h3>
           <p className="text-[#6e6e73] text-sm mb-4">새 문서 생성 버튼을 눌러 첫 문서를 만들어 보세요</p>
-          <button onClick={() => setShowModal(true)} className="px-5 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors">
+          <button onClick={() => setShowModal(true)} className="px-6 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors">
             새 문서 생성
           </button>
         </div>
@@ -261,19 +261,19 @@ export default function DocumentsPage() {
               <div className="flex gap-2 mt-4 pt-3 border-t border-[#f5f5f7]">
                 <button
                   onClick={() => setViewDoc(d)}
-                  className="px-3 py-1.5 rounded-lg text-sm text-[#0071e3] hover:bg-[#f5f5f7] transition-colors"
+                  className="px-4 py-2 rounded-lg text-sm text-[#0071e3] hover:bg-[#f5f5f7] transition-colors"
                 >
                   보기
                 </button>
                 <button
                   onClick={() => handleDownload(d)}
-                  className="px-3 py-1.5 rounded-lg text-sm text-[#0071e3] hover:bg-[#f5f5f7] transition-colors"
+                  className="px-4 py-2 rounded-lg text-sm text-[#0071e3] hover:bg-[#f5f5f7] transition-colors"
                 >
                   다운로드
                 </button>
                 <button
                   onClick={() => handleDelete(d.id)}
-                  className="px-3 py-1.5 rounded-lg text-sm text-[#ff3b30] hover:bg-[#f5f5f7] transition-colors"
+                  className="px-4 py-2 rounded-lg text-sm text-[#ff3b30] hover:bg-[#f5f5f7] transition-colors"
                 >
                   삭제
                 </button>
@@ -287,7 +287,7 @@ export default function DocumentsPage() {
       {viewDoc && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-[#e5e5e7] flex items-center justify-between sticky top-0 bg-white rounded-t-2xl z-10">
+            <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between sticky top-0 bg-white rounded-t-2xl z-10">
               <div>
                 <h2 className="text-lg font-semibold text-[#1d1d1f]">{viewDoc.title}</h2>
                 <div className="flex gap-2 mt-1">
@@ -312,14 +312,14 @@ export default function DocumentsPage() {
                 })}
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-[#e5e5e7] flex justify-end gap-3">
+            <div className="px-6 py-5 border-t border-[#e5e5e7] flex justify-end gap-3">
               <button
                 onClick={() => handleDownload(viewDoc)}
-                className="px-4 py-2 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
+                className="px-5 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
               >
                 다운로드
               </button>
-              <button onClick={() => setViewDoc(null)} className="px-5 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors">닫기</button>
+              <button onClick={() => setViewDoc(null)} className="px-6 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors">닫기</button>
             </div>
           </div>
         </div>
@@ -330,7 +330,7 @@ export default function DocumentsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
             {/* modal header */}
-            <div className="px-6 py-4 border-b border-[#e5e5e7] flex items-center justify-between sticky top-0 bg-white rounded-t-2xl z-10">
+            <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between sticky top-0 bg-white rounded-t-2xl z-10">
               <h2 className="text-lg font-semibold text-[#1d1d1f]">새 문서 생성</h2>
               <button onClick={resetModal} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -371,7 +371,7 @@ export default function DocumentsPage() {
                     <button
                       key={t.id}
                       onClick={() => setSelectedTemplate(t.id)}
-                      className={`p-4 rounded-xl border text-left transition-all ${selectedTemplate === t.id ? 'border-[#0071e3] bg-[#f5f5f7] ring-2 ring-[#0071e3]/30' : 'border-[#e5e5e7] hover:border-[#0071e3]'}`}
+                      className={`p-5 rounded-xl border text-left transition-all ${selectedTemplate === t.id ? 'border-[#0071e3] bg-[#f5f5f7] ring-2 ring-[#0071e3]/30' : 'border-[#e5e5e7] hover:border-[#0071e3]'}`}
                     >
                       <span className="text-2xl">{TEMPLATE_ICONS[t.name] ?? '📄'}</span>
                       <h4 className="font-medium text-[#1d1d1f] text-sm mt-2">{t.name}</h4>
@@ -388,7 +388,7 @@ export default function DocumentsPage() {
                   {sourceFiles.map((f) => (
                     <label
                       key={f.id}
-                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${selectedFiles.has(f.id) ? 'border-[#0071e3] bg-[#f5f5f7]' : 'border-[#e5e5e7] hover:bg-[#f5f5f7]'}`}
+                      className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${selectedFiles.has(f.id) ? 'border-[#0071e3] bg-[#f5f5f7]' : 'border-[#e5e5e7] hover:bg-[#f5f5f7]'}`}
                     >
                       <input type="checkbox" checked={selectedFiles.has(f.id)} onChange={() => toggleFile(f.id)} className="rounded border-[#e5e5e7] text-[#0071e3] focus:ring-[#0071e3]" />
                       <svg className="w-5 h-5 text-[#6e6e73] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -465,13 +465,13 @@ export default function DocumentsPage() {
             </div>
 
             {/* modal footer */}
-            <div className="px-6 py-4 border-t border-[#e5e5e7] flex items-center justify-between sticky bottom-0 bg-white rounded-b-2xl">
+            <div className="px-6 py-5 border-t border-[#e5e5e7] flex items-center justify-between sticky bottom-0 bg-white rounded-b-2xl">
               <button
                 onClick={() => {
                   if (step === 1 || step === 5) resetModal();
                   else setStep(step - 1);
                 }}
-                className="px-4 py-2 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
+                className="px-5 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
               >
                 {step === 1 || step === 5 ? '닫기' : '이전'}
               </button>
@@ -479,7 +479,7 @@ export default function DocumentsPage() {
                 <button
                   disabled={!canNext()}
                   onClick={() => setStep(step + 1)}
-                  className="px-5 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-6 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   다음
                 </button>
@@ -488,7 +488,7 @@ export default function DocumentsPage() {
                 <button
                   disabled={generating}
                   onClick={handleGenerate}
-                  className="px-5 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-6 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {generating ? '생성 중...' : '문서 생성'}
                 </button>
@@ -499,7 +499,7 @@ export default function DocumentsPage() {
                     if (generatedDoc) setViewDoc(generatedDoc);
                     resetModal();
                   }}
-                  className="px-5 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors"
+                  className="px-6 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors"
                 >
                   문서 보기
                 </button>

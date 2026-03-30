@@ -243,7 +243,7 @@ export default function TemplatesPage() {
         </div>
         <button
           onClick={openCreate}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors shadow-sm"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors shadow-sm"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
           새 템플릿
@@ -273,7 +273,7 @@ export default function TemplatesPage() {
           </div>
           <h3 className="text-lg font-semibold text-[#1d1d1f] mb-1">{tab} 템플릿이 없습니다</h3>
           <p className="text-[#6e6e73] text-sm mb-4">새 템플릿을 만들어 보세요</p>
-          <button onClick={openCreate} className="px-5 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors">
+          <button onClick={openCreate} className="px-6 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors">
             새 템플릿
           </button>
         </div>
@@ -324,7 +324,7 @@ export default function TemplatesPage() {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[85vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-[#e5e5e7] flex items-center justify-between">
+            <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between">
               <h2 className="text-lg font-semibold text-[#1d1d1f]">
                 {editId ? '템플릿 편집' : '새 템플릿 만들기'}
               </h2>
@@ -332,16 +332,16 @@ export default function TemplatesPage() {
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            <div className="px-6 py-6 space-y-5">
+            <div className="px-6 py-6 space-y-6">
               {/* Icon selector */}
               <div>
                 <label className="block text-sm font-medium text-[#1d1d1f] mb-2">아이콘</label>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2.5">
                   {ICON_OPTIONS.map((icon) => (
                     <button
                       key={icon}
                       onClick={() => setFormIcon(icon)}
-                      className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl border transition-colors ${formIcon === icon ? 'border-[#0071e3] bg-[#f5f5f7] ring-2 ring-[#0071e3]/30' : 'border-[#e5e5e7] hover:border-[#0071e3]'}`}
+                      className={`w-11 h-11 rounded-lg flex items-center justify-center text-xl border transition-colors ${formIcon === icon ? 'border-[#0071e3] bg-[#f5f5f7] ring-2 ring-[#0071e3]/30' : 'border-[#e5e5e7] hover:border-[#0071e3]'}`}
                     >
                       {icon}
                     </button>
@@ -356,7 +356,7 @@ export default function TemplatesPage() {
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="템플릿 이름을 입력하세요"
-                  className="w-full px-4 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3]"
+                  className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3]"
                 />
               </div>
 
@@ -368,7 +368,7 @@ export default function TemplatesPage() {
                   onChange={(e) => setFormDescription(e.target.value)}
                   placeholder="템플릿에 대한 설명을 입력하세요"
                   rows={3}
-                  className="w-full px-4 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none"
+                  className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none"
                 />
               </div>
 
@@ -378,7 +378,7 @@ export default function TemplatesPage() {
                 <select
                   value={formDepartmentId}
                   onChange={(e) => setFormDepartmentId(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3]"
+                  className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] text-sm text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3]"
                 >
                   {deptList.map((d) => (
                     <option key={d.id} value={d.id}>{d.name}</option>
@@ -402,12 +402,12 @@ export default function TemplatesPage() {
                 </div>
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-[#e5e5e7] flex justify-end gap-3">
-              <button onClick={resetForm} className="px-4 py-2 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">취소</button>
+            <div className="px-6 py-5 border-t border-[#e5e5e7] flex justify-end gap-3">
+              <button onClick={resetForm} className="px-5 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">취소</button>
               <button
                 onClick={handleSave}
                 disabled={!formName.trim() || saving}
-                className="px-5 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-6 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {saving ? '저장 중...' : editId ? '수정' : '생성'}
               </button>

@@ -282,13 +282,13 @@ function FilesPage() {
           </span>
           <button
             onClick={bulkDelete}
-            className="ml-auto px-4 py-1.5 rounded-lg bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors"
+            className="ml-auto px-5 py-2 rounded-lg bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors"
           >
             선택 삭제
           </button>
           <button
             onClick={() => setSelectedIds(new Set())}
-            className="px-4 py-1.5 rounded-lg border border-[#e5e5e7] bg-white text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
+            className="px-5 py-2 rounded-lg border border-[#e5e5e7] bg-white text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
           >
             선택 해제
           </button>
@@ -339,15 +339,15 @@ function FilesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-[#f5f5f7] text-left text-[#6e6e73]">
-                  <th className="px-4 py-3 w-10">
+                  <th className="px-4 py-4 w-10">
                     <input type="checkbox" checked={selectedIds.size === paged.length && paged.length > 0} onChange={toggleAll} className="rounded border-[#e5e5e7] text-[#0071e3] focus:ring-[#0071e3]" />
                   </th>
-                  <th className="px-4 py-3 font-medium">파일명</th>
-                  <th className="px-4 py-3 font-medium hidden sm:table-cell">부서</th>
-                  <th className="px-4 py-3 font-medium hidden md:table-cell">크기</th>
-                  <th className="px-4 py-3 font-medium hidden md:table-cell">업로드일</th>
-                  <th className="px-4 py-3 font-medium">상태</th>
-                  <th className="px-4 py-3 font-medium w-28">작업</th>
+                  <th className="px-4 py-4 font-medium">파일명</th>
+                  <th className="px-4 py-4 font-medium hidden sm:table-cell">부서</th>
+                  <th className="px-4 py-4 font-medium hidden md:table-cell">크기</th>
+                  <th className="px-4 py-4 font-medium hidden md:table-cell">업로드일</th>
+                  <th className="px-4 py-4 font-medium">상태</th>
+                  <th className="px-4 py-4 font-medium w-28">작업</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e5e5e7]">

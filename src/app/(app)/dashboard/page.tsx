@@ -195,7 +195,7 @@ export default function DashboardPage() {
               key={a.label}
               href={a.href}
               className="flex items-center justify-center gap-3 rounded-xl bg-card border border-border text-[14px] font-medium text-foreground hover:border-primary hover:text-primary transition-all duration-200"
-              style={{ padding: '14px 20px' }}
+              style={{ padding: '16px 24px' }}
             >
               <Icon size={17} strokeWidth={1.5} />
               {a.label}
@@ -206,7 +206,7 @@ export default function DashboardPage() {
 
       {/* Recent Files */}
       <div className="bg-card rounded-2xl border border-border overflow-hidden">
-        <div className="flex items-center justify-between" style={{ padding: '20px 24px', borderBottom: '1px solid #e5e5e7' }}>
+        <div className="flex items-center justify-between" style={{ padding: '22px 24px', borderBottom: '1px solid #e5e5e7' }}>
           <h2 className="text-[16px] font-semibold text-foreground">최근 파일</h2>
           <Link href="/files" className="text-[13px] font-medium text-primary hover:text-primary-dark flex items-center gap-1 transition-colors">
             전체 보기 <ArrowUpRight size={14} />
@@ -216,11 +216,11 @@ export default function DashboardPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-page-bg">
-                <th className="text-left px-6 py-3.5 text-[12px] font-semibold text-muted uppercase tracking-wider">파일명</th>
-                <th className="text-left px-6 py-3.5 text-[12px] font-semibold text-muted uppercase tracking-wider">유형</th>
-                <th className="text-left px-6 py-3.5 text-[12px] font-semibold text-muted uppercase tracking-wider">부서</th>
-                <th className="text-left px-6 py-3.5 text-[12px] font-semibold text-muted uppercase tracking-wider">날짜</th>
-                <th className="text-left px-6 py-3.5 text-[12px] font-semibold text-muted uppercase tracking-wider">상태</th>
+                <th className="text-left px-6 py-4 text-[12px] font-semibold text-muted uppercase tracking-wider">파일명</th>
+                <th className="text-left px-6 py-4 text-[12px] font-semibold text-muted uppercase tracking-wider">유형</th>
+                <th className="text-left px-6 py-4 text-[12px] font-semibold text-muted uppercase tracking-wider">부서</th>
+                <th className="text-left px-6 py-4 text-[12px] font-semibold text-muted uppercase tracking-wider">날짜</th>
+                <th className="text-left px-6 py-4 text-[12px] font-semibold text-muted uppercase tracking-wider">상태</th>
               </tr>
             </thead>
             <tbody>
@@ -250,7 +250,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr]" style={{ gap: 20 }}>
         {/* Activity */}
         <div className="bg-card rounded-2xl border border-border overflow-hidden">
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e5e7' }}>
+          <div style={{ padding: '22px 24px', borderBottom: '1px solid #e5e5e7' }}>
             <h2 className="text-[16px] font-semibold text-foreground">최근 활동</h2>
           </div>
           <div style={{ padding: '8px 0' }}>
@@ -263,7 +263,7 @@ export default function DashboardPage() {
               const label = ACTION_LABELS[a.action] ?? a.action;
               const target = detail?.file_name ?? detail?.title ?? detail?.name ?? detail?.query ?? '';
               return (
-                <div key={a.id} className="flex items-center" style={{ gap: 14, padding: '10px 24px' }}>
+                <div key={a.id} className="flex items-center" style={{ gap: 16, padding: '12px 24px' }}>
                   <div className="w-8 h-8 rounded-full bg-page-bg flex items-center justify-center flex-shrink-0">
                     <Clock size={14} strokeWidth={1.5} className="text-muted" />
                   </div>

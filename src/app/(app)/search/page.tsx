@@ -114,7 +114,7 @@ export default function SearchPage() {
       </section>
 
       {/* ── search bar ── */}
-      <div className="bg-white rounded-2xl border border-[#e5e5e7] overflow-hidden" style={{ padding: '24px' }}>
+      <div className="bg-white rounded-2xl border border-[#e5e5e7] overflow-hidden" style={{ padding: '28px' }}>
         <div className="relative">
           <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6e6e73]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -132,7 +132,7 @@ export default function SearchPage() {
             onClick={() => doSearch(query)}
             disabled={loading || !query.trim()}
             className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl bg-[#1d1d1f] text-white text-[14px] font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ padding: '8px 20px' }}
+            style={{ padding: '10px 22px' }}
           >
             {loading ? '검색 중...' : '검색'}
           </button>
@@ -145,7 +145,7 @@ export default function SearchPage() {
           value={department}
           onChange={(e) => setDepartment(e.target.value)}
           className="rounded-xl border border-[#e5e5e7] bg-white text-[14px] text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3]"
-          style={{ padding: '8px 16px' }}
+          style={{ padding: '10px 18px' }}
         >
           {departments.map((d) => (
             <option key={d}>{d}</option>
@@ -155,7 +155,7 @@ export default function SearchPage() {
           value={fileType}
           onChange={(e) => setFileType(e.target.value)}
           className="rounded-xl border border-[#e5e5e7] bg-white text-[14px] text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3]"
-          style={{ padding: '8px 16px' }}
+          style={{ padding: '10px 18px' }}
         >
           {FILE_TYPES.map((t) => (
             <option key={t}>{t}</option>
@@ -174,7 +174,7 @@ export default function SearchPage() {
                 doSearch(s);
               }}
               className="rounded-full bg-[#f5f5f7] border border-[#e5e5e7] text-[14px] text-[#1d1d1f] hover:bg-white hover:border-[#0071e3] transition-colors"
-              style={{ padding: '8px 16px' }}
+              style={{ padding: '10px 18px' }}
             >
               {s}
             </button>
@@ -224,7 +224,7 @@ export default function SearchPage() {
                 <div
                   key={r.id}
                   className="bg-white rounded-2xl border border-[#e5e5e7] overflow-hidden hover:shadow-md transition-shadow"
-                  style={{ padding: '20px 24px' }}
+                  style={{ padding: '24px 28px' }}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
@@ -248,7 +248,7 @@ export default function SearchPage() {
                   </div>
 
                   {/* AI summary toggle */}
-                  <div className="mt-3 pt-3 border-t border-[#f5f5f7]">
+                  <div className="mt-4 pt-4 border-t border-[#f5f5f7]">
                     <button
                       onClick={() => setExpandedSummary(expandedSummary === r.id ? null : r.id)}
                       className="flex items-center gap-1.5 text-sm text-[#0071e3] hover:text-[#0071e3] font-medium transition-colors"
@@ -268,7 +268,7 @@ export default function SearchPage() {
                       </svg>
                     </button>
                     {expandedSummary === r.id && (
-                      <div className="mt-3 p-4 rounded-xl bg-[#f5f5f7] text-sm text-[#1d1d1f] leading-relaxed">
+                      <div className="mt-4 p-5 rounded-xl bg-[#f5f5f7] text-sm text-[#1d1d1f] leading-relaxed">
                         {r.aiSummary}
                       </div>
                     )}
