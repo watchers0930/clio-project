@@ -266,13 +266,13 @@ export default function TemplatesPage() {
       {/* grid */}
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-24 h-24 rounded-full bg-[#f5f5f7] flex items-center justify-center mb-4">
+          <div className="w-24 h-24 rounded-full bg-[#f5f5f7] flex items-center justify-center" style={{ marginBottom: 20 }}>
             <svg className="w-10 h-10 text-[#0071e3]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-[#1d1d1f] mb-1">{tab} 템플릿이 없습니다</h3>
-          <p className="text-[#6e6e73] text-sm mb-4">새 템플릿을 만들어 보세요</p>
+          <h3 className="text-lg font-semibold text-[#1d1d1f]" style={{ marginBottom: 20 }}>{tab} 템플릿이 없습니다</h3>
+          <p className="text-[#6e6e73] text-sm" style={{ marginBottom: 20 }}>새 템플릿을 만들어 보세요</p>
           <button onClick={openCreate} className="px-6 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors">
             새 템플릿
           </button>

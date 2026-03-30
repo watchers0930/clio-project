@@ -210,12 +210,12 @@ export default function SearchPage() {
 
           {sortedResults.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="w-24 h-24 rounded-full bg-[#f5f5f7] flex items-center justify-center mb-4">
+              <div className="w-24 h-24 rounded-full bg-[#f5f5f7] flex items-center justify-center" style={{ marginBottom: 20 }}>
                 <svg className="w-10 h-10 text-[#e5e5e7]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-[#1d1d1f] mb-1">검색 결과가 없습니다</h3>
+              <h3 className="text-lg font-semibold text-[#1d1d1f]" style={{ marginBottom: 20 }}>검색 결과가 없습니다</h3>
               <p className="text-[#6e6e73] text-sm">다른 키워드로 다시 검색해 보세요</p>
             </div>
           ) : (
@@ -283,12 +283,12 @@ export default function SearchPage() {
       {/* ── empty state (before first search) ── */}
       {!searched && !loading && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="w-32 h-32 rounded-full bg-[#f5f5f7] flex items-center justify-center mb-6">
+          <div className="w-32 h-32 rounded-full bg-[#f5f5f7] flex items-center justify-center" style={{ marginBottom: 20 }}>
             <svg className="w-14 h-14 text-[#0071e3]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
             </svg>
           </div>
-          <h3 className="text-xl font-semibold text-[#1d1d1f] mb-2">AI 기반 스마트 검색</h3>
+          <h3 className="text-xl font-semibold text-[#1d1d1f]" style={{ marginBottom: 20 }}>AI 기반 스마트 검색</h3>
           <p className="text-[#6e6e73] max-w-md">
             자연어로 질문하면 AI가 관련 문서를 찾아 핵심 내용을 요약해 드립니다.
             위 검색창에 궁금한 내용을 입력해 보세요.
