@@ -262,6 +262,20 @@ export default function MessagesPage() {
     } catch {} finally { setSharing(false); }
   };
 
+  // 첨부파일 다운로드
+  const downloadFile = async (fileId: string) => {
+    try {
+      const res = await fetch(`/api/files/${fileId}/download`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.url) window.open(json.url, '_blank');
+      } else {
+        const json = await res.json().catch(() => ({ error: '다운로드 실패' }));
+        alert(json.error ?? '다운로드에 실패했습니다.');
+      }
+    } catch { alert('다운로드 중 오류가 발생했습니다.'); }
+  };
+
   // 공유 파일 열람
   const viewSharedFile = async (fileId: string, fileName: string) => {
     setFileViewLoading(true);
@@ -568,7 +582,7 @@ export default function MessagesPage() {
                       {m.sharedFile ? (
                         <>
                           <p className="mb-2">{m.content.replace(/📎\s*/, '')}</p>
-                          <button onClick={() => viewSharedFile(m.sharedFile!.id, m.sharedFile!.name)}
+                          <button onClick={() => downloadFile(m.sharedFile!.id)}
                             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${m.isOwn ? 'bg-white/10 hover:bg-white/20' : 'bg-white border border-[#e5e5e7] hover:border-[#0071e3] hover:bg-blue-50/50'}`}>
                             <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${m.isOwn ? 'bg-white/20' : 'bg-[#0071e3]/10'}`}>
                               <FileText size={18} className={m.isOwn ? 'text-white' : 'text-[#0071e3]'} />
@@ -576,8 +590,8 @@ export default function MessagesPage() {
                             <div className="min-w-0 flex-1 text-left">
                               <p className="text-xs font-semibold truncate">{m.sharedFile.name}</p>
                               <div className="flex items-center gap-1.5 mt-0.5">
-                                <Eye size={10} className={m.isOwn ? 'text-white/60' : 'text-[#6e6e73]'} />
-                                <span className={`text-[10px] ${m.isOwn ? 'text-white/60' : 'text-[#6e6e73]'}`}>읽기 전용 · {m.attachment?.size ?? ''}</span>
+                                <Paperclip size={10} className={m.isOwn ? 'text-white/60' : 'text-[#6e6e73]'} />
+                                <span className={`text-[10px] ${m.isOwn ? 'text-white/60' : 'text-[#6e6e73]'}`}>다운로드 · {m.attachment?.size ?? ''}</span>
                               </div>
                             </div>
                             <ChevronRight size={14} className={`shrink-0 ${m.isOwn ? 'text-white/40' : 'text-[#a1a1a6]'}`} />
