@@ -375,20 +375,20 @@ export default function MessagesPage() {
       {showFileModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={() => setShowFileModal(false)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-4 border-b border-[#e5e5e7] flex items-center justify-between">
+            <div className="px-5 py-5 border-b border-[#e5e5e7] flex items-center justify-between">
               <h3 className="text-base font-semibold text-[#1d1d1f]">파일 공유</h3>
               <button onClick={() => setShowFileModal(false)} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]"><X size={18} /></button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-5 py-3">
-              <p className="text-xs text-[#6e6e73] mb-3">내 파일함에서 공유할 파일을 선택하세요. 파일은 이동되지 않고 읽기 권한만 부여됩니다.</p>
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              <p className="text-xs text-[#6e6e73] mb-4">내 파일함에서 공유할 파일을 선택하세요. 파일은 이동되지 않고 읽기 권한만 부여됩니다.</p>
 
               {filesLoading ? (
                 <div className="py-8 text-center text-sm text-[#6e6e73]">파일 목록 불러오는 중...</div>
               ) : myFiles.length === 0 ? (
                 <div className="py-8 text-center text-sm text-[#6e6e73]">업로드한 파일이 없습니다.</div>
               ) : (
-                <div className="space-y-1.5">
+                <div className="space-y-2.5">
                   {myFiles.map(f => (
                     <button key={f.id} onClick={() => setSelectedFileId(f.id)}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${selectedFileId === f.id ? 'bg-[#0071e3]/10 border border-[#0071e3] ring-1 ring-[#0071e3]/30' : 'hover:bg-[#f5f5f7] border border-transparent'}`}>
@@ -406,8 +406,8 @@ export default function MessagesPage() {
             </div>
 
             {/* 만료 기간 설정 */}
-            <div className="px-5 py-3 border-t border-[#e5e5e7]">
-              <div className="flex items-center gap-3 mb-3">
+            <div className="px-5 py-4 border-t border-[#e5e5e7]">
+              <div className="flex items-center gap-3 mb-4">
                 <Clock size={14} className="text-[#6e6e73] shrink-0" />
                 <label className="text-xs text-[#6e6e73]">공유 기간</label>
                 <select value={expiresInDays} onChange={e => setExpiresInDays(Number(e.target.value))}
@@ -433,21 +433,21 @@ export default function MessagesPage() {
       {viewingFile && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={() => setViewingFile(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-4 border-b border-[#e5e5e7] flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0">
+            <div className="px-5 py-5 border-b border-[#e5e5e7] flex items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0">
                 <FileText size={18} className="text-[#0071e3] shrink-0" />
                 <h3 className="text-base font-semibold text-[#1d1d1f] truncate">{viewingFile.name}</h3>
               </div>
               <button onClick={() => setViewingFile(null)} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]"><X size={18} /></button>
             </div>
-            <div className="px-5 py-4">
+            <div className="px-5 py-5">
               {fileViewLoading ? (
                 <p className="text-sm text-[#6e6e73] text-center py-6">파일 정보를 불러오는 중...</p>
               ) : (
-                <pre className="text-sm text-[#1d1d1f] whitespace-pre-wrap bg-[#f5f5f7] rounded-xl px-4 py-3 leading-relaxed">{viewingFile.content}</pre>
+                <pre className="text-sm text-[#1d1d1f] whitespace-pre-wrap bg-[#f5f5f7] rounded-xl px-4 py-4 leading-relaxed">{viewingFile.content}</pre>
               )}
             </div>
-            <div className="px-5 py-3 border-t border-[#e5e5e7]">
+            <div className="px-5 py-4 border-t border-[#e5e5e7]">
               <button onClick={() => { if (viewingFile) window.open(`/files?highlight=${viewingFile.id}`, '_blank'); }}
                 className="w-full py-2.5 rounded-xl bg-[#f5f5f7] text-[#1d1d1f] text-sm font-medium hover:bg-[#e5e5e7] transition-colors">
                 파일함에서 열기
@@ -464,7 +464,7 @@ export default function MessagesPage() {
         className={`fixed left-0 top-0 bottom-0 z-50 w-80 bg-white rounded-r-2xl border-r border-[#e5e5e7] shadow-xl flex flex-col shrink-0 overflow-hidden transition-transform duration-300 ease-out lg:relative lg:translate-x-0 lg:rounded-2xl lg:border lg:shadow-sm ${showSidebar ? 'translate-x-0' : '-translate-x-full'} lg:!transform-none`}>
         {/* 내 프로필 + 닫기 */}
         {currentUser && (
-          <div className="px-4 pt-4 pb-2 flex items-center gap-3 border-b border-[#e5e5e7]">
+          <div className="px-4 pt-5 pb-3 flex items-center gap-3 border-b border-[#e5e5e7]">
             <div className="w-9 h-9 rounded-full bg-[#0071e3] flex items-center justify-center shrink-0">
               <span className="text-sm font-medium text-white">{currentUser.name.charAt(0)}</span>
             </div>
@@ -480,14 +480,14 @@ export default function MessagesPage() {
 
         <div className="flex-1 overflow-y-auto">
           {/* 조직도 트리 */}
-          <div className="px-4 pt-3 pb-1 flex items-center justify-between">
+          <div className="px-4 pt-4 pb-2 flex items-center justify-between">
             <p className="text-xs font-semibold text-[#6e6e73] uppercase tracking-wide">조직</p>
           </div>
 
           {deptTree.map(dept => (
             <div key={dept.id}>
               <button onClick={() => toggleDept(dept.id)}
-                className="w-full px-4 py-2 flex items-center gap-2 text-left hover:bg-[#f5f5f7] transition-colors">
+                className="w-full px-4 py-2.5 flex items-center gap-2.5 text-left hover:bg-[#f5f5f7] transition-colors">
                 {expandedDepts.has(dept.id) ? <ChevronDown size={14} className="text-[#6e6e73]" /> : <ChevronRight size={14} className="text-[#6e6e73]" />}
                 <Building2 size={14} className="text-[#0071e3]" />
                 <span className="text-sm font-medium text-[#1d1d1f]">{dept.name}</span>
@@ -497,7 +497,7 @@ export default function MessagesPage() {
                 const isMe = member.id === currentUser?.id;
                 return (
                   <button key={member.id} onClick={() => !isMe && openDmWith(member.id)}
-                    className={`w-full pl-10 pr-4 py-2 flex items-center gap-2.5 text-left transition-colors ${isMe ? 'cursor-default' : 'hover:bg-[#f5f5f7]'}`}>
+                    className={`w-full pl-10 pr-4 py-2.5 flex items-center gap-3 text-left transition-colors ${isMe ? 'cursor-default' : 'hover:bg-[#f5f5f7]'}`}>
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${isMe ? 'bg-[#0071e3]' : 'bg-[#1d1d1f]'}`}>
                       <span className="text-xs font-medium text-white">{member.name.charAt(0)}</span>
                     </div>
@@ -536,7 +536,7 @@ export default function MessagesPage() {
                 <p className="text-xs font-semibold text-[#6e6e73] uppercase tracking-wide">이전 대화 목록</p>
               </div>
               {dmChannels.map(c => (
-                <div key={c.id} className={`group w-full px-4 py-2.5 flex items-center gap-3 hover:bg-[#f5f5f7] transition-colors ${activeChannel === c.id ? 'bg-[#f5f5f7] border-l-2 border-[#0071e3]' : ''}`}>
+                <div key={c.id} className={`group w-full px-4 py-3 flex items-center gap-3 hover:bg-[#f5f5f7] transition-colors ${activeChannel === c.id ? 'bg-[#f5f5f7] border-l-2 border-[#0071e3]' : ''}`}>
                   <button onClick={() => openChannel(c.id)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
                     <div className="w-8 h-8 rounded-full bg-[#1d1d1f] flex items-center justify-center shrink-0">
                       <span className="text-xs font-medium text-white">{c.avatar}</span>
