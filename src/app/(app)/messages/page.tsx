@@ -19,6 +19,14 @@ export default function MessagesPage() {
   const [showSidebar, setShowSidebar] = useState(false);
 
   const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // 모바일: 부모 스크롤 방지 (footer 안 보이게)
+  useEffect(() => {
+    const main = document.querySelector('main.flex-1.overflow-y-auto') as HTMLElement;
+    if (main) main.style.overflow = 'hidden';
+    return () => { if (main) main.style.overflow = ''; };
+  }, []);
+
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string } | null>(null);
 
   // 부서 트리
@@ -356,11 +364,11 @@ export default function MessagesPage() {
   const dmChannels = channels.filter(c => c.type === 'dm' || c.type === 'group');
 
   if (loading) {
-    return <div className="fixed inset-x-0 bottom-0 flex gap-4 animate-pulse" style={{ top: 64, padding: '8px 12px' }}><div className="w-80 bg-white rounded-2xl border border-[#e5e5e7]" /><div className="flex-1 bg-white rounded-2xl border border-[#e5e5e7]" /></div>;
+    return <div className="flex gap-4 h-[calc(100vh-120px)] animate-pulse"><div className="w-80 bg-white rounded-2xl border border-[#e5e5e7] hidden lg:block" /><div className="flex-1 bg-white rounded-2xl border border-[#e5e5e7]" /></div>;
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-0 flex gap-4" style={{ top: 64, padding: '8px 12px' }}>
+    <div className="flex gap-4 h-[calc(100vh-120px)]">
       <input ref={fileInputRef} type="file" className="hidden" onChange={handleAttachFile} />
 
       {/* ── 파일 공유 모달 ── */}
