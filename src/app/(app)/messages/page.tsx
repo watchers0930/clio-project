@@ -19,6 +19,21 @@ export default function MessagesPage() {
   const [showSidebar, setShowSidebar] = useState(false);
 
   const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // 메시지 페이지: 부모 스크롤 제거 + 패딩 최소화 (모바일 뷰포트 맞춤)
+  useEffect(() => {
+    const wrapper = document.querySelector('main.flex-1.overflow-y-auto') as HTMLElement;
+    const content = wrapper?.querySelector(':scope > div') as HTMLElement;
+    const footer = wrapper?.querySelector('footer')?.parentElement as HTMLElement;
+    if (wrapper) { wrapper.style.overflow = 'hidden'; }
+    if (content) { content.style.padding = '8px 12px 0'; content.style.maxWidth = 'none'; }
+    if (footer) { footer.style.display = 'none'; }
+    return () => {
+      if (wrapper) { wrapper.style.overflow = ''; }
+      if (content) { content.style.padding = ''; content.style.maxWidth = ''; }
+      if (footer) { footer.style.display = ''; }
+    };
+  }, []);
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string } | null>(null);
 
   // 부서 트리
@@ -340,11 +355,11 @@ export default function MessagesPage() {
   const dmChannels = channels.filter(c => c.type === 'dm' || c.type === 'group');
 
   if (loading) {
-    return <div className="flex gap-4 h-[calc(100vh-120px)] animate-pulse"><div className="w-80 bg-white rounded-2xl border border-[#e5e5e7]" /><div className="flex-1 bg-white rounded-2xl border border-[#e5e5e7]" /></div>;
+    return <div className="flex gap-4 animate-pulse" style={{ height: 'calc(100dvh - 130px)' }}><div className="w-80 bg-white rounded-2xl border border-[#e5e5e7]" /><div className="flex-1 bg-white rounded-2xl border border-[#e5e5e7]" /></div>;
   }
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-120px)]">
+    <div className="flex gap-4" style={{ height: 'calc(100dvh - 130px)' }}>
       <input ref={fileInputRef} type="file" className="hidden" onChange={handleAttachFile} />
 
       {/* ── 파일 공유 모달 ── */}
