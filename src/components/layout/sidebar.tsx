@@ -20,6 +20,7 @@ interface NavItem {
   label: string;
   href: string;
   icon: React.ElementType;
+  badge?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -28,7 +29,7 @@ const navItems: NavItem[] = [
   { label: '파일 관리', href: '/files', icon: FolderOpen },
   { label: '문서 생성', href: '/documents', icon: FilePlus },
   { label: '템플릿', href: '/templates', icon: FileText },
-  { label: '메시지', href: '/messages', icon: MessageSquare },
+  { label: '메시지', href: '/messages', icon: MessageSquare, badge: true },
   { label: '설정', href: '/settings', icon: Settings },
 ];
 
@@ -40,12 +41,26 @@ interface SidebarProps {
 function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const [unreadTotal, setUnreadTotal] = useState(0);
 
   useEffect(() => {
     try {
       const stored = localStorage.getItem('clio_user');
       if (stored) setUser(JSON.parse(stored));
     } catch {}
+  }, []);
+
+  // 안 읽은 메시지 수 폴링 (10초)
+  useEffect(() => {
+    const fetchUnread = () => {
+      fetch('/api/messages/unread')
+        .then(r => r.json())
+        .then(d => { if (d.success) setUnreadTotal(d.total); })
+        .catch(() => {});
+    };
+    fetchUnread();
+    const timer = setInterval(fetchUnread, 10000);
+    return () => clearInterval(timer);
   }, []);
 
   return (
@@ -85,8 +100,22 @@ function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
               )}
               title={collapsed ? item.label : undefined}
             >
-              <Icon size={17} strokeWidth={1.5} className="flex-shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
+              <div className="relative flex-shrink-0">
+                <Icon size={17} strokeWidth={1.5} />
+                {item.badge && unreadTotal > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center" style={{ padding: '0 3px' }}>
+                    {unreadTotal > 99 ? '99+' : unreadTotal}
+                  </span>
+                )}
+              </div>
+              {!collapsed && (
+                <span className="flex-1">{item.label}</span>
+              )}
+              {!collapsed && item.badge && unreadTotal > 0 && (
+                <span className="min-w-[20px] h-[20px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center" style={{ padding: '0 5px' }}>
+                  {unreadTotal > 99 ? '99+' : unreadTotal}
+                </span>
+              )}
             </Link>
           );
         })}
