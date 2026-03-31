@@ -71,10 +71,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
     }
 
-    // 템플릿 조회
+    // 템플릿 조회 (양식 파일 포함)
     const { data: tmpl } = await supabase
       .from('templates')
-      .select('name, content, placeholders')
+      .select('name, content, placeholders, template_file_id')
       .eq('id', templateId)
       .single();
 
@@ -100,11 +100,26 @@ export async function POST(request: NextRequest) {
         sourceChunks = (chunks ?? []).map((c) => c.content);
       }
 
+      // 템플릿 양식 파일의 텍스트 가져오기
+      let templateFileText: string | null = null;
+      if (tmpl?.template_file_id) {
+        const { data: tplChunks } = await supabase
+          .from('file_chunks')
+          .select('content')
+          .eq('file_id', tmpl.template_file_id)
+          .order('chunk_index')
+          .limit(30);
+        if (tplChunks && tplChunks.length > 0) {
+          templateFileText = tplChunks.map((c) => c.content).join('\n');
+        }
+      }
+
       // AI 문서 생성
       try {
         docContent = await generateDocumentContent({
           templateName,
           templateContent: typeof tmpl?.content === 'string' ? tmpl.content : null,
+          templateFileText,
           sourceChunks,
           instructions: instructions ?? undefined,
         });

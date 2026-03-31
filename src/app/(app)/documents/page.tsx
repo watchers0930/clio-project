@@ -162,7 +162,7 @@ export default function DocumentsPage() {
 
   const canNext = () => {
     if (step === 1) return !!selectedTemplate;
-    if (step === 2) return selectedFiles.size > 0;
+    // Step 2: 파일 0개도 허용 (템플릿 양식만으로 생성 가능)
     return true;
   };
 
@@ -437,9 +437,12 @@ export default function DocumentsPage() {
                 return (
                   <div className="space-y-5">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm text-[#6e6e73]">소스 파일을 선택하세요</p>
+                      <p className="text-sm text-[#6e6e73]">참조할 소스 파일을 선택하세요 (선택사항)</p>
                       <span className="text-xs font-medium text-[#0071e3]">{selectedFiles.size}개 선택됨</span>
                     </div>
+                    {selectedFiles.size === 0 && (
+                      <p className="text-xs text-[#ff9f0a] bg-[#fff8f0] px-3 py-2 rounded-lg">파일 없이도 템플릿 양식 기반으로 문서를 생성할 수 있습니다.</p>
+                    )}
 
                     {/* 검색 */}
                     <div className="relative" style={{ marginTop: 10, marginBottom: 15 }}>
