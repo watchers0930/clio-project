@@ -359,7 +359,7 @@ export default function DocumentsPage() {
 
             {/* steps indicator */}
             {step <= 4 && (
-              <div className="px-6 py-4">
+              <div className="px-6 py-6">
                 <div className="flex items-center gap-2">
                   {[1, 2, 3, 4].map((s) => (
                     <div key={s} className="flex items-center gap-2 flex-1">
@@ -383,7 +383,7 @@ export default function DocumentsPage() {
               </div>
             )}
 
-            <div className="px-6 pb-6">
+            <div className="px-6 py-6">
               {/* Step 1: Select template */}
               {step === 1 && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -420,7 +420,7 @@ export default function DocumentsPage() {
                 });
 
                 return (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <p className="text-sm text-[#6e6e73]">소스 파일을 선택하세요</p>
                       <span className="text-xs font-medium text-[#0071e3]">{selectedFiles.size}개 선택됨</span>
@@ -506,7 +506,7 @@ export default function DocumentsPage() {
               {/* Step 3: Instructions */}
               {step === 3 && (
                 <div>
-                  <p className="text-sm text-[#6e6e73] mb-3">추가 지시사항을 입력하세요 (선택)</p>
+                  <p className="text-sm text-[#6e6e73] mb-4">추가 지시사항을 입력하세요 (선택)</p>
                   <textarea
                     value={instructions}
                     onChange={(e) => setInstructions(e.target.value)}
@@ -520,7 +520,7 @@ export default function DocumentsPage() {
               {/* Step 4: Confirm */}
               {step === 4 && (
                 <div className="space-y-4">
-                  <div className="bg-[#f5f5f7] rounded-xl p-4 space-y-3 text-sm">
+                  <div className="bg-[#f5f5f7] rounded-xl p-5 space-y-4 text-sm">
                     <div className="flex justify-between">
                       <span className="text-[#6e6e73]">템플릿</span>
                       <span className="text-[#1d1d1f] font-medium">{templates.find((t) => t.id === selectedTemplate)?.name}</span>
