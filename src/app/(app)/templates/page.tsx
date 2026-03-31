@@ -283,7 +283,7 @@ export default function TemplatesPage() {
       </div>
 
       {/* tabs */}
-      <div className="flex gap-6 border-b border-[#e5e5e7]">
+      <div className="flex gap-6">
         {(['전사 공용', '부서 전용'] as const).map((t) => (
           <button
             key={t}
