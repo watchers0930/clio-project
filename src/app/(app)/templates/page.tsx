@@ -353,10 +353,10 @@ export default function TemplatesPage() {
 
       {/* ── Create/Edit Modal ── */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="tmpl-modal-title" onKeyDown={(e) => { if (e.key === 'Escape') resetForm(); }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[85vh] overflow-y-auto">
             <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-[#1d1d1f]">
+              <h2 id="tmpl-modal-title" className="text-lg font-semibold text-[#1d1d1f]">
                 {editId ? '템플릿 편집' : '새 템플릿 만들기'}
               </h2>
               <button onClick={resetForm} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">

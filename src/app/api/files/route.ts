@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { mimeToType, formatSize } from '@/lib/utils/format';
+import { sanitizeFileName, validateFile } from '@/lib/utils/sanitize';
 
 /** 파일 상태 매핑 (DB status → 프론트 표시용) */
 const STATUS_MAP: Record<string, string> = {
@@ -50,7 +51,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      query = query.ilike('name', `%${search}%`);
+      const escaped = search.replace(/[%_\\]/g, '\\$&');
+      query = query.ilike('name', `%${escaped}%`);
     }
 
     const from = (page - 1) * limit;
@@ -68,7 +70,7 @@ export async function GET(request: NextRequest) {
       type: mimeToType(f.type, f.name),
       department: deptMap.get(f.department_id ?? '') ?? '미분류',
       size: formatSize(f.size),
-      uploadDate: f.created_at.split('T')[0],
+      uploadDate: f.created_at?.split('T')[0] ?? '',
       status: STATUS_MAP[f.status] ?? f.status,
     }));
 
@@ -115,8 +117,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: '파일이 필요합니다.' }, { status: 400 });
       }
 
+      const validationError = validateFile(file);
+      if (validationError) {
+        return NextResponse.json({ success: false, error: validationError }, { status: 400 });
+      }
+
       // Storage에 파일 업로드
-      const storagePath = `uploads/${departmentId ?? 'general'}/${Date.now()}_${file.name}`;
+      const safeName = sanitizeFileName(file.name);
+      const storagePath = `uploads/${departmentId ?? 'general'}/${Date.now()}_${safeName}`;
       const { error: uploadError } = await supabase.storage
         .from('files')
         .upload(storagePath, file);

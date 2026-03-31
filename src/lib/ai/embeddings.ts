@@ -10,10 +10,13 @@ const EMBEDDING_MODEL = 'text-embedding-3-small';
 const BATCH_SIZE = 20;
 const BATCH_DELAY_MS = 100;
 
+let _openaiClient: OpenAI | null = null;
 function getOpenAIClient(): OpenAI {
+  if (_openaiClient) return _openaiClient;
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error('OPENAI_API_KEY가 설정되지 않았습니다.');
-  return new OpenAI({ apiKey });
+  _openaiClient = new OpenAI({ apiKey });
+  return _openaiClient;
 }
 
 /** 단일 텍스트의 임베딩 생성 */

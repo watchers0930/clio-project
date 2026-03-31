@@ -38,6 +38,7 @@ export async function GET(
         .select('id')
         .eq('file_id', id)
         .eq('shared_with', authUserId)
+        .gt('expires_at', new Date().toISOString())
         .limit(1);
 
       if (!share || share.length === 0) {
@@ -53,7 +54,8 @@ export async function GET(
       });
 
     if (signError || !signed?.signedUrl) {
-      return NextResponse.json({ error: `다운로드 URL 생성 실패: ${signError?.message ?? ''}` }, { status: 500 });
+      console.error('[download] signed URL error:', signError?.message);
+      return NextResponse.json({ error: '다운로드 URL 생성에 실패했습니다.' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, url: signed.signedUrl, name: file.name });

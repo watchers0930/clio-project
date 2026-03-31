@@ -18,8 +18,11 @@ export async function POST(request: NextRequest) {
       if (providedSecret !== internalSecret) {
         return NextResponse.json({ success: false, error: '인증 실패' }, { status: 403 });
       }
+    } else if (process.env.NODE_ENV === 'production') {
+      console.error('[process] INTERNAL_API_SECRET 미설정 — 프로덕션에서 요청 거부');
+      return NextResponse.json({ success: false, error: '서버 설정 오류' }, { status: 500 });
     } else {
-      console.warn('[process] INTERNAL_API_SECRET 미설정 — 프로덕션에서는 반드시 설정하세요');
+      console.warn('[process] INTERNAL_API_SECRET 미설정 — 개발 환경에서만 허용');
     }
 
     const { fileId } = await request.json();

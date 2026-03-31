@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { mimeToType, formatSize } from '@/lib/utils/format';
+import { sanitizeFileName, validateFile } from '@/lib/utils/sanitize';
 
 export async function GET(request: NextRequest) {
   try {
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
         departmentId: t.department_id,
         scope: t.scope === 'company' ? '전사 공용' : '부서 전용',
         placeholders,
-        lastUpdated: t.updated_at.split('T')[0],
+        lastUpdated: t.updated_at?.split('T')[0] ?? '',
         usageCount: 0,
         templateFile: fileJoin ? {
           id: fileJoin.id,
@@ -68,7 +69,10 @@ export async function GET(request: NextRequest) {
 /** 파일 업로드 → files 테이블 INSERT → process 파이프라인 호출 → file.id 반환 */
 async function uploadTemplateFile(supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>, file: File, authUserId: string, requestOrigin: string): Promise<string | null> {
   if (!supabase) return null;
-  const storagePath = `uploads/templates/${Date.now()}_${file.name}`;
+  const safeName = sanitizeFileName(file.name);
+  const validationError = validateFile(file);
+  if (validationError) return null;
+  const storagePath = `uploads/templates/${Date.now()}_${safeName}`;
   const { error: uploadError } = await supabase.storage.from('files').upload(storagePath, file);
   if (uploadError) {
     console.error('[templates] storage upload:', uploadError.message);

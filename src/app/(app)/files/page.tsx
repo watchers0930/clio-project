@@ -43,15 +43,17 @@ const typeBadge: Record<string, string> = {
 
 const PAGE_SIZE = 6;
 
+// formatFileSize, getFileType — 로컬에서만 사용 (API 응답이 이미 포맷된 값을 제공)
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+void formatFileSize; // 업로드 미리보기용으로 유지
 
 function getFileType(name: string): string {
   const ext = name.split('.').pop()?.toUpperCase() ?? '';
-  if (['PDF', 'DOCX', 'PPTX', 'XLSX', 'MD'].includes(ext)) return ext;
+  if (['PDF', 'DOCX', 'PPTX', 'XLSX', 'MD', 'HWP'].includes(ext)) return ext;
   return ext || 'FILE';
 }
 

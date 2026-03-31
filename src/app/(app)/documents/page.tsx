@@ -317,11 +317,11 @@ export default function DocumentsPage() {
 
       {/* ── View Document Modal ── */}
       {viewDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="view-doc-title" onKeyDown={(e) => { if (e.key === 'Escape') setViewDoc(null); }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-y-auto">
             <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between sticky top-0 bg-white rounded-t-2xl z-10">
               <div>
-                <h2 className="text-lg font-semibold text-[#1d1d1f]">{viewDoc.title}</h2>
+                <h2 id="view-doc-title" className="text-lg font-semibold text-[#1d1d1f]">{viewDoc.title}</h2>
                 <div className="flex gap-2 mt-1">
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusColor[viewDoc.status]}`}>{viewDoc.status}</span>
                   <span className="text-xs text-[#6e6e73]">{viewDoc.createdAt}</span>
@@ -359,11 +359,11 @@ export default function DocumentsPage() {
 
       {/* ── New Document Modal ── */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="new-doc-title" onKeyDown={(e) => { if (e.key === 'Escape') resetModal(); }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
             {/* modal header */}
             <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between sticky top-0 bg-white rounded-t-2xl z-10">
-              <h2 className="text-lg font-semibold text-[#1d1d1f]">새 문서 생성</h2>
+              <h2 id="new-doc-title" className="text-lg font-semibold text-[#1d1d1f]">새 문서 생성</h2>
               <button onClick={resetModal} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>

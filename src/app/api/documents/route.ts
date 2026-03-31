@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
         id: d.id,
         title: d.title,
         template: tmplJoin?.name ?? '기본',
-        createdAt: d.created_at.split('T')[0],
+        createdAt: d.created_at?.split('T')[0] ?? '',
         status: d.status === 'completed' ? '완료' : '초안',
         sourceCount: d.source_file_ids?.length ?? 0,
         content: d.content,
