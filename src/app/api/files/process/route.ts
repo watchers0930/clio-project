@@ -11,6 +11,15 @@ import { generateAndStoreChunks } from '@/lib/ai/embeddings';
  */
 export async function POST(request: NextRequest) {
   try {
+    // 내부 호출 인증: INTERNAL_API_SECRET 설정 시 검증
+    const internalSecret = process.env.INTERNAL_API_SECRET;
+    if (internalSecret) {
+      const providedSecret = request.headers.get('X-Internal-Secret');
+      if (providedSecret !== internalSecret) {
+        return NextResponse.json({ success: false, error: '인증 실패' }, { status: 403 });
+      }
+    }
+
     const { fileId } = await request.json();
 
     if (!fileId) {

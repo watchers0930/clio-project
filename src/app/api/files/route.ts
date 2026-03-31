@@ -172,9 +172,10 @@ export async function POST(request: NextRequest) {
 
       // 백그라운드 파일 처리 (텍스트 추출 → 청킹 → 임베딩)
       const baseUrl = request.nextUrl.origin;
+      const internalSecret = process.env.INTERNAL_API_SECRET || '';
       fetch(`${baseUrl}/api/files/process`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': internalSecret },
         body: JSON.stringify({ fileId: data.id }),
       }).then(() => {}, () => {});
 

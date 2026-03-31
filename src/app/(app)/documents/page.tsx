@@ -186,9 +186,12 @@ export default function DocumentsPage() {
           setDocs((prev) => [newDoc, ...prev]);
           setStep(5); // Show generated result
         }
+      } else {
+        const errData = await res.json().catch(() => null);
+        alert(errData?.error ?? '문서 생성에 실패했습니다. 다시 시도해 주세요.');
       }
     } catch {
-      // silent
+      alert('네트워크 오류가 발생했습니다. 다시 시도해 주세요.');
     } finally {
       setGenerating(false);
     }

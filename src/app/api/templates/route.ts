@@ -85,8 +85,8 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/** 파일 업로드 → files 테이블 INSERT → file.id 반환 */
-async function uploadTemplateFile(supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>, file: File, authUserId: string): Promise<string | null> {
+/** 파일 업로드 → files 테이블 INSERT → process 파이프라인 호출 → file.id 반환 */
+async function uploadTemplateFile(supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>, file: File, authUserId: string, requestOrigin: string): Promise<string | null> {
   if (!supabase) return null;
   const storagePath = `uploads/templates/${Date.now()}_${file.name}`;
   const { error: uploadError } = await supabase.storage.from('files').upload(storagePath, file);
@@ -101,7 +101,7 @@ async function uploadTemplateFile(supabase: Awaited<ReturnType<typeof createServ
     size: file.size,
     department_id: null,
     uploaded_by: authUserId,
-    status: 'completed',
+    status: 'processing',
     storage_path: storagePath,
   }).select('id').single();
 
@@ -109,6 +109,15 @@ async function uploadTemplateFile(supabase: Awaited<ReturnType<typeof createServ
     console.error('[templates] file insert:', error.message);
     return null;
   }
+
+  // 텍스트 추출/청킹/임베딩 파이프라인 호출
+  const internalSecret = process.env.INTERNAL_API_SECRET || '';
+  fetch(`${requestOrigin}/api/files/process`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': internalSecret },
+    body: JSON.stringify({ fileId: data.id }),
+  }).then(() => {}, () => {});
+
   return data.id;
 }
 
@@ -139,7 +148,7 @@ export async function POST(request: NextRequest) {
       scope = (formData.get('scope') as string) ?? '전사 공용';
       const file = formData.get('file') as File | null;
       if (file && file.size > 0) {
-        templateFileId = await uploadTemplateFile(supabase, file, authUserId);
+        templateFileId = await uploadTemplateFile(supabase, file, authUserId, request.nextUrl.origin);
       }
     } else {
       const body = await request.json();
@@ -147,6 +156,7 @@ export async function POST(request: NextRequest) {
       description = body.description ?? '';
       departmentId = body.departmentId || null;
       scope = body.scope ?? '전사 공용';
+      if (body.templateFileId) templateFileId = body.templateFileId;
     }
 
     if (!name) {
@@ -162,6 +172,7 @@ export async function POST(request: NextRequest) {
       scope: scopeValue,
       content: '',
       placeholders: [],
+      created_by: authUserId,
     };
     if (templateFileId) insertData.template_file_id = templateFileId;
 
@@ -231,7 +242,7 @@ export async function PUT(request: NextRequest) {
       removeFile = (formData.get('removeFile') as string) === 'true';
       const file = formData.get('file') as File | null;
       if (file && file.size > 0) {
-        templateFileId = await uploadTemplateFile(supabase, file, authUserId);
+        templateFileId = await uploadTemplateFile(supabase, file, authUserId, request.nextUrl.origin);
       }
     } else {
       const body = await request.json();
@@ -307,6 +318,11 @@ export async function DELETE(request: NextRequest) {
     const supabase = await createServerSupabaseClient();
     if (!supabase) {
       return NextResponse.json({ error: '데이터베이스가 설정되지 않았습니다.' }, { status: 503 });
+    }
+
+    const authUserId = await getAuthUserId(supabase);
+    if (!authUserId) {
+      return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
     }
 
     const { error } = await supabase.from('templates').delete().eq('id', id);

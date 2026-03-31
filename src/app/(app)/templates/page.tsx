@@ -229,27 +229,23 @@ export default function TemplatesPage() {
     }
   };
 
-  const handleDuplicate = (t: Template) => {
-    const copy: Template = {
-      ...t,
-      id: `tmpl-copy-${Date.now()}`,
-      name: `${t.name} (복사본)`,
-      usageCount: 0,
-      lastUpdated: new Date().toISOString().split('T')[0],
-    };
-    setTemplates((prev) => [...prev, copy]);
-
-    // Also persist to API
-    fetch('/api/templates', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: copy.name,
-        description: copy.description,
-        departmentId: copy.departmentId,
-        scope: copy.scope,
-      }),
-    }).catch(() => {});
+  const handleDuplicate = async (t: Template) => {
+    try {
+      const res = await fetch('/api/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: `${t.name} (복사본)`,
+          description: t.description,
+          departmentId: t.departmentId,
+          scope: t.scope,
+          templateFileId: t.templateFile?.id || undefined,
+        }),
+      });
+      if (res.ok) {
+        loadTemplates(); // DB 응답 기반으로 목록 새로고침
+      }
+    } catch { /* ignore */ }
   };
 
   if (loading) {

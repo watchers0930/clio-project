@@ -237,14 +237,35 @@ function FilesPage() {
     setDeleteConfirm(null);
   };
 
-  const bulkDelete = () => {
+  const bulkDelete = async () => {
     if (selectedIds.size === 0) return;
+    if (!confirm(`${selectedIds.size}개 파일을 삭제하시겠습니까?`)) return;
+    const ids = Array.from(selectedIds);
+    for (const id of ids) {
+      try {
+        await fetch(`/api/files/${id}`, { method: 'DELETE' });
+      } catch { /* ignore */ }
+    }
     setFiles((prev) => prev.filter((f) => !selectedIds.has(f.id)));
     setSelectedIds(new Set());
   };
 
-  const handleDownload = (file: FileItem) => {
+  const handleDownload = async (file: FileItem) => {
     setDownloadToast(file.name);
+    try {
+      const res = await fetch(`/api/files/${file.id}/download`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) {
+          const a = document.createElement('a');
+          a.href = data.url;
+          a.download = file.name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+      }
+    } catch { /* ignore */ }
     setTimeout(() => setDownloadToast(null), 2000);
   };
 

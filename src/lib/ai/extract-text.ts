@@ -31,6 +31,13 @@ export async function extractText(
     ['md', 'txt', 'csv', 'tsv'].includes(ext)
   ) {
     text = new TextDecoder().decode(buffer);
+  } else if (ext === 'hwp' || mimeType === 'application/haansofthwp' || mimeType === 'application/x-hwp') {
+    // HWP 파일은 바이너리 형식이라 직접 파싱 어려움 — 빈 텍스트로 처리
+    console.warn(`[extract-text] HWP 파일은 텍스트 추출이 제한적입니다: ${fileName}`);
+    text = `[HWP 파일: ${fileName}] — HWP 파일은 양식 구조 참조용으로 등록되었습니다. 텍스트 자동 추출은 지원되지 않습니다.`;
+  } else if (ext === 'pptx' || mimeType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') {
+    // PPTX 기본 처리
+    text = `[PPTX 파일: ${fileName}] — 프레젠테이션 파일입니다.`;
   } else {
     throw new Error(`지원하지 않는 파일 형식입니다: ${mimeType} (${ext})`);
   }

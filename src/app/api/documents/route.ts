@@ -125,7 +125,8 @@ export async function POST(request: NextRequest) {
         });
       } catch (err) {
         console.error('[documents/POST] AI generation failed:', err);
-        docContent = `## ${templateName}\n\n문서 생성 중 오류가 발생했습니다. 다시 시도해 주세요.`;
+        const errMsg = err instanceof Error ? err.message : 'AI 문서 생성 실패';
+        return NextResponse.json({ error: `문서 생성 실패: ${errMsg}. 다시 시도해 주세요.`, aiError: true }, { status: 500 });
       }
     }
 
