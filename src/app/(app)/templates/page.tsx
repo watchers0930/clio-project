@@ -332,10 +332,10 @@ export default function TemplatesPage() {
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            <div className="px-6 py-6 space-y-6">
+            <div className="px-6 py-6 space-y-8">
               {/* Icon selector */}
               <div>
-                <label className="block text-sm font-medium text-[#1d1d1f] mb-2">아이콘</label>
+                <label className="block text-sm font-medium text-[#1d1d1f] mb-3">아이콘</label>
                 <div className="flex flex-wrap gap-2.5">
                   {ICON_OPTIONS.map((icon) => (
                     <button
@@ -351,7 +351,7 @@ export default function TemplatesPage() {
 
               {/* Name */}
               <div>
-                <label className="block text-sm font-medium text-[#1d1d1f] mb-1">이름 *</label>
+                <label className="block text-sm font-medium text-[#1d1d1f] mb-2">이름 *</label>
                 <input
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
@@ -362,7 +362,7 @@ export default function TemplatesPage() {
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-[#1d1d1f] mb-1">설명</label>
+                <label className="block text-sm font-medium text-[#1d1d1f] mb-2">설명</label>
                 <textarea
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
@@ -374,7 +374,7 @@ export default function TemplatesPage() {
 
               {/* Department */}
               <div>
-                <label className="block text-sm font-medium text-[#1d1d1f] mb-1">부서</label>
+                <label className="block text-sm font-medium text-[#1d1d1f] mb-2">부서</label>
                 <select
                   value={formDepartmentId}
                   onChange={(e) => setFormDepartmentId(e.target.value)}
@@ -388,7 +388,7 @@ export default function TemplatesPage() {
 
               {/* Scope */}
               <div>
-                <label className="block text-sm font-medium text-[#1d1d1f] mb-2">범위</label>
+                <label className="block text-sm font-medium text-[#1d1d1f] mb-3">범위</label>
                 <div className="flex gap-3">
                   {(['전사 공용', '부서 전용'] as const).map((s) => (
                     <button
