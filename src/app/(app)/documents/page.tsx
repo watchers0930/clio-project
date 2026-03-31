@@ -420,7 +420,7 @@ export default function DocumentsPage() {
                 });
 
                 return (
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     <div className="flex items-center justify-between">
                       <p className="text-sm text-[#6e6e73]">소스 파일을 선택하세요</p>
                       <span className="text-xs font-medium text-[#0071e3]">{selectedFiles.size}개 선택됨</span>
