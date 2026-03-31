@@ -3,6 +3,13 @@
 import { useState, useEffect, useCallback } from 'react';
 
 /* ────────────────────────── types ────────────────────────── */
+interface TemplateFile {
+  id: string;
+  name: string;
+  type: string;
+  size: string;
+}
+
 interface Template {
   id: string;
   name: string;
@@ -14,6 +21,7 @@ interface Template {
   usageCount: number;
   lastUpdated: string;
   placeholders: string[];
+  templateFile: TemplateFile | null;
 }
 
 /* DEPARTMENTS: API에서 동적 로드 */
@@ -35,6 +43,9 @@ export default function TemplatesPage() {
   const [formDepartmentId, setFormDepartmentId] = useState('');
   const [formScope, setFormScope] = useState<'전사 공용' | '부서 전용'>('전사 공용');
   const [formIcon, setFormIcon] = useState('📄');
+  const [formFile, setFormFile] = useState<File | null>(null);
+  const [formExistingFile, setFormExistingFile] = useState<TemplateFile | null>(null);
+  const [formRemoveFile, setFormRemoveFile] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const loadTemplates = useCallback(async () => {
@@ -55,6 +66,7 @@ export default function TemplatesPage() {
             usageCount: t.usageCount as number,
             lastUpdated: t.lastUpdated as string,
             placeholders: (t.placeholders as string[]) ?? [],
+            templateFile: (t.templateFile as TemplateFile | null) ?? null,
           }))
         );
       }
@@ -98,6 +110,9 @@ export default function TemplatesPage() {
     setFormDepartmentId(deptList[0]?.id ?? '');
     setFormScope('전사 공용');
     setFormIcon('📄');
+    setFormFile(null);
+    setFormExistingFile(null);
+    setFormRemoveFile(false);
     setSaving(false);
   };
 
@@ -113,6 +128,9 @@ export default function TemplatesPage() {
     setFormDepartmentId(t.departmentId);
     setFormScope(t.scope);
     setFormIcon(t.icon);
+    setFormExistingFile(t.templateFile);
+    setFormFile(null);
+    setFormRemoveFile(false);
     setShowModal(true);
   };
 
@@ -121,63 +139,77 @@ export default function TemplatesPage() {
     setSaving(true);
 
     try {
+      const hasFile = formFile !== null;
+      const useFormData = hasFile;
+
       if (editId) {
-        // Update
-        const res = await fetch('/api/templates', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: editId,
-            name: formName,
-            description: formDescription,
-            departmentId: formDepartmentId,
-            scope: formScope,
-          }),
-        });
+        let res: Response;
+        if (useFormData) {
+          const fd = new FormData();
+          fd.append('id', editId);
+          fd.append('name', formName);
+          fd.append('description', formDescription);
+          fd.append('departmentId', formDepartmentId);
+          fd.append('scope', formScope);
+          if (formFile) fd.append('file', formFile);
+          if (formRemoveFile) fd.append('removeFile', 'true');
+          res = await fetch('/api/templates', { method: 'PUT', body: fd });
+        } else {
+          res = await fetch('/api/templates', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: editId, name: formName, description: formDescription,
+              departmentId: formDepartmentId, scope: formScope,
+              removeFile: formRemoveFile || undefined,
+            }),
+          });
+        }
         if (res.ok) {
           const data = await res.json();
           const updated = data.template;
           setTemplates((prev) =>
             prev.map((t) =>
               t.id === editId
-                ? { ...t, name: updated.name, description: updated.description, department: updated.department, departmentId: updated.departmentId, scope: updated.scope, lastUpdated: updated.lastUpdated, icon: formIcon }
+                ? { ...t, name: updated.name, description: updated.description, department: updated.department, departmentId: updated.departmentId, scope: updated.scope, lastUpdated: updated.lastUpdated, icon: formIcon, templateFile: updated.templateFile ?? null }
                 : t
             )
           );
         }
       } else {
-        // Create
-        const res = await fetch('/api/templates', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: formName,
-            description: formDescription,
-            departmentId: formDepartmentId,
-            scope: formScope,
-          }),
-        });
+        let res: Response;
+        if (useFormData) {
+          const fd = new FormData();
+          fd.append('name', formName);
+          fd.append('description', formDescription);
+          fd.append('departmentId', formDepartmentId);
+          fd.append('scope', formScope);
+          if (formFile) fd.append('file', formFile);
+          res = await fetch('/api/templates', { method: 'POST', body: fd });
+        } else {
+          res = await fetch('/api/templates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: formName, description: formDescription, departmentId: formDepartmentId, scope: formScope }),
+          });
+        }
         if (res.ok) {
           const data = await res.json();
           const newTmpl = data.template;
           setTemplates((prev) => [
             ...prev,
             {
-              id: newTmpl.id,
-              name: newTmpl.name,
-              icon: formIcon,
-              description: newTmpl.description,
-              department: newTmpl.department,
-              departmentId: newTmpl.departmentId,
-              scope: newTmpl.scope,
-              usageCount: 0,
-              lastUpdated: newTmpl.lastUpdated,
-              placeholders: [],
+              id: newTmpl.id, name: newTmpl.name, icon: formIcon,
+              description: newTmpl.description, department: newTmpl.department,
+              departmentId: newTmpl.departmentId, scope: newTmpl.scope,
+              usageCount: 0, lastUpdated: newTmpl.lastUpdated, placeholders: [],
+              templateFile: newTmpl.templateFile ?? null,
             },
           ]);
         }
       }
       resetForm();
+      loadTemplates();
     } catch {
       // silent
     } finally {
@@ -311,6 +343,9 @@ export default function TemplatesPage() {
               <p className="text-sm text-[#6e6e73] line-clamp-2 mb-3">{t.description}</p>
               <div className="flex flex-wrap gap-2 items-center text-xs">
                 <span className="px-2 py-0.5 rounded-full bg-[#f5f5f7] text-[#1d1d1f] font-medium">{t.department}</span>
+                {t.templateFile && (
+                  <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium">{t.templateFile.type}</span>
+                )}
                 <span className="text-[#6e6e73]">사용 {t.usageCount}회</span>
                 <span className="text-[#6e6e73]">·</span>
                 <span className="text-[#6e6e73]">{t.lastUpdated}</span>
@@ -400,6 +435,67 @@ export default function TemplatesPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+              {/* Template File */}
+              <div style={{ marginTop: 20 }}>
+                <label className="block text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>표준양식 파일</label>
+                <p className="text-xs text-[#6e6e73] mb-3">HWP, DOCX, XLSX, PDF 등 표준양식 파일을 첨부하세요</p>
+
+                {/* 기존 파일 표시 */}
+                {formExistingFile && !formRemoveFile && !formFile && (
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-[#e5e5e7] bg-[#f5f5f7]">
+                    <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">{formExistingFile.type}</span>
+                    <span className="text-sm text-[#1d1d1f] flex-1 truncate">{formExistingFile.name}</span>
+                    <span className="text-xs text-[#6e6e73]">{formExistingFile.size}</span>
+                    <button
+                      type="button"
+                      onClick={() => setFormRemoveFile(true)}
+                      className="p-1 rounded hover:bg-white text-[#ff3b30]"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
+                )}
+
+                {/* 새 파일 선택됨 */}
+                {formFile && (
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-[#0071e3] bg-[#f0f5ff]">
+                    <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">
+                      {formFile.name.split('.').pop()?.toUpperCase() ?? 'FILE'}
+                    </span>
+                    <span className="text-sm text-[#1d1d1f] flex-1 truncate">{formFile.name}</span>
+                    <span className="text-xs text-[#6e6e73]">
+                      {formFile.size < 1024 * 1024 ? `${(formFile.size / 1024).toFixed(0)} KB` : `${(formFile.size / (1024 * 1024)).toFixed(1)} MB`}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => { setFormFile(null); setFormRemoveFile(false); }}
+                      className="p-1 rounded hover:bg-white text-[#ff3b30]"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
+                )}
+
+                {/* 파일 선택 버튼 */}
+                {!formFile && (!formExistingFile || formRemoveFile) && (
+                  <label className="flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-[#e5e5e7] cursor-pointer hover:border-[#0071e3] hover:bg-[#f5f5f7] transition-colors">
+                    <svg className="w-5 h-5 text-[#6e6e73]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                    </svg>
+                    <span className="text-sm text-[#6e6e73]">파일 선택</span>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".hwp,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf,.md"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) { setFormFile(file); setFormRemoveFile(false); }
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                )}
               </div>
             </div>
             <div className="px-6 py-5 border-t border-[#e5e5e7] flex justify-end gap-3">

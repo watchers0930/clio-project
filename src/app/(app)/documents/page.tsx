@@ -13,10 +13,18 @@ interface Document {
   content?: string;
 }
 
+interface TemplateFile {
+  id: string;
+  name: string;
+  type: string;
+  size: string;
+}
+
 interface Template {
   id: string;
   name: string;
   description: string;
+  templateFile: TemplateFile | null;
 }
 
 interface SourceFile {
@@ -91,6 +99,7 @@ export default function DocumentsPage() {
             id: t.id as string,
             name: t.name as string,
             description: t.description as string,
+            templateFile: (t.templateFile as TemplateFile | null) ?? null,
           }))
         );
       }
@@ -396,6 +405,12 @@ export default function DocumentsPage() {
                       <span className="text-2xl">{TEMPLATE_ICONS[t.name] ?? '📄'}</span>
                       <h4 className="font-medium text-[#1d1d1f] text-sm mt-2">{t.name}</h4>
                       <p className="text-xs text-[#6e6e73] mt-1 line-clamp-2">{t.description}</p>
+                      {t.templateFile && (
+                        <div className="flex items-center gap-1.5 mt-2">
+                          <span className="text-[10px] font-bold px-1 py-0.5 rounded bg-blue-50 text-blue-600">{t.templateFile.type}</span>
+                          <span className="text-[10px] text-[#6e6e73] truncate">{t.templateFile.name}</span>
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -535,6 +550,24 @@ export default function DocumentsPage() {
                         <p className="text-[#1d1d1f] mt-1">{instructions}</p>
                       </div>
                     )}
+                    {(() => {
+                      const tmpl = templates.find((t) => t.id === selectedTemplate);
+                      return tmpl?.templateFile ? (
+                        <div className="flex items-center justify-between">
+                          <span className="text-[#6e6e73]">표준양식</span>
+                          <a
+                            href={`/api/files/${tmpl.templateFile.id}/download`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-1.5 text-[#0071e3] font-medium hover:underline"
+                          >
+                            <span className="text-[10px] font-bold px-1 py-0.5 rounded bg-blue-50 text-blue-600">{tmpl.templateFile.type}</span>
+                            {tmpl.templateFile.name}
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                          </a>
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                   {generating && (
                     <div className="flex flex-col items-center py-6 gap-3">
