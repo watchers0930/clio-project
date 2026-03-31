@@ -383,7 +383,7 @@ export default function DocumentsPage() {
               </div>
             )}
 
-            <div className="px-6 py-6">
+            <div className="px-6 pt-2 pb-8">
               {/* Step 1: Select template */}
               {step === 1 && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
