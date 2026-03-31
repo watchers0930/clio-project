@@ -350,7 +350,7 @@ export default function TemplatesPage() {
               </div>
 
               {/* Name */}
-              <div>
+              <div style={{ marginTop: 20 }}>
                 <label className="block text-sm font-medium text-[#1d1d1f] mb-2">이름 *</label>
                 <input
                   value={formName}
@@ -361,7 +361,7 @@ export default function TemplatesPage() {
               </div>
 
               {/* Description */}
-              <div>
+              <div style={{ marginTop: 20 }}>
                 <label className="block text-sm font-medium text-[#1d1d1f] mb-2">설명</label>
                 <textarea
                   value={formDescription}
@@ -373,7 +373,7 @@ export default function TemplatesPage() {
               </div>
 
               {/* Department */}
-              <div>
+              <div style={{ marginTop: 20 }}>
                 <label className="block text-sm font-medium text-[#1d1d1f] mb-2">부서</label>
                 <select
                   value={formDepartmentId}
@@ -387,7 +387,7 @@ export default function TemplatesPage() {
               </div>
 
               {/* Scope */}
-              <div>
+              <div style={{ marginTop: 20 }}>
                 <label className="block text-sm font-medium text-[#1d1d1f] mb-3">범위</label>
                 <div className="flex gap-3">
                   {(['전사 공용', '부서 전용'] as const).map((s) => (
