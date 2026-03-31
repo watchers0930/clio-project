@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { mimeToType, formatSize } from '@/lib/utils/format';
 
 /** 파일 상태 매핑 (DB status → 프론트 표시용) */
 const STATUS_MAP: Record<string, string> = {
@@ -10,27 +11,6 @@ const STATUS_MAP: Record<string, string> = {
   completed: '완료',
   error: '오류',
 };
-
-/** 파일 사이즈 포맷 */
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-/** MIME → 확장자 매핑 */
-function mimeToType(mime: string | null, name: string): string {
-  if (!mime) return name.split('.').pop()?.toUpperCase() ?? 'FILE';
-  const map: Record<string, string> = {
-    'application/pdf': 'PDF',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'XLSX',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PPTX',
-    'audio/m4a': 'M4A',
-    'text/markdown': 'MD',
-  };
-  return map[mime] ?? name.split('.').pop()?.toUpperCase() ?? 'FILE';
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -177,7 +157,7 @@ export async function POST(request: NextRequest) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': internalSecret },
         body: JSON.stringify({ fileId: data.id }),
-      }).then(() => {}, () => {});
+      }).then(() => {}, (err) => console.error('[files] process pipeline error:', err));
 
       return NextResponse.json({ success: true, data }, { status: 201 });
     }

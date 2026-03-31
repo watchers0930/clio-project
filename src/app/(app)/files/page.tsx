@@ -241,11 +241,7 @@ function FilesPage() {
     if (selectedIds.size === 0) return;
     if (!confirm(`${selectedIds.size}개 파일을 삭제하시겠습니까?`)) return;
     const ids = Array.from(selectedIds);
-    for (const id of ids) {
-      try {
-        await fetch(`/api/files/${id}`, { method: 'DELETE' });
-      } catch { /* ignore */ }
-    }
+    await Promise.allSettled(ids.map((id) => fetch(`/api/files/${id}`, { method: 'DELETE' })));
     setFiles((prev) => prev.filter((f) => !selectedIds.has(f.id)));
     setSelectedIds(new Set());
   };

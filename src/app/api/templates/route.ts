@@ -1,27 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
-
-/** MIME → 확장자 매핑 */
-function mimeToType(mime: string | null, name: string): string {
-  if (!mime) return name.split('.').pop()?.toUpperCase() ?? 'FILE';
-  const map: Record<string, string> = {
-    'application/pdf': 'PDF',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'XLSX',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PPTX',
-    'application/haansofthwp': 'HWP',
-    'application/x-hwp': 'HWP',
-    'text/markdown': 'MD',
-  };
-  return map[mime] ?? name.split('.').pop()?.toUpperCase() ?? 'FILE';
-}
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
+import { mimeToType, formatSize } from '@/lib/utils/format';
 
 export async function GET(request: NextRequest) {
   try {
@@ -116,7 +96,7 @@ async function uploadTemplateFile(supabase: Awaited<ReturnType<typeof createServ
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': internalSecret },
     body: JSON.stringify({ fileId: data.id }),
-  }).then(() => {}, () => {});
+  }).then(() => {}, (err) => console.error('[templates] process pipeline error:', err));
 
   return data.id;
 }
