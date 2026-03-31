@@ -335,7 +335,7 @@ export default function TemplatesPage() {
             <div className="px-6 py-6 space-y-8">
               {/* Icon selector */}
               <div>
-                <label className="block text-sm font-medium text-[#1d1d1f] mb-3">아이콘</label>
+                <label className="block text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>아이콘</label>
                 <div className="flex flex-wrap gap-2.5">
                   {ICON_OPTIONS.map((icon) => (
                     <button
@@ -351,7 +351,7 @@ export default function TemplatesPage() {
 
               {/* Name */}
               <div style={{ marginTop: 20 }}>
-                <label className="block text-sm font-medium text-[#1d1d1f] mb-2">이름 *</label>
+                <label className="block text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>이름 *</label>
                 <input
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
@@ -362,7 +362,7 @@ export default function TemplatesPage() {
 
               {/* Description */}
               <div style={{ marginTop: 20 }}>
-                <label className="block text-sm font-medium text-[#1d1d1f] mb-2">설명</label>
+                <label className="block text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>설명</label>
                 <textarea
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
@@ -374,7 +374,7 @@ export default function TemplatesPage() {
 
               {/* Department */}
               <div style={{ marginTop: 20 }}>
-                <label className="block text-sm font-medium text-[#1d1d1f] mb-2">부서</label>
+                <label className="block text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>부서</label>
                 <select
                   value={formDepartmentId}
                   onChange={(e) => setFormDepartmentId(e.target.value)}
@@ -388,7 +388,7 @@ export default function TemplatesPage() {
 
               {/* Scope */}
               <div style={{ marginTop: 20 }}>
-                <label className="block text-sm font-medium text-[#1d1d1f] mb-3">범위</label>
+                <label className="block text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>범위</label>
                 <div className="flex gap-3">
                   {(['전사 공용', '부서 전용'] as const).map((s) => (
                     <button
