@@ -106,7 +106,7 @@ function FilesPage() {
     async function load() {
       try {
         const [filesRes, deptsRes] = await Promise.all([
-          fetch('/api/files'),
+          fetch('/api/files?limit=500'),
           fetch('/api/departments'),
         ]);
         if (filesRes.ok) {
@@ -216,7 +216,7 @@ function FilesPage() {
     }
 
     // 파일 목록 갱신
-    const listRes = await fetch('/api/files');
+    const listRes = await fetch('/api/files?limit=500');
     if (listRes.ok) {
       const data = await listRes.json();
       setFiles(data.files ?? []);

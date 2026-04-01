@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, Number(searchParams.get('page') ?? 1));
-    const limit = Math.min(50, Math.max(1, Number(searchParams.get('limit') ?? 20)));
+    const limit = Math.min(500, Math.max(1, Number(searchParams.get('limit') ?? 20)));
     const department = searchParams.get('department');
     const type = searchParams.get('type');
     const status = searchParams.get('status');
