@@ -267,7 +267,7 @@ export default function TemplatesPage() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#1d1d1f]">템플릿 관리</h1>
-          <p className="text-[#6e6e73] mt-1">문서 생성에 사용할 템플릿을 관리하세요</p>
+          <p className="text-[#6e6e73] mt-1" style={{ marginBottom: 10 }}>문서 생성에 사용할 템플릿을 관리하세요</p>
         </div>
         <button
           onClick={openCreate}
