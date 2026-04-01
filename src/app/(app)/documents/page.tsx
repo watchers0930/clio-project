@@ -361,7 +361,7 @@ export default function DocumentsPage() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#1d1d1f]">문서 생성</h1>
-          <p className="text-[#6e6e73] mt-1">AI를 활용하여 문서를 자동으로 생성하세요</p>
+          <p className="text-[#6e6e73] mt-1" style={{ marginBottom: 10 }}>AI를 활용하여 문서를 자동으로 생성하세요</p>
         </div>
         <button
           onClick={() => setShowModal(true)}
