@@ -196,7 +196,8 @@ function FilesPage() {
       setUploadProgress(80);
 
       if (!res.ok) {
-        throw new Error('업로드 실패');
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || '업로드 실패');
       }
 
       setUploadProgress(100);
@@ -215,9 +216,9 @@ function FilesPage() {
         setPage(1);
         if (fileInputRef.current) fileInputRef.current.value = '';
       }, 600);
-    } catch {
+    } catch (e) {
       setUploadProgress(null);
-      alert('파일 업로드에 실패했습니다.');
+      alert(e instanceof Error ? e.message : '파일 업로드에 실패했습니다.');
     }
   };
 

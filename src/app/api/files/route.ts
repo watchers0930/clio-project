@@ -122,12 +122,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: validationError }, { status: 400 });
       }
 
-      // Storage에 파일 업로드
+      // Storage에 파일 업로드 (Node.js 환경에서 File→Buffer 변환)
       const safeName = sanitizeFileName(file.name);
       const storagePath = `uploads/${departmentId ?? 'general'}/${Date.now()}_${safeName}`;
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const contentType = file.type || 'application/octet-stream';
       const { error: uploadError } = await supabase.storage
         .from('files')
-        .upload(storagePath, file);
+        .upload(storagePath, buffer, { contentType, upsert: false });
       if (uploadError) {
         console.error('[files/POST] storage upload:', uploadError.message);
         return NextResponse.json({ success: false, error: '파일 업로드에 실패했습니다.' }, { status: 500 });
