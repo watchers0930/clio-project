@@ -14,7 +14,7 @@ function AppLayout({ children }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-page-bg">
+    <div className="flex h-screen overflow-hidden bg-page-bg w-[94%] mx-auto">
       {/* Desktop sidebar */}
       <div className="hidden lg:flex flex-shrink-0">
         <Sidebar
@@ -40,7 +40,7 @@ function AppLayout({ children }: AppLayoutProps) {
       <div className="flex flex-col flex-1 min-w-0">
         <Header onMenuClick={() => setMobileMenuOpen(!mobileMenuOpen)} />
         <main className="flex-1 overflow-y-auto flex flex-col">
-          <div className="flex-1 max-w-6xl mx-auto w-full" style={{ padding: '32px 40px' }}>
+          <div className="flex-1 w-full" style={{ padding: '32px 40px' }}>
             {children}
           </div>
           <Footer />
