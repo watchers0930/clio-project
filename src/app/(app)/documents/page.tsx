@@ -110,13 +110,13 @@ export default function DocumentsPage() {
 
   const loadFiles = useCallback(async () => {
     try {
-      const res = await fetch('/api/files?limit=50');
+      const res = await fetch('/api/files?limit=500');
       if (res.ok) {
         const data = await res.json();
         const fileData = data.data ?? data.files ?? [];
         setSourceFiles(
           fileData
-            .filter((f: Record<string, unknown>) => f.status === '완료')
+            .filter((f: Record<string, unknown>) => f.status !== '오류')
             .map((f: Record<string, unknown>) => ({
               id: f.id as string,
               name: (f.name as string) ?? '',
