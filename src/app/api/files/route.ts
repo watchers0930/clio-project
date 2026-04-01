@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { mimeToType, formatSize } from '@/lib/utils/format';
-import { sanitizeFileName, validateFile } from '@/lib/utils/sanitize';
+import { validateFile } from '@/lib/utils/sanitize';
 
 /** 확장자 → MIME 타입 폴백 매핑 (브라우저가 MIME을 비워서 보낼 때 대비) */
 const EXTENSION_MIME_MAP: Record<string, string> = {
@@ -140,10 +141,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: validationError }, { status: 400 });
       }
 
-      // Storage에 파일 업로드 (Node.js 환경에서 File→Buffer 변환)
-      const safeName = sanitizeFileName(file.name);
-      const storagePath = `uploads/${departmentId ?? 'general'}/${Date.now()}_${safeName}`;
+      // Storage에 파일 업로드 (UUID 경로로 특수문자/한글 문제 회피)
       const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+      const storagePath = `uploads/${departmentId ?? 'general'}/${randomUUID()}.${ext}`;
       const fileContentType = file.type || EXTENSION_MIME_MAP[ext] || 'application/octet-stream';
       const buffer = Buffer.from(await file.arrayBuffer());
       console.log('[files/POST] uploading to:', storagePath, 'contentType:', fileContentType, 'bufferSize:', buffer.length);
