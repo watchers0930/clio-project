@@ -477,7 +477,7 @@ function FilesPage() {
 
       {/* pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center justify-center gap-2 mt-5">
           <button disabled={safePage <= 1} onClick={() => setPage(safePage - 1)} className="px-3 py-1.5 rounded-lg border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">이전</button>
           {Array.from({ length: totalPages }, (_, i) => (
             <button
