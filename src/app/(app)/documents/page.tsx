@@ -67,6 +67,9 @@ export default function DocumentsPage() {
   const [fileDeptFilter, setFileDeptFilter] = useState('전체');
   const [fileTypeFilter, setFileTypeFilter] = useState('전체');
 
+  // Bulk select
+  const [selectedDocIds, setSelectedDocIds] = useState<Set<string>>(new Set());
+
   // View/Edit modal state
   const [viewDoc, setViewDoc] = useState<Document | null>(null);
   const [editContent, setEditContent] = useState('');
@@ -206,9 +209,44 @@ export default function DocumentsPage() {
       const res = await fetch(`/api/documents?id=${id}`, { method: 'DELETE' });
       if (res.ok) {
         setDocs((prev) => prev.filter((d) => d.id !== id));
+        setSelectedDocIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
       }
     } catch {
       // silent
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedDocIds.size;
+    if (count === 0) return;
+    if (!confirm(`선택된 ${count}개 문서를 삭제하시겠습니까?`)) return;
+    const ids = Array.from(selectedDocIds);
+    await Promise.all(ids.map((id) => fetch(`/api/documents?id=${id}`, { method: 'DELETE' })));
+    setDocs((prev) => prev.filter((d) => !selectedDocIds.has(d.id)));
+    setSelectedDocIds(new Set());
+  };
+
+  const handleDeleteAll = async () => {
+    if (docs.length === 0) return;
+    if (!confirm(`전체 ${docs.length}개 문서를 모두 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+    await Promise.all(docs.map((d) => fetch(`/api/documents?id=${d.id}`, { method: 'DELETE' })));
+    setDocs([]);
+    setSelectedDocIds(new Set());
+  };
+
+  const toggleDocSelect = (id: string) => {
+    setSelectedDocIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedDocIds.size === docs.length) {
+      setSelectedDocIds(new Set());
+    } else {
+      setSelectedDocIds(new Set(docs.map((d) => d.id)));
     }
   };
 
@@ -351,14 +389,42 @@ export default function DocumentsPage() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {docs.map((d) => (
-            <div key={d.id} className="bg-white rounded-2xl border border-[#e5e5e7] p-5 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="font-semibold text-[#1d1d1f] truncate pr-2">{d.title}</h3>
-                <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${statusColor[d.status]}`}>{d.status}</span>
-              </div>
-              <div className="space-y-2 text-sm text-[#6e6e73]">
+        <>
+          {/* Bulk actions */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-[#6e6e73]">
+              <input
+                type="checkbox"
+                checked={docs.length > 0 && selectedDocIds.size === docs.length}
+                onChange={toggleSelectAll}
+                className="w-4 h-4 rounded border-[#e5e5e7] accent-[#0071e3]"
+              />
+              전체 선택
+            </label>
+            {selectedDocIds.size > 0 && (
+              <button onClick={handleBulkDelete} className="px-4 py-1.5 rounded-lg text-sm text-[#ff3b30] border border-[#ff3b30] hover:bg-red-50 transition-colors">
+                선택 삭제 ({selectedDocIds.size})
+              </button>
+            )}
+            <button onClick={handleDeleteAll} className="px-4 py-1.5 rounded-lg text-sm text-[#6e6e73] border border-[#e5e5e7] hover:bg-[#f5f5f7] transition-colors">
+              전체 삭제
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {docs.map((d) => (
+              <div key={d.id} className={`bg-white rounded-2xl border p-5 shadow-sm hover:shadow-md transition-all ${selectedDocIds.has(d.id) ? 'border-[#0071e3] ring-1 ring-[#0071e3]' : 'border-[#e5e5e7]'}`}>
+                <div className="flex items-start gap-3 mb-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedDocIds.has(d.id)}
+                    onChange={() => toggleDocSelect(d.id)}
+                    className="w-4 h-4 rounded border-[#e5e5e7] accent-[#0071e3] mt-1 shrink-0"
+                  />
+                  <h3 className="font-semibold text-[#1d1d1f] truncate flex-1">{d.title}</h3>
+                  <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${statusColor[d.status]}`}>{d.status}</span>
+                </div>
+                <div className="space-y-2 text-sm text-[#6e6e73] ml-7">
                 <div className="flex items-center gap-2">
                   <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6z" /></svg>
                   <span>템플릿: {d.template}</span>
@@ -372,29 +438,30 @@ export default function DocumentsPage() {
                   <span>소스 파일 {d.sourceCount}개</span>
                 </div>
               </div>
-              <div className="flex gap-2 mt-4 pt-3 border-t border-[#f5f5f7]">
-                <button
-                  onClick={() => openDocModal(d)}
-                  className="px-4 py-2 rounded-lg text-sm text-[#0071e3] hover:bg-[#f5f5f7] transition-colors"
-                >
-                  {d.status === '초안' ? '편집' : '보기'}
-                </button>
-                <button
-                  onClick={() => handleDownload(d)}
-                  className="px-4 py-2 rounded-lg text-sm text-[#0071e3] hover:bg-[#f5f5f7] transition-colors"
-                >
-                  다운로드
-                </button>
-                <button
-                  onClick={() => handleDelete(d.id)}
-                  className="px-4 py-2 rounded-lg text-sm text-[#ff3b30] hover:bg-[#f5f5f7] transition-colors"
-                >
-                  삭제
-                </button>
+                <div className="flex gap-2 mt-4 pt-3 border-t border-[#f5f5f7] ml-7">
+                  <button
+                    onClick={() => openDocModal(d)}
+                    className="px-4 py-2 rounded-lg text-sm text-[#0071e3] hover:bg-[#f5f5f7] transition-colors"
+                  >
+                    {d.status === '초안' ? '편집' : '보기'}
+                  </button>
+                  <button
+                    onClick={() => handleDownload(d)}
+                    className="px-4 py-2 rounded-lg text-sm text-[#0071e3] hover:bg-[#f5f5f7] transition-colors"
+                  >
+                    다운로드
+                  </button>
+                  <button
+                    onClick={() => handleDelete(d.id)}
+                    className="px-4 py-2 rounded-lg text-sm text-[#ff3b30] hover:bg-[#f5f5f7] transition-colors"
+                  >
+                    삭제
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* ── View/Edit Document Modal ── */}
