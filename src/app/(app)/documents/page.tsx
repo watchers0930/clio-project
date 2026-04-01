@@ -411,7 +411,7 @@ export default function DocumentsPage() {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ marginTop: 20 }}>
             {docs.map((d) => (
               <div key={d.id} className={`bg-white rounded-2xl border p-5 shadow-sm hover:shadow-md transition-all ${selectedDocIds.has(d.id) ? 'border-[#0071e3] ring-1 ring-[#0071e3]' : 'border-[#e5e5e7]'}`}>
                 <div className="flex items-start gap-3 mb-3">
