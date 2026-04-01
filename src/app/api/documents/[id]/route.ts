@@ -48,6 +48,60 @@ export async function GET(
   }
 }
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+    const { content, status, title } = body as { content?: string; status?: string; title?: string };
+
+    const supabase = await createServerSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json<ApiResponse>({ success: false, error: 'DB 미설정' }, { status: 503 });
+    }
+
+    const authUserId = await getAuthUserId(supabase);
+    if (!authUserId) {
+      return NextResponse.json<ApiResponse>({ success: false, error: '인증이 필요합니다.' }, { status: 401 });
+    }
+
+    const updates: Record<string, unknown> = {};
+    if (content !== undefined) updates.content = content;
+    if (status !== undefined) updates.status = status;
+    if (title !== undefined) updates.title = title;
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json<ApiResponse>({ success: false, error: '수정할 내용이 없습니다.' }, { status: 400 });
+    }
+
+    const { data, error } = await supabase
+      .from('documents')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[documents/[id]/PATCH]', error.message);
+      return NextResponse.json<ApiResponse>({ success: false, error: '문서 수정에 실패했습니다.' }, { status: 500 });
+    }
+
+    await supabase.from('audit_logs').insert({
+      user_id: authUserId,
+      action: status ? 'document.status_change' : 'document.edit',
+      target_type: 'document',
+      target_id: id,
+      details: { ...updates },
+    }).then(() => {}, () => {});
+
+    return NextResponse.json<ApiResponse>({ success: true, data });
+  } catch {
+    return NextResponse.json<ApiResponse>({ success: false, error: '문서 수정 중 오류' }, { status: 500 });
+  }
+}
+
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },

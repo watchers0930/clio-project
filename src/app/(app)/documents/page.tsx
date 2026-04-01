@@ -67,8 +67,11 @@ export default function DocumentsPage() {
   const [fileDeptFilter, setFileDeptFilter] = useState('전체');
   const [fileTypeFilter, setFileTypeFilter] = useState('전체');
 
-  // View modal state
+  // View/Edit modal state
   const [viewDoc, setViewDoc] = useState<Document | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [editTitle, setEditTitle] = useState('');
+  const [saving, setSaving] = useState(false);
 
   // Templates and source files from API
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -209,6 +212,80 @@ export default function DocumentsPage() {
     }
   };
 
+  const openDocModal = (doc: Document) => {
+    setViewDoc(doc);
+    setEditContent(doc.content ?? '');
+    setEditTitle(doc.title);
+  };
+
+  const handleSave = async () => {
+    if (!viewDoc) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/documents/${viewDoc.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: editContent, title: editTitle }),
+      });
+      if (!res.ok) throw new Error();
+      const updated = { ...viewDoc, content: editContent, title: editTitle };
+      setViewDoc(updated);
+      setDocs((prev) => prev.map((d) => d.id === viewDoc.id ? updated : d));
+    } catch {
+      alert('저장에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleComplete = async () => {
+    if (!viewDoc || !confirm('문서를 최종 완료하시겠습니까?\n완료 후에도 초안으로 되돌릴 수 있습니다.')) return;
+    setSaving(true);
+    try {
+      // 편집 내용이 있으면 함께 저장
+      const body: Record<string, string> = { status: 'completed' };
+      if (editContent !== viewDoc.content) body.content = editContent;
+      if (editTitle !== viewDoc.title) body.title = editTitle;
+
+      const res = await fetch(`/api/documents/${viewDoc.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error();
+      const updated = { ...viewDoc, ...body, status: '완료' as const, content: editContent, title: editTitle };
+      setViewDoc(updated);
+      setDocs((prev) => prev.map((d) => d.id === viewDoc.id ? updated : d));
+    } catch {
+      alert('상태 변경에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRevertToDraft = async () => {
+    if (!viewDoc || !confirm('초안 상태로 되돌리시겠습니까?')) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/documents/${viewDoc.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'draft' }),
+      });
+      if (!res.ok) throw new Error();
+      const updated = { ...viewDoc, status: '초안' as const };
+      setViewDoc(updated);
+      setDocs((prev) => prev.map((d) => d.id === viewDoc.id ? updated : d));
+    } catch {
+      alert('상태 변경에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isEdited = viewDoc ? (editContent !== (viewDoc.content ?? '') || editTitle !== viewDoc.title) : false;
+  const isDraft = viewDoc?.status === '초안';
+
   const handleDownload = async (doc: Document) => {
     try {
       const res = await fetch(`/api/documents/${doc.id}/download`);
@@ -297,10 +374,10 @@ export default function DocumentsPage() {
               </div>
               <div className="flex gap-2 mt-4 pt-3 border-t border-[#f5f5f7]">
                 <button
-                  onClick={() => setViewDoc(d)}
+                  onClick={() => openDocModal(d)}
                   className="px-4 py-2 rounded-lg text-sm text-[#0071e3] hover:bg-[#f5f5f7] transition-colors"
                 >
-                  보기
+                  {d.status === '초안' ? '편집' : '보기'}
                 </button>
                 <button
                   onClick={() => handleDownload(d)}
@@ -320,43 +397,80 @@ export default function DocumentsPage() {
         </div>
       )}
 
-      {/* ── View Document Modal ── */}
+      {/* ── View/Edit Document Modal ── */}
       {viewDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="view-doc-title" onKeyDown={(e) => { if (e.key === 'Escape') setViewDoc(null); }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-y-auto">
-            <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between sticky top-0 bg-white rounded-t-2xl z-10">
-              <div>
-                <h2 id="view-doc-title" className="text-lg font-semibold text-[#1d1d1f]">{viewDoc.title}</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="view-doc-title" onKeyDown={(e) => { if (e.key === 'Escape' && !isEdited) setViewDoc(null); }}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between shrink-0">
+              <div className="flex-1 min-w-0">
+                {isDraft ? (
+                  <input
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="text-lg font-semibold text-[#1d1d1f] w-full bg-transparent border-b border-transparent hover:border-[#e5e5e7] focus:border-[#0071e3] focus:outline-none pb-1 transition-colors"
+                  />
+                ) : (
+                  <h2 id="view-doc-title" className="text-lg font-semibold text-[#1d1d1f] truncate">{viewDoc.title}</h2>
+                )}
                 <div className="flex gap-2 mt-1">
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusColor[viewDoc.status]}`}>{viewDoc.status}</span>
                   <span className="text-xs text-[#6e6e73]">{viewDoc.createdAt}</span>
+                  {isEdited && <span className="text-xs text-[#ff9f0a] font-medium">수정됨</span>}
                 </div>
               </div>
-              <button onClick={() => setViewDoc(null)} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
+              <button onClick={() => { if (isEdited && !confirm('수정 내용이 저장되지 않았습니다. 닫으시겠습니까?')) return; setViewDoc(null); }} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73] ml-3">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            <div className="px-6 py-6">
-              <div className="prose prose-sm max-w-none">
-                {(viewDoc.content ?? '문서 내용이 없습니다.').split('\n').map((line, i) => {
-                  if (line.startsWith('## ')) return <h2 key={i} className="text-lg font-bold text-[#1d1d1f] mt-4 mb-2">{line.replace('## ', '')}</h2>;
-                  if (line.startsWith('# ')) return <h1 key={i} className="text-xl font-bold text-[#1d1d1f] mt-4 mb-2">{line.replace('# ', '')}</h1>;
-                  if (line.startsWith('- ')) return <li key={i} className="text-sm text-[#1d1d1f] ml-4">{line.replace('- ', '')}</li>;
-                  if (line.startsWith('*')) return <p key={i} className="text-sm text-[#6e6e73] italic">{line.replace(/\*/g, '')}</p>;
-                  if (line.trim() === '---') return <hr key={i} className="my-3 border-[#e5e5e7]" />;
-                  if (line.trim() === '') return <br key={i} />;
-                  return <p key={i} className="text-sm text-[#1d1d1f] leading-relaxed">{line}</p>;
-                })}
-              </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto px-6 py-6">
+              {isDraft ? (
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="w-full h-full min-h-[400px] text-sm text-[#1d1d1f] leading-relaxed bg-transparent resize-none focus:outline-none font-mono"
+                  placeholder="문서 내용을 편집하세요..."
+                />
+              ) : (
+                <div className="prose prose-sm max-w-none">
+                  {(viewDoc.content ?? '문서 내용이 없습니다.').split('\n').map((line, i) => {
+                    if (line.startsWith('## ')) return <h2 key={i} className="text-lg font-bold text-[#1d1d1f] mt-4 mb-2">{line.replace('## ', '')}</h2>;
+                    if (line.startsWith('# ')) return <h1 key={i} className="text-xl font-bold text-[#1d1d1f] mt-4 mb-2">{line.replace('# ', '')}</h1>;
+                    if (line.startsWith('- ')) return <li key={i} className="text-sm text-[#1d1d1f] ml-4">{line.replace('- ', '')}</li>;
+                    if (line.startsWith('*')) return <p key={i} className="text-sm text-[#6e6e73] italic">{line.replace(/\*/g, '')}</p>;
+                    if (line.trim() === '---') return <hr key={i} className="my-3 border-[#e5e5e7]" />;
+                    if (line.trim() === '') return <br key={i} />;
+                    return <p key={i} className="text-sm text-[#1d1d1f] leading-relaxed">{line}</p>;
+                  })}
+                </div>
+              )}
             </div>
-            <div className="px-6 py-5 border-t border-[#e5e5e7] flex justify-end gap-3">
-              <button
-                onClick={() => handleDownload(viewDoc)}
-                className="px-5 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
-              >
-                다운로드
-              </button>
-              <button onClick={() => setViewDoc(null)} className="px-6 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors">닫기</button>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-[#e5e5e7] flex items-center justify-between shrink-0">
+              <div>
+                {isDraft ? (
+                  <button onClick={handleComplete} disabled={saving} className="px-5 py-2.5 rounded-xl bg-[#30d158] text-white text-sm font-medium hover:bg-[#28b94c] disabled:opacity-50 transition-colors">
+                    {saving ? '처리 중...' : '완료'}
+                  </button>
+                ) : (
+                  <button onClick={handleRevertToDraft} disabled={saving} className="px-5 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] disabled:opacity-50 transition-colors">
+                    초안으로 되돌리기
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-3">
+                {isDraft && (
+                  <button onClick={handleSave} disabled={saving || !isEdited} className="px-5 py-2.5 rounded-xl border border-[#0071e3] text-sm text-[#0071e3] font-medium hover:bg-[#f5f5f7] disabled:opacity-40 transition-colors">
+                    {saving ? '저장 중...' : '저장'}
+                  </button>
+                )}
+                <button onClick={() => handleDownload(viewDoc)} className="px-5 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">
+                  다운로드
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -643,12 +757,12 @@ export default function DocumentsPage() {
               {step === 5 && (
                 <button
                   onClick={() => {
-                    if (generatedDoc) setViewDoc(generatedDoc);
+                    if (generatedDoc) openDocModal(generatedDoc);
                     resetModal();
                   }}
                   className="px-6 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors"
                 >
-                  문서 보기
+                  문서 편집
                 </button>
               )}
             </div>
