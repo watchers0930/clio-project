@@ -39,6 +39,8 @@ export default function SearchPage() {
   const [fileType, setFileType] = useState('전체');
   const [sort, setSort] = useState('관련도순');
   const [expandedSummary, setExpandedSummary] = useState<string | null>(null);
+  const [previewData, setPreviewData] = useState<{ name: string; text: string; truncated?: boolean; totalLength?: number } | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   // 부서 목록 + 검색 제안어를 API에서 로드
   useEffect(() => {
@@ -56,6 +58,25 @@ export default function SearchPage() {
       setSuggestions(['회의록', '보고서', '계약서', '제안서', '공문']);
     });
   }, []);
+
+  const openPreview = async (fileId: string) => {
+    setPreviewLoading(true);
+    setPreviewData(null);
+    try {
+      const res = await fetch(`/api/files/${fileId}/preview`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        setPreviewData({ name: '오류', text: err?.error || '미리보기를 불러올 수 없습니다.' });
+        return;
+      }
+      const data = await res.json();
+      setPreviewData(data);
+    } catch {
+      setPreviewData({ name: '오류', text: '네트워크 오류가 발생했습니다.' });
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
 
   const doSearch = useCallback(
     async (q: string) => {
@@ -247,8 +268,18 @@ export default function SearchPage() {
                     </div>
                   </div>
 
-                  {/* AI summary toggle */}
-                  <div className="mt-4 pt-4 border-t border-[#f5f5f7]">
+                  {/* Actions */}
+                  <div className="mt-4 pt-4 border-t border-[#f5f5f7] flex items-center gap-4">
+                    <button
+                      onClick={() => openPreview(r.id)}
+                      className="flex items-center gap-1.5 text-sm text-[#1d1d1f] hover:text-[#0071e3] font-medium transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      미리보기
+                    </button>
                     <button
                       onClick={() => setExpandedSummary(expandedSummary === r.id ? null : r.id)}
                       className="flex items-center gap-1.5 text-sm text-[#0071e3] hover:text-[#0071e3] font-medium transition-colors"
@@ -267,12 +298,12 @@ export default function SearchPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
                       </svg>
                     </button>
-                    {expandedSummary === r.id && (
-                      <div className="mt-4 p-5 rounded-xl bg-[#f5f5f7] text-sm text-[#1d1d1f] leading-relaxed">
-                        {r.aiSummary}
-                      </div>
-                    )}
                   </div>
+                  {expandedSummary === r.id && (
+                    <div className="mt-4 p-5 rounded-xl bg-[#f5f5f7] text-sm text-[#1d1d1f] leading-relaxed">
+                      {r.aiSummary}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -293,6 +324,33 @@ export default function SearchPage() {
             자연어로 질문하면 AI가 관련 문서를 찾아 핵심 내용을 요약해 드립니다.
             위 검색창에 궁금한 내용을 입력해 보세요.
           </p>
+        </div>
+      )}
+      {/* ── Preview Modal ── */}
+      {(previewData || previewLoading) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) { setPreviewData(null); } }}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[#e5e5e7] shrink-0">
+              <h2 className="text-lg font-semibold text-[#1d1d1f] truncate">{previewLoading ? '불러오는 중...' : previewData?.name}</h2>
+              <button onClick={() => setPreviewData(null)} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              {previewLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="w-8 h-8 border-2 border-[#0071e3] border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : (
+                <>
+                  <pre className="whitespace-pre-wrap text-sm text-[#1d1d1f] leading-relaxed font-sans">{previewData?.text}</pre>
+                  {previewData?.truncated && (
+                    <p className="mt-4 text-xs text-[#6e6e73]">* 전체 {previewData.totalLength?.toLocaleString()}자 중 10,000자까지 표시됩니다.</p>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
