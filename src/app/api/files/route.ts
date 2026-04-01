@@ -133,7 +133,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: '파일이 필요합니다.' }, { status: 400 });
       }
 
-      console.log('[files/POST] file:', file.name, 'type:', file.type, 'size:', file.size);
+      // macOS NFD → NFC 정규화 (한글 검색 호환)
+      const normalizedName = file.name.normalize('NFC');
+      console.log('[files/POST] file:', normalizedName, 'type:', file.type, 'size:', file.size);
 
       const validationError = validateFile(file);
       if (validationError) {
@@ -157,7 +159,7 @@ export async function POST(request: NextRequest) {
 
       // files 테이블에 메타데이터 INSERT
       const { data, error } = await supabase.from('files').insert({
-        name: file.name,
+        name: normalizedName,
         type: fileContentType,
         size: file.size,
         department_id: departmentId ?? null,
@@ -199,7 +201,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data, error } = await supabase.from('files').insert({
-      name: body.name,
+      name: (body.name as string).normalize('NFC'),
       type: body.type ?? 'application/octet-stream',
       size: body.size ?? 0,
       department_id: body.department_id ?? null,

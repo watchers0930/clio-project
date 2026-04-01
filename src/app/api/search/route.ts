@@ -37,6 +37,8 @@ export async function POST(request: NextRequest) {
     if (!query || typeof query !== 'string' || query.trim().length === 0) {
       return NextResponse.json({ results: [], total: 0 });
     }
+    // macOS NFD → NFC 정규화 (한글 검색 호환)
+    const normalizedQuery = query.normalize('NFC');
 
     const supabase = await createServerSupabaseClient();
     if (!supabase) {
@@ -58,7 +60,7 @@ export async function POST(request: NextRequest) {
     if ((chunkCount ?? 0) > 0) {
       // ── 벡터 검색 ──
       try {
-        const queryEmbedding = await generateEmbedding(query);
+        const queryEmbedding = await generateEmbedding(normalizedQuery);
 
         const { data: matches, error: rpcErr } = await supabase.rpc('match_file_chunks', {
           query_embedding: JSON.stringify(queryEmbedding),
@@ -107,7 +109,7 @@ export async function POST(request: NextRequest) {
 
     // ── 텍스트 검색 폴백 (벡터 결과가 없을 때) ──
     if (results.length === 0) {
-      const queryTokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+      const queryTokens = normalizedQuery.toLowerCase().split(/\s+/).filter(Boolean);
 
       let fileQuery = supabase
         .from('files')
@@ -170,7 +172,7 @@ export async function POST(request: NextRequest) {
         user_id: authUserId,
         action: 'search',
         target_type: 'search',
-        details: { query, resultCount: results.length },
+        details: { query: normalizedQuery, resultCount: results.length },
       }).then(() => {}, () => {});
     }
 
