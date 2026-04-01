@@ -501,7 +501,7 @@ function FilesPage() {
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-2xl p-10 text-center transition-colors ${dragOver ? 'border-[#0071e3] bg-[#f5f5f7]' : 'border-[#e5e5e7] bg-[#f5f5f7]'}`}
+              className={`border-2 border-dashed rounded-2xl py-8 px-6 text-center transition-colors ${dragOver ? 'border-[#0071e3] bg-[#f5f5f7]' : 'border-[#e5e5e7] bg-[#f5f5f7]'}`}
             >
               <svg className="w-12 h-12 mx-auto text-[#6e6e73] mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
