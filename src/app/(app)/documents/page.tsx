@@ -324,9 +324,12 @@ export default function DocumentsPage() {
   const isEdited = viewDoc ? (editContent !== (viewDoc.content ?? '') || editTitle !== viewDoc.title) : false;
   const isDraft = viewDoc?.status === '초안';
 
+  const FONT_OPTIONS = ['맑은 고딕', '나눔고딕', '바탕', '돋움', '굴림', '나눔명조', 'Arial', 'Times New Roman'];
+  const [selectedFont, setSelectedFont] = useState('맑은 고딕');
+
   const handleDownload = async (doc: Document) => {
     try {
-      const res = await fetch(`/api/documents/${doc.id}/download`);
+      const res = await fetch(`/api/documents/${doc.id}/download?font=${encodeURIComponent(selectedFont)}`);
       if (!res.ok) throw new Error('다운로드 실패');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -534,6 +537,9 @@ export default function DocumentsPage() {
                     {saving ? '저장 중...' : '저장'}
                   </button>
                 )}
+                <select value={selectedFont} onChange={(e) => setSelectedFont(e.target.value)} className="px-3 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] bg-white">
+                  {FONT_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
+                </select>
                 <button onClick={() => handleDownload(viewDoc)} className="px-5 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">
                   다운로드
                 </button>

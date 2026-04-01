@@ -19,12 +19,27 @@ import {
  * GET /api/documents/[id]/download
  * 문서 내용을 DOCX로 변환하여 다운로드
  */
+const FONT_MAP: Record<string, string> = {
+  '맑은 고딕': 'Malgun Gothic',
+  '나눔고딕': 'NanumGothic',
+  '바탕': 'Batang',
+  '돋움': 'Dotum',
+  '굴림': 'Gulim',
+  '나눔명조': 'NanumMyeongjo',
+  'Arial': 'Arial',
+  'Times New Roman': 'Times New Roman',
+};
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
+    const url = new URL(_request.url);
+    const fontParam = url.searchParams.get('font') ?? '맑은 고딕';
+    const fontFamily = FONT_MAP[fontParam] ?? 'Malgun Gothic';
+
     const supabase = await createServerSupabaseClient();
     if (!supabase) {
       return NextResponse.json({ error: 'DB 미설정' }, { status: 503 });
@@ -56,7 +71,7 @@ export async function GET(
       styles: {
         default: {
           document: {
-            run: { font: 'Malgun Gothic', size: 22 },
+            run: { font: fontFamily, size: 24 },
           },
         },
       },
