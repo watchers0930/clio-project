@@ -86,10 +86,10 @@ function FilesPage() {
   const [statusFilter, setStatusFilter] = useState('전체');
   const [page, setPage] = useState(1);
   const [showUpload, setShowUpload] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; percent: number } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [dragOver, setDragOver] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [detailFile, setDetailFile] = useState<FileItem | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<FileItem | null>(null);
   const [downloadToast, setDownloadToast] = useState<string | null>(null);
@@ -158,8 +158,19 @@ function FilesPage() {
     }
   };
 
-  const handleFileSelect = (file: File) => {
-    setSelectedFile(file);
+  const ALLOWED_EXTS = new Set(['pdf', 'docx', 'pptx', 'xlsx', 'md', 'txt', 'csv']);
+  const MAX_SIZE = 50 * 1024 * 1024;
+
+  const addFiles = (incoming: File[]) => {
+    const valid = incoming.filter((f) => {
+      const ext = f.name.split('.').pop()?.toLowerCase() ?? '';
+      return ALLOWED_EXTS.has(ext) && f.size <= MAX_SIZE;
+    });
+    if (valid.length === 0) return;
+    setSelectedFiles((prev) => {
+      const names = new Set(prev.map((f) => f.name));
+      return [...prev, ...valid.filter((f) => !names.has(f.name))];
+    });
   };
 
   const handleFilePicker = () => {
@@ -167,61 +178,61 @@ function FilesPage() {
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleFileSelect(file);
+    const files = e.target.files;
+    if (files?.length) addFiles(Array.from(files));
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) handleFileSelect(file);
+    const files = e.dataTransfer.files;
+    if (files?.length) addFiles(Array.from(files));
   };
 
-  const simulateUpload = async () => {
-    if (!selectedFile) return;
-    setUploadProgress(10);
+  const handleUpload = async () => {
+    if (selectedFiles.length === 0) return;
+    const total = selectedFiles.length;
+    const failed: string[] = [];
 
-    try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
+    for (let i = 0; i < total; i++) {
+      setUploadProgress({ current: i + 1, total, percent: Math.round(((i) / total) * 100) });
 
-      setUploadProgress(40);
+      try {
+        const formData = new FormData();
+        formData.append('file', selectedFiles[i]);
 
-      const res = await fetch('/api/files', {
-        method: 'POST',
-        body: formData,
-      });
-
-      setUploadProgress(80);
-
-      if (!res.ok) {
-        const text = await res.text();
-        let msg = `업로드 실패 (${res.status})`;
-        try { msg = JSON.parse(text)?.error || msg; } catch { /* non-JSON */ }
-        throw new Error(msg);
+        const res = await fetch('/api/files', { method: 'POST', body: formData });
+        if (!res.ok) {
+          const text = await res.text();
+          let msg = `(${res.status})`;
+          try { msg = JSON.parse(text)?.error || msg; } catch { /* non-JSON */ }
+          failed.push(`${selectedFiles[i].name}: ${msg}`);
+        }
+      } catch {
+        failed.push(`${selectedFiles[i].name}: 네트워크 오류`);
       }
 
-      setUploadProgress(100);
-
-      // 파일 목록 갱신
-      const listRes = await fetch('/api/files');
-      if (listRes.ok) {
-        const data = await listRes.json();
-        setFiles(data.files ?? []);
-      }
-
-      setTimeout(() => {
-        setUploadProgress(null);
-        setShowUpload(false);
-        setSelectedFile(null);
-        setPage(1);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-      }, 600);
-    } catch (e) {
-      setUploadProgress(null);
-      alert(e instanceof Error ? e.message : '파일 업로드에 실패했습니다.');
+      setUploadProgress({ current: i + 1, total, percent: Math.round(((i + 1) / total) * 100) });
     }
+
+    // 파일 목록 갱신
+    const listRes = await fetch('/api/files');
+    if (listRes.ok) {
+      const data = await listRes.json();
+      setFiles(data.files ?? []);
+    }
+
+    if (failed.length > 0) {
+      alert(`${total - failed.length}/${total}개 업로드 완료\n\n실패:\n${failed.join('\n')}`);
+    }
+
+    setTimeout(() => {
+      setUploadProgress(null);
+      setShowUpload(false);
+      setSelectedFiles([]);
+      setPage(1);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }, failed.length > 0 ? 0 : 600);
   };
 
   const handleDelete = (file: FileItem) => {
@@ -483,11 +494,11 @@ function FilesPage() {
 
       {/* ── Upload Modal ── */}
       {showUpload && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) { setShowUpload(false); setUploadProgress(null); setSelectedFile(null); } }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) { setShowUpload(false); setUploadProgress(null); setSelectedFiles([]); } }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-[#1d1d1f]">파일 업로드</h2>
-              <button onClick={() => { setShowUpload(false); setUploadProgress(null); setSelectedFile(null); }} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
+              <button onClick={() => { setShowUpload(false); setUploadProgress(null); setSelectedFiles([]); }} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
@@ -496,6 +507,7 @@ function FilesPage() {
               ref={fileInputRef}
               type="file"
               accept=".pdf,.docx,.pptx,.xlsx,.md,.txt,.csv"
+              multiple
               className="hidden"
               onChange={handleFileInputChange}
             />
@@ -517,30 +529,40 @@ function FilesPage() {
               <p className="text-xs text-[#6e6e73] mt-3">PDF, DOCX, PPTX, XLSX, MD (최대 50MB)</p>
             </div>
 
-            {/* selected file info */}
-            {selectedFile && uploadProgress === null && (
+            {/* selected files list */}
+            {selectedFiles.length > 0 && uploadProgress === null && (
               <div className="mt-4 p-4 bg-[#f5f5f7] rounded-xl border border-[#e5e5e7]">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl bg-white border border-[#e5e5e7] flex items-center justify-center ${typeIconColor[getFileType(selectedFile.name)] ?? 'text-gray-400'}`}>
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[#1d1d1f] truncate">{selectedFile.name}</p>
-                    <p className="text-xs text-[#6e6e73]">
-                      {formatFileSize(selectedFile.size)} · {getFileType(selectedFile.name)}
-                    </p>
-                  </div>
-                  <button onClick={() => { setSelectedFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="p-1 rounded-lg hover:bg-white text-[#6e6e73]">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-medium text-[#1d1d1f]">
+                    {selectedFiles.length}개 파일 · {formatFileSize(selectedFiles.reduce((s, f) => s + f.size, 0))}
+                  </p>
+                  <button onClick={() => { setSelectedFiles([]); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="text-xs text-[#6e6e73] hover:text-[#1d1d1f]">
+                    전체 삭제
                   </button>
                 </div>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {selectedFiles.map((file, idx) => (
+                    <div key={`${file.name}-${idx}`} className="flex items-center gap-3 bg-white rounded-lg px-3 py-2 border border-[#e5e5e7]">
+                      <div className={`w-8 h-8 rounded-lg bg-[#f5f5f7] flex items-center justify-center shrink-0 ${typeIconColor[getFileType(file.name)] ?? 'text-gray-400'}`}>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-[#1d1d1f] truncate">{file.name}</p>
+                        <p className="text-xs text-[#6e6e73]">{formatFileSize(file.size)}</p>
+                      </div>
+                      <button onClick={() => setSelectedFiles((prev) => prev.filter((_, i) => i !== idx))} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73] shrink-0">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
                 <button
-                  onClick={simulateUpload}
+                  onClick={handleUpload}
                   className="mt-3 w-full py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors"
                 >
-                  업로드
+                  {selectedFiles.length}개 파일 업로드
                 </button>
               </div>
             )}
@@ -548,11 +570,11 @@ function FilesPage() {
             {uploadProgress !== null && (
               <div className="mt-4">
                 <div className="flex justify-between text-sm mb-1">
-                  <span className="text-[#1d1d1f]">{uploadProgress >= 100 ? '업로드 완료!' : '업로드 중...'}</span>
-                  <span className="text-[#0071e3] font-medium font-num">{uploadProgress}%</span>
+                  <span className="text-[#1d1d1f]">{uploadProgress.percent >= 100 ? '업로드 완료!' : `업로드 중... (${uploadProgress.current}/${uploadProgress.total})`}</span>
+                  <span className="text-[#0071e3] font-medium font-num">{uploadProgress.percent}%</span>
                 </div>
                 <div className="h-2 bg-[#f5f5f7] rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full transition-all duration-300 ${uploadProgress >= 100 ? 'bg-[#30d158]' : 'bg-[#0071e3]'}`} style={{ width: `${uploadProgress}%` }} />
+                  <div className={`h-full rounded-full transition-all duration-300 ${uploadProgress.percent >= 100 ? 'bg-[#30d158]' : 'bg-[#0071e3]'}`} style={{ width: `${uploadProgress.percent}%` }} />
                 </div>
               </div>
             )}
