@@ -32,9 +32,7 @@ export async function extractText(
   ) {
     text = new TextDecoder().decode(buffer);
   } else if (ext === 'hwp' || mimeType === 'application/haansofthwp' || mimeType === 'application/x-hwp') {
-    // HWP 파일은 바이너리 형식이라 직접 파싱 어려움 — 빈 텍스트로 처리
-    console.warn(`[extract-text] HWP 파일은 텍스트 추출이 제한적입니다: ${fileName}`);
-    text = `[HWP 파일: ${fileName}] — HWP 파일은 양식 구조 참조용으로 등록되었습니다. 텍스트 자동 추출은 지원되지 않습니다.`;
+    text = await extractHwp(buffer, fileName);
   } else if (ext === 'pptx' || mimeType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') {
     // PPTX 기본 처리
     text = `[PPTX 파일: ${fileName}] — 프레젠테이션 파일입니다.`;
@@ -74,6 +72,47 @@ async function extractXlsx(buffer: ArrayBuffer): Promise<string> {
   }
 
   return texts.join('\n\n');
+}
+
+async function extractHwp(buffer: ArrayBuffer, fileName: string): Promise<string> {
+  const fs = await import('fs');
+  const os = await import('os');
+  const path = await import('path');
+  const hwp = await import('node-hwp');
+
+  // node-hwp는 파일 경로만 받으므로 임시 파일 생성
+  const tmpPath = path.join(os.tmpdir(), `hwp_${Date.now()}.hwp`);
+  fs.writeFileSync(tmpPath, Buffer.from(buffer));
+
+  try {
+    const doc = await new Promise<Record<string, unknown>>((resolve, reject) => {
+      hwp.open(tmpPath, (err: Error | null, doc: Record<string, unknown>) => {
+        if (err) reject(err);
+        else resolve(doc);
+      });
+    });
+
+    const hml = doc._hml as Record<string, unknown> | undefined;
+    if (!hml) return `[HWP: ${fileName}] 텍스트 추출 실패`;
+
+    const texts: string[] = [];
+    function walk(node: unknown) {
+      if (!node) return;
+      if (typeof node === 'string') { texts.push(node); return; }
+      if (typeof node === 'object' && node !== null) {
+        const obj = node as Record<string, unknown>;
+        if (typeof obj.text === 'string') texts.push(obj.text);
+        if (typeof obj.value === 'string') texts.push(obj.value);
+        if (Array.isArray(obj.children)) obj.children.forEach(walk);
+        if (Array.isArray(obj)) (obj as unknown[]).forEach(walk);
+      }
+    }
+    walk(hml);
+
+    return texts.filter((t) => t.trim() && !t.startsWith('^')).join('\n');
+  } finally {
+    fs.unlinkSync(tmpPath);
+  }
 }
 
 /** 오디오 파일인지 확인 */
