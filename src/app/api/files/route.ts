@@ -4,6 +4,21 @@ import { getAuthUserId } from '@/lib/auth-helper';
 import { mimeToType, formatSize } from '@/lib/utils/format';
 import { sanitizeFileName, validateFile } from '@/lib/utils/sanitize';
 
+/** 확장자 → MIME 타입 폴백 매핑 (브라우저가 MIME을 비워서 보낼 때 대비) */
+const EXTENSION_MIME_MAP: Record<string, string> = {
+  pdf: 'application/pdf',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  doc: 'application/msword',
+  xls: 'application/vnd.ms-excel',
+  ppt: 'application/vnd.ms-powerpoint',
+  hwp: 'application/haansofthwp',
+  md: 'text/markdown',
+  txt: 'text/plain',
+  csv: 'text/csv',
+};
+
 /** 파일 상태 매핑 (DB status → 프론트 표시용) */
 const STATUS_MAP: Record<string, string> = {
   uploading: '업로드중',
@@ -105,10 +120,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: '인증이 필요합니다.' }, { status: 401 });
     }
 
-    const contentType = request.headers.get('content-type') ?? '';
+    const reqContentType = request.headers.get('content-type') ?? '';
 
     // FormData (파일 업로드)
-    if (contentType.includes('multipart/form-data')) {
+    if (reqContentType.includes('multipart/form-data')) {
       const formData = await request.formData();
       const file = formData.get('file') as File | null;
       const departmentId = formData.get('department_id') as string | null;
@@ -117,28 +132,33 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: '파일이 필요합니다.' }, { status: 400 });
       }
 
+      console.log('[files/POST] file:', file.name, 'type:', file.type, 'size:', file.size);
+
       const validationError = validateFile(file);
       if (validationError) {
+        console.error('[files/POST] validation failed:', validationError);
         return NextResponse.json({ success: false, error: validationError }, { status: 400 });
       }
 
       // Storage에 파일 업로드 (Node.js 환경에서 File→Buffer 변환)
       const safeName = sanitizeFileName(file.name);
       const storagePath = `uploads/${departmentId ?? 'general'}/${Date.now()}_${safeName}`;
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+      const fileContentType = file.type || EXTENSION_MIME_MAP[ext] || 'application/octet-stream';
       const buffer = Buffer.from(await file.arrayBuffer());
-      const contentType = file.type || 'application/octet-stream';
+      console.log('[files/POST] uploading to:', storagePath, 'contentType:', fileContentType, 'bufferSize:', buffer.length);
       const { error: uploadError } = await supabase.storage
         .from('files')
-        .upload(storagePath, buffer, { contentType, upsert: false });
+        .upload(storagePath, buffer, { contentType: fileContentType, upsert: false });
       if (uploadError) {
         console.error('[files/POST] storage upload:', uploadError.message);
-        return NextResponse.json({ success: false, error: '파일 업로드에 실패했습니다.' }, { status: 500 });
+        return NextResponse.json({ success: false, error: `스토리지 업로드 실패: ${uploadError.message}` }, { status: 500 });
       }
 
       // files 테이블에 메타데이터 INSERT
       const { data, error } = await supabase.from('files').insert({
         name: file.name,
-        type: file.type,
+        type: fileContentType,
         size: file.size,
         department_id: departmentId ?? null,
         uploaded_by: authUserId,

@@ -196,8 +196,10 @@ function FilesPage() {
       setUploadProgress(80);
 
       if (!res.ok) {
-        const err = await res.json().catch(() => null);
-        throw new Error(err?.error || '업로드 실패');
+        const text = await res.text();
+        let msg = `업로드 실패 (${res.status})`;
+        try { msg = JSON.parse(text)?.error || msg; } catch { /* non-JSON */ }
+        throw new Error(msg);
       }
 
       setUploadProgress(100);
