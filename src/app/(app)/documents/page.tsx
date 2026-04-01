@@ -209,17 +209,22 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleDownload = (doc: Document) => {
-    const content = doc.content ?? `# ${doc.title}\n\n문서 내용이 여기에 표시됩니다.`;
-    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${doc.title}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const handleDownload = async (doc: Document) => {
+    try {
+      const res = await fetch(`/api/documents/${doc.id}/download`);
+      if (!res.ok) throw new Error('다운로드 실패');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${doc.title}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('DOCX 다운로드에 실패했습니다.');
+    }
   };
 
   if (loading) {
