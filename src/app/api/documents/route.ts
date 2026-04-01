@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { generateDocumentContent } from '@/lib/ai/generate-document';
+import { extractText } from '@/lib/ai/extract-text';
+
+export const maxDuration = 60;
 
 export async function GET(request: NextRequest) {
   try {
@@ -88,29 +91,46 @@ export async function POST(request: NextRequest) {
     if (providedContent) {
       docContent = providedContent;
     } else {
-      // 소스 파일의 청크 가져오기
+      // 소스 파일에서 직접 텍스트 추출 (file_chunks 미의존)
       let sourceChunks: string[] = [];
       if (sourceFileIds && sourceFileIds.length > 0) {
-        const { data: chunks } = await supabase
-          .from('file_chunks')
-          .select('content')
-          .in('file_id', sourceFileIds)
-          .order('chunk_index')
-          .limit(50);
-        sourceChunks = (chunks ?? []).map((c) => c.content);
+        const { data: srcFiles } = await supabase
+          .from('files')
+          .select('id, name, type, storage_path')
+          .in('id', sourceFileIds);
+        for (const sf of (srcFiles ?? [])) {
+          if (!sf.storage_path) continue;
+          try {
+            const { data: blob } = await supabase.storage.from('files').download(sf.storage_path);
+            if (blob) {
+              const buf = await blob.arrayBuffer();
+              const text = await extractText(buf, sf.type ?? '', sf.name);
+              if (text.trim()) sourceChunks.push(text.slice(0, 8000));
+            }
+          } catch (e) {
+            console.error(`[documents/POST] extract source ${sf.name}:`, e);
+          }
+        }
       }
 
-      // 템플릿 양식 파일의 텍스트 가져오기
+      // 템플릿 양식 파일에서 직접 텍스트 추출
       let templateFileText: string | null = null;
       if (tmpl?.template_file_id) {
-        const { data: tplChunks } = await supabase
-          .from('file_chunks')
-          .select('content')
-          .eq('file_id', tmpl.template_file_id)
-          .order('chunk_index')
-          .limit(30);
-        if (tplChunks && tplChunks.length > 0) {
-          templateFileText = tplChunks.map((c) => c.content).join('\n');
+        const { data: tplFile } = await supabase
+          .from('files')
+          .select('name, type, storage_path')
+          .eq('id', tmpl.template_file_id)
+          .single();
+        if (tplFile?.storage_path) {
+          try {
+            const { data: blob } = await supabase.storage.from('files').download(tplFile.storage_path);
+            if (blob) {
+              const buf = await blob.arrayBuffer();
+              templateFileText = await extractText(buf, tplFile.type ?? '', tplFile.name);
+            }
+          } catch (e) {
+            console.error(`[documents/POST] extract template:`, e);
+          }
         }
       }
 
