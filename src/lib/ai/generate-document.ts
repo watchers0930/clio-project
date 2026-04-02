@@ -1,12 +1,22 @@
 /**
- * AI 문서 생성 엔진
- * 템플릿 + 양식파일 구조 + 소스 파일 청크 + 사용자 지시 → GPT-4o → 완성 문서
+ * AI 문서 생성 엔진 — 멀티포맷 지원
+ * 템플릿 + 양식파일 + 소스 파일 청크 + 지시사항 → GPT-4o → 포맷별 결과
+ *
+ * 아키텍처:
+ *  - AI(콘텐츠 생성) ↔ 렌더러(파일 변환)를 분리
+ *  - DOCX/PDF/HWPX → 마크다운 출력
+ *  - XLSX → ExcelSheet[] JSON 출력
+ *  - PPTX → PptxSlide[] JSON 출력
  */
 
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
+import type { OutputFormat, ExcelSheet, PptxSlide, GenerationResult } from '@/lib/renderers/types';
 
 const MAX_CONTEXT_CHARS = 60_000;
+const MAX_TEMPLATE_FILE_CHARS = 30_000;
+
+// ─── 기존 마크다운 생성 (DOCX/PDF/HWPX 공용) ───────────────
 
 export async function generateDocumentContent(params: {
   templateName: string;
@@ -17,14 +27,11 @@ export async function generateDocumentContent(params: {
 }): Promise<string> {
   const { templateName, templateContent, templateFileText, sourceChunks, instructions } = params;
 
-  // 템플릿 양식 전체 사용 (최대 30,000자)
-  const MAX_TEMPLATE_FILE_CHARS = 30_000;
   let trimmedTemplateFileText = templateFileText ?? null;
   if (trimmedTemplateFileText && trimmedTemplateFileText.length > MAX_TEMPLATE_FILE_CHARS) {
     trimmedTemplateFileText = trimmedTemplateFileText.slice(0, MAX_TEMPLATE_FILE_CHARS) + '\n...(이하 생략)';
   }
 
-  // 소스 청크를 컨텍스트 제한 내로
   const templateFileLen = trimmedTemplateFileText?.length ?? 0;
   const maxSourceChars = Math.max(5000, MAX_CONTEXT_CHARS - templateFileLen);
 
@@ -80,4 +87,194 @@ export async function generateDocumentContent(params: {
   });
 
   return text;
+}
+
+// ─── XLSX용: AI가 구조화 JSON 반환 ──────────────────────────
+
+export async function generateExcelContent(params: {
+  templateName: string;
+  sourceChunks: string[];
+  instructions?: string;
+}): Promise<ExcelSheet[]> {
+  const { templateName, sourceChunks, instructions } = params;
+
+  let contextText = '';
+  for (const chunk of sourceChunks) {
+    if (contextText.length + chunk.length > MAX_CONTEXT_CHARS) break;
+    contextText += chunk + '\n---\n';
+  }
+
+  const systemPrompt = `당신은 데이터 분석 및 Excel 보고서 작성 전문 AI입니다. 한국어로 작성합니다.
+
+## 출력 형식
+반드시 아래 JSON 배열 형식으로만 출력하세요. 다른 텍스트는 포함하지 마세요.
+
+\`\`\`json
+[
+  {
+    "sheetName": "시트이름",
+    "headers": ["컬럼1", "컬럼2", "컬럼3"],
+    "rows": [
+      ["값1", "값2", 123],
+      ["값3", "값4", 456]
+    ]
+  }
+]
+\`\`\`
+
+## 규칙
+1. 참조 자료의 수치 데이터를 분석하여 체계적인 테이블로 구성합니다.
+2. 숫자는 number 타입, 텍스트는 string 타입으로 구분합니다.
+3. 필요시 요약/합계 시트를 추가합니다.
+4. 시트가 여러 개 필요하면 배열에 추가합니다.`;
+
+  const userPrompt = `## 작성할 Excel: ${templateName}
+
+## 참조 자료:
+${contextText || '(참조 자료 없음)'}
+
+${instructions ? `## 지시사항:\n${instructions}\n\n` : ''}
+위 참조 자료를 분석하여 "${templateName}" Excel 보고서를 JSON 배열 형식으로 생성하세요.`;
+
+  const { text } = await generateText({
+    model: openai('gpt-4o'),
+    system: systemPrompt,
+    prompt: userPrompt,
+    maxTokens: 8000,
+    temperature: 0.2,
+  });
+
+  return parseJsonResponse<ExcelSheet[]>(text, []);
+}
+
+// ─── PPTX용: AI가 슬라이드 JSON 반환 ────────────────────────
+
+export async function generatePptxContent(params: {
+  templateName: string;
+  sourceChunks: string[];
+  instructions?: string;
+}): Promise<PptxSlide[]> {
+  const { templateName, sourceChunks, instructions } = params;
+
+  let contextText = '';
+  for (const chunk of sourceChunks) {
+    if (contextText.length + chunk.length > MAX_CONTEXT_CHARS) break;
+    contextText += chunk + '\n---\n';
+  }
+
+  const systemPrompt = `당신은 프레젠테이션 전문 AI입니다. 한국어로 작성합니다.
+
+## 출력 형식
+반드시 아래 JSON 배열 형식으로만 출력하세요. 다른 텍스트는 포함하지 마세요.
+
+\`\`\`json
+[
+  {
+    "title": "슬라이드 제목",
+    "body": "본문 설명 (선택)",
+    "bullets": ["핵심 포인트 1", "핵심 포인트 2", "핵심 포인트 3"]
+  }
+]
+\`\`\`
+
+## 규칙
+1. 슬라이드는 5~15개로 구성합니다.
+2. 각 슬라이드의 title은 간결하게 (15자 이내)
+3. body는 1~2문장으로 핵심 설명
+4. bullets는 3~5개, 각 항목 30자 이내
+5. 첫 슬라이드는 개요/목차, 마지막은 결론/요약
+6. 데이터가 있으면 핵심 수치를 포함합니다.`;
+
+  const userPrompt = `## 작성할 프레젠테이션: ${templateName}
+
+## 참조 자료:
+${contextText || '(참조 자료 없음)'}
+
+${instructions ? `## 지시사항:\n${instructions}\n\n` : ''}
+위 참조 자료를 분석하여 "${templateName}" 프레젠테이션 슬라이드를 JSON 배열 형식으로 생성하세요.`;
+
+  const { text } = await generateText({
+    model: openai('gpt-4o'),
+    system: systemPrompt,
+    prompt: userPrompt,
+    maxTokens: 6000,
+    temperature: 0.3,
+  });
+
+  return parseJsonResponse<PptxSlide[]>(text, []);
+}
+
+// ─── 통합 생성 엔진 ─────────────────────────────────────────
+
+export async function generateForFormat(params: {
+  format: OutputFormat;
+  templateName: string;
+  templateContent?: string | null;
+  templateFileText?: string | null;
+  sourceChunks: string[];
+  instructions?: string;
+}): Promise<GenerationResult> {
+  const { format, templateName, ...rest } = params;
+  const title = templateName;
+
+  switch (format) {
+    case 'xlsx': {
+      const excelSheets = await generateExcelContent({
+        templateName,
+        sourceChunks: rest.sourceChunks,
+        instructions: rest.instructions,
+      });
+      return { format, title, excelSheets };
+    }
+
+    case 'pptx': {
+      const pptxSlides = await generatePptxContent({
+        templateName,
+        sourceChunks: rest.sourceChunks,
+        instructions: rest.instructions,
+      });
+      return { format, title, pptxSlides };
+    }
+
+    case 'docx':
+    case 'pdf':
+    case 'hwpx': {
+      const markdown = await generateDocumentContent({
+        templateName,
+        templateContent: rest.templateContent,
+        templateFileText: rest.templateFileText,
+        sourceChunks: rest.sourceChunks,
+        instructions: rest.instructions,
+      });
+      return { format, title, markdown };
+    }
+
+    default:
+      throw new Error(`지원하지 않는 출력 포맷: ${format}`);
+  }
+}
+
+// ─── JSON 파싱 유틸 ──────────────────────────────────────────
+
+function parseJsonResponse<T>(text: string, fallback: T): T {
+  // ```json ... ``` 블록 추출
+  const jsonMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+  const jsonStr = jsonMatch ? jsonMatch[1].trim() : text.trim();
+
+  try {
+    return JSON.parse(jsonStr) as T;
+  } catch {
+    // JSON 배열 부분만 추출 시도
+    const arrayMatch = jsonStr.match(/\[[\s\S]*\]/);
+    if (arrayMatch) {
+      try {
+        return JSON.parse(arrayMatch[0]) as T;
+      } catch {
+        console.error('[generateDocument] JSON 파싱 실패:', jsonStr.slice(0, 200));
+        return fallback;
+      }
+    }
+    console.error('[generateDocument] JSON 파싱 실패:', jsonStr.slice(0, 200));
+    return fallback;
+  }
 }

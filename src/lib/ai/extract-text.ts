@@ -1,6 +1,6 @@
 /**
  * 파일 타입별 텍스트 추출
- * PDF, DOCX, XLSX, MD/TXT 지원
+ * PDF, DOCX, XLSX, PPTX, HWP, HWPX, MD/TXT 지원
  */
 
 const MAX_TEXT_LENGTH = 500_000;
@@ -26,16 +26,20 @@ export async function extractText(
   ) {
     text = await extractXlsx(buffer);
   } else if (
+    mimeType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
+    ext === 'pptx'
+  ) {
+    text = await extractPptx(buffer, fileName);
+  } else if (
     mimeType === 'text/markdown' ||
     mimeType === 'text/plain' ||
     ['md', 'txt', 'csv', 'tsv'].includes(ext)
   ) {
     text = new TextDecoder().decode(buffer);
+  } else if (ext === 'hwpx' || mimeType === 'application/hwp+zip') {
+    text = await extractHwpx(buffer, fileName);
   } else if (ext === 'hwp' || mimeType === 'application/haansofthwp' || mimeType === 'application/x-hwp') {
     text = await extractHwp(buffer, fileName);
-  } else if (ext === 'pptx' || mimeType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') {
-    // PPTX 기본 처리
-    text = `[PPTX 파일: ${fileName}] — 프레젠테이션 파일입니다.`;
   } else {
     throw new Error(`지원하지 않는 파일 형식입니다: ${mimeType} (${ext})`);
   }
@@ -48,39 +52,154 @@ export async function extractText(
   return text.trim();
 }
 
+// ─── PDF ───────────────────────────────────────────────────
 async function extractPdf(buffer: ArrayBuffer): Promise<string> {
   const pdfParse = (await import('pdf-parse')).default;
   const result = await pdfParse(Buffer.from(buffer));
   return result.text;
 }
 
+// ─── DOCX ──────────────────────────────────────────────────
 async function extractDocx(buffer: ArrayBuffer): Promise<string> {
   const mammoth = await import('mammoth');
   const result = await mammoth.extractRawText({ buffer });
   return result.value;
 }
 
+// ─── XLSX → 구조화 JSON ────────────────────────────────────
 async function extractXlsx(buffer: ArrayBuffer): Promise<string> {
   const XLSX = await import('xlsx');
   const workbook = XLSX.read(buffer, { type: 'array' });
-  const texts: string[] = [];
+  const sheets: string[] = [];
 
   for (const sheetName of workbook.SheetNames) {
     const sheet = workbook.Sheets[sheetName];
-    const csv = XLSX.utils.sheet_to_csv(sheet);
-    texts.push(`[시트: ${sheetName}]\n${csv}`);
+    // 구조화 JSON으로 추출 (AI가 수치 트렌드를 이해할 수 있도록)
+    const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+
+    if (jsonData.length === 0) {
+      sheets.push(`[시트: ${sheetName}]\n(빈 시트)`);
+      continue;
+    }
+
+    // 헤더 추출
+    const headers = Object.keys(jsonData[0]);
+    // 요약 정보
+    const summary = {
+      sheetName,
+      rowCount: jsonData.length,
+      columns: headers,
+    };
+
+    // 데이터를 구조화된 형태로 변환
+    const dataPreview = jsonData.slice(0, 100); // 최대 100행
+
+    sheets.push(
+      `[시트: ${sheetName}] (${jsonData.length}행 × ${headers.length}열)\n` +
+      `컬럼: ${headers.join(', ')}\n` +
+      `데이터:\n${JSON.stringify(dataPreview, null, 1)}\n` +
+      (jsonData.length > 100 ? `... (${jsonData.length - 100}행 추가 데이터 생략)` : '') +
+      `\n요약: ${JSON.stringify(summary)}`
+    );
   }
 
-  return texts.join('\n\n');
+  return sheets.join('\n\n');
 }
 
+// ─── PPTX → 슬라이드별 텍스트 추출 ─────────────────────────
+async function extractPptx(buffer: ArrayBuffer, fileName: string): Promise<string> {
+  const AdmZip = (await import('adm-zip')).default;
+
+  try {
+    const zip = new AdmZip(Buffer.from(buffer));
+    const slides: { num: number; texts: string[] }[] = [];
+
+    // 슬라이드 엔트리 찾기 (ppt/slides/slide1.xml, slide2.xml, ...)
+    const entries = zip.getEntries();
+    const slideEntries = entries
+      .filter(e => /^ppt\/slides\/slide\d+\.xml$/i.test(e.entryName))
+      .sort((a, b) => {
+        const numA = parseInt(a.entryName.match(/slide(\d+)/)?.[1] ?? '0');
+        const numB = parseInt(b.entryName.match(/slide(\d+)/)?.[1] ?? '0');
+        return numA - numB;
+      });
+
+    for (const entry of slideEntries) {
+      const xml = entry.getData().toString('utf-8');
+      const slideNum = parseInt(entry.entryName.match(/slide(\d+)/)?.[1] ?? '0');
+
+      // XML에서 텍스트 노드 추출 (<a:t> 태그)
+      const textMatches = xml.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) ?? [];
+      const texts = textMatches
+        .map(m => m.replace(/<[^>]+>/g, '').trim())
+        .filter(t => t.length > 0);
+
+      if (texts.length > 0) {
+        slides.push({ num: slideNum, texts });
+      }
+    }
+
+    if (slides.length === 0) {
+      return `[PPTX: ${fileName}] 텍스트를 추출할 수 없습니다.`;
+    }
+
+    const result = slides.map(s =>
+      `[슬라이드 ${s.num}]\n${s.texts.join('\n')}`
+    ).join('\n\n');
+
+    return `[PPTX: ${fileName}] (${slides.length}개 슬라이드)\n\n${result}`;
+  } catch (err) {
+    console.error(`[extract-pptx] ${fileName}:`, err);
+    return `[PPTX: ${fileName}] 텍스트 추출 실패`;
+  }
+}
+
+// ─── HWPX → XML에서 텍스트 추출 ────────────────────────────
+async function extractHwpx(buffer: ArrayBuffer, fileName: string): Promise<string> {
+  const AdmZip = (await import('adm-zip')).default;
+
+  try {
+    const zip = new AdmZip(Buffer.from(buffer));
+    const texts: string[] = [];
+
+    // HWPX는 ZIP 패키지: Contents/section0.xml, section1.xml ...
+    const entries = zip.getEntries();
+    const sectionEntries = entries
+      .filter(e => /^Contents\/section\d+\.xml$/i.test(e.entryName))
+      .sort((a, b) => {
+        const numA = parseInt(a.entryName.match(/section(\d+)/)?.[1] ?? '0');
+        const numB = parseInt(b.entryName.match(/section(\d+)/)?.[1] ?? '0');
+        return numA - numB;
+      });
+
+    for (const entry of sectionEntries) {
+      const xml = entry.getData().toString('utf-8');
+      // <hp:t> 또는 <t> 태그에서 텍스트 추출
+      const textMatches = xml.match(/<(?:hp:)?t[^>]*>([^<]*)<\/(?:hp:)?t>/g) ?? [];
+      const sectionTexts = textMatches
+        .map(m => m.replace(/<[^>]+>/g, '').trim())
+        .filter(t => t.length > 0);
+      texts.push(...sectionTexts);
+    }
+
+    if (texts.length === 0) {
+      return `[HWPX: ${fileName}] 텍스트를 추출할 수 없습니다.`;
+    }
+
+    return texts.join('\n');
+  } catch (err) {
+    console.error(`[extract-hwpx] ${fileName}:`, err);
+    return `[HWPX: ${fileName}] 텍스트 추출 실패`;
+  }
+}
+
+// ─── HWP (바이너리) ────────────────────────────────────────
 async function extractHwp(buffer: ArrayBuffer, fileName: string): Promise<string> {
   const fs = await import('fs');
   const os = await import('os');
   const path = await import('path');
   const hwp = await import('node-hwp');
 
-  // node-hwp는 파일 경로만 받으므로 임시 파일 생성
   const tmpPath = path.join(os.tmpdir(), `hwp_${Date.now()}.hwp`);
   fs.writeFileSync(tmpPath, Buffer.from(buffer));
 

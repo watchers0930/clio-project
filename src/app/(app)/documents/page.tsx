@@ -61,6 +61,9 @@ export default function DocumentsPage() {
   const [instructions, setInstructions] = useState('');
   const [generating, setGenerating] = useState(false);
   const [generatedDoc, setGeneratedDoc] = useState<Document | null>(null);
+  const [outputFormat, setOutputFormat] = useState<string>('docx');
+  const [generatedDownloadUrl, setGeneratedDownloadUrl] = useState<string | null>(null);
+  const [generatedOutline, setGeneratedOutline] = useState<Record<string, unknown> | null>(null);
 
   // Step 2: file search & filter
   const [fileSearch, setFileSearch] = useState('');
@@ -153,6 +156,9 @@ export default function DocumentsPage() {
     setInstructions('');
     setGenerating(false);
     setGeneratedDoc(null);
+    setOutputFormat('docx');
+    setGeneratedDownloadUrl(null);
+    setGeneratedOutline(null);
     setFileSearch('');
     setFileDeptFilter('전체');
     setFileTypeFilter('전체');
@@ -174,14 +180,17 @@ export default function DocumentsPage() {
 
   const handleGenerate = async () => {
     setGenerating(true);
+    setGeneratedDownloadUrl(null);
+    setGeneratedOutline(null);
     try {
-      const res = await fetch('/api/documents', {
+      const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           templateId: selectedTemplate,
           sourceFileIds: Array.from(selectedFiles),
           instructions: instructions.trim() || undefined,
+          outputFormat,
         }),
       });
       if (res.ok) {
@@ -190,7 +199,9 @@ export default function DocumentsPage() {
         if (newDoc) {
           setGeneratedDoc(newDoc);
           setDocs((prev) => [newDoc, ...prev]);
-          setStep(5); // Show generated result
+          if (data.downloadUrl) setGeneratedDownloadUrl(data.downloadUrl);
+          if (data.outline) setGeneratedOutline(data.outline);
+          setStep(5);
         }
       } else {
         const errData = await res.json().catch(() => null);
@@ -325,23 +336,25 @@ export default function DocumentsPage() {
   const isDraft = viewDoc?.status === '초안';
 
   const FONT_OPTIONS = ['맑은 고딕', '나눔고딕', '바탕', '돋움', '굴림', '나눔명조', 'Arial', 'Times New Roman'];
+  const DOWNLOAD_FORMAT_OPTIONS = ['docx', 'hwpx', 'pdf'] as const;
   const [selectedFont, setSelectedFont] = useState('맑은 고딕');
+  const [downloadFormat, setDownloadFormat] = useState<string>('docx');
 
   const handleDownload = async (doc: Document) => {
     try {
-      const res = await fetch(`/api/documents/${doc.id}/download?font=${encodeURIComponent(selectedFont)}`);
+      const res = await fetch(`/api/documents/${doc.id}/download?font=${encodeURIComponent(selectedFont)}&format=${downloadFormat}`);
       if (!res.ok) throw new Error('다운로드 실패');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${doc.title}.docx`;
+      a.download = `${doc.title}.${downloadFormat}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch {
-      alert('DOCX 다운로드에 실패했습니다.');
+      alert('다운로드에 실패했습니다.');
     }
   };
 
@@ -537,6 +550,9 @@ export default function DocumentsPage() {
                     {saving ? '저장 중...' : '저장'}
                   </button>
                 )}
+                <select value={downloadFormat} onChange={(e) => setDownloadFormat(e.target.value)} className="px-3 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] bg-white">
+                  {DOWNLOAD_FORMAT_OPTIONS.map((f) => <option key={f} value={f}>{f.toUpperCase()}</option>)}
+                </select>
                 <select value={selectedFont} onChange={(e) => setSelectedFont(e.target.value)} className="px-3 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] bg-white">
                   {FONT_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
                 </select>
@@ -716,17 +732,49 @@ export default function DocumentsPage() {
                 );
               })()}
 
-              {/* Step 3: Instructions */}
+              {/* Step 3: Instructions + Output Format */}
               {step === 3 && (
-                <div>
-                  <p className="text-sm text-[#6e6e73] mb-4">추가 지시사항을 입력하세요 (선택)</p>
-                  <textarea
-                    value={instructions}
-                    onChange={(e) => setInstructions(e.target.value)}
-                    placeholder="예: 핵심 수치 위주로 요약해 주세요. 표 형태로 정리해 주세요."
-                    rows={6}
-                    className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none"
-                  />
+                <div className="space-y-6">
+                  {/* 출력 포맷 선택 */}
+                  <div>
+                    <p className="text-sm font-medium text-[#1d1d1f] mb-3">출력 포맷</p>
+                    <div className="grid grid-cols-5 gap-2">
+                      {[
+                        { value: 'docx', label: 'DOCX', icon: '📝', desc: 'Word 문서' },
+                        { value: 'pdf', label: 'PDF', icon: '📕', desc: 'PDF 문서' },
+                        { value: 'hwpx', label: 'HWPX', icon: '📘', desc: '한글 문서' },
+                        { value: 'xlsx', label: 'XLSX', icon: '📊', desc: 'Excel 보고서' },
+                        { value: 'pptx', label: 'PPTX', icon: '📙', desc: '프레젠테이션' },
+                      ].map((f) => (
+                        <button
+                          key={f.value}
+                          onClick={() => setOutputFormat(f.value)}
+                          className={`p-3 rounded-xl border text-center transition-all ${outputFormat === f.value ? 'border-[#0071e3] bg-[#f0f5ff] ring-2 ring-[#0071e3]/30' : 'border-[#e5e5e7] hover:border-[#0071e3]'}`}
+                        >
+                          <span className="text-xl">{f.icon}</span>
+                          <p className="text-xs font-bold text-[#1d1d1f] mt-1">{f.label}</p>
+                          <p className="text-[10px] text-[#6e6e73]">{f.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                    {(outputFormat === 'xlsx' || outputFormat === 'pptx') && (
+                      <p className="text-xs text-[#0071e3] bg-[#f0f5ff] px-3 py-2 rounded-lg mt-2">
+                        {outputFormat === 'xlsx' ? 'AI가 데이터 테이블을 구조화하여 Excel 파일로 생성합니다.' : 'AI가 슬라이드 구성을 자동으로 설계하여 PPT 파일로 생성합니다.'}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* 추가 지시사항 */}
+                  <div>
+                    <p className="text-sm text-[#6e6e73] mb-3">추가 지시사항 (선택)</p>
+                    <textarea
+                      value={instructions}
+                      onChange={(e) => setInstructions(e.target.value)}
+                      placeholder="예: 핵심 수치 위주로 요약해 주세요. 표 형태로 정리해 주세요."
+                      rows={4}
+                      className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -741,6 +789,10 @@ export default function DocumentsPage() {
                     <div className="flex justify-between">
                       <span className="text-[#6e6e73]">소스 파일</span>
                       <span className="text-[#1d1d1f] font-medium">{selectedFiles.size}개</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#6e6e73]">출력 포맷</span>
+                      <span className="text-[#1d1d1f] font-medium">{outputFormat.toUpperCase()}</span>
                     </div>
                     {instructions && (
                       <div>
@@ -785,15 +837,61 @@ export default function DocumentsPage() {
                   <div className="flex items-center gap-3 p-4 rounded-xl bg-[#f5f5f7] border border-[#e5e5e7]">
                     <svg className="w-6 h-6 text-[#30d158] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     <div>
-                      <h4 className="font-semibold text-[#1d1d1f]">문서가 생성되었습니다!</h4>
+                      <h4 className="font-semibold text-[#1d1d1f]">{outputFormat.toUpperCase()} 문서가 생성되었습니다!</h4>
                       <p className="text-sm text-[#6e6e73]">{generatedDoc.title}</p>
                     </div>
                   </div>
-                  <div className="bg-[#f5f5f7] rounded-xl p-4 max-h-60 overflow-y-auto">
-                    <div className="text-sm text-[#1d1d1f] leading-relaxed whitespace-pre-wrap">
-                      {generatedDoc.content ?? '내용 없음'}
+
+                  {/* 마크다운 기반 포맷 미리보기 */}
+                  {(outputFormat === 'docx' || outputFormat === 'pdf' || outputFormat === 'hwpx') && (
+                    <div className="bg-[#f5f5f7] rounded-xl p-4 max-h-60 overflow-y-auto">
+                      <div className="text-sm text-[#1d1d1f] leading-relaxed whitespace-pre-wrap">
+                        {generatedDoc.content ?? '내용 없음'}
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {/* XLSX 아웃라인 미리보기 */}
+                  {outputFormat === 'xlsx' && generatedOutline && (generatedOutline as { sheets?: { sheetName: string; headers: string[]; rows: unknown[][] }[] }).sheets && (
+                    <div className="bg-[#f5f5f7] rounded-xl p-4 max-h-60 overflow-y-auto space-y-3">
+                      <p className="text-xs font-bold text-[#6e6e73] uppercase">Excel 아웃라인</p>
+                      {((generatedOutline as { sheets: { sheetName: string; headers: string[]; rows: unknown[][] }[] }).sheets).map((sheet: { sheetName: string; headers: string[]; rows: unknown[][] }, idx: number) => (
+                        <div key={idx} className="bg-white rounded-lg p-3 border border-[#e5e5e7]">
+                          <p className="text-sm font-medium text-[#1d1d1f]">{sheet.sheetName} ({sheet.rows?.length ?? 0}행)</p>
+                          <p className="text-xs text-[#6e6e73] mt-1">컬럼: {sheet.headers?.join(', ')}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* PPTX 아웃라인 미리보기 */}
+                  {outputFormat === 'pptx' && generatedOutline && (generatedOutline as { slides?: { title: string; bullets?: string[] }[] }).slides && (
+                    <div className="bg-[#f5f5f7] rounded-xl p-4 max-h-60 overflow-y-auto space-y-2">
+                      <p className="text-xs font-bold text-[#6e6e73] uppercase">슬라이드 아웃라인</p>
+                      {((generatedOutline as { slides: { title: string; bullets?: string[] }[] }).slides).map((slide: { title: string; bullets?: string[] }, idx: number) => (
+                        <div key={idx} className="bg-white rounded-lg p-3 border border-[#e5e5e7]">
+                          <p className="text-sm font-medium text-[#1d1d1f]">{idx + 1}. {slide.title}</p>
+                          {slide.bullets && (
+                            <ul className="text-xs text-[#6e6e73] mt-1 ml-4 list-disc">
+                              {slide.bullets.map((b: string, bi: number) => <li key={bi}>{b}</li>)}
+                            </ul>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* XLSX/PPTX 직접 다운로드 버튼 */}
+                  {generatedDownloadUrl && (
+                    <a
+                      href={generatedDownloadUrl}
+                      download
+                      className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#0071e3] text-white text-sm font-medium hover:bg-[#005bb5] transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                      {outputFormat.toUpperCase()} 파일 다운로드
+                    </a>
+                  )}
                 </div>
               )}
             </div>
