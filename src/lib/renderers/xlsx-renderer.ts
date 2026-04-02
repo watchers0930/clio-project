@@ -1,9 +1,10 @@
 /**
- * XLSX 렌더러 — AI JSON → Excel 파일 변환
- * exceljs 사용
+ * XLSX 렌더러
+ * - renderXlsx: AI JSON → 새 Excel 생성 (템플릿 없을 때)
+ * - renderXlsxFromTemplate: 기존 XLSX 로드 → 셀 값 주입 (템플릿 있을 때)
  */
 
-import type { ExcelSheet, RenderOutput, CorporateTheme } from './types';
+import type { ExcelSheet, ExcelCellData, RenderOutput, CorporateTheme } from './types';
 import { DEFAULT_THEME } from './types';
 
 export async function renderXlsx(
@@ -82,6 +83,45 @@ export async function renderXlsx(
         from: { row: 1, column: 1 },
         to: { row: 1, column: sheet.headers.length },
       };
+    }
+  }
+
+  const arrayBuffer = await workbook.xlsx.writeBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  return {
+    buffer,
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    extension: 'xlsx',
+    fileName: `${title}.xlsx`,
+  };
+}
+
+/**
+ * 템플릿 기반 XLSX 생성
+ * 기존 XLSX 파일을 로드하여 서식 유지 + AI가 지정한 셀에 값 주입
+ */
+export async function renderXlsxFromTemplate(
+  templateBuffer: Buffer,
+  cellData: ExcelCellData,
+  title: string,
+): Promise<RenderOutput> {
+  const ExcelJS = await import('exceljs');
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(templateBuffer);
+
+  // AI가 지정한 셀에 값 주입 (기존 서식 유지)
+  for (const [sheetName, cells] of Object.entries(cellData)) {
+    const ws = workbook.getWorksheet(sheetName);
+    if (!ws) {
+      console.warn(`[xlsx-template] 시트를 찾을 수 없음: ${sheetName}`);
+      continue;
+    }
+
+    for (const [cellAddr, value] of Object.entries(cells)) {
+      const cell = ws.getCell(cellAddr);
+      // 서식(font, fill, border, alignment)은 유지하고 값만 변경
+      cell.value = typeof value === 'number' ? value : String(value);
     }
   }
 

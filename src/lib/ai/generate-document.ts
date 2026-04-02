@@ -11,7 +11,7 @@
 
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import type { OutputFormat, ExcelSheet, PptxSlide, GenerationResult } from '@/lib/renderers/types';
+import type { OutputFormat, ExcelSheet, ExcelCellData, PptxSlide, PptxReplacement, GenerationResult } from '@/lib/renderers/types';
 
 const MAX_CONTEXT_CHARS = 60_000;
 const MAX_TEMPLATE_FILE_CHARS = 30_000;
@@ -204,6 +204,129 @@ ${instructions ? `## 지시사항:\n${instructions}\n\n` : ''}
   return parseJsonResponse<PptxSlide[]>(text, []);
 }
 
+// ─── XLSX 템플릿용: AI가 셀 주소별 값 반환 ──────────────────
+
+export async function generateExcelCellData(params: {
+  templateName: string;
+  templateFileText: string;
+  sourceChunks: string[];
+  instructions?: string;
+}): Promise<ExcelCellData> {
+  const { templateName, templateFileText, sourceChunks, instructions } = params;
+
+  let contextText = '';
+  for (const chunk of sourceChunks) {
+    if (contextText.length + chunk.length > MAX_CONTEXT_CHARS) break;
+    contextText += chunk + '\n---\n';
+  }
+
+  const systemPrompt = `당신은 Excel 양식 작성 전문 AI입니다. 한국어로 작성합니다.
+
+## 핵심 규칙
+기존 Excel 양식의 구조(시트, 셀 위치, 서식)를 그대로 유지하면서 빈 셀에 값을 채웁니다.
+
+## 출력 형식
+반드시 아래 JSON 객체 형식으로만 출력하세요. 다른 텍스트는 포함하지 마세요.
+
+\`\`\`json
+{
+  "시트이름": {
+    "A1": "값",
+    "B2": 123,
+    "C5": "텍스트"
+  }
+}
+\`\`\`
+
+## 규칙
+1. 시트 이름은 양식에 있는 기존 시트 이름을 그대로 사용합니다.
+2. 셀 주소는 Excel 표기법(A1, B2, C3...)을 사용합니다.
+3. 이미 값이 있는 셀은 건드리지 않습니다. 빈 셀만 채웁니다.
+4. 숫자는 number, 텍스트는 string으로 구분합니다.
+5. 참조 자료에서 값을 찾을 수 없으면 [확인필요]로 표시합니다.`;
+
+  const userPrompt = `## 작성할 Excel: ${templateName}
+
+## ★ 기존 양식 구조 (이 구조의 빈 셀만 채우세요):
+${templateFileText.slice(0, MAX_TEMPLATE_FILE_CHARS)}
+
+## 참조 자료:
+${contextText || '(참조 자료 없음)'}
+
+${instructions ? `## 지시사항:\n${instructions}\n\n` : ''}
+위 양식의 빈 셀을 참조 자료와 지시사항으로 채워 JSON 객체로 출력하세요.`;
+
+  const { text } = await generateText({
+    model: openai('gpt-4o'),
+    system: systemPrompt,
+    prompt: userPrompt,
+    maxTokens: 8000,
+    temperature: 0.2,
+  });
+
+  return parseJsonResponse<ExcelCellData>(text, {});
+}
+
+// ─── PPTX 템플릿용: AI가 슬라이드별 텍스트 치환 반환 ─────────
+
+export async function generatePptxReplacements(params: {
+  templateName: string;
+  templateFileText: string;
+  sourceChunks: string[];
+  instructions?: string;
+}): Promise<PptxReplacement> {
+  const { templateName, templateFileText, sourceChunks, instructions } = params;
+
+  let contextText = '';
+  for (const chunk of sourceChunks) {
+    if (contextText.length + chunk.length > MAX_CONTEXT_CHARS) break;
+    contextText += chunk + '\n---\n';
+  }
+
+  const systemPrompt = `당신은 프레젠테이션 양식 작성 전문 AI입니다. 한국어로 작성합니다.
+
+## 핵심 규칙
+기존 PPT 양식의 레이아웃/디자인을 유지하면서 텍스트만 교체합니다.
+
+## 출력 형식
+반드시 아래 JSON 객체 형식으로만 출력하세요. 다른 텍스트는 포함하지 마세요.
+
+\`\`\`json
+{
+  1: { "기존 플레이스홀더 텍스트": "새로운 텍스트" },
+  2: { "제목 텍스트": "새 제목", "본문 텍스트": "새 본문" }
+}
+\`\`\`
+
+## 규칙
+1. 키는 슬라이드 번호(1부터 시작)입니다.
+2. 각 슬라이드에서 교체할 텍스트를 "기존→새" 형태로 매핑합니다.
+3. 기존 텍스트는 양식에 있는 정확한 텍스트를 사용합니다.
+4. 새 텍스트는 참조 자료와 지시사항을 바탕으로 작성합니다.
+5. 교체할 필요 없는 텍스트(로고, 고정 문구)는 포함하지 않습니다.`;
+
+  const userPrompt = `## 작성할 프레젠테이션: ${templateName}
+
+## ★ 기존 양식 슬라이드 텍스트 (이 텍스트를 교체하세요):
+${templateFileText.slice(0, MAX_TEMPLATE_FILE_CHARS)}
+
+## 참조 자료:
+${contextText || '(참조 자료 없음)'}
+
+${instructions ? `## 지시사항:\n${instructions}\n\n` : ''}
+위 양식의 플레이스홀더 텍스트를 참조 자료로 교체하여 JSON 객체로 출력하세요.`;
+
+  const { text } = await generateText({
+    model: openai('gpt-4o'),
+    system: systemPrompt,
+    prompt: userPrompt,
+    maxTokens: 6000,
+    temperature: 0.2,
+  });
+
+  return parseJsonResponse<PptxReplacement>(text, {});
+}
+
 // ─── 통합 생성 엔진 ─────────────────────────────────────────
 
 export async function generateForFormat(params: {
@@ -211,14 +334,26 @@ export async function generateForFormat(params: {
   templateName: string;
   templateContent?: string | null;
   templateFileText?: string | null;
+  templateBuffer?: Buffer | null;
   sourceChunks: string[];
   instructions?: string;
 }): Promise<GenerationResult> {
   const { format, templateName, ...rest } = params;
   const title = templateName;
+  const hasTemplateFile = !!rest.templateFileText && !!rest.templateBuffer;
 
   switch (format) {
     case 'xlsx': {
+      // 템플릿 있으면 → 셀 주입 방식, 없으면 → 새로 생성
+      if (hasTemplateFile) {
+        const excelCellData = await generateExcelCellData({
+          templateName,
+          templateFileText: rest.templateFileText!,
+          sourceChunks: rest.sourceChunks,
+          instructions: rest.instructions,
+        });
+        return { format, title, excelCellData, templateBuffer: rest.templateBuffer! };
+      }
       const excelSheets = await generateExcelContent({
         templateName,
         sourceChunks: rest.sourceChunks,
@@ -228,6 +363,16 @@ export async function generateForFormat(params: {
     }
 
     case 'pptx': {
+      // 템플릿 있으면 → 텍스트 치환 방식, 없으면 → 새로 생성
+      if (hasTemplateFile) {
+        const pptxReplacements = await generatePptxReplacements({
+          templateName,
+          templateFileText: rest.templateFileText!,
+          sourceChunks: rest.sourceChunks,
+          instructions: rest.instructions,
+        });
+        return { format, title, pptxReplacements, templateBuffer: rest.templateBuffer! };
+      }
       const pptxSlides = await generatePptxContent({
         templateName,
         sourceChunks: rest.sourceChunks,

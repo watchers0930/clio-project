@@ -77,8 +77,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 템플릿 양식 파일 텍스트 추출
+    // 템플릿 양식 파일 텍스트 추출 + 바이너리 보존
     let templateFileText: string | null = null;
+    let templateBuffer: Buffer | null = null;
     if (tmpl?.template_file_id) {
       const { data: tplFile } = await supabase
         .from('files')
@@ -92,6 +93,10 @@ export async function POST(request: NextRequest) {
           if (blob) {
             const buf = await blob.arrayBuffer();
             templateFileText = await extractText(buf, tplFile.type ?? '', tplFile.name);
+            // XLSX/PPTX 템플릿 기반 생성 시 바이너리 원본 보존
+            if (format === 'xlsx' || format === 'pptx') {
+              templateBuffer = Buffer.from(buf);
+            }
           }
         } catch (e) {
           console.error(`[generate] extract template:`, e);
@@ -105,6 +110,7 @@ export async function POST(request: NextRequest) {
       templateName,
       templateContent: typeof tmpl?.content === 'string' ? tmpl.content : null,
       templateFileText,
+      templateBuffer,
       sourceChunks,
       instructions: instructions ?? undefined,
     });

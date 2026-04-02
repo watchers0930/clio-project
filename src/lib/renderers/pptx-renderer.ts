@@ -1,9 +1,10 @@
 /**
- * PPTX 렌더러 — AI JSON → PowerPoint 파일 변환
- * pptxgenjs 사용
+ * PPTX 렌더러
+ * - renderPptx: AI JSON → 새 PPT 생성 (템플릿 없을 때)
+ * - renderPptxFromTemplate: 기존 PPTX 로드 → 텍스트 치환 (템플릿 있을 때, adm-zip)
  */
 
-import type { PptxSlide, RenderOutput, CorporateTheme } from './types';
+import type { PptxSlide, PptxReplacement, RenderOutput, CorporateTheme } from './types';
 import { DEFAULT_THEME } from './types';
 
 export async function renderPptx(
@@ -121,4 +122,78 @@ export async function renderPptx(
     extension: 'pptx',
     fileName: `${title}.pptx`,
   };
+}
+
+/**
+ * 템플릿 기반 PPTX 생성
+ * adm-zip으로 PPTX(ZIP) 열기 → 슬라이드 XML에서 텍스트 치환 → 다시 ZIP
+ */
+export async function renderPptxFromTemplate(
+  templateBuffer: Buffer,
+  replacements: PptxReplacement,
+  title: string,
+): Promise<RenderOutput> {
+  const AdmZip = (await import('adm-zip')).default;
+  const zip = new AdmZip(templateBuffer);
+
+  // 슬라이드 파일 목록 (ppt/slides/slide1.xml, slide2.xml ...)
+  const entries = zip.getEntries();
+  const slideEntries = entries
+    .filter(e => /^ppt\/slides\/slide\d+\.xml$/i.test(e.entryName))
+    .sort((a, b) => {
+      const numA = parseInt(a.entryName.match(/slide(\d+)/)?.[1] ?? '0');
+      const numB = parseInt(b.entryName.match(/slide(\d+)/)?.[1] ?? '0');
+      return numA - numB;
+    });
+
+  for (const entry of slideEntries) {
+    const slideNum = parseInt(entry.entryName.match(/slide(\d+)/)?.[1] ?? '0');
+    const slideReplacements = replacements[slideNum];
+    if (!slideReplacements) continue;
+
+    let xml = entry.getData().toString('utf-8');
+
+    // 텍스트 치환: <a:t> 태그 내의 기존 텍스트를 새 텍스트로 교체
+    for (const [oldText, newText] of Object.entries(slideReplacements)) {
+      // XML 내에서 텍스트가 여러 <a:r>/<a:t> 태그에 걸쳐 분산될 수 있으므로
+      // 단순 문자열 치환 + <a:t> 태그 내 치환 모두 시도
+      const escapedOld = escapeXml(oldText);
+      const escapedNew = escapeXml(newText);
+
+      // 방법 1: <a:t> 태그 내 직접 치환
+      xml = xml.replace(
+        new RegExp(`(<a:t[^>]*>)${escapeRegex(escapedOld)}(</a:t>)`, 'g'),
+        `$1${escapedNew}$2`,
+      );
+
+      // 방법 2: 플레인 텍스트 치환 (태그에 안 걸린 경우)
+      if (xml.includes(escapedOld)) {
+        xml = xml.split(escapedOld).join(escapedNew);
+      }
+    }
+
+    zip.updateFile(entry.entryName, Buffer.from(xml, 'utf-8'));
+  }
+
+  const buffer = zip.toBuffer();
+
+  return {
+    buffer,
+    mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    extension: 'pptx',
+    fileName: `${title}.pptx`,
+  };
+}
+
+function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
