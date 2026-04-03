@@ -750,10 +750,10 @@ export default function DocumentsPage() {
 
               {/* Step 3: Instructions + Output Format */}
               {step === 3 && (
-                <div className="space-y-6">
+                <div>
                   {/* 출력 포맷 선택 */}
                   <div>
-                    <p className="text-sm font-medium text-[#1d1d1f] mb-[10px]">출력 포맷</p>
+                    <p className="text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 10 }}>출력 포맷</p>
                     <div className="grid grid-cols-5 gap-2">
                       {[
                         { value: 'docx', label: 'DOCX', icon: '📝', desc: 'Word 문서' },
@@ -782,7 +782,7 @@ export default function DocumentsPage() {
 
                   {/* 추가 지시사항 */}
                   <div>
-                    <p className="text-sm text-[#6e6e73] mt-[20px] mb-[10px]">추가 지시사항 (선택)</p>
+                    <p className="text-sm text-[#6e6e73]" style={{ marginTop: 20, marginBottom: 10 }}>추가 지시사항 (선택)</p>
                     <textarea
                       value={instructions}
                       onChange={(e) => setInstructions(e.target.value)}
