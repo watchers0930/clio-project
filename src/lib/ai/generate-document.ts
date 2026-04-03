@@ -41,9 +41,11 @@ export async function generateDocumentContent(params: {
     contextText += chunk + '\n---\n';
   }
 
-  const hasTemplate = !!trimmedTemplateFileText;
+  const hasTemplateFile = !!trimmedTemplateFileText;
+  const hasTemplateContent = !!templateContent?.trim();
+  const hasAnyTemplate = hasTemplateFile || hasTemplateContent;
 
-  const systemPrompt = hasTemplate
+  const systemPrompt = hasTemplateFile
     ? `당신은 계약서/공문서 작성 전문 AI입니다. 한국어로 작성합니다.
 
 ## 핵심 규칙
@@ -53,8 +55,18 @@ export async function generateDocumentContent(params: {
 4. 양식에 없는 내용을 임의로 추가하지 않습니다.
 5. 참조 자료에서 값을 찾을 수 없는 빈칸은 [미정] 또는 [확인필요]로 표시합니다.
 6. 마크다운 형식으로 출력합니다.`
+    : hasTemplateContent
+    ? `당신은 전문 문서 작성 AI입니다. 한국어로 작성합니다.
+
+## 핵심 규칙
+1. 제공된 "템플릿 구조"를 충실히 따라 문서를 작성합니다.
+2. 템플릿에 정의된 섹션, 항목, 구조를 빠짐없이 포함합니다.
+3. 각 섹션의 내용을 참조 자료와 지시사항을 바탕으로 구체적이고 실질적으로 작성합니다.
+4. 마크다운 형식으로 출력합니다.
+5. 코드블록(\`\`\`markdown)으로 감싸지 말고 순수 마크다운으로 출력합니다.`
     : `당신은 전문 문서 작성 AI입니다. 한국어로 작성하세요.
-주어진 참조 자료를 분석하여 완성도 높은 문서를 마크다운 형식으로 작성합니다.`;
+주어진 참조 자료를 분석하여 완성도 높은 문서를 마크다운 형식으로 작성합니다.
+코드블록(\`\`\`markdown)으로 감싸지 말고 순수 마크다운으로 출력합니다.`;
 
   let userPrompt = `## 작성할 문서: ${templateName}\n\n`;
 
@@ -63,7 +75,7 @@ export async function generateDocumentContent(params: {
   }
 
   if (templateContent) {
-    userPrompt += `## 템플릿 메타정보:\n${templateContent}\n\n`;
+    userPrompt += `## ★ 템플릿 구조 (이 구조를 반드시 따라 작성하세요):\n${templateContent}\n\n`;
   }
 
   userPrompt += `## 참조 자료 (빈칸을 채울 때 참고):\n${contextText || '(참조 자료 없음)'}\n\n`;
@@ -72,10 +84,12 @@ export async function generateDocumentContent(params: {
     userPrompt += `## 지시사항 (이 정보로 빈칸을 채우세요):\n${instructions}\n\n`;
   }
 
-  if (hasTemplate) {
+  if (hasTemplateFile) {
     userPrompt += `위 표준양식의 구조를 그대로 유지하면서, 참조 자료와 지시사항의 정보로 빈칸을 채워 완성된 "${templateName}" 문서를 출력하세요. 양식의 조항이나 구조를 생략하지 마세요.`;
+  } else if (hasTemplateContent) {
+    userPrompt += `위 "템플릿 구조"에 정의된 섹션과 항목을 빠짐없이 따르되, 참조 자료와 지시사항을 바탕으로 각 항목의 내용을 구체적으로 채워 완성된 "${templateName}" 문서를 출력하세요. 코드블록으로 감싸지 마세요.`;
   } else {
-    userPrompt += `위 참조 자료를 바탕으로 "${templateName}" 문서를 완성해주세요.`;
+    userPrompt += `위 참조 자료를 바탕으로 "${templateName}" 문서를 완성해주세요. 코드블록으로 감싸지 마세요.`;
   }
 
   const { text } = await generateText({
@@ -86,7 +100,15 @@ export async function generateDocumentContent(params: {
     temperature: 0.2,
   });
 
-  return text;
+  // AI가 ```markdown ... ``` 코드블록으로 감쌀 경우 제거
+  let result = text.trim();
+  if (result.startsWith('```markdown')) {
+    result = result.replace(/^```markdown\s*\n?/, '').replace(/\n?```\s*$/, '');
+  } else if (result.startsWith('```')) {
+    result = result.replace(/^```\w*\s*\n?/, '').replace(/\n?```\s*$/, '');
+  }
+
+  return result;
 }
 
 // ─── XLSX용: AI가 구조화 JSON 반환 ──────────────────────────

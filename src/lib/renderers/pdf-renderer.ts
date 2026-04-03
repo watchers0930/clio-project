@@ -1,11 +1,7 @@
 /**
- * PDF 렌더러 — 마크다운 → HTML → PDF 변환
- * Vercel Serverless 환경에서는 headless browser 대신
- * 마크다운 → DOCX → PDF 방식이 불가하므로
- * 순수 HTML 기반 PDF 생성 (jsPDF 또는 HTML 반환)
- *
- * 현재: 마크다운 → 스타일된 HTML 문자열 반환
- * 클라이언트에서 window.print() 또는 브라우저 PDF 출력 활용
+ * PDF 렌더러 — 마크다운 → 스타일된 HTML 반환
+ * 서버에서는 print-ready HTML을 반환하고,
+ * 클라이언트에서 iframe + window.print() 또는 브라우저 PDF 저장으로 처리
  */
 
 import type { RenderOutput, CorporateTheme } from './types';
@@ -13,6 +9,9 @@ import { DEFAULT_THEME } from './types';
 
 function markdownToHtml(md: string, theme: CorporateTheme): string {
   let html = md;
+
+  // 코드블록 래핑 제거
+  html = html.replace(/^```\w*\s*\n?/, '').replace(/\n?```\s*$/, '');
 
   // 헤딩
   html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
@@ -55,8 +54,11 @@ function markdownToHtml(md: string, theme: CorporateTheme): string {
 <title>CLIO Document</title>
 <style>
   @page { size: A4; margin: 20mm; }
+  @media print {
+    body { margin: 0; padding: 20mm; }
+  }
   body {
-    font-family: '${theme.fontFamily}', 'Malgun Gothic', sans-serif;
+    font-family: '${theme.fontFamily}', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
     font-size: ${theme.fontSize}pt;
     line-height: 1.6;
     color: #1B1F2B;
@@ -88,15 +90,13 @@ export async function renderPdf(
   title: string,
   theme: CorporateTheme = DEFAULT_THEME,
 ): Promise<RenderOutput> {
-  // Serverless 환경에서는 HTML을 반환하고 클라이언트에서 PDF 변환
-  // 향후 @sparticuz/chromium 등으로 서버사이드 PDF 생성 가능
   const html = markdownToHtml(markdown, theme);
   const buffer = Buffer.from(html, 'utf-8');
 
   return {
     buffer,
     mimeType: 'text/html',
-    extension: 'html', // 클라이언트에서 print-to-pdf
+    extension: 'html',
     fileName: `${title}.html`,
   };
 }

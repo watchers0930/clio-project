@@ -1,6 +1,6 @@
 {
   "name": "clio-project",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -21,12 +21,14 @@
     "docxtemplater": "^3.68.3",
     "exceljs": "^4.4.0",
     "jsonwebtoken": "^9.0.3",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.7.0",
     "mammoth": "^1.12.0",
     "next": "16.2.1",
     "next-themes": "^0.4.6",
     "node-hwp": "^0.1.0-alpha",
     "openai": "^6.33.0",
+    "pdf-lib": "^1.17.1",
     "pdf-parse": "^2.4.5",
     "pg": "^8.20.0",
     "pizzip": "^3.2.0",

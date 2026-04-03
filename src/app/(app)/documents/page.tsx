@@ -343,6 +343,21 @@ export default function DocumentsPage() {
 
   const handleDownload = async (doc: Document) => {
     try {
+      if (downloadFormat === 'pdf') {
+        // PDF: 서버에서 print-ready HTML을 받아 새 창에서 인쇄(PDF 저장)
+        const res = await fetch(`/api/documents/${doc.id}/download?font=${encodeURIComponent(selectedFont)}&format=pdf`);
+        if (!res.ok) throw new Error('다운로드 실패');
+        const htmlContent = await res.text();
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(htmlContent);
+          printWindow.document.close();
+          printWindow.onload = () => {
+            setTimeout(() => printWindow.print(), 300);
+          };
+        }
+        return;
+      }
       const res = await fetch(`/api/documents/${doc.id}/download?font=${encodeURIComponent(selectedFont)}&format=${downloadFormat}`);
       if (!res.ok) throw new Error('다운로드 실패');
       const blob = await res.blob();
@@ -738,7 +753,7 @@ export default function DocumentsPage() {
                 <div className="space-y-6">
                   {/* 출력 포맷 선택 */}
                   <div>
-                    <p className="text-sm font-medium text-[#1d1d1f] mb-3">출력 포맷</p>
+                    <p className="text-sm font-medium text-[#1d1d1f] mb-[10px]">출력 포맷</p>
                     <div className="grid grid-cols-5 gap-2">
                       {[
                         { value: 'docx', label: 'DOCX', icon: '📝', desc: 'Word 문서' },
@@ -767,7 +782,7 @@ export default function DocumentsPage() {
 
                   {/* 추가 지시사항 */}
                   <div>
-                    <p className="text-sm text-[#6e6e73] mb-3">추가 지시사항 (선택)</p>
+                    <p className="text-sm text-[#6e6e73] mt-[20px] mb-[10px]">추가 지시사항 (선택)</p>
                     <textarea
                       value={instructions}
                       onChange={(e) => setInstructions(e.target.value)}
