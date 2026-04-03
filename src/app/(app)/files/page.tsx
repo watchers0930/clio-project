@@ -93,6 +93,10 @@ function FilesPage() {
   const [detailFile, setDetailFile] = useState<FileItem | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<FileItem | null>(null);
   const [downloadToast, setDownloadToast] = useState<string | null>(null);
+  const [showScrape, setShowScrape] = useState(false);
+  const [scrapeUrl, setScrapeUrl] = useState('');
+  const [scrapeLoading, setScrapeLoading] = useState(false);
+  const [scrapeResult, setScrapeResult] = useState<{ success: boolean; message: string; linkCount?: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   /* auto-open upload modal from query param */
@@ -281,6 +285,43 @@ function FilesPage() {
     setTimeout(() => setDownloadToast(null), 2000);
   };
 
+  const handleScrape = async () => {
+    if (!scrapeUrl.trim() || scrapeLoading) return;
+    setScrapeLoading(true);
+    setScrapeResult(null);
+    try {
+      const res = await fetch('/api/files/scrape', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: scrapeUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setScrapeResult({ success: false, message: data.error ?? '수집에 실패했습니다.' });
+        return;
+      }
+      if (data.data?.linkCount === 0) {
+        setScrapeResult({ success: true, message: data.message ?? '상품 링크를 찾을 수 없습니다.', linkCount: 0 });
+        return;
+      }
+      setScrapeResult({
+        success: true,
+        message: `${data.data.linkCount}개의 상품 링크를 수집하여 "${data.data.name}" 파일로 저장했습니다.`,
+        linkCount: data.data.linkCount,
+      });
+      // 파일 목록 갱신
+      const listRes = await fetch('/api/files?limit=500');
+      if (listRes.ok) {
+        const listData = await listRes.json();
+        setFiles(listData.files ?? []);
+      }
+    } catch {
+      setScrapeResult({ success: false, message: '네트워크 오류가 발생했습니다.' });
+    } finally {
+      setScrapeLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6 animate-pulse">
@@ -296,15 +337,26 @@ function FilesPage() {
       {/* header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3" style={{ marginBottom: 15 }}>
         <h1 className="text-2xl font-bold text-[#1d1d1f]">파일 관리</h1>
-        <button
-          onClick={() => setShowUpload(true)}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors shadow-sm w-full sm:w-auto"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-          </svg>
-          파일 업로드
-        </button>
+        <div className="flex gap-3 w-full sm:w-auto">
+          <button
+            onClick={() => { setShowScrape(true); setScrapeUrl(''); setScrapeResult(null); }}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-[#1d1d1f] text-[#1d1d1f] text-sm font-medium hover:bg-[#f5f5f7] transition-colors w-full sm:w-auto"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-2.07a4.5 4.5 0 00-1.242-7.244l-4.5-4.5a4.5 4.5 0 00-6.364 6.364l1.757 1.757" />
+            </svg>
+            URL 상품 링크 수집
+          </button>
+          <button
+            onClick={() => setShowUpload(true)}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors shadow-sm w-full sm:w-auto"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+            </svg>
+            파일 업로드
+          </button>
+        </div>
       </div>
 
       {/* bulk actions bar */}
@@ -644,6 +696,77 @@ function FilesPage() {
               <button onClick={confirmDelete} className="flex-1 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors">
                 삭제
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Scrape Modal ── */}
+      {showScrape && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget && !scrapeLoading) setShowScrape(false); }}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6">
+            <div className="flex items-center justify-between" style={{ marginBottom: 20 }}>
+              <h2 className="text-lg font-semibold text-[#1d1d1f]">URL 상품 링크 수집</h2>
+              {!scrapeLoading && (
+                <button onClick={() => setShowScrape(false)} className="p-1 rounded-lg hover:bg-[#f5f5f7]">
+                  <svg className="w-5 h-5 text-[#6e6e73]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              )}
+            </div>
+
+            <p className="text-sm text-[#6e6e73]" style={{ marginBottom: 16 }}>
+              쇼핑몰 카테고리 페이지 URL을 입력하면 상품 링크를 자동으로 수집합니다.
+            </p>
+
+            <input
+              type="url"
+              value={scrapeUrl}
+              onChange={(e) => setScrapeUrl(e.target.value)}
+              placeholder="https://example.com/category/..."
+              disabled={scrapeLoading}
+              className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] disabled:opacity-50"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && scrapeUrl.trim() && !scrapeLoading) handleScrape();
+              }}
+            />
+
+            {/* Loading */}
+            {scrapeLoading && (
+              <div className="flex items-center gap-3 mt-4 p-4 rounded-xl bg-[#f5f5f7]">
+                <div className="w-5 h-5 border-2 border-[#0071e3] border-t-transparent rounded-full animate-spin" />
+                <span className="text-sm text-[#6e6e73]">상품 링크를 수집하고 있습니다...</span>
+              </div>
+            )}
+
+            {/* Result */}
+            {scrapeResult && !scrapeLoading && (
+              <div className={`flex items-start gap-3 mt-4 p-4 rounded-xl ${scrapeResult.success ? 'bg-[#f0fdf4]' : 'bg-[#fef2f2]'}`}>
+                {scrapeResult.success ? (
+                  <svg className="w-5 h-5 text-[#30d158] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                ) : (
+                  <svg className="w-5 h-5 text-[#ff3b30] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9.303 3.376c-.866 1.5-3.032 1.5-3.898 0L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+                )}
+                <span className="text-sm text-[#1d1d1f]">{scrapeResult.message}</span>
+              </div>
+            )}
+
+            <div className="flex gap-3" style={{ marginTop: 20 }}>
+              <button
+                onClick={() => setShowScrape(false)}
+                disabled={scrapeLoading}
+                className="flex-1 py-2.5 rounded-xl border border-[#e5e5e7] text-sm font-medium text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors disabled:opacity-50"
+              >
+                {scrapeResult?.success && scrapeResult.linkCount ? '닫기' : '취소'}
+              </button>
+              {!(scrapeResult?.success && scrapeResult.linkCount) && (
+                <button
+                  onClick={handleScrape}
+                  disabled={!scrapeUrl.trim() || scrapeLoading}
+                  className="flex-1 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-50"
+                >
+                  수집 시작
+                </button>
+              )}
             </div>
           </div>
         </div>
