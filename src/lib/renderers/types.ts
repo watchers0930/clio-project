@@ -26,11 +26,17 @@ export interface PptxSlide {
 export type PptxReplacement = Record<number, Record<string, string>>;
 // { 1: { "기존텍스트": "새텍스트" }, 2: { ... } }
 
+/** AI가 반환하는 DOCX 텍스트 치환 (템플릿 있을 때) */
+export type DocxReplacement = Record<string, string>;
+// { "기존 플레이스홀더": "새 텍스트", ... }
+
 /** AI 생성 결과 — 포맷별 분기 */
 export interface GenerationResult {
   format: OutputFormat;
   /** DOCX/PDF/HWPX용 마크다운 콘텐츠 */
   markdown?: string;
+  /** DOCX용 텍스트 치환 (템플릿 있을 때) */
+  docxReplacements?: DocxReplacement;
   /** XLSX용 시트 데이터 (템플릿 없을 때) */
   excelSheets?: ExcelSheet[];
   /** XLSX용 셀 데이터 (템플릿 있을 때) */

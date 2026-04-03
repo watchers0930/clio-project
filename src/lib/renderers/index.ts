@@ -4,7 +4,7 @@
  * 템플릿 있으면 → 템플릿 기반 렌더링, 없으면 → 새로 생성
  */
 
-export { renderDocx } from './docx-renderer';
+export { renderDocx, renderDocxFromTemplate } from './docx-renderer';
 export { renderXlsx, renderXlsxFromTemplate } from './xlsx-renderer';
 export { renderPptx, renderPptxFromTemplate } from './pptx-renderer';
 export { renderHwpx } from './hwpx-renderer';
@@ -23,7 +23,7 @@ export { DEFAULT_THEME } from './types';
 
 import type { GenerationResult, RenderOutput, CorporateTheme } from './types';
 import { DEFAULT_THEME } from './types';
-import { renderDocx } from './docx-renderer';
+import { renderDocx, renderDocxFromTemplate } from './docx-renderer';
 import { renderXlsx, renderXlsxFromTemplate } from './xlsx-renderer';
 import { renderPptx, renderPptxFromTemplate } from './pptx-renderer';
 import { renderHwpx } from './hwpx-renderer';
@@ -39,6 +39,11 @@ export async function renderDocument(
 ): Promise<RenderOutput> {
   switch (result.format) {
     case 'docx':
+      // 템플릿 기반: 원본 DOCX 파일에 텍스트 치환
+      if (result.templateBuffer && result.docxReplacements) {
+        return renderDocxFromTemplate(result.templateBuffer, result.docxReplacements, result.title);
+      }
+      // 새로 생성
       if (!result.markdown) throw new Error('DOCX 렌더링에 마크다운 콘텐츠가 필요합니다.');
       return renderDocx(result.markdown, result.title, theme);
 

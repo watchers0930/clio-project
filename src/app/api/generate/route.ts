@@ -93,8 +93,8 @@ export async function POST(request: NextRequest) {
           if (blob) {
             const buf = await blob.arrayBuffer();
             templateFileText = await extractText(buf, tplFile.type ?? '', tplFile.name);
-            // XLSX/PPTX 템플릿 기반 생성 시 바이너리 원본 보존
-            if (format === 'xlsx' || format === 'pptx') {
+            // 템플릿 기반 생성 시 바이너리 원본 보존 (DOCX/XLSX/PPTX)
+            if (format === 'xlsx' || format === 'pptx' || format === 'docx') {
               templateBuffer = Buffer.from(buf);
             }
           }
@@ -120,7 +120,61 @@ export async function POST(request: NextRequest) {
     const title = `${templateName} (${dateStr} 생성)`;
     generationResult.title = title;
 
-    // 마크다운 기반 포맷(DOCX/HWPX/PDF)은 기존처럼 documents 테이블에도 저장
+    // DOCX 템플릿 기반: 파일 렌더링 → Storage 업로드 (XLSX/PPTX와 동일 흐름)
+    if (generationResult.docxReplacements && generationResult.templateBuffer) {
+      const rendered = await renderDocument(generationResult);
+      const storagePath = `generated/${authUserId}/${Date.now()}_${rendered.fileName}`;
+
+      const { error: uploadErr } = await supabase.storage
+        .from('files')
+        .upload(storagePath, rendered.buffer, {
+          contentType: rendered.mimeType,
+          upsert: false,
+        });
+
+      if (uploadErr) {
+        console.error('[generate] DOCX Storage upload error:', uploadErr.message);
+        return NextResponse.json({ error: '파일 업로드 실패' }, { status: 500 });
+      }
+
+      const { data: urlData } = await supabase.storage
+        .from('files')
+        .createSignedUrl(storagePath, 3600);
+
+      const { data: newDoc } = await supabase.from('documents').insert({
+        title,
+        content: `[DOCX 템플릿 기반] ${templateName}`,
+        template_id: templateId,
+        source_file_ids: sourceFileIds ?? [],
+        instructions: instructions ?? null,
+        status: 'completed',
+        created_by: authUserId,
+      }).select().single();
+
+      await supabase.from('audit_logs').insert({
+        user_id: authUserId,
+        action: 'document.create',
+        target_type: 'document',
+        target_id: newDoc?.id ?? '',
+        details: { title, format, storagePath },
+      }).then(() => {}, () => {});
+
+      return NextResponse.json({
+        document: {
+          id: newDoc?.id,
+          title,
+          template: templateName,
+          createdAt: dateStr,
+          status: '완료',
+          sourceCount: (sourceFileIds ?? []).length,
+          content: `[DOCX 템플릿 기반] ${templateName}`,
+        },
+        format,
+        downloadUrl: urlData?.signedUrl ?? null,
+      }, { status: 201 });
+    }
+
+    // 마크다운 기반 포맷(DOCX새로생성/HWPX/PDF)은 기존처럼 documents 테이블에도 저장
     if (generationResult.markdown) {
       const { data: newDoc, error } = await supabase.from('documents').insert({
         title,

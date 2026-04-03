@@ -16,7 +16,9 @@ import {
   WidthType,
   BorderStyle,
 } from 'docx';
-import type { RenderOutput, CorporateTheme } from './types';
+import Docxtemplater from 'docxtemplater';
+import PizZip from 'pizzip';
+import type { RenderOutput, CorporateTheme, DocxReplacement } from './types';
 import { DEFAULT_THEME } from './types';
 
 const FONT_MAP: Record<string, string> = {
@@ -50,6 +52,52 @@ export async function renderDocx(
   });
 
   const buffer = Buffer.from(await Packer.toBuffer(doc));
+
+  return {
+    buffer,
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    extension: 'docx',
+    fileName: `${title}.docx`,
+  };
+}
+
+export async function renderDocxFromTemplate(
+  templateBuffer: Buffer,
+  replacements: DocxReplacement,
+  title: string,
+): Promise<RenderOutput> {
+  const zip = new PizZip(templateBuffer);
+  const doc = new Docxtemplater(zip, {
+    paragraphLoop: true,
+    linebreaks: true,
+    delimiters: { start: '{{', end: '}}' },
+  });
+
+  // 1단계: docxtemplater 플레이스홀더 치환 ({{key}} 형식이 있는 경우)
+  try {
+    doc.render(replacements);
+  } catch {
+    // 플레이스홀더가 없어도 무시 (2단계에서 텍스트 치환)
+  }
+
+  // 2단계: XML 직접 텍스트 치환 (빈칸, _____, ( ) 등)
+  const zipAfter = doc.getZip();
+  const xmlFiles = ['word/document.xml', 'word/header1.xml', 'word/header2.xml', 'word/footer1.xml', 'word/footer2.xml'];
+
+  for (const xmlPath of xmlFiles) {
+    const file = zipAfter.file(xmlPath);
+    if (!file) continue;
+    let xml = file.asText();
+    for (const [oldText, newText] of Object.entries(replacements)) {
+      if (!oldText || !newText) continue;
+      // XML 내 w:t 태그 사이의 텍스트에서 치환
+      const escaped = oldText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      xml = xml.replace(new RegExp(escaped, 'g'), newText);
+    }
+    zipAfter.file(xmlPath, xml);
+  }
+
+  const buffer = Buffer.from(zipAfter.generate({ type: 'nodebuffer' }));
 
   return {
     buffer,

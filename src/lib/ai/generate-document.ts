@@ -11,7 +11,7 @@
 
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import type { OutputFormat, ExcelSheet, ExcelCellData, PptxSlide, PptxReplacement, GenerationResult } from '@/lib/renderers/types';
+import type { OutputFormat, ExcelSheet, ExcelCellData, PptxSlide, PptxReplacement, DocxReplacement, GenerationResult } from '@/lib/renderers/types';
 
 const MAX_CONTEXT_CHARS = 60_000;
 const MAX_TEMPLATE_FILE_CHARS = 30_000;
@@ -327,6 +327,67 @@ ${instructions ? `## 지시사항:\n${instructions}\n\n` : ''}
   return parseJsonResponse<PptxReplacement>(text, {});
 }
 
+// ─── DOCX 템플릿용: AI가 텍스트 치환 맵 반환 ────────────────
+
+export async function generateDocxReplacements(params: {
+  templateName: string;
+  templateFileText: string;
+  sourceChunks: string[];
+  instructions?: string;
+}): Promise<DocxReplacement> {
+  const { templateName, templateFileText, sourceChunks, instructions } = params;
+
+  let contextText = '';
+  for (const chunk of sourceChunks) {
+    if (contextText.length + chunk.length > MAX_CONTEXT_CHARS) break;
+    contextText += chunk + '\n---\n';
+  }
+
+  const systemPrompt = `당신은 공문서/보고서 양식 작성 전문 AI입니다. 한국어로 작성합니다.
+
+## 핵심 규칙
+기존 DOCX 양식의 구조(제목, 항목, 표)를 그대로 유지하면서 빈칸/플레이스홀더만 채웁니다.
+
+## 출력 형식
+반드시 아래 JSON 객체 형식으로만 출력하세요. 다른 텍스트는 포함하지 마세요.
+
+\`\`\`json
+{
+  "기존 텍스트 또는 빈칸": "새로운 텍스트",
+  "_____ (예: 날짜)": "2026년 4월 3일",
+  "( )": "실제 값"
+}
+\`\`\`
+
+## 규칙
+1. 키는 양식에 있는 정확한 빈칸/플레이스홀더 텍스트를 사용합니다.
+2. 값은 참조 자료와 지시사항을 바탕으로 채웁니다.
+3. 이미 완성된 텍스트(고정 문구)는 포함하지 않습니다.
+4. 참조 자료에서 값을 찾을 수 없으면 [확인필요]로 표시합니다.
+5. 양식 전체를 다시 쓰지 말고, 변경이 필요한 부분만 매핑하세요.`;
+
+  const userPrompt = `## 작성할 문서: ${templateName}
+
+## ★ 기존 양식 텍스트 (빈칸/플레이스홀더만 채우세요):
+${templateFileText.slice(0, MAX_TEMPLATE_FILE_CHARS)}
+
+## 참조 자료:
+${contextText || '(참조 자료 없음)'}
+
+${instructions ? `## 지시사항:\n${instructions}\n\n` : ''}
+위 양식의 빈칸과 플레이스홀더를 참조 자료와 지시사항으로 채워 JSON 객체로 출력하세요.`;
+
+  const { text } = await generateText({
+    model: openai('gpt-4o'),
+    system: systemPrompt,
+    prompt: userPrompt,
+    maxTokens: 8000,
+    temperature: 0.2,
+  });
+
+  return parseJsonResponse<DocxReplacement>(text, {});
+}
+
 // ─── 통합 생성 엔진 ─────────────────────────────────────────
 
 export async function generateForFormat(params: {
@@ -381,7 +442,28 @@ export async function generateForFormat(params: {
       return { format, title, pptxSlides };
     }
 
-    case 'docx':
+    case 'docx': {
+      // 템플릿 있으면 → 텍스트 치환 방식 (원본 구조 유지)
+      if (hasTemplateFile) {
+        const docxReplacements = await generateDocxReplacements({
+          templateName,
+          templateFileText: rest.templateFileText!,
+          sourceChunks: rest.sourceChunks,
+          instructions: rest.instructions,
+        });
+        return { format, title, docxReplacements, templateBuffer: rest.templateBuffer! };
+      }
+      // 템플릿 없으면 → 마크다운 기반 새로 생성
+      const markdown = await generateDocumentContent({
+        templateName,
+        templateContent: rest.templateContent,
+        templateFileText: rest.templateFileText,
+        sourceChunks: rest.sourceChunks,
+        instructions: rest.instructions,
+      });
+      return { format, title, markdown };
+    }
+
     case 'pdf':
     case 'hwpx': {
       const markdown = await generateDocumentContent({
