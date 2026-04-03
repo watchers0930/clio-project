@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
         id: t.id,
         name: t.name,
         description: t.description,
+        content: t.content ?? '',
         department: deptJoin?.name ?? '전사',
         departmentId: t.department_id,
         scope: t.scope === 'company' ? '전사 공용' : '부서 전용',
@@ -120,6 +121,7 @@ export async function POST(request: NextRequest) {
     const contentType = request.headers.get('content-type') ?? '';
     let name = '';
     let description = '';
+    let content = '';
     let departmentId: string | null = null;
     let scope = '전사 공용';
     let templateFileId: string | null = null;
@@ -128,6 +130,7 @@ export async function POST(request: NextRequest) {
       const formData = await request.formData();
       name = (formData.get('name') as string) ?? '';
       description = (formData.get('description') as string) ?? '';
+      content = (formData.get('content') as string) ?? '';
       departmentId = (formData.get('departmentId') as string) || null;
       scope = (formData.get('scope') as string) ?? '전사 공용';
       const file = formData.get('file') as File | null;
@@ -138,6 +141,7 @@ export async function POST(request: NextRequest) {
       const body = await request.json();
       name = body.name ?? '';
       description = body.description ?? '';
+      content = body.content ?? '';
       departmentId = body.departmentId || null;
       scope = body.scope ?? '전사 공용';
       if (body.templateFileId) templateFileId = body.templateFileId;
@@ -154,7 +158,7 @@ export async function POST(request: NextRequest) {
       description: description ?? '',
       department_id: departmentId,
       scope: scopeValue,
-      content: '',
+      content: content,
       placeholders: [],
       created_by: authUserId,
     };
@@ -176,6 +180,7 @@ export async function POST(request: NextRequest) {
         id: newTmpl.id,
         name: newTmpl.name,
         description: newTmpl.description,
+        content: newTmpl.content ?? '',
         department: deptJoin?.name ?? '전사',
         departmentId: newTmpl.department_id,
         scope: scope ?? '전사 공용',
@@ -211,6 +216,7 @@ export async function PUT(request: NextRequest) {
     let id = '';
     let name: string | undefined;
     let description: string | undefined;
+    let content: string | undefined;
     let departmentId: string | undefined;
     let scope: string | undefined;
     let templateFileId: string | null | undefined;
@@ -221,6 +227,7 @@ export async function PUT(request: NextRequest) {
       id = (formData.get('id') as string) ?? '';
       name = (formData.get('name') as string) || undefined;
       description = (formData.get('description') as string) ?? undefined;
+      content = (formData.get('content') as string) ?? undefined;
       departmentId = (formData.get('departmentId') as string) || undefined;
       scope = (formData.get('scope') as string) || undefined;
       removeFile = (formData.get('removeFile') as string) === 'true';
@@ -233,6 +240,7 @@ export async function PUT(request: NextRequest) {
       id = body.id ?? '';
       name = body.name;
       description = body.description;
+      content = body.content;
       departmentId = body.departmentId;
       scope = body.scope;
       removeFile = body.removeFile === true;
@@ -245,6 +253,7 @@ export async function PUT(request: NextRequest) {
     const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
+    if (content !== undefined) updateData.content = content;
     if (departmentId !== undefined) updateData.department_id = departmentId;
     if (scope !== undefined) updateData.scope = scope === '부서 전용' ? 'department' : 'company';
     if (templateFileId) updateData.template_file_id = templateFileId;
@@ -271,6 +280,7 @@ export async function PUT(request: NextRequest) {
         id: data.id,
         name: data.name,
         description: data.description,
+        content: data.content ?? '',
         department: deptJoin?.name ?? '전사',
         departmentId: data.department_id,
         scope: data.scope === 'company' ? '전사 공용' : '부서 전용',

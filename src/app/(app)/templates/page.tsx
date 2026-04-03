@@ -15,6 +15,7 @@ interface Template {
   name: string;
   icon: string;
   description: string;
+  content: string;
   department: string;
   departmentId: string;
   scope: '전사 공용' | '부서 전용';
@@ -43,6 +44,7 @@ export default function TemplatesPage() {
   const [formDepartmentId, setFormDepartmentId] = useState('');
   const [formScope, setFormScope] = useState<'전사 공용' | '부서 전용'>('전사 공용');
   const [formIcon, setFormIcon] = useState('📄');
+  const [formContent, setFormContent] = useState('');
   const [formFile, setFormFile] = useState<File | null>(null);
   const [formExistingFile, setFormExistingFile] = useState<TemplateFile | null>(null);
   const [formRemoveFile, setFormRemoveFile] = useState(false);
@@ -107,6 +109,7 @@ export default function TemplatesPage() {
     setEditId(null);
     setFormName('');
     setFormDescription('');
+    setFormContent('');
     setFormDepartmentId(deptList[0]?.id ?? '');
     setFormScope('전사 공용');
     setFormIcon('📄');
@@ -125,6 +128,7 @@ export default function TemplatesPage() {
     setEditId(t.id);
     setFormName(t.name);
     setFormDescription(t.description);
+    setFormContent(t.content ?? '');
     setFormDepartmentId(t.departmentId);
     setFormScope(t.scope);
     setFormIcon(t.icon);
@@ -149,6 +153,7 @@ export default function TemplatesPage() {
           fd.append('id', editId);
           fd.append('name', formName);
           fd.append('description', formDescription);
+          fd.append('content', formContent);
           fd.append('departmentId', formDepartmentId);
           fd.append('scope', formScope);
           if (formFile) fd.append('file', formFile);
@@ -160,7 +165,7 @@ export default function TemplatesPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               id: editId, name: formName, description: formDescription,
-              departmentId: formDepartmentId, scope: formScope,
+              content: formContent, departmentId: formDepartmentId, scope: formScope,
               removeFile: formRemoveFile || undefined,
             }),
           });
@@ -171,7 +176,7 @@ export default function TemplatesPage() {
           setTemplates((prev) =>
             prev.map((t) =>
               t.id === editId
-                ? { ...t, name: updated.name, description: updated.description, department: updated.department, departmentId: updated.departmentId, scope: updated.scope, lastUpdated: updated.lastUpdated, icon: formIcon, templateFile: updated.templateFile ?? null }
+                ? { ...t, name: updated.name, description: updated.description, content: updated.content ?? '', department: updated.department, departmentId: updated.departmentId, scope: updated.scope, lastUpdated: updated.lastUpdated, icon: formIcon, templateFile: updated.templateFile ?? null }
                 : t
             )
           );
@@ -182,6 +187,7 @@ export default function TemplatesPage() {
           const fd = new FormData();
           fd.append('name', formName);
           fd.append('description', formDescription);
+          fd.append('content', formContent);
           fd.append('departmentId', formDepartmentId);
           fd.append('scope', formScope);
           if (formFile) fd.append('file', formFile);
@@ -190,7 +196,7 @@ export default function TemplatesPage() {
           res = await fetch('/api/templates', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: formName, description: formDescription, departmentId: formDepartmentId, scope: formScope }),
+            body: JSON.stringify({ name: formName, description: formDescription, content: formContent, departmentId: formDepartmentId, scope: formScope }),
           });
         }
         if (res.ok) {
@@ -200,7 +206,8 @@ export default function TemplatesPage() {
             ...prev,
             {
               id: newTmpl.id, name: newTmpl.name, icon: formIcon,
-              description: newTmpl.description, department: newTmpl.department,
+              description: newTmpl.description, content: newTmpl.content ?? '',
+              department: newTmpl.department,
               departmentId: newTmpl.departmentId, scope: newTmpl.scope,
               usageCount: 0, lastUpdated: newTmpl.lastUpdated, placeholders: [],
               templateFile: newTmpl.templateFile ?? null,
@@ -400,6 +407,19 @@ export default function TemplatesPage() {
                   placeholder="템플릿에 대한 설명을 입력하세요"
                   rows={3}
                   className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none"
+                />
+              </div>
+
+              {/* Content (문서 구조) */}
+              <div style={{ marginTop: 20 }}>
+                <label className="block text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>문서 구조</label>
+                <p className="text-xs text-[#6e6e73]" style={{ marginBottom: 8 }}>AI가 이 구조를 따라 문서를 생성합니다. 섹션/항목을 정의하세요.</p>
+                <textarea
+                  value={formContent}
+                  onChange={(e) => setFormContent(e.target.value)}
+                  placeholder={"예:\n# 업무일지\n## 오늘의 업무\n- 주요 업무 내용 1\n- 주요 업무 내용 2\n## 문제점 및 해결 방안\n## 내일의 계획"}
+                  rows={6}
+                  className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none font-mono"
                 />
               </div>
 

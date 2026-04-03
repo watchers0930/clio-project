@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     // 템플릿 조회
     const { data: tmpl } = await supabase
       .from('templates')
-      .select('name, content, placeholders, template_file_id')
+      .select('name, content, description, placeholders, template_file_id')
       .eq('id', templateId)
       .single();
 
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
     const generationResult = await generateForFormat({
       format,
       templateName,
-      templateContent: typeof tmpl?.content === 'string' ? tmpl.content : null,
+      templateContent: (typeof tmpl?.content === 'string' && tmpl.content.trim()) ? tmpl.content : (typeof tmpl?.description === 'string' && tmpl.description.trim()) ? tmpl.description : null,
       templateFileText,
       templateBuffer,
       sourceChunks,
