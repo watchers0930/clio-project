@@ -76,11 +76,13 @@ export async function GET(
     }
 
     const fileName = encodeURIComponent(rendered.fileName);
+    const uint8 = new Uint8Array(rendered.buffer);
 
-    return new NextResponse(rendered.buffer, {
+    return new NextResponse(uint8, {
       headers: {
         'Content-Type': rendered.mimeType,
         'Content-Disposition': `attachment; filename*=UTF-8''${fileName}`,
+        'Content-Length': String(uint8.byteLength),
       },
     });
   } catch (err) {
