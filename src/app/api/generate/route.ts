@@ -15,7 +15,19 @@ import { getAuthUserId } from '@/lib/auth-helper';
 import { extractText } from '@/lib/ai/extract-text';
 import { generateForFormat } from '@/lib/ai/generate-document';
 import { renderDocument } from '@/lib/renderers';
-import type { OutputFormat } from '@/lib/renderers/types';
+import type { OutputFormat, CorporateTheme } from '@/lib/renderers/types';
+import { DEFAULT_THEME } from '@/lib/renderers/types';
+
+const FONT_MAP: Record<string, string> = {
+  '맑은 고딕': 'Malgun Gothic',
+  '나눔고딕': 'NanumGothic',
+  '바탕': 'Batang',
+  '돋움': 'Dotum',
+  '굴림': 'Gulim',
+  '나눔명조': 'NanumMyeongjo',
+  'Arial': 'Arial',
+  'Times New Roman': 'Times New Roman',
+};
 
 export const maxDuration = 60;
 
@@ -24,7 +36,15 @@ const VALID_FORMATS: OutputFormat[] = ['docx', 'pdf', 'hwpx', 'xlsx', 'pptx'];
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { templateId, sourceFileIds, instructions, outputFormat = 'docx' } = body;
+    const { templateId, sourceFileIds, instructions, outputFormat = 'docx', font } = body;
+
+    // 폰트 테마 생성
+    const fontParam = typeof font === 'string' ? font : '맑은 고딕';
+    const theme: CorporateTheme = {
+      ...DEFAULT_THEME,
+      fontFamily: fontParam,
+      fontFamilyEn: FONT_MAP[fontParam] ?? 'Malgun Gothic',
+    };
 
     if (!templateId) {
       return NextResponse.json({ error: '템플릿을 선택해주세요.' }, { status: 400 });
@@ -122,7 +142,7 @@ export async function POST(request: NextRequest) {
 
     // DOCX 템플릿 기반: 파일 렌더링 → Storage 업로드 (XLSX/PPTX와 동일 흐름)
     if (generationResult.docxReplacements && generationResult.templateBuffer) {
-      const rendered = await renderDocument(generationResult);
+      const rendered = await renderDocument(generationResult, theme);
       const storagePath = `generated/${authUserId}/${Date.now()}_${rendered.fileName}`;
 
       const { error: uploadErr } = await supabase.storage
@@ -202,7 +222,7 @@ export async function POST(request: NextRequest) {
 
       // PDF는 렌더링된 HTML도 함께 반환
       if (format === 'pdf') {
-        const rendered = await renderDocument(generationResult);
+        const rendered = await renderDocument(generationResult, theme);
         return NextResponse.json({
           document: {
             id: newDoc.id,
@@ -233,7 +253,7 @@ export async function POST(request: NextRequest) {
     }
 
     // XLSX/PPTX → 파일 렌더링 → Storage 업로드
-    const rendered = await renderDocument(generationResult);
+    const rendered = await renderDocument(generationResult, theme);
     const storagePath = `generated/${authUserId}/${Date.now()}_${rendered.fileName}`;
 
     const { error: uploadErr } = await supabase.storage

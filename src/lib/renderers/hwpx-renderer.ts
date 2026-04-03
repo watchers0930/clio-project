@@ -6,10 +6,24 @@
 import type { RenderOutput, CorporateTheme } from './types';
 import { DEFAULT_THEME } from './types';
 
+const HWPX_FONT_MAP: Record<string, string> = {
+  '맑은 고딕': 'Malgun Gothic',
+  '나눔고딕': 'NanumGothic',
+  '바탕': 'Batang',
+  '돋움': 'Dotum',
+  '굴림': 'Gulim',
+  '나눔명조': 'NanumMyeongjo',
+  'Arial': 'Arial',
+  'Times New Roman': 'Times New Roman',
+};
+
 // 최소 HWPX 구조의 section0.xml 템플릿
 function buildSectionXml(markdown: string, theme: CorporateTheme): string {
   const lines = markdown.split('\n');
   const paragraphs: string[] = [];
+  const fontKo = theme.fontFamily;
+  const fontEn = HWPX_FONT_MAP[theme.fontFamily] ?? theme.fontFamilyEn;
+  const baseFontSize = theme.fontSize * 100; // HWPX: 100 = 1pt
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -20,20 +34,20 @@ function buildSectionXml(markdown: string, theme: CorporateTheme): string {
 
     let text = trimmed;
     let bold = false;
-    let fontSize = 1000; // 10pt in HWPX units (100 = 1pt)
+    let fontSize = baseFontSize;
 
     if (trimmed.startsWith('# ')) {
       text = trimmed.slice(2);
       bold = true;
-      fontSize = 2000;
+      fontSize = baseFontSize * 2;
     } else if (trimmed.startsWith('## ')) {
       text = trimmed.slice(3);
       bold = true;
-      fontSize = 1600;
+      fontSize = Math.round(baseFontSize * 1.6);
     } else if (trimmed.startsWith('### ')) {
       text = trimmed.slice(4);
       bold = true;
-      fontSize = 1300;
+      fontSize = Math.round(baseFontSize * 1.3);
     } else if (/^[-*]\s/.test(trimmed)) {
       text = `• ${trimmed.slice(2)}`;
     } else if (/^\d+\.\s/.test(trimmed)) {
@@ -47,6 +61,7 @@ function buildSectionXml(markdown: string, theme: CorporateTheme): string {
 
     const charPrXml = `<hp:charPr>
       <hp:sz val="${fontSize}" />
+      <hp:fontRef hangul="${fontKo}" latin="${fontEn}" hanja="${fontKo}" />
       ${bold ? '<hp:bold />' : ''}
     </hp:charPr>`;
 

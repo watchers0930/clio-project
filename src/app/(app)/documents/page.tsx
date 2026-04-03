@@ -191,6 +191,7 @@ export default function DocumentsPage() {
           sourceFileIds: Array.from(selectedFiles),
           instructions: instructions.trim() || undefined,
           outputFormat,
+          font: selectedFont,
         }),
       });
       if (res.ok) {

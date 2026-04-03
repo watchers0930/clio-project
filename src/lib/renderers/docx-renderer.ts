@@ -38,14 +38,24 @@ export async function renderDocx(
   theme: CorporateTheme = DEFAULT_THEME,
 ): Promise<RenderOutput> {
   const fontFamily = FONT_MAP[theme.fontFamily] ?? theme.fontFamilyEn;
-  const children = markdownToDocxElements(markdown);
+  const fontSize = theme.fontSize * 2; // half-point 단위
+  const children = markdownToDocxElements(markdown, fontFamily, fontSize);
 
   const doc = new Document({
     sections: [{ properties: {}, children }],
     styles: {
       default: {
         document: {
-          run: { font: fontFamily, size: theme.fontSize * 2 },
+          run: { font: fontFamily, size: fontSize },
+        },
+        heading1: {
+          run: { font: fontFamily },
+        },
+        heading2: {
+          run: { font: fontFamily },
+        },
+        heading3: {
+          run: { font: fontFamily },
         },
       },
     },
@@ -108,7 +118,7 @@ export async function renderDocxFromTemplate(
 }
 
 /** 마크다운 → docx Paragraph[] */
-function markdownToDocxElements(md: string): (Paragraph | Table)[] {
+function markdownToDocxElements(md: string, fontFamily: string, fontSize: number): (Paragraph | Table)[] {
   const lines = md.split('\n');
   const elements: (Paragraph | Table)[] = [];
   let i = 0;
@@ -125,27 +135,27 @@ function markdownToDocxElements(md: string): (Paragraph | Table)[] {
         }
         i++;
       }
-      if (tableLines.length > 0) elements.push(parseTable(tableLines));
+      if (tableLines.length > 0) elements.push(parseTable(tableLines, fontFamily, fontSize));
       continue;
     }
 
     if (line.startsWith('### ')) {
-      elements.push(new Paragraph({ text: line.slice(4).trim(), heading: HeadingLevel.HEADING_3, spacing: { before: 240, after: 120 } }));
+      elements.push(new Paragraph({ children: [new TextRun({ text: line.slice(4).trim(), font: fontFamily, bold: true })], heading: HeadingLevel.HEADING_3, spacing: { before: 240, after: 120 } }));
     } else if (line.startsWith('## ')) {
-      elements.push(new Paragraph({ text: line.slice(3).trim(), heading: HeadingLevel.HEADING_2, spacing: { before: 360, after: 120 } }));
+      elements.push(new Paragraph({ children: [new TextRun({ text: line.slice(3).trim(), font: fontFamily, bold: true })], heading: HeadingLevel.HEADING_2, spacing: { before: 360, after: 120 } }));
     } else if (line.startsWith('# ')) {
-      elements.push(new Paragraph({ text: line.slice(2).trim(), heading: HeadingLevel.HEADING_1, spacing: { before: 480, after: 200 } }));
+      elements.push(new Paragraph({ children: [new TextRun({ text: line.slice(2).trim(), font: fontFamily, bold: true })], heading: HeadingLevel.HEADING_1, spacing: { before: 480, after: 200 } }));
     } else if (/^[-*]\s/.test(line.trim())) {
-      elements.push(new Paragraph({ children: parseInlineFormatting(line.trim().slice(2).trim()), bullet: { level: 0 }, spacing: { after: 60 } }));
+      elements.push(new Paragraph({ children: parseInlineFormatting(line.trim().slice(2).trim(), fontFamily, fontSize), bullet: { level: 0 }, spacing: { after: 60 } }));
     } else if (/^\d+\.\s/.test(line.trim())) {
       const text = line.trim().replace(/^\d+\.\s/, '');
-      elements.push(new Paragraph({ children: parseInlineFormatting(text), spacing: { after: 60 } }));
+      elements.push(new Paragraph({ children: parseInlineFormatting(text, fontFamily, fontSize), spacing: { after: 60 } }));
     } else if (/^---+$/.test(line.trim())) {
-      elements.push(new Paragraph({ children: [new TextRun({ text: '' })], border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'CCCCCC' } }, spacing: { before: 200, after: 200 } }));
+      elements.push(new Paragraph({ children: [new TextRun({ text: '', font: fontFamily })], border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'CCCCCC' } }, spacing: { before: 200, after: 200 } }));
     } else if (line.trim() === '') {
-      elements.push(new Paragraph({ text: '' }));
+      elements.push(new Paragraph({ children: [new TextRun({ text: '', font: fontFamily })] }));
     } else {
-      elements.push(new Paragraph({ children: parseInlineFormatting(line), spacing: { after: 60 } }));
+      elements.push(new Paragraph({ children: parseInlineFormatting(line, fontFamily, fontSize), spacing: { after: 60 } }));
     }
 
     i++;
@@ -154,29 +164,29 @@ function markdownToDocxElements(md: string): (Paragraph | Table)[] {
   return elements;
 }
 
-function parseInlineFormatting(text: string): TextRun[] {
+function parseInlineFormatting(text: string, fontFamily: string, fontSize: number): TextRun[] {
   const runs: TextRun[] = [];
   const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|([^*`]+))/g;
   let match;
 
   while ((match = regex.exec(text)) !== null) {
-    if (match[2]) runs.push(new TextRun({ text: match[2], bold: true }));
-    else if (match[3]) runs.push(new TextRun({ text: match[3], italics: true }));
-    else if (match[4]) runs.push(new TextRun({ text: match[4], font: 'Consolas', size: 20 }));
-    else if (match[5]) runs.push(new TextRun({ text: match[5] }));
+    if (match[2]) runs.push(new TextRun({ text: match[2], bold: true, font: fontFamily, size: fontSize }));
+    else if (match[3]) runs.push(new TextRun({ text: match[3], italics: true, font: fontFamily, size: fontSize }));
+    else if (match[4]) runs.push(new TextRun({ text: match[4], font: 'Consolas', size: fontSize }));
+    else if (match[5]) runs.push(new TextRun({ text: match[5], font: fontFamily, size: fontSize }));
   }
 
-  if (runs.length === 0) runs.push(new TextRun({ text }));
+  if (runs.length === 0) runs.push(new TextRun({ text, font: fontFamily, size: fontSize }));
   return runs;
 }
 
-function parseTable(tableLines: string[]): Table {
+function parseTable(tableLines: string[], fontFamily: string, fontSize: number): Table {
   const rows = tableLines.map((line, rowIdx) => {
     const cells = line.split('|').filter(c => c.trim() !== '').map(c => c.trim());
     return new TableRow({
       children: cells.map(cellText =>
         new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: cellText, bold: rowIdx === 0, size: 20 })], alignment: AlignmentType.CENTER })],
+          children: [new Paragraph({ children: [new TextRun({ text: cellText, bold: rowIdx === 0, size: fontSize, font: fontFamily })], alignment: AlignmentType.CENTER })],
           width: { size: Math.floor(9000 / Math.max(cells.length, 1)), type: WidthType.DXA },
         }),
       ),
