@@ -222,11 +222,14 @@ export function extractDocxTableStructure(templateBuffer: Buffer): DocxTableStru
       parsedRows.push(row);
     });
 
-    // 빈 셀에 contextLabel 매핑 (헤더 기준)
+    // 빈 셀에 contextLabel 매핑 (왼쪽 이웃 셀 우선, 없으면 헤더)
     for (let r = 1; r < parsedRows.length; r++) {
       for (let c = 0; c < parsedRows[r].length; c++) {
         const cell = parsedRows[r][c];
-        cell.contextLabel = headers[c] ?? '';
+        const leftNeighbor = c > 0 ? parsedRows[r][c - 1] : null;
+        cell.contextLabel = (leftNeighbor && !leftNeighbor.isEmpty && leftNeighbor.text)
+          ? leftNeighbor.text
+          : (headers[c] ?? '');
         if (cell.isEmpty) {
           result.emptyCells.push(cell);
         }
