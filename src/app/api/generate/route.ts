@@ -372,22 +372,19 @@ export async function POST(request: NextRequest) {
         }, { status: 201 });
       }
 
-      // HWPX 마크다운 → 파일 렌더링 → Storage 업로드
-      if (format === 'hwpx') {
+      // DOCX/HWPX 마크다운 → 파일 렌더링 → Storage 업로드
+      if (format === 'hwpx' || format === 'docx') {
         const rendered = await renderDocument(generationResult, theme);
-        const hwpxPath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
+        const filePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
         const { error: upErr } = await supabase.storage
           .from('files')
-          .upload(hwpxPath, rendered.buffer, { contentType: rendered.mimeType, upsert: false });
+          .upload(filePath, rendered.buffer, { contentType: rendered.mimeType, upsert: false });
         if (upErr) {
-          console.error('[generate] HWPX Storage upload error:', upErr.message);
+          console.error(`[generate] ${format.toUpperCase()} Storage upload error:`, upErr.message);
         }
-        const { data: hwpxUrl } = await supabase.storage
+        const { data: fileUrl } = await supabase.storage
           .from('files')
-          .createSignedUrl(hwpxPath, 3600);
-
-        // status를 completed로 업데이트
-        await supabase.from('documents').update({ status: 'completed' }).eq('id', newDoc.id).then(() => {}, () => {});
+          .createSignedUrl(filePath, 3600);
 
         return NextResponse.json({
           document: {
@@ -395,12 +392,12 @@ export async function POST(request: NextRequest) {
             title,
             template: templateName,
             createdAt: dateStr,
-            status: '완료',
+            status: '초안',
             sourceCount: (sourceFileIds ?? []).length,
             content: generationResult.markdown,
           },
           format,
-          downloadUrl: hwpxUrl?.signedUrl ?? null,
+          downloadUrl: fileUrl?.signedUrl ?? null,
         }, { status: 201 });
       }
 
