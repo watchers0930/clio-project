@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
     // DOCX 폼 데이터 기반: 빈 셀에 내용 주입 → Storage 업로드
     if (generationResult.docxFormData && generationResult.templateBuffer && generationResult.tableStructure) {
       const rendered = await renderDocument(generationResult, theme);
-      const storagePath = `generated/${authUserId}/${Date.now()}_${rendered.fileName}`;
+      const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
 
       const { error: uploadErr } = await supabase.storage
         .from('files')
@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
     // HWPX 폼 데이터 기반: 빈 셀에 내용 주입 → Storage 업로드
     if (generationResult.hwpxFormData && generationResult.templateBuffer && generationResult.hwpxTableStructure) {
       const rendered = await renderDocument(generationResult, theme);
-      const storagePath = `generated/${authUserId}/${Date.now()}_${rendered.fileName}`;
+      const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
 
       const { error: uploadErr } = await supabase.storage
         .from('files')
@@ -260,7 +260,7 @@ export async function POST(request: NextRequest) {
     // DOCX 템플릿 기반: 파일 렌더링 → Storage 업로드 (XLSX/PPTX와 동일 흐름)
     if (generationResult.docxReplacements && generationResult.templateBuffer) {
       const rendered = await renderDocument(generationResult, theme);
-      const storagePath = `generated/${authUserId}/${Date.now()}_${rendered.fileName}`;
+      const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
 
       const { error: uploadErr } = await supabase.storage
         .from('files')
@@ -358,7 +358,7 @@ export async function POST(request: NextRequest) {
       // HWPX 마크다운 → 파일 렌더링 → Storage 업로드
       if (format === 'hwpx') {
         const rendered = await renderDocument(generationResult, theme);
-        const hwpxPath = `generated/${authUserId}/${Date.now()}_${rendered.fileName}`;
+        const hwpxPath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
         const { error: upErr } = await supabase.storage
           .from('files')
           .upload(hwpxPath, rendered.buffer, { contentType: rendered.mimeType, upsert: false });
@@ -403,7 +403,7 @@ export async function POST(request: NextRequest) {
 
     // XLSX/PPTX → 파일 렌더링 → Storage 업로드
     const rendered = await renderDocument(generationResult, theme);
-    const storagePath = `generated/${authUserId}/${Date.now()}_${rendered.fileName}`;
+    const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
 
     const { error: uploadErr } = await supabase.storage
       .from('files')
