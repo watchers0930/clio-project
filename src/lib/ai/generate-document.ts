@@ -527,6 +527,7 @@ export function mapFormDataDirect(
     ['작성일자', '작성일자'],
     ['작성자', '작성자'],
     ['부서명', '부서'],
+    ['제목', '제목'],
   ];
 
   for (const [key, label] of metaFields) {
