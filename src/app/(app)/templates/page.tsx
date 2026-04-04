@@ -182,6 +182,11 @@ export default function TemplatesPage() {
                 : t
             )
           );
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          alert(errData.error || '템플릿 수정에 실패했습니다.');
+          setSaving(false);
+          return;
         }
       } else {
         let res: Response;
@@ -215,12 +220,17 @@ export default function TemplatesPage() {
               templateFile: newTmpl.templateFile ?? null,
             },
           ]);
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          alert(errData.error || '템플릿 생성에 실패했습니다.');
+          setSaving(false);
+          return;
         }
       }
       resetForm();
       loadTemplates();
-    } catch {
-      // silent
+    } catch (e) {
+      alert('저장 중 오류가 발생했습니다.');
     } finally {
       setSaving(false);
     }
