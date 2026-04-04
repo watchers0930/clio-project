@@ -611,10 +611,7 @@ export async function generateForFormat(params: {
             return { format, title, hwpxFormData, hwpxTableStructure: hwpxResult.structure, templateBuffer: rest.templateBuffer! };
           }
         } catch (e) {
-          const msg = e instanceof Error ? `${e.message}\n${e.stack?.split('\n').slice(0, 3).join('\n')}` : String(e);
-          console.error('[generateForFormat] HWPX 구조 분석 실패:', msg);
-          // 폴백하지 않고 에러를 전파 — 원인 파악 필요
-          throw new Error(`HWPX 양식 분석 실패: ${e instanceof Error ? e.message : String(e)}`);
+          console.error('[generateForFormat] HWPX 구조 분석 실패, 마크다운 폴백:', e instanceof Error ? e.message : e);
         }
       }
       // 템플릿 없거나 빈 셀 없으면 → 마크다운 기반 새로 생성

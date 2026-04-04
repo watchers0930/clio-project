@@ -192,6 +192,11 @@ function extractHwpxColSpan(cellXml: string): number {
 
 /** HWPX 템플릿 Buffer에서 테이블 구조 추출 */
 export function extractHwpxTableStructure(templateBuffer: Buffer): { structure: DocxTableStructure; sectionXml: string; sectionPath: string } | null {
+  // ZIP 매직바이트 확인 (PK = 0x50 0x4B)
+  if (templateBuffer.length < 4 || templateBuffer[0] !== 0x50 || templateBuffer[1] !== 0x4B) {
+    console.warn(`[extractHwpxTableStructure] ZIP이 아닌 파일 (first2: ${templateBuffer.slice(0, 2).toString('hex')}). HWP 바이너리일 수 있음.`);
+    return null;
+  }
   const zip = new PizZip(templateBuffer);
 
   // section XML 찾기
