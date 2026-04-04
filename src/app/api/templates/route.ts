@@ -68,16 +68,16 @@ export async function GET(request: NextRequest) {
 }
 
 /** 파일 업로드 → files 테이블 INSERT → process 파이프라인 호출 → file.id 반환 */
-async function uploadTemplateFile(supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>, file: File, authUserId: string, requestOrigin: string): Promise<string | null> {
-  if (!supabase) return null;
+async function uploadTemplateFile(supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>, file: File, authUserId: string, requestOrigin: string): Promise<{ id: string | null; error?: string }> {
+  if (!supabase) return { id: null, error: 'DB 미연결' };
   const safeName = sanitizeFileName(file.name);
   const validationError = validateFile(file);
-  if (validationError) return null;
+  if (validationError) return { id: null, error: `파일 검증 실패: ${validationError}` };
   const storagePath = `uploads/templates/${Date.now()}_${safeName}`;
   const { error: uploadError } = await supabase.storage.from('files').upload(storagePath, file);
   if (uploadError) {
     console.error('[templates] storage upload:', uploadError.message);
-    return null;
+    return { id: null, error: `Storage 업로드 실패: ${uploadError.message}` };
   }
 
   const { data, error } = await supabase.from('files').insert({
@@ -92,7 +92,7 @@ async function uploadTemplateFile(supabase: Awaited<ReturnType<typeof createServ
 
   if (error) {
     console.error('[templates] file insert:', error.message);
-    return null;
+    return { id: null, error: `DB 저장 실패: ${error.message}` };
   }
 
   // 텍스트 추출/청킹/임베딩 파이프라인 호출
@@ -103,7 +103,7 @@ async function uploadTemplateFile(supabase: Awaited<ReturnType<typeof createServ
     body: JSON.stringify({ fileId: data.id }),
   }).then(() => {}, (err) => console.error('[templates] process pipeline error:', err));
 
-  return data.id;
+  return { id: data.id };
 }
 
 export async function POST(request: NextRequest) {
@@ -135,7 +135,9 @@ export async function POST(request: NextRequest) {
       scope = (formData.get('scope') as string) ?? '전사 공용';
       const file = formData.get('file') as File | null;
       if (file && file.size > 0) {
-        templateFileId = await uploadTemplateFile(supabase, file, authUserId, request.nextUrl.origin);
+        const uploadResult = await uploadTemplateFile(supabase, file, authUserId, request.nextUrl.origin);
+        if (uploadResult.error) return NextResponse.json({ error: uploadResult.error }, { status: 400 });
+        templateFileId = uploadResult.id;
       }
     } else {
       const body = await request.json();
@@ -233,7 +235,9 @@ export async function PUT(request: NextRequest) {
       removeFile = (formData.get('removeFile') as string) === 'true';
       const file = formData.get('file') as File | null;
       if (file && file.size > 0) {
-        templateFileId = await uploadTemplateFile(supabase, file, authUserId, request.nextUrl.origin);
+        const uploadResult = await uploadTemplateFile(supabase, file, authUserId, request.nextUrl.origin);
+        if (uploadResult.error) return NextResponse.json({ error: uploadResult.error }, { status: 400 });
+        templateFileId = uploadResult.id;
       }
     } else {
       const body = await request.json();
