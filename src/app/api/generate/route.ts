@@ -112,18 +112,15 @@ export async function POST(request: NextRequest) {
           const { data: blob } = await supabase.storage.from('files').download(tplFile.storage_path);
           if (blob) {
             const buf = await blob.arrayBuffer();
-            // 바이너리 원본을 먼저 보존 (ArrayBuffer는 소비될 수 있으므로)
-            const bufCopy = Buffer.from(buf);
-            // XLSX 템플릿은 셀 주소 포함 구조화 추출
+            // 바이너리 원본을 깊은 복사로 보존 (Uint8Array로 독립 메모리 확보)
+            templateBuffer = Buffer.from(new Uint8Array(buf));
+            // 텍스트 추출용 별도 복사본
+            const extractBuf = new Uint8Array(buf).buffer;
             const ext = tplFile.name.split('.').pop()?.toLowerCase() ?? '';
             if (ext === 'xlsx' && format === 'xlsx') {
-              templateFileText = await extractXlsxStructured(bufCopy.buffer.slice(bufCopy.byteOffset, bufCopy.byteOffset + bufCopy.byteLength));
+              templateFileText = await extractXlsxStructured(extractBuf);
             } else {
-              templateFileText = await extractText(bufCopy.buffer.slice(bufCopy.byteOffset, bufCopy.byteOffset + bufCopy.byteLength), tplFile.type ?? '', tplFile.name);
-            }
-            // 템플릿 기반 생성 시 바이너리 원본 보존 (DOCX/XLSX/PPTX/HWPX)
-            if (format === 'xlsx' || format === 'pptx' || format === 'docx' || format === 'hwpx') {
-              templateBuffer = bufCopy;
+              templateFileText = await extractText(extractBuf, tplFile.type ?? '', tplFile.name);
             }
           }
         } catch (e) {
