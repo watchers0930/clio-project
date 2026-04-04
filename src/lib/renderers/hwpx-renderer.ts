@@ -338,6 +338,9 @@ export async function renderHwpxFromFormData(
       );
     }
 
+    // 서식 통일: paraPrIDRef를 2(JUSTIFY/좌측정렬)로 변경 — CENTER 방지
+    cellXml = cellXml.replace(/paraPrIDRef="1"/g, 'paraPrIDRef="2"');
+
     const absStart = tbl.start + row.start + tc.start;
     const absEnd = tbl.start + row.start + tc.end;
     xml = xml.slice(0, absStart) + cellXml + xml.slice(absEnd);
