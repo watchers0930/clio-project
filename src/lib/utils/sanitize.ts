@@ -15,6 +15,7 @@ export const ALLOWED_MIMES = new Set([
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   'application/haansofthwp',
   'application/x-hwp',
+  'application/hwp+zip',
   'text/markdown',
   'text/plain',
   'text/csv',
@@ -29,7 +30,7 @@ export const ALLOWED_MIMES = new Set([
 /** 허용 확장자 (MIME 타입 미확인 시 폴백) */
 export const ALLOWED_EXTENSIONS = new Set([
   'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
-  'hwp', 'md', 'txt', 'csv', 'tsv',
+  'hwp', 'hwpx', 'md', 'txt', 'csv', 'tsv',
   'm4a', 'mp3', 'wav', 'webm', 'ogg',
 ]);
 
