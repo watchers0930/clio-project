@@ -4,7 +4,7 @@
  * 템플릿 있으면 → 템플릿 기반 렌더링, 없으면 → 새로 생성
  */
 
-export { renderDocx, renderDocxFromTemplate } from './docx-renderer';
+export { renderDocx, renderDocxFromTemplate, renderDocxFromFormData, extractDocxTableStructure } from './docx-renderer';
 export { renderXlsx, renderXlsxFromTemplate } from './xlsx-renderer';
 export { renderPptx, renderPptxFromTemplate } from './pptx-renderer';
 export { renderHwpx } from './hwpx-renderer';
@@ -15,6 +15,8 @@ export type {
   ExcelCellData,
   PptxSlide,
   PptxReplacement,
+  DocxFormData,
+  DocxTableStructure,
   GenerationResult,
   RenderOutput,
   CorporateTheme,
@@ -23,7 +25,7 @@ export { DEFAULT_THEME } from './types';
 
 import type { GenerationResult, RenderOutput, CorporateTheme } from './types';
 import { DEFAULT_THEME } from './types';
-import { renderDocx, renderDocxFromTemplate } from './docx-renderer';
+import { renderDocx, renderDocxFromTemplate, renderDocxFromFormData } from './docx-renderer';
 import { renderXlsx, renderXlsxFromTemplate } from './xlsx-renderer';
 import { renderPptx, renderPptxFromTemplate } from './pptx-renderer';
 import { renderHwpx } from './hwpx-renderer';
@@ -39,6 +41,10 @@ export async function renderDocument(
 ): Promise<RenderOutput> {
   switch (result.format) {
     case 'docx':
+      // 폼 데이터 기반: 빈 셀에 내용 주입
+      if (result.templateBuffer && result.docxFormData && result.tableStructure) {
+        return renderDocxFromFormData(result.templateBuffer, result.docxFormData, result.tableStructure, result.title, result.docxReplacements);
+      }
       // 템플릿 기반: 원본 DOCX 파일에 텍스트 치환
       if (result.templateBuffer && result.docxReplacements) {
         return renderDocxFromTemplate(result.templateBuffer, result.docxReplacements, result.title);

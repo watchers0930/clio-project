@@ -18,7 +18,7 @@ import {
 } from 'docx';
 import Docxtemplater from 'docxtemplater';
 import PizZip from 'pizzip';
-import type { RenderOutput, CorporateTheme, DocxReplacement } from './types';
+import type { RenderOutput, CorporateTheme, DocxReplacement, DocxFormData, DocxTableCell, DocxTableStructure } from './types';
 import { DEFAULT_THEME } from './types';
 
 const FONT_MAP: Record<string, string> = {
@@ -108,6 +108,250 @@ export async function renderDocxFromTemplate(
   }
 
   const buffer = Buffer.from(zipAfter.generate({ type: 'nodebuffer' }));
+
+  return {
+    buffer,
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    extension: 'docx',
+    fileName: `${title}.docx`,
+  };
+}
+
+// ─── DOCX 테이블 구조 분석 ─────────────────────────────────
+
+/** XML에서 최상위 블록 태그 추출 (중첩 안전) */
+function findTopLevelBlocks(xml: string, tagName: string): { content: string; start: number; end: number }[] {
+  const blocks: { content: string; start: number; end: number }[] = [];
+  const openTag = `<${tagName}`;
+  const closeTag = `</${tagName}>`;
+  let pos = 0;
+  while (pos < xml.length) {
+    const start = xml.indexOf(openTag, pos);
+    if (start === -1) break;
+    let depth = 1;
+    let scan = start + openTag.length;
+    while (depth > 0 && scan < xml.length) {
+      const nextOpen = xml.indexOf(openTag, scan);
+      const nextClose = xml.indexOf(closeTag, scan);
+      if (nextClose === -1) break;
+      if (nextOpen !== -1 && nextOpen < nextClose) {
+        depth++;
+        scan = nextOpen + openTag.length;
+      } else {
+        depth--;
+        if (depth === 0) {
+          scan = nextClose + closeTag.length;
+        } else {
+          scan = nextClose + closeTag.length;
+        }
+      }
+    }
+    blocks.push({ content: xml.slice(start, scan), start, end: scan });
+    pos = scan;
+  }
+  return blocks;
+}
+
+/** w:tc 셀에서 텍스트 추출 */
+function extractCellText(cellXml: string): string {
+  const texts: string[] = [];
+  const regex = /<w:t[^>]*>([^<]*)<\/w:t>/g;
+  let m;
+  while ((m = regex.exec(cellXml)) !== null) {
+    texts.push(m[1]);
+  }
+  return texts.join('').trim();
+}
+
+/** w:tc 셀에서 gridSpan 추출 */
+function extractGridSpan(cellXml: string): number {
+  const m = cellXml.match(/<w:gridSpan\s+w:val="(\d+)"/);
+  return m ? parseInt(m[1], 10) : 1;
+}
+
+/** w:tc 셀이 vMerge 계속(continuation)인지 확인 */
+function isVMergeContinuation(cellXml: string): boolean {
+  // <w:vMerge/> 또는 <w:vMerge w:val="continue"/> → 병합 계속
+  // <w:vMerge w:val="restart"/> → 병합 시작 (= 실제 셀)
+  if (!/<w:vMerge/.test(cellXml)) return false;
+  return !/<w:vMerge\s+w:val="restart"/.test(cellXml);
+}
+
+/** DOCX 템플릿 Buffer에서 테이블 구조 추출 */
+export function extractDocxTableStructure(templateBuffer: Buffer): DocxTableStructure {
+  const zip = new PizZip(templateBuffer);
+  const docXml = zip.file('word/document.xml')?.asText() ?? '';
+
+  const tables = findTopLevelBlocks(docXml, 'w:tbl');
+  const result: DocxTableStructure = { tables: [], emptyCells: [], hasEmptyCells: false };
+
+  tables.forEach((tbl, tableIndex) => {
+    const tblRows = findTopLevelBlocks(tbl.content, 'w:tr');
+    const parsedRows: DocxTableCell[][] = [];
+    let headers: string[] = [];
+
+    tblRows.forEach((tr, rowIndex) => {
+      const tblCells = findTopLevelBlocks(tr.content, 'w:tc');
+      const row: DocxTableCell[] = [];
+
+      tblCells.forEach((tc, colIndex) => {
+        if (isVMergeContinuation(tc.content)) return; // 병합 계속은 건너뜀
+
+        const text = extractCellText(tc.content);
+        const gridSpan = extractGridSpan(tc.content);
+        const isEmpty = text.replace(/[\d.]/g, '').trim() === ''; // 숫자/마침표만 있으면 빈칸 취급
+
+        const cell: DocxTableCell = {
+          fieldId: `field_${tableIndex}_${rowIndex}_${colIndex}`,
+          tableIndex,
+          rowIndex,
+          colIndex,
+          isEmpty,
+          text,
+          contextLabel: '',
+          gridSpan,
+        };
+        row.push(cell);
+      });
+
+      // 첫 행을 헤더로 인식
+      if (rowIndex === 0) {
+        headers = row.map(c => c.text);
+      }
+
+      parsedRows.push(row);
+    });
+
+    // 빈 셀에 contextLabel 매핑 (헤더 기준)
+    for (let r = 1; r < parsedRows.length; r++) {
+      for (let c = 0; c < parsedRows[r].length; c++) {
+        const cell = parsedRows[r][c];
+        cell.contextLabel = headers[c] ?? '';
+        if (cell.isEmpty) {
+          result.emptyCells.push(cell);
+        }
+      }
+    }
+
+    result.tables.push({ tableIndex, headers, rows: parsedRows });
+  });
+
+  result.hasEmptyCells = result.emptyCells.length > 0;
+  return result;
+}
+
+// ─── Placeholder 주입 ───────────────────────────────────────
+
+/** 빈 셀에 {{field_T_R_C}} placeholder를 주입한 DOCX Buffer 반환 */
+export function injectPlaceholders(
+  templateBuffer: Buffer,
+  structure: DocxTableStructure,
+): { modifiedBuffer: Buffer; placeholderMap: Record<string, string> } {
+  const zip = new PizZip(templateBuffer);
+  let xml = zip.file('word/document.xml')?.asText() ?? '';
+  const placeholderMap: Record<string, string> = {};
+
+  // 역순 처리 (뒤에서부터 삽입해야 앞쪽 위치가 안 밀림)
+  const sortedCells = [...structure.emptyCells].sort((a, b) => {
+    if (a.tableIndex !== b.tableIndex) return b.tableIndex - a.tableIndex;
+    if (a.rowIndex !== b.rowIndex) return b.rowIndex - a.rowIndex;
+    return b.colIndex - a.colIndex;
+  });
+
+  // 테이블/행/셀을 순서대로 찾아 위치 특정
+  const tblBlocks = findTopLevelBlocks(xml, 'w:tbl');
+
+  for (const cell of sortedCells) {
+    const tbl = tblBlocks[cell.tableIndex];
+    if (!tbl) continue;
+
+    const rows = findTopLevelBlocks(tbl.content, 'w:tr');
+    const row = rows[cell.rowIndex];
+    if (!row) continue;
+
+    const cells = findTopLevelBlocks(row.content, 'w:tc');
+    const tc = cells[cell.colIndex];
+    if (!tc) continue;
+
+    const placeholder = `{{${cell.fieldId}}}`;
+    placeholderMap[cell.fieldId] = cell.contextLabel || `행${cell.rowIndex}_열${cell.colIndex}`;
+
+    // 셀 내 XML에서 빈 w:t에 placeholder 삽입
+    let cellXml = tc.content;
+    const hasRunWithText = /<w:r[^>]*>[\s\S]*?<w:t[^>]*>[^<]*<\/w:t>[\s\S]*?<\/w:r>/.test(cellXml);
+
+    if (hasRunWithText) {
+      // 기존 텍스트를 placeholder로 교체 (첫 번째 w:t만)
+      let replaced = false;
+      cellXml = cellXml.replace(/<w:t([^>]*)>([^<]*)<\/w:t>/, (_match, attrs) => {
+        if (!replaced) {
+          replaced = true;
+          return `<w:t${attrs}>${placeholder}</w:t>`;
+        }
+        return _match;
+      });
+    } else {
+      // w:r이 없으면 </w:p> 앞에 삽입
+      cellXml = cellXml.replace(
+        /<\/w:p>/,
+        `<w:r><w:t xml:space="preserve">${placeholder}</w:t></w:r></w:p>`,
+      );
+    }
+
+    // 원본 XML에서 해당 셀 영역 교체 (절대 위치 사용)
+    const absStart = tbl.start + row.start + tc.start;
+    const absEnd = tbl.start + row.start + tc.end;
+    xml = xml.slice(0, absStart) + cellXml + xml.slice(absEnd);
+  }
+
+  zip.file('word/document.xml', xml);
+  const modifiedBuffer = Buffer.from(zip.generate({ type: 'nodebuffer' }));
+  return { modifiedBuffer, placeholderMap };
+}
+
+// ─── FormData 기반 렌더링 ───────────────────────────────────
+
+/** 빈 셀에 AI 생성 내용을 채운 DOCX 렌더링 */
+export async function renderDocxFromFormData(
+  templateBuffer: Buffer,
+  formData: DocxFormData,
+  tableStructure: DocxTableStructure,
+  title: string,
+  extraReplacements?: DocxReplacement,
+): Promise<RenderOutput> {
+  const { modifiedBuffer } = injectPlaceholders(templateBuffer, tableStructure);
+
+  const zip = new PizZip(modifiedBuffer);
+  const doc = new Docxtemplater(zip, {
+    paragraphLoop: true,
+    linebreaks: true,
+    delimiters: { start: '{{', end: '}}' },
+  });
+
+  try {
+    doc.render(formData);
+  } catch (e) {
+    console.error('[renderDocxFromFormData] docxtemplater render error:', e);
+  }
+
+  // 추가 텍스트 치환 (비테이블 영역)
+  if (extraReplacements && Object.keys(extraReplacements).length > 0) {
+    const zipAfter = doc.getZip();
+    const xmlFiles = ['word/document.xml', 'word/header1.xml', 'word/header2.xml', 'word/footer1.xml', 'word/footer2.xml'];
+    for (const xmlPath of xmlFiles) {
+      const file = zipAfter.file(xmlPath);
+      if (!file) continue;
+      let xmlContent = file.asText();
+      for (const [oldText, newText] of Object.entries(extraReplacements)) {
+        if (!oldText || !newText) continue;
+        const escaped = oldText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        xmlContent = xmlContent.replace(new RegExp(escaped, 'g'), newText);
+      }
+      zipAfter.file(xmlPath, xmlContent);
+    }
+  }
+
+  const buffer = Buffer.from(doc.getZip().generate({ type: 'nodebuffer' }));
 
   return {
     buffer,

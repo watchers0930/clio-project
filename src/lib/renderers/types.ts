@@ -30,6 +30,33 @@ export type PptxReplacement = Record<number, Record<string, string>>;
 export type DocxReplacement = Record<string, string>;
 // { "기존 플레이스홀더": "새 텍스트", ... }
 
+/** DOCX 테이블 셀 구조 정보 */
+export interface DocxTableCell {
+  fieldId: string;           // "field_0_1_2" (table_row_col)
+  tableIndex: number;
+  rowIndex: number;
+  colIndex: number;
+  isEmpty: boolean;
+  text: string;
+  contextLabel: string;      // 해당 열의 헤더 텍스트
+  gridSpan: number;          // 1 = 일반, >1 = 가로 병합
+}
+
+/** DOCX 테이블 구조 맵 */
+export interface DocxTableStructure {
+  tables: {
+    tableIndex: number;
+    headers: string[];
+    rows: DocxTableCell[][];
+  }[];
+  emptyCells: DocxTableCell[];
+  hasEmptyCells: boolean;
+}
+
+/** AI가 반환하는 DOCX 폼 데이터 (빈 셀 채우기) */
+export type DocxFormData = Record<string, string>;
+// { "field_0_1_2": "내용", ... }
+
 /** AI 생성 결과 — 포맷별 분기 */
 export interface GenerationResult {
   format: OutputFormat;
@@ -37,6 +64,10 @@ export interface GenerationResult {
   markdown?: string;
   /** DOCX용 텍스트 치환 (템플릿 있을 때) */
   docxReplacements?: DocxReplacement;
+  /** DOCX용 폼 데이터 (빈 셀 채우기) */
+  docxFormData?: DocxFormData;
+  /** DOCX 테이블 구조 (렌더러 전달용) */
+  tableStructure?: DocxTableStructure;
   /** XLSX용 시트 데이터 (템플릿 없을 때) */
   excelSheets?: ExcelSheet[];
   /** XLSX용 셀 데이터 (템플릿 있을 때) */

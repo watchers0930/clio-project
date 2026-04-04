@@ -11,7 +11,7 @@
 
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import type { OutputFormat, ExcelSheet, ExcelCellData, PptxSlide, PptxReplacement, DocxReplacement, GenerationResult } from '@/lib/renderers/types';
+import type { OutputFormat, ExcelSheet, ExcelCellData, PptxSlide, PptxReplacement, DocxReplacement, DocxFormData, DocxTableStructure, GenerationResult } from '@/lib/renderers/types';
 
 const MAX_CONTEXT_CHARS = 60_000;
 const MAX_TEMPLATE_FILE_CHARS = 30_000;
@@ -410,6 +410,98 @@ ${instructions ? `## 지시사항:\n${instructions}\n\n` : ''}
   return parseJsonResponse<DocxReplacement>(text, {});
 }
 
+// ─── DOCX 폼 데이터 생성 (빈 셀 채우기) ─────────────────────
+
+/** 테이블 구조를 AI가 읽을 수 있는 텍스트로 변환 */
+function tableStructureToText(structure: DocxTableStructure): string {
+  const lines: string[] = [];
+  for (const table of structure.tables) {
+    if (table.rows.length === 0) continue;
+    const headerStr = table.headers.filter(h => h).join(' | ');
+    lines.push(`### 테이블 ${table.tableIndex} (헤더: ${headerStr || '없음'})`);
+
+    for (let r = 0; r < table.rows.length; r++) {
+      const row = table.rows[r];
+      if (r === 0) {
+        lines.push(`헤더행: ${row.map(c => c.text || '(빈칸)').join(' | ')}`);
+        continue;
+      }
+      const cellDescs = row.map(c => {
+        if (c.isEmpty) {
+          const ctx = c.contextLabel ? ` (${c.contextLabel})` : '';
+          return `[${c.fieldId}: 빈칸${ctx}]`;
+        }
+        return c.text;
+      });
+      lines.push(`행 ${r}: ${cellDescs.join(' | ')}`);
+    }
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+
+export async function generateDocxFormData(params: {
+  templateName: string;
+  tableStructure: DocxTableStructure;
+  sourceChunks: string[];
+  instructions?: string;
+}): Promise<DocxFormData> {
+  const { templateName, tableStructure, sourceChunks, instructions } = params;
+
+  let contextText = '';
+  for (const chunk of sourceChunks) {
+    if (contextText.length + chunk.length > MAX_CONTEXT_CHARS) break;
+    contextText += chunk + '\n---\n';
+  }
+
+  const structureText = tableStructureToText(tableStructure);
+  const fieldList = tableStructure.emptyCells.map(c =>
+    `- ${c.fieldId}: ${c.contextLabel || '미정'} (행${c.rowIndex}, 열${c.colIndex})`
+  ).join('\n');
+
+  const systemPrompt = `당신은 문서 양식 작성 전문 AI입니다. 한국어로 작성합니다.
+
+## 핵심 규칙
+1. 제공된 양식의 빈 셀에 들어갈 내용을 JSON 객체로 반환합니다.
+2. 각 필드의 위치(어떤 테이블, 어떤 열의 헤더)를 참고하여 적절한 내용을 작성합니다.
+3. "지시사항"의 내용을 최우선으로 반영하여 빈칸을 채웁니다.
+4. 참조 자료가 없어도 지시사항만으로 빈칸을 채울 수 있습니다.
+5. 내용이 없는 필드는 빈 문자열("")로 남겨두세요.
+6. 번호가 매겨진 항목(1., 2., 3...)은 해당 행에 맞는 내용을 배치하세요.
+
+## 출력 형식
+반드시 아래 JSON 객체 형식으로만 출력하세요. 다른 텍스트는 포함하지 마세요.
+
+\`\`\`json
+{
+  "field_0_1_0": "내용1",
+  "field_0_2_0": "내용2"
+}
+\`\`\``;
+
+  const userPrompt = `## 작성할 문서: ${templateName}
+
+## 양식 구조:
+${structureText}
+
+## 채워야 할 빈 필드 목록:
+${fieldList}
+
+${contextText ? `## 참조 자료:\n${contextText}\n` : ''}
+${instructions ? `## 지시사항 (이 내용으로 빈칸을 채우세요):\n${instructions}\n\n` : ''}
+위 양식의 빈 필드를 지시사항과 참조 자료를 바탕으로 채워 JSON 객체로 출력하세요.`;
+
+  const { text } = await generateText({
+    model: openai('gpt-4o'),
+    system: systemPrompt,
+    prompt: userPrompt,
+    maxTokens: 8000,
+    temperature: 0.2,
+  });
+
+  return parseJsonResponse<DocxFormData>(text, {});
+}
+
 // ─── 통합 생성 엔진 ─────────────────────────────────────────
 
 export async function generateForFormat(params: {
@@ -465,8 +557,22 @@ export async function generateForFormat(params: {
     }
 
     case 'docx': {
-      // 템플릿 있으면 → 텍스트 치환 방식 (원본 구조 유지)
       if (hasTemplateFile) {
+        // 테이블 구조 분석 → 빈 셀이 있으면 폼 데이터 방식
+        const { extractDocxTableStructure } = await import('@/lib/renderers/docx-renderer');
+        const tableStructure = extractDocxTableStructure(rest.templateBuffer!);
+
+        if (tableStructure.hasEmptyCells) {
+          const docxFormData = await generateDocxFormData({
+            templateName,
+            tableStructure,
+            sourceChunks: rest.sourceChunks,
+            instructions: rest.instructions,
+          });
+          return { format, title, docxFormData, tableStructure, templateBuffer: rest.templateBuffer! };
+        }
+
+        // 빈 셀 없으면 → 기존 텍스트 치환 방식
         const docxReplacements = await generateDocxReplacements({
           templateName,
           templateFileText: rest.templateFileText!,

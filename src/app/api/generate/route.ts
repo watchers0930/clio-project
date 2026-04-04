@@ -140,6 +140,60 @@ export async function POST(request: NextRequest) {
     const title = `${templateName} (${dateStr} 생성)`;
     generationResult.title = title;
 
+    // DOCX 폼 데이터 기반: 빈 셀에 내용 주입 → Storage 업로드
+    if (generationResult.docxFormData && generationResult.templateBuffer && generationResult.tableStructure) {
+      const rendered = await renderDocument(generationResult, theme);
+      const storagePath = `generated/${authUserId}/${Date.now()}_${rendered.fileName}`;
+
+      const { error: uploadErr } = await supabase.storage
+        .from('files')
+        .upload(storagePath, rendered.buffer, {
+          contentType: rendered.mimeType,
+          upsert: false,
+        });
+
+      if (uploadErr) {
+        console.error('[generate] DOCX FormData Storage upload error:', uploadErr.message);
+        return NextResponse.json({ error: '파일 업로드 실패' }, { status: 500 });
+      }
+
+      const { data: urlData } = await supabase.storage
+        .from('files')
+        .createSignedUrl(storagePath, 3600);
+
+      const { data: newDoc } = await supabase.from('documents').insert({
+        title,
+        content: `[DOCX 양식 채우기] ${templateName}`,
+        template_id: templateId,
+        source_file_ids: sourceFileIds ?? [],
+        instructions: instructions ?? null,
+        status: 'completed',
+        created_by: authUserId,
+      }).select().single();
+
+      await supabase.from('audit_logs').insert({
+        user_id: authUserId,
+        action: 'document.create',
+        target_type: 'document',
+        target_id: newDoc?.id ?? '',
+        details: { title, format, storagePath },
+      }).then(() => {}, () => {});
+
+      return NextResponse.json({
+        document: {
+          id: newDoc?.id,
+          title,
+          template: templateName,
+          createdAt: dateStr,
+          status: '완료',
+          sourceCount: (sourceFileIds ?? []).length,
+          content: `[DOCX 양식 채우기] ${templateName}`,
+        },
+        format,
+        downloadUrl: urlData?.signedUrl ?? null,
+      }, { status: 201 });
+    }
+
     // DOCX 템플릿 기반: 파일 렌더링 → Storage 업로드 (XLSX/PPTX와 동일 흐름)
     if (generationResult.docxReplacements && generationResult.templateBuffer) {
       const rendered = await renderDocument(generationResult, theme);
