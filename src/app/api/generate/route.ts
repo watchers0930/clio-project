@@ -112,16 +112,18 @@ export async function POST(request: NextRequest) {
           const { data: blob } = await supabase.storage.from('files').download(tplFile.storage_path);
           if (blob) {
             const buf = await blob.arrayBuffer();
+            // 바이너리 원본을 먼저 보존 (ArrayBuffer는 소비될 수 있으므로)
+            const bufCopy = Buffer.from(buf);
             // XLSX 템플릿은 셀 주소 포함 구조화 추출
             const ext = tplFile.name.split('.').pop()?.toLowerCase() ?? '';
             if (ext === 'xlsx' && format === 'xlsx') {
-              templateFileText = await extractXlsxStructured(buf);
+              templateFileText = await extractXlsxStructured(bufCopy.buffer.slice(bufCopy.byteOffset, bufCopy.byteOffset + bufCopy.byteLength));
             } else {
-              templateFileText = await extractText(buf, tplFile.type ?? '', tplFile.name);
+              templateFileText = await extractText(bufCopy.buffer.slice(bufCopy.byteOffset, bufCopy.byteOffset + bufCopy.byteLength), tplFile.type ?? '', tplFile.name);
             }
             // 템플릿 기반 생성 시 바이너리 원본 보존 (DOCX/XLSX/PPTX/HWPX)
             if (format === 'xlsx' || format === 'pptx' || format === 'docx' || format === 'hwpx') {
-              templateBuffer = Buffer.from(buf);
+              templateBuffer = bufCopy;
             }
           }
         } catch (e) {
@@ -427,8 +429,9 @@ export async function POST(request: NextRequest) {
         : { slides: generationResult.pptxSlides },
     }, { status: 201 });
   } catch (err) {
-    console.error('[generate] error:', err);
     const errMsg = err instanceof Error ? err.message : '문서 생성 실패';
+    const errStack = err instanceof Error ? err.stack?.split('\n').slice(0, 5).join('\n') : '';
+    console.error('[generate] error:', errMsg, errStack);
     return NextResponse.json({ error: `문서 생성 중 오류: ${errMsg}` }, { status: 500 });
   }
 }

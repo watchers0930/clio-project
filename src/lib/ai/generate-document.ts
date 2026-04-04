@@ -558,18 +558,21 @@ export async function generateForFormat(params: {
 
     case 'docx': {
       if (hasTemplateFile) {
-        // 테이블 구조 분석 → 빈 셀이 있으면 폼 데이터 방식
-        const { extractDocxTableStructure } = await import('@/lib/renderers/docx-renderer');
-        const tableStructure = extractDocxTableStructure(rest.templateBuffer!);
+        try {
+          const { extractDocxTableStructure } = await import('@/lib/renderers/docx-renderer');
+          const tableStructure = extractDocxTableStructure(rest.templateBuffer!);
 
-        if (tableStructure.hasEmptyCells) {
-          const docxFormData = await generateDocxFormData({
-            templateName,
-            tableStructure,
-            sourceChunks: rest.sourceChunks,
-            instructions: rest.instructions,
-          });
-          return { format, title, docxFormData, tableStructure, templateBuffer: rest.templateBuffer! };
+          if (tableStructure.hasEmptyCells) {
+            const docxFormData = await generateDocxFormData({
+              templateName,
+              tableStructure,
+              sourceChunks: rest.sourceChunks,
+              instructions: rest.instructions,
+            });
+            return { format, title, docxFormData, tableStructure, templateBuffer: rest.templateBuffer! };
+          }
+        } catch (e) {
+          console.error('[generateForFormat] DOCX 구조 분석 실패, 텍스트 치환 폴백:', e);
         }
 
         // 빈 셀 없으면 → 기존 텍스트 치환 방식
@@ -594,18 +597,21 @@ export async function generateForFormat(params: {
 
     case 'hwpx': {
       if (hasTemplateFile) {
-        // HWPX 테이블 구조 분석 → 빈 셀이 있으면 폼 데이터 방식
-        const { extractHwpxTableStructure } = await import('@/lib/renderers/hwpx-renderer');
-        const hwpxResult = await extractHwpxTableStructure(rest.templateBuffer!);
+        try {
+          const { extractHwpxTableStructure } = await import('@/lib/renderers/hwpx-renderer');
+          const hwpxResult = await extractHwpxTableStructure(rest.templateBuffer!);
 
-        if (hwpxResult && hwpxResult.structure.hasEmptyCells) {
-          const hwpxFormData = await generateDocxFormData({
-            templateName,
-            tableStructure: hwpxResult.structure,
-            sourceChunks: rest.sourceChunks,
-            instructions: rest.instructions,
-          });
-          return { format, title, hwpxFormData, hwpxTableStructure: hwpxResult.structure, templateBuffer: rest.templateBuffer! };
+          if (hwpxResult && hwpxResult.structure.hasEmptyCells) {
+            const hwpxFormData = await generateDocxFormData({
+              templateName,
+              tableStructure: hwpxResult.structure,
+              sourceChunks: rest.sourceChunks,
+              instructions: rest.instructions,
+            });
+            return { format, title, hwpxFormData, hwpxTableStructure: hwpxResult.structure, templateBuffer: rest.templateBuffer! };
+          }
+        } catch (e) {
+          console.error('[generateForFormat] HWPX 구조 분석 실패, 마크다운 폴백:', e);
         }
       }
       // 템플릿 없거나 빈 셀 없으면 → 마크다운 기반 새로 생성
