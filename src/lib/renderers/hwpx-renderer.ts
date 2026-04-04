@@ -308,23 +308,33 @@ export async function renderHwpxFromFormData(
 
     let cellXml = tc.content;
     const tRegex = new RegExp(`<${tTag}([^>]*)>([^<]*)</${tTag}>`);
+    let injected = false;
 
+    // 방법 1: 기존 빈 <hp:t>에 내용 삽입
     if (tRegex.test(cellXml)) {
-      // 기존 빈 <hp:t>에 내용 삽입
-      let replaced = false;
       cellXml = cellXml.replace(tRegex, (match, attrs, text) => {
-        if (!replaced && text.replace(/[\d.]/g, '').trim() === '') {
-          replaced = true;
+        if (!injected && text.replace(/[\d.]/g, '').trim() === '') {
+          injected = true;
           return `<${tTag}${attrs}>${escaped}</${tTag}>`;
         }
         return match;
       });
-    } else {
-      // <hp:t> 없으면 셀 끝에 paragraph 추가
-      const closeTag = `</${tcTag}>`;
+    }
+
+    // 방법 2: self-closing <hp:run/> → <hp:run><hp:t>내용</hp:t></hp:run>
+    if (!injected && cellXml.includes('<hp:run charPrIDRef=')) {
       cellXml = cellXml.replace(
-        new RegExp(`${closeTag.replace(/[/]/g, '\\/')}$`),
-        `<hp:p><hp:run><hp:char><${tTag}>${escaped}</${tTag}></hp:char></hp:run></hp:p>${closeTag}`,
+        /<hp:run(\s+charPrIDRef="[^"]*")\/>/,
+        `<hp:run$1><hp:t>${escaped}</hp:t></hp:run>`,
+      );
+      injected = true;
+    }
+
+    // 방법 3: </hp:p> 앞에 run 삽입
+    if (!injected) {
+      cellXml = cellXml.replace(
+        /<\/hp:p>/,
+        `<hp:run><hp:t>${escaped}</hp:t></hp:run></hp:p>`,
       );
     }
 
