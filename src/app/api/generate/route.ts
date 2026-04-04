@@ -36,7 +36,7 @@ const VALID_FORMATS: OutputFormat[] = ['docx', 'pdf', 'hwpx', 'xlsx', 'pptx'];
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { templateId, sourceFileIds, instructions, outputFormat = 'docx', font } = body;
+    const { templateId, sourceFileIds, instructions, outputFormat = 'docx', font, customStructure } = body;
 
     // 폰트 테마 생성
     const fontParam = typeof font === 'string' ? font : '맑은 고딕';
@@ -46,8 +46,8 @@ export async function POST(request: NextRequest) {
       fontFamilyEn: FONT_MAP[fontParam] ?? 'Malgun Gothic',
     };
 
-    if (!templateId) {
-      return NextResponse.json({ error: '템플릿을 선택해주세요.' }, { status: 400 });
+    if (!templateId && !customStructure) {
+      return NextResponse.json({ error: '템플릿을 선택하거나 문서 구조를 입력해주세요.' }, { status: 400 });
     }
 
     const format = outputFormat as OutputFormat;
@@ -65,14 +65,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
     }
 
-    // 템플릿 조회
-    const { data: tmpl } = await supabase
-      .from('templates')
-      .select('name, content, description, placeholders, template_file_id')
-      .eq('id', templateId)
-      .single();
+    // 템플릿 조회 (직접 작성 모드에서는 건너뜀)
+    let tmpl: { name: string; content: string | null; description: string | null; placeholders: string[] | null; template_file_id: string | null } | null = null;
+    if (templateId) {
+      const { data } = await supabase
+        .from('templates')
+        .select('name, content, description, placeholders, template_file_id')
+        .eq('id', templateId)
+        .single();
+      tmpl = data as typeof tmpl;
+    }
 
-    const templateName = tmpl?.name ?? '문서';
+    const templateName = tmpl?.name ?? (customStructure ? '직접 작성 문서' : '문서');
 
     // 소스 파일 텍스트 추출
     const sourceChunks: string[] = [];
@@ -133,7 +137,7 @@ export async function POST(request: NextRequest) {
     const generationResult = await generateForFormat({
       format,
       templateName,
-      templateContent: (typeof tmpl?.content === 'string' && tmpl.content.trim()) ? tmpl.content : (typeof tmpl?.description === 'string' && tmpl.description.trim()) ? tmpl.description : null,
+      templateContent: customStructure ? customStructure : (typeof tmpl?.content === 'string' && tmpl.content.trim()) ? tmpl.content : (typeof tmpl?.description === 'string' && tmpl.description.trim()) ? tmpl.description : null,
       templateFileText,
       templateBuffer,
       sourceChunks,

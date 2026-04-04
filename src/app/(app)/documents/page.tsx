@@ -59,6 +59,7 @@ export default function DocumentsPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [instructions, setInstructions] = useState('');
+  const [customStructure, setCustomStructure] = useState('');
   const [generating, setGenerating] = useState(false);
   const [generatedDoc, setGeneratedDoc] = useState<Document | null>(null);
   const [outputFormat, setOutputFormat] = useState<string>('docx');
@@ -154,6 +155,7 @@ export default function DocumentsPage() {
     setSelectedTemplate(null);
     setSelectedFiles(new Set());
     setInstructions('');
+    setCustomStructure('');
     setGenerating(false);
     setGeneratedDoc(null);
     setOutputFormat('docx');
@@ -174,7 +176,7 @@ export default function DocumentsPage() {
 
   const canNext = () => {
     if (step === 1) return !!selectedTemplate;
-    // Step 2: 파일 0개도 허용 (템플릿 양식만으로 생성 가능)
+    if (step === 3 && selectedTemplate === '__none__' && !customStructure.trim()) return false;
     return true;
   };
 
@@ -183,15 +185,21 @@ export default function DocumentsPage() {
     setGeneratedDownloadUrl(null);
     setGeneratedOutline(null);
     try {
+      const isCustom = selectedTemplate === '__none__';
+      const finalInstructions = isCustom
+        ? `## 문서 구조:\n${customStructure.trim()}\n\n${instructions.trim() ? `## 추가 지시사항:\n${instructions.trim()}` : ''}`
+        : instructions.trim() || undefined;
+
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          templateId: selectedTemplate,
+          templateId: isCustom ? undefined : selectedTemplate,
           sourceFileIds: Array.from(selectedFiles),
-          instructions: instructions.trim() || undefined,
+          instructions: finalInstructions,
           outputFormat,
           font: selectedFont,
+          customStructure: isCustom ? customStructure.trim() : undefined,
         }),
       });
       if (res.ok) {
@@ -623,6 +631,15 @@ export default function DocumentsPage() {
               {/* Step 1: Select template */}
               {step === 1 && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {/* 템플릿 없이 생성 */}
+                  <button
+                    onClick={() => { setSelectedTemplate('__none__'); setCustomStructure(''); }}
+                    className={`p-5 rounded-xl border text-left transition-all ${selectedTemplate === '__none__' ? 'border-[#0071e3] bg-[#f5f5f7] ring-2 ring-[#0071e3]/30' : 'border-dashed border-[#d1d1d6] hover:border-[#0071e3]'}`}
+                  >
+                    <span className="text-2xl">✏️</span>
+                    <h4 className="font-medium text-[#1d1d1f] text-sm mt-2">직접 작성</h4>
+                    <p className="text-xs text-[#6e6e73] mt-1">문서 구조를 직접 입력하여 생성</p>
+                  </button>
                   {templates.map((t) => (
                     <button
                       key={t.id}
@@ -780,6 +797,21 @@ export default function DocumentsPage() {
                     )}
                   </div>
 
+                  {/* 문서 구조 (직접 작성 모드) */}
+                  {selectedTemplate === '__none__' && (
+                    <div style={{ marginTop: 20 }}>
+                      <p className="text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>문서 구조 *</p>
+                      <p className="text-xs text-[#6e6e73]" style={{ marginBottom: 8 }}>AI가 이 구조를 따라 문서를 생성합니다</p>
+                      <textarea
+                        value={customStructure}
+                        onChange={(e) => setCustomStructure(e.target.value)}
+                        placeholder={"예:\n# 업무일지\n## 오늘의 업무\n- 주요 업무 내용 1\n- 주요 업무 내용 2\n## 문제점 및 해결 방안\n## 내일의 계획"}
+                        rows={6}
+                        className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none font-mono"
+                      />
+                    </div>
+                  )}
+
                   {/* 추가 지시사항 */}
                   <div>
                     <p className="text-sm text-[#6e6e73]" style={{ marginTop: 20, marginBottom: 10 }}>추가 지시사항 (선택)</p>
@@ -800,7 +832,7 @@ export default function DocumentsPage() {
                   <div className="bg-[#f5f5f7] rounded-xl p-5 space-y-4 text-sm">
                     <div className="flex justify-between">
                       <span className="text-[#6e6e73]">템플릿</span>
-                      <span className="text-[#1d1d1f] font-medium">{templates.find((t) => t.id === selectedTemplate)?.name}</span>
+                      <span className="text-[#1d1d1f] font-medium">{selectedTemplate === '__none__' ? '직접 작성' : templates.find((t) => t.id === selectedTemplate)?.name}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-[#6e6e73]">소스 파일</span>
