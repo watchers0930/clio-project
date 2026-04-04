@@ -518,6 +518,8 @@ export function mapFormDataDirect(
   instructions: string,
 ): DocxFormData {
   const result: DocxFormData = {};
+  console.log('[mapFormDataDirect] instructions:', instructions.slice(0, 500));
+  console.log('[mapFormDataDirect] emptyCells:', structure.emptyCells.length);
 
   // 1. 메타데이터 매핑
   const metaFields: [string, string][] = [
@@ -529,15 +531,15 @@ export function mapFormDataDirect(
 
   for (const [key, label] of metaFields) {
     const value = extractMeta(instructions, key);
-    if (value) {
-      const fieldId = findFieldByLabel(structure, label);
-      if (fieldId) result[fieldId] = value;
-    }
+    const fieldId = findFieldByLabel(structure, label);
+    console.log(`[mapFormDataDirect] meta: ${key}=${value}, label=${label}, fieldId=${fieldId}`);
+    if (value && fieldId) result[fieldId] = value;
   }
 
   // 2. 금일 업무 매핑
   const todayItems = extractSection(instructions, '금일\\s*업무');
   const todayCells = findBodyCells(structure, '금일업무내용');
+  console.log(`[mapFormDataDirect] 금일: items=${JSON.stringify(todayItems)}, cells=${todayCells.length}`);
   for (let i = 0; i < Math.min(todayItems.length, todayCells.length); i++) {
     result[todayCells[i]] = todayItems[i];
   }
@@ -545,6 +547,7 @@ export function mapFormDataDirect(
   // 3. 명일 업무 매핑
   const tomorrowItems = extractSection(instructions, '명일\\s*업무');
   const tomorrowCells = findBodyCells(structure, '명일업무내용');
+  console.log(`[mapFormDataDirect] 명일: items=${JSON.stringify(tomorrowItems)}, cells=${tomorrowCells.length}`);
   for (let i = 0; i < Math.min(tomorrowItems.length, tomorrowCells.length); i++) {
     result[tomorrowCells[i]] = tomorrowItems[i];
   }
@@ -568,6 +571,7 @@ export function mapFormDataDirect(
     }
   }
 
+  console.log('[mapFormDataDirect] RESULT:', JSON.stringify(result));
   return result;
 }
 
