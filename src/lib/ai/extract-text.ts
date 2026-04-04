@@ -154,27 +154,25 @@ async function extractPptx(buffer: ArrayBuffer, fileName: string): Promise<strin
   }
 }
 
-// ─── HWPX → XML에서 텍스트 추출 ────────────────────────────
+// ─── HWPX → XML에서 텍스트 추출 (PizZip 사용) ──────────────
 async function extractHwpx(buffer: ArrayBuffer, fileName: string): Promise<string> {
-  const AdmZip = (await import('adm-zip')).default;
+  const PizZip = (await import('pizzip')).default;
 
   try {
-    const zip = new AdmZip(Buffer.from(buffer));
+    const zip = new PizZip(Buffer.from(buffer));
     const texts: string[] = [];
 
     // HWPX는 ZIP 패키지: Contents/section0.xml, section1.xml ...
-    const entries = zip.getEntries();
-    const sectionEntries = entries
-      .filter(e => /^Contents\/section\d+\.xml$/i.test(e.entryName))
+    const sectionFiles = Object.keys(zip.files)
+      .filter(name => /^Contents\/section\d+\.xml$/i.test(name))
       .sort((a, b) => {
-        const numA = parseInt(a.entryName.match(/section(\d+)/)?.[1] ?? '0');
-        const numB = parseInt(b.entryName.match(/section(\d+)/)?.[1] ?? '0');
+        const numA = parseInt(a.match(/section(\d+)/)?.[1] ?? '0');
+        const numB = parseInt(b.match(/section(\d+)/)?.[1] ?? '0');
         return numA - numB;
       });
 
-    for (const entry of sectionEntries) {
-      const xml = entry.getData().toString('utf-8');
-      // <hp:t> 또는 <t> 태그에서 텍스트 추출
+    for (const name of sectionFiles) {
+      const xml = zip.file(name)?.asText() ?? '';
       const textMatches = xml.match(/<(?:hp:)?t[^>]*>([^<]*)<\/(?:hp:)?t>/g) ?? [];
       const sectionTexts = textMatches
         .map(m => m.replace(/<[^>]+>/g, '').trim())
