@@ -35,6 +35,8 @@ export default function TemplatesPage() {
   const [deptList, setDeptList] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'전사 공용' | '부서 전용'>('전사 공용');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectMode, setSelectMode] = useState(false);
 
   // Create/Edit modal state
   const [showModal, setShowModal] = useState(false);
@@ -236,6 +238,37 @@ export default function TemplatesPage() {
     }
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((t) => t.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`선택한 ${selectedIds.size}개 템플릿을 삭제하시겠습니까?`)) return;
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map((id) =>
+          fetch(`/api/templates?id=${id}`, { method: 'DELETE' })
+        )
+      );
+      setTemplates((prev) => prev.filter((t) => !selectedIds.has(t.id)));
+      setSelectedIds(new Set());
+      setSelectMode(false);
+    } catch { /* silent */ }
+  };
+
   const handleDuplicate = async (t: Template) => {
     try {
       const res = await fetch('/api/templates', {
@@ -276,13 +309,48 @@ export default function TemplatesPage() {
           <h1 className="text-2xl font-bold text-[#1d1d1f]">템플릿 관리</h1>
           <p className="text-[#6e6e73] mt-1" style={{ marginBottom: 10 }}>문서 생성에 사용할 템플릿을 관리하세요</p>
         </div>
-        <button
-          onClick={openCreate}
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors shadow-sm"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-          새 템플릿
-        </button>
+        <div className="flex gap-2">
+          {selectMode ? (
+            <>
+              <button
+                onClick={toggleSelectAll}
+                className="px-4 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors"
+              >
+                {selectedIds.size === filtered.length ? '전체 해제' : '전체 선택'}
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={selectedIds.size === 0}
+                className="px-4 py-2.5 rounded-xl bg-[#ff3b30] text-white text-sm font-medium hover:bg-[#ff453a] transition-colors disabled:opacity-40"
+              >
+                {selectedIds.size}개 삭제
+              </button>
+              <button
+                onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}
+                className="px-4 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
+              >
+                취소
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setSelectMode(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                선택
+              </button>
+              <button
+                onClick={openCreate}
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors shadow-sm"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                새 템플릿
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* tabs */}
@@ -315,9 +383,22 @@ export default function TemplatesPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((t) => (
-            <div key={t.id} className="bg-white rounded-2xl border border-[#e5e5e7] p-5 shadow-sm hover:shadow-md transition-shadow">
+            <div
+              key={t.id}
+              onClick={selectMode ? () => toggleSelect(t.id) : undefined}
+              className={`bg-white rounded-2xl border p-5 shadow-sm hover:shadow-md transition-all ${selectMode ? 'cursor-pointer' : ''} ${selectedIds.has(t.id) ? 'border-[#0071e3] ring-2 ring-[#0071e3]/20' : 'border-[#e5e5e7]'}`}
+            >
               <div className="flex items-start justify-between mb-3">
-                <span className="text-3xl">{t.icon}</span>
+                <div className="flex items-center gap-3">
+                  {selectMode && (
+                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${selectedIds.has(t.id) ? 'bg-[#0071e3] border-[#0071e3]' : 'border-[#d1d1d6]'}`}>
+                      {selectedIds.has(t.id) && (
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                      )}
+                    </div>
+                  )}
+                  <span className="text-3xl">{t.icon}</span>
+                </div>
                 <div className="flex gap-1">
                   <button
                     onClick={() => openEdit(t)}
