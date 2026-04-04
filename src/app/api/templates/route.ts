@@ -70,10 +70,11 @@ export async function GET(request: NextRequest) {
 /** 파일 업로드 → files 테이블 INSERT → process 파이프라인 호출 → file.id 반환 */
 async function uploadTemplateFile(supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>, file: File, authUserId: string, requestOrigin: string): Promise<{ id: string | null; error?: string }> {
   if (!supabase) return { id: null, error: 'DB 미연결' };
-  const safeName = sanitizeFileName(file.name);
   const validationError = validateFile(file);
   if (validationError) return { id: null, error: `파일 검증 실패: ${validationError}` };
-  const storagePath = `uploads/templates/${Date.now()}_${safeName}`;
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin';
+  const uuid = crypto.randomUUID();
+  const storagePath = `uploads/templates/${uuid}.${ext}`;
   const { error: uploadError } = await supabase.storage.from('files').upload(storagePath, file);
   if (uploadError) {
     console.error('[templates] storage upload:', uploadError.message);
