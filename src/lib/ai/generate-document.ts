@@ -599,7 +599,7 @@ export async function generateForFormat(params: {
       if (hasTemplateFile) {
         try {
           const { extractHwpxTableStructure } = await import('@/lib/renderers/hwpx-renderer');
-          const hwpxResult = await extractHwpxTableStructure(rest.templateBuffer!);
+          const hwpxResult = extractHwpxTableStructure(rest.templateBuffer!);
 
           if (hwpxResult && hwpxResult.structure.hasEmptyCells) {
             const hwpxFormData = await generateDocxFormData({

@@ -3,6 +3,7 @@
  * adm-zip으로 section0.xml 직접 수정
  */
 
+import PizZip from 'pizzip';
 import type { RenderOutput, CorporateTheme, DocxTableCell, DocxTableStructure, DocxFormData } from './types';
 import { DEFAULT_THEME } from './types';
 
@@ -190,24 +191,16 @@ function extractHwpxColSpan(cellXml: string): number {
 }
 
 /** HWPX 템플릿 Buffer에서 테이블 구조 추출 */
-export async function extractHwpxTableStructure(templateBuffer: Buffer): Promise<{ structure: DocxTableStructure; sectionXml: string; sectionPath: string } | null> {
-  const AdmZip = (await import('adm-zip')).default;
-  // Buffer를 Uint8Array로 완전 복사 후 새 Buffer 생성 (Node.js Buffer pool 회피)
-  const arr = new Uint8Array(templateBuffer.length);
-  for (let i = 0; i < templateBuffer.length; i++) arr[i] = templateBuffer[i];
-  const safeBuf = Buffer.from(arr);
-  console.log(`[extractHwpxTableStructure] buffer size: ${safeBuf.length}, first4: ${safeBuf.slice(0, 4).toString('hex')}, isZip: ${safeBuf[0] === 0x50 && safeBuf[1] === 0x4b}`);
-  if (safeBuf.length === 0) return null;
-  const zip = new AdmZip(safeBuf);
-  const entries = zip.getEntries();
+export function extractHwpxTableStructure(templateBuffer: Buffer): { structure: DocxTableStructure; sectionXml: string; sectionPath: string } | null {
+  const zip = new PizZip(templateBuffer);
 
-  const sectionEntry = entries.find((e: { entryName: string }) =>
-    /^Contents\/section\d+\.xml$/i.test(e.entryName)
-  );
-  if (!sectionEntry) return null;
+  // section XML 찾기
+  const sectionFile = Object.keys(zip.files).find(name => /^Contents\/section\d+\.xml$/i.test(name));
+  if (!sectionFile) return null;
 
-  const sectionXml = sectionEntry.getData().toString('utf-8');
-  const sectionPath = sectionEntry.entryName;
+  const sectionXml = zip.file(sectionFile)?.asText() ?? '';
+  if (!sectionXml) return null;
+  const sectionPath = sectionFile;
 
   // hp:tbl 태그로 테이블 찾기 (네임스페이스 있는/없는 경우 모두)
   const tblTag = sectionXml.includes('<hp:tbl') ? 'hp:tbl' : 'tbl';
@@ -266,19 +259,12 @@ export async function renderHwpxFromFormData(
   structure: DocxTableStructure,
   title: string,
 ): Promise<RenderOutput> {
-  const AdmZip = (await import('adm-zip')).default;
-  const arr2 = new Uint8Array(templateBuffer.length);
-  for (let i = 0; i < templateBuffer.length; i++) arr2[i] = templateBuffer[i];
-  const safeBuf2 = Buffer.from(arr2);
-  const zip = new AdmZip(safeBuf2);
-  const entries = zip.getEntries();
+  const zip = new PizZip(templateBuffer);
 
-  const sectionEntry = entries.find((e: { entryName: string }) =>
-    /^Contents\/section\d+\.xml$/i.test(e.entryName)
-  );
-  if (!sectionEntry) throw new Error('HWPX section XML을 찾을 수 없습니다.');
+  const sectionFile = Object.keys(zip.files).find(name => /^Contents\/section\d+\.xml$/i.test(name));
+  if (!sectionFile) throw new Error('HWPX section XML을 찾을 수 없습니다.');
 
-  let xml = sectionEntry.getData().toString('utf-8');
+  let xml = zip.file(sectionFile)?.asText() ?? '';
   const tblTag = xml.includes('<hp:tbl') ? 'hp:tbl' : 'tbl';
   const trTag = xml.includes('<hp:tr') ? 'hp:tr' : 'tr';
   const tcTag = xml.includes('<hp:tc') ? 'hp:tc' : 'tc';
@@ -335,8 +321,8 @@ export async function renderHwpxFromFormData(
     xml = xml.slice(0, absStart) + cellXml + xml.slice(absEnd);
   }
 
-  zip.updateFile(sectionEntry.entryName, Buffer.from(xml, 'utf-8'));
-  const buffer = zip.toBuffer();
+  zip.file(sectionFile, xml);
+  const buffer = Buffer.from(zip.generate({ type: 'nodebuffer' }));
 
   return {
     buffer,
