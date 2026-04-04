@@ -232,9 +232,13 @@ export default function TemplatesPage() {
       const res = await fetch(`/api/templates?id=${id}`, { method: 'DELETE' });
       if (res.ok) {
         setTemplates((prev) => prev.filter((t) => t.id !== id));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || '삭제에 실패했습니다.');
       }
+      await loadTemplates();
     } catch {
-      // silent
+      alert('삭제 중 오류가 발생했습니다.');
     }
   };
 
@@ -258,15 +262,19 @@ export default function TemplatesPage() {
     if (selectedIds.size === 0) return;
     if (!confirm(`선택한 ${selectedIds.size}개 템플릿을 삭제하시겠습니까?`)) return;
     try {
-      await Promise.all(
+      const results = await Promise.all(
         Array.from(selectedIds).map((id) =>
-          fetch(`/api/templates?id=${id}`, { method: 'DELETE' })
+          fetch(`/api/templates?id=${id}`, { method: 'DELETE' }).then((r) => r.ok)
         )
       );
-      setTemplates((prev) => prev.filter((t) => !selectedIds.has(t.id)));
+      const failCount = results.filter((ok) => !ok).length;
+      if (failCount > 0) alert(`${failCount}개 삭제 실패`);
       setSelectedIds(new Set());
       setSelectMode(false);
-    } catch { /* silent */ }
+      await loadTemplates();
+    } catch {
+      alert('삭제 중 오류가 발생했습니다.');
+    }
   };
 
   const handleDuplicate = async (t: Template) => {
