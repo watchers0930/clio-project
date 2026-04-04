@@ -440,6 +440,137 @@ function tableStructureToText(structure: DocxTableStructure): string {
   return lines.join('\n');
 }
 
+// ─── 프로그래밍 방식 폼 매핑 (AI 미사용, 확정적) ──────────
+
+/** 지시사항에서 "키: 값" 형태의 메타데이터 추출 */
+function extractMeta(instructions: string, key: string): string {
+  const regex = new RegExp(`${key}[:\\s]*(.+?)(?:\\n|$)`, 'i');
+  const m = instructions.match(regex);
+  return m ? m[1].trim() : '';
+}
+
+/** 지시사항에서 섹션별 내용 추출 (금일 업무, 명일 업무, 비고) */
+function extractSection(instructions: string, sectionName: string): string[] {
+  // "금일 업무:" 또는 "금일업무:" 뒤의 내용을 다음 섹션 시작 전까지 추출
+  const sectionNames = ['금일\\s*업무', '명일\\s*업무', '비고'];
+  const otherSections = sectionNames.filter(s => s !== sectionName.replace(/\s+/g, '\\s*'));
+  const endPattern = otherSections.length > 0 ? `(?=${otherSections.join('|')})` : '$';
+  const regex = new RegExp(`${sectionName}[:\\s]*\\n?([\\s\\S]*?)(?:${endPattern}|$)`, 'i');
+  const m = instructions.match(regex);
+  if (!m) return [];
+  return m[1].split('\n')
+    .map(line => line.replace(/^\s*\d+[.)]\s*/, '').replace(/^\s*[-•]\s*/, '').trim())
+    .filter(line => line.length > 0);
+}
+
+/** 테이블 구조에서 라벨 옆의 빈 셀 fieldId 찾기 */
+function findFieldByLabel(structure: DocxTableStructure, label: string): string | null {
+  for (const table of structure.tables) {
+    for (const row of table.rows) {
+      for (let c = 0; c < row.length; c++) {
+        const cell = row[c];
+        // 라벨 텍스트 매칭 (공백/전각공백 무시)
+        const normalized = cell.text.replace(/[\s\u3000]+/g, '');
+        if (normalized.includes(label) && !cell.isEmpty) {
+          // 오른쪽 빈 셀 찾기
+          if (c + 1 < row.length && row[c + 1].isEmpty) {
+            return row[c + 1].fieldId;
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/** 특정 헤더 아래의 본문 빈 셀들 찾기 (행 순서대로) */
+function findBodyCells(structure: DocxTableStructure, headerText: string): string[] {
+  const fieldIds: string[] = [];
+  for (const table of structure.tables) {
+    // 헤더행에서 해당 텍스트의 열 인덱스 찾기
+    let headerColIdx = -1;
+    if (table.rows.length > 0) {
+      // 헤더가 아닌 "금일 업무내용" / "명일 업무내용" 행 찾기
+      for (let r = 0; r < table.rows.length; r++) {
+        for (let c = 0; c < table.rows[r].length; c++) {
+          const normalized = table.rows[r][c].text.replace(/[\s\u3000]+/g, '');
+          if (normalized.includes(headerText)) {
+            headerColIdx = c;
+            // 이 행 이후의 같은 열에서 빈 셀 수집
+            for (let br = r + 1; br < table.rows.length; br++) {
+              if (br < table.rows.length && table.rows[br][headerColIdx]) {
+                const bodyCell = table.rows[br][headerColIdx];
+                if (bodyCell.isEmpty) fieldIds.push(bodyCell.fieldId);
+              }
+            }
+            return fieldIds;
+          }
+        }
+      }
+    }
+  }
+  return fieldIds;
+}
+
+/** 프로그래밍 방식으로 폼 데이터 매핑 (AI 불필요) */
+export function mapFormDataDirect(
+  structure: DocxTableStructure,
+  instructions: string,
+): DocxFormData {
+  const result: DocxFormData = {};
+
+  // 1. 메타데이터 매핑
+  const metaFields: [string, string][] = [
+    ['보고번호', '보고번호'],
+    ['작성일자', '작성일자'],
+    ['작성자', '작성자'],
+    ['부서명', '부서'],
+  ];
+
+  for (const [key, label] of metaFields) {
+    const value = extractMeta(instructions, key);
+    if (value) {
+      const fieldId = findFieldByLabel(structure, label);
+      if (fieldId) result[fieldId] = value;
+    }
+  }
+
+  // 2. 금일 업무 매핑
+  const todayItems = extractSection(instructions, '금일\\s*업무');
+  const todayCells = findBodyCells(structure, '금일업무내용');
+  for (let i = 0; i < Math.min(todayItems.length, todayCells.length); i++) {
+    result[todayCells[i]] = todayItems[i];
+  }
+
+  // 3. 명일 업무 매핑
+  const tomorrowItems = extractSection(instructions, '명일\\s*업무');
+  const tomorrowCells = findBodyCells(structure, '명일업무내용');
+  for (let i = 0; i < Math.min(tomorrowItems.length, tomorrowCells.length); i++) {
+    result[tomorrowCells[i]] = tomorrowItems[i];
+  }
+
+  // 4. 비고 매핑
+  const bigoItems = extractSection(instructions, '비고');
+  // 비고는 보통 마지막 행의 첫 셀 — 라벨 "비고" 옆 또는 아래
+  if (bigoItems.length > 0) {
+    // "비고" 라벨이 있는 행에서 빈 셀 찾기
+    for (const table of structure.tables) {
+      for (const row of table.rows) {
+        for (let c = 0; c < row.length; c++) {
+          if (row[c].text.replace(/[\s\u3000]+/g, '').includes('비고')) {
+            // 같은 행의 다음 빈 셀, 또는 이 셀 자체가 유일한 셀이면 아래 행
+            if (c + 1 < row.length && row[c + 1].isEmpty) {
+              result[row[c + 1].fieldId] = bigoItems.join(', ');
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
 export async function generateDocxFormData(params: {
   templateName: string;
   tableStructure: DocxTableStructure;
@@ -575,12 +706,8 @@ export async function generateForFormat(params: {
           const tableStructure = extractDocxTableStructure(rest.templateBuffer!);
 
           if (tableStructure.hasEmptyCells) {
-            const docxFormData = await generateDocxFormData({
-              templateName,
-              tableStructure,
-              sourceChunks: rest.sourceChunks,
-              instructions: rest.instructions,
-            });
+            // 프로그래밍 방식으로 직접 매핑 (AI 미사용)
+            const docxFormData = mapFormDataDirect(tableStructure, rest.instructions ?? '');
             return { format, title, docxFormData, tableStructure, templateBuffer: rest.templateBuffer! };
           }
         } catch (e) {
@@ -614,12 +741,8 @@ export async function generateForFormat(params: {
           const hwpxResult = extractHwpxTableStructure(rest.templateBuffer!);
 
           if (hwpxResult && hwpxResult.structure.hasEmptyCells) {
-            const hwpxFormData = await generateDocxFormData({
-              templateName,
-              tableStructure: hwpxResult.structure,
-              sourceChunks: rest.sourceChunks,
-              instructions: rest.instructions,
-            });
+            // 프로그래밍 방식으로 직접 매핑 (AI 미사용)
+            const hwpxFormData = mapFormDataDirect(hwpxResult.structure, rest.instructions ?? '');
             return { format, title, hwpxFormData, hwpxTableStructure: hwpxResult.structure, templateBuffer: rest.templateBuffer! };
           }
         } catch (e) {
