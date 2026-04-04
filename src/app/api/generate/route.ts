@@ -65,6 +65,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
     }
 
+    // 사용자 정보 조회 (이름, 부서)
+    const { data: userData } = await supabase
+      .from('users')
+      .select('name, departments:department_id(name)')
+      .eq('id', authUserId)
+      .single();
+    const userName = (userData as Record<string, unknown>)?.name as string ?? '';
+    const userDept = ((userData as Record<string, unknown>)?.departments as { name: string } | null)?.name ?? '';
+
     // 템플릿 조회 (직접 작성 모드에서는 건너뜀)
     let tmpl: { name: string; content: string | null; description: string | null; placeholders: string[] | null; template_file_id: string | null } | null = null;
     if (templateId) {
@@ -133,6 +142,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 자동 채울 메타데이터 생성
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const reportNo = `${todayStr.replace(/-/g, '')}-${String(Math.floor(Math.random() * 90) + 10)}-001`;
+    const userMeta = `작성일자: ${todayStr}\n보고번호: ${reportNo}\n작성자: ${userName}\n부서명: ${userDept}`;
+    const enrichedInstructions = instructions
+      ? `${userMeta}\n\n${instructions}`
+      : userMeta;
+
     // AI 콘텐츠 생성 (포맷별 분기)
     const generationResult = await generateForFormat({
       format,
@@ -141,11 +159,10 @@ export async function POST(request: NextRequest) {
       templateFileText,
       templateBuffer,
       sourceChunks,
-      instructions: instructions ?? undefined,
+      instructions: enrichedInstructions,
     });
 
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const dateStr = todayStr;
     const title = `${templateName} (${dateStr} 생성)`;
     generationResult.title = title;
 
