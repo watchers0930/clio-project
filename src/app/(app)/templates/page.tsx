@@ -544,7 +544,7 @@ export default function TemplatesPage() {
               {/* Template File */}
               <div style={{ marginTop: 20 }}>
                 <label className="block text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>표준양식 파일</label>
-                <p className="text-xs text-[#6e6e73] mb-3">HWP, DOCX, XLSX, PDF 등 표준양식 파일을 첨부하세요</p>
+                <p className="text-xs text-[#6e6e73] mb-3">HWP, HWPX, DOCX, XLSX, PPTX, PDF 등 표준양식 파일을 첨부하세요</p>
 
                 {/* 기존 파일 표시 */}
                 {formExistingFile && !formRemoveFile && !formFile && (
