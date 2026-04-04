@@ -584,7 +584,7 @@ export default function TemplatesPage() {
                     <input
                       type="file"
                       className="hidden"
-                      accept=".hwp,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf,.md"
+                      accept=".hwp,.hwpx,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf,.md"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) { setFormFile(file); setFormRemoveFile(false); }
