@@ -355,6 +355,38 @@ export async function POST(request: NextRequest) {
         }, { status: 201 });
       }
 
+      // HWPX 마크다운 → 파일 렌더링 → Storage 업로드
+      if (format === 'hwpx') {
+        const rendered = await renderDocument(generationResult, theme);
+        const hwpxPath = `generated/${authUserId}/${Date.now()}_${rendered.fileName}`;
+        const { error: upErr } = await supabase.storage
+          .from('files')
+          .upload(hwpxPath, rendered.buffer, { contentType: rendered.mimeType, upsert: false });
+        if (upErr) {
+          console.error('[generate] HWPX Storage upload error:', upErr.message);
+        }
+        const { data: hwpxUrl } = await supabase.storage
+          .from('files')
+          .createSignedUrl(hwpxPath, 3600);
+
+        // status를 completed로 업데이트
+        await supabase.from('documents').update({ status: 'completed' }).eq('id', newDoc.id).then(() => {}, () => {});
+
+        return NextResponse.json({
+          document: {
+            id: newDoc.id,
+            title,
+            template: templateName,
+            createdAt: dateStr,
+            status: '완료',
+            sourceCount: (sourceFileIds ?? []).length,
+            content: generationResult.markdown,
+          },
+          format,
+          downloadUrl: hwpxUrl?.signedUrl ?? null,
+        }, { status: 201 });
+      }
+
       return NextResponse.json({
         document: {
           id: newDoc.id,
