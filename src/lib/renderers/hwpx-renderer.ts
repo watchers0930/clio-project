@@ -192,7 +192,13 @@ function extractHwpxColSpan(cellXml: string): number {
 /** HWPX 템플릿 Buffer에서 테이블 구조 추출 */
 export async function extractHwpxTableStructure(templateBuffer: Buffer): Promise<{ structure: DocxTableStructure; sectionXml: string; sectionPath: string } | null> {
   const AdmZip = (await import('adm-zip')).default;
-  const zip = new AdmZip(templateBuffer);
+  // Buffer를 Uint8Array로 완전 복사 후 새 Buffer 생성 (Node.js Buffer pool 회피)
+  const arr = new Uint8Array(templateBuffer.length);
+  for (let i = 0; i < templateBuffer.length; i++) arr[i] = templateBuffer[i];
+  const safeBuf = Buffer.from(arr);
+  console.log(`[extractHwpxTableStructure] buffer size: ${safeBuf.length}, first4: ${safeBuf.slice(0, 4).toString('hex')}, isZip: ${safeBuf[0] === 0x50 && safeBuf[1] === 0x4b}`);
+  if (safeBuf.length === 0) return null;
+  const zip = new AdmZip(safeBuf);
   const entries = zip.getEntries();
 
   const sectionEntry = entries.find((e: { entryName: string }) =>
@@ -261,7 +267,10 @@ export async function renderHwpxFromFormData(
   title: string,
 ): Promise<RenderOutput> {
   const AdmZip = (await import('adm-zip')).default;
-  const zip = new AdmZip(templateBuffer);
+  const arr2 = new Uint8Array(templateBuffer.length);
+  for (let i = 0; i < templateBuffer.length; i++) arr2[i] = templateBuffer[i];
+  const safeBuf2 = Buffer.from(arr2);
+  const zip = new AdmZip(safeBuf2);
   const entries = zip.getEntries();
 
   const sectionEntry = entries.find((e: { entryName: string }) =>
