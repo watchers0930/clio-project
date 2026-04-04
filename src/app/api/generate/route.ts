@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
-import { extractText } from '@/lib/ai/extract-text';
+import { extractText, extractXlsxStructured } from '@/lib/ai/extract-text';
 import { generateForFormat } from '@/lib/ai/generate-document';
 import { renderDocument } from '@/lib/renderers';
 import type { OutputFormat, CorporateTheme } from '@/lib/renderers/types';
@@ -112,9 +112,15 @@ export async function POST(request: NextRequest) {
           const { data: blob } = await supabase.storage.from('files').download(tplFile.storage_path);
           if (blob) {
             const buf = await blob.arrayBuffer();
-            templateFileText = await extractText(buf, tplFile.type ?? '', tplFile.name);
-            // 템플릿 기반 생성 시 바이너리 원본 보존 (DOCX/XLSX/PPTX)
-            if (format === 'xlsx' || format === 'pptx' || format === 'docx') {
+            // XLSX 템플릿은 셀 주소 포함 구조화 추출
+            const ext = tplFile.name.split('.').pop()?.toLowerCase() ?? '';
+            if (ext === 'xlsx' && format === 'xlsx') {
+              templateFileText = await extractXlsxStructured(buf);
+            } else {
+              templateFileText = await extractText(buf, tplFile.type ?? '', tplFile.name);
+            }
+            // 템플릿 기반 생성 시 바이너리 원본 보존 (DOCX/XLSX/PPTX/HWPX)
+            if (format === 'xlsx' || format === 'pptx' || format === 'docx' || format === 'hwpx') {
               templateBuffer = Buffer.from(buf);
             }
           }
@@ -188,6 +194,60 @@ export async function POST(request: NextRequest) {
           status: '완료',
           sourceCount: (sourceFileIds ?? []).length,
           content: `[DOCX 양식 채우기] ${templateName}`,
+        },
+        format,
+        downloadUrl: urlData?.signedUrl ?? null,
+      }, { status: 201 });
+    }
+
+    // HWPX 폼 데이터 기반: 빈 셀에 내용 주입 → Storage 업로드
+    if (generationResult.hwpxFormData && generationResult.templateBuffer && generationResult.hwpxTableStructure) {
+      const rendered = await renderDocument(generationResult, theme);
+      const storagePath = `generated/${authUserId}/${Date.now()}_${rendered.fileName}`;
+
+      const { error: uploadErr } = await supabase.storage
+        .from('files')
+        .upload(storagePath, rendered.buffer, {
+          contentType: rendered.mimeType,
+          upsert: false,
+        });
+
+      if (uploadErr) {
+        console.error('[generate] HWPX FormData Storage upload error:', uploadErr.message);
+        return NextResponse.json({ error: '파일 업로드 실패' }, { status: 500 });
+      }
+
+      const { data: urlData } = await supabase.storage
+        .from('files')
+        .createSignedUrl(storagePath, 3600);
+
+      const { data: newDoc } = await supabase.from('documents').insert({
+        title,
+        content: `[HWPX 양식 채우기] ${templateName}`,
+        template_id: templateId,
+        source_file_ids: sourceFileIds ?? [],
+        instructions: instructions ?? null,
+        status: 'completed',
+        created_by: authUserId,
+      }).select().single();
+
+      await supabase.from('audit_logs').insert({
+        user_id: authUserId,
+        action: 'document.create',
+        target_type: 'document',
+        target_id: newDoc?.id ?? '',
+        details: { title, format, storagePath },
+      }).then(() => {}, () => {});
+
+      return NextResponse.json({
+        document: {
+          id: newDoc?.id,
+          title,
+          template: templateName,
+          createdAt: dateStr,
+          status: '완료',
+          sourceCount: (sourceFileIds ?? []).length,
+          content: `[HWPX 양식 채우기] ${templateName}`,
         },
         format,
         downloadUrl: urlData?.signedUrl ?? null,

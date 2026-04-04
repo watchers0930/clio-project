@@ -592,8 +592,34 @@ export async function generateForFormat(params: {
       return { format, title, markdown };
     }
 
-    case 'pdf':
     case 'hwpx': {
+      if (hasTemplateFile) {
+        // HWPX 테이블 구조 분석 → 빈 셀이 있으면 폼 데이터 방식
+        const { extractHwpxTableStructure } = await import('@/lib/renderers/hwpx-renderer');
+        const hwpxResult = extractHwpxTableStructure(rest.templateBuffer!);
+
+        if (hwpxResult && hwpxResult.structure.hasEmptyCells) {
+          const hwpxFormData = await generateDocxFormData({
+            templateName,
+            tableStructure: hwpxResult.structure,
+            sourceChunks: rest.sourceChunks,
+            instructions: rest.instructions,
+          });
+          return { format, title, hwpxFormData, hwpxTableStructure: hwpxResult.structure, templateBuffer: rest.templateBuffer! };
+        }
+      }
+      // 템플릿 없거나 빈 셀 없으면 → 마크다운 기반 새로 생성
+      const hwpxMarkdown = await generateDocumentContent({
+        templateName,
+        templateContent: rest.templateContent,
+        templateFileText: rest.templateFileText,
+        sourceChunks: rest.sourceChunks,
+        instructions: rest.instructions,
+      });
+      return { format, title, markdown: hwpxMarkdown };
+    }
+
+    case 'pdf': {
       const markdown = await generateDocumentContent({
         templateName,
         templateContent: rest.templateContent,

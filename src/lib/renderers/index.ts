@@ -7,7 +7,7 @@
 export { renderDocx, renderDocxFromTemplate, renderDocxFromFormData, extractDocxTableStructure } from './docx-renderer';
 export { renderXlsx, renderXlsxFromTemplate } from './xlsx-renderer';
 export { renderPptx, renderPptxFromTemplate } from './pptx-renderer';
-export { renderHwpx } from './hwpx-renderer';
+export { renderHwpx, renderHwpxFromFormData, extractHwpxTableStructure } from './hwpx-renderer';
 export { renderPdf } from './pdf-renderer';
 export type {
   OutputFormat,
@@ -28,7 +28,7 @@ import { DEFAULT_THEME } from './types';
 import { renderDocx, renderDocxFromTemplate, renderDocxFromFormData } from './docx-renderer';
 import { renderXlsx, renderXlsxFromTemplate } from './xlsx-renderer';
 import { renderPptx, renderPptxFromTemplate } from './pptx-renderer';
-import { renderHwpx } from './hwpx-renderer';
+import { renderHwpx, renderHwpxFromFormData } from './hwpx-renderer';
 import { renderPdf } from './pdf-renderer';
 
 /**
@@ -72,6 +72,11 @@ export async function renderDocument(
       return renderPptx(result.pptxSlides, result.title, theme);
 
     case 'hwpx':
+      // 폼 데이터 기반: 빈 셀에 내용 주입
+      if (result.templateBuffer && result.hwpxFormData && result.hwpxTableStructure) {
+        return renderHwpxFromFormData(result.templateBuffer, result.hwpxFormData, result.title);
+      }
+      // 새로 생성
       if (!result.markdown) throw new Error('HWPX 렌더링에 마크다운 콘텐츠가 필요합니다.');
       return renderHwpx(result.markdown, result.title, theme);
 

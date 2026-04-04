@@ -234,6 +234,39 @@ async function extractHwp(buffer: ArrayBuffer, fileName: string): Promise<string
   }
 }
 
+// ─── XLSX 구조화 추출 (셀 주소 포함, 템플릿용) ────────────
+export async function extractXlsxStructured(buffer: ArrayBuffer): Promise<string> {
+  const XLSX = await import('xlsx');
+  const workbook = XLSX.read(buffer, { type: 'array' });
+  const sheets: string[] = [];
+
+  for (const sheetName of workbook.SheetNames) {
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet['!ref']) {
+      sheets.push(`[시트: ${sheetName}]\n(빈 시트)`);
+      continue;
+    }
+
+    const range = XLSX.utils.decode_range(sheet['!ref']);
+    const rows: string[] = [];
+
+    for (let r = range.s.r; r <= range.e.r; r++) {
+      const cells: string[] = [];
+      for (let c = range.s.c; c <= range.e.c; c++) {
+        const addr = XLSX.utils.encode_cell({ r, c });
+        const cell = sheet[addr];
+        const val = cell ? String(cell.v ?? '').trim() : '';
+        cells.push(`${addr}: ${val || '(빈칸)'}`);
+      }
+      rows.push(cells.join(' | '));
+    }
+
+    sheets.push(`[시트: ${sheetName}] (${range.e.r - range.s.r + 1}행 × ${range.e.c - range.s.c + 1}열)\n${rows.join('\n')}`);
+  }
+
+  return sheets.join('\n\n');
+}
+
 /** 오디오 파일인지 확인 */
 export function isAudioFile(mimeType: string, fileName: string): boolean {
   const audioMimes = ['audio/m4a', 'audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/webm', 'audio/mp4'];

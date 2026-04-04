@@ -76,6 +76,10 @@ export interface GenerationResult {
   pptxSlides?: PptxSlide[];
   /** PPTX용 텍스트 치환 (템플릿 있을 때) */
   pptxReplacements?: PptxReplacement;
+  /** HWPX용 폼 데이터 (빈 셀 채우기) */
+  hwpxFormData?: DocxFormData;
+  /** HWPX 테이블 구조 (렌더러 전달용) */
+  hwpxTableStructure?: DocxTableStructure;
   /** 템플릿 바이너리 (렌더러에 전달) */
   templateBuffer?: Buffer;
   /** 문서 제목 */
