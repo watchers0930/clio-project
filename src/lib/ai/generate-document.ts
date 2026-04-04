@@ -744,14 +744,17 @@ export async function generateForFormat(params: {
           const { extractHwpxTableStructure } = await import('@/lib/renderers/hwpx-renderer');
           const hwpxResult = extractHwpxTableStructure(rest.templateBuffer!);
 
+          console.log('[HWPX] extractHwpxTableStructure result:', hwpxResult ? `tables=${hwpxResult.structure.tables.length}, emptyCells=${hwpxResult.structure.emptyCells.length}` : 'null');
           if (hwpxResult && hwpxResult.structure.hasEmptyCells) {
             // 프로그래밍 방식으로 직접 매핑 (AI 미사용)
             const hwpxFormData = mapFormDataDirect(hwpxResult.structure, rest.instructions ?? '');
+            console.log('[HWPX] mapFormDataDirect keys:', Object.keys(hwpxFormData).length);
             return { format, title, hwpxFormData, hwpxTableStructure: hwpxResult.structure, templateBuffer: rest.templateBuffer! };
           }
         } catch (e) {
-          console.error('[generateForFormat] HWPX 구조 분석 실패, 마크다운 폴백:', e instanceof Error ? e.message : e);
+          console.error('[HWPX] 구조 분석 실패, 마크다운 폴백:', e instanceof Error ? e.message : e, e instanceof Error ? e.stack : '');
         }
+        console.warn('[HWPX] Form-fill 경로 실패, 마크다운 폴백 진입');
       }
       // 템플릿 없거나 빈 셀 없으면 → 마크다운 기반 새로 생성
       const hwpxMarkdown = await generateDocumentContent({
