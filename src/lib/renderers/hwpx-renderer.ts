@@ -264,6 +264,9 @@ export async function renderHwpxFromFormData(
   structure: DocxTableStructure,
   title: string,
 ): Promise<RenderOutput> {
+  if (templateBuffer.length < 4 || templateBuffer[0] !== 0x50 || templateBuffer[1] !== 0x4B) {
+    throw new Error('HWPX 파일이 유효한 ZIP이 아닙니다.');
+  }
   const zip = new PizZip(templateBuffer);
 
   const sectionFile = Object.keys(zip.files).find(name => /^Contents\/section\d+\.xml$/i.test(name));
