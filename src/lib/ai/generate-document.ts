@@ -596,7 +596,7 @@ export async function generateForFormat(params: {
       if (hasTemplateFile) {
         // HWPX 테이블 구조 분석 → 빈 셀이 있으면 폼 데이터 방식
         const { extractHwpxTableStructure } = await import('@/lib/renderers/hwpx-renderer');
-        const hwpxResult = extractHwpxTableStructure(rest.templateBuffer!);
+        const hwpxResult = await extractHwpxTableStructure(rest.templateBuffer!);
 
         if (hwpxResult && hwpxResult.structure.hasEmptyCells) {
           const hwpxFormData = await generateDocxFormData({

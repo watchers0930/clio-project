@@ -190,12 +190,11 @@ function extractHwpxColSpan(cellXml: string): number {
 }
 
 /** HWPX 템플릿 Buffer에서 테이블 구조 추출 */
-export function extractHwpxTableStructure(templateBuffer: Buffer): { structure: DocxTableStructure; sectionXml: string; sectionPath: string } | null {
-  const AdmZip = require('adm-zip');
+export async function extractHwpxTableStructure(templateBuffer: Buffer): Promise<{ structure: DocxTableStructure; sectionXml: string; sectionPath: string } | null> {
+  const AdmZip = (await import('adm-zip')).default;
   const zip = new AdmZip(templateBuffer);
   const entries = zip.getEntries();
 
-  // section XML 찾기
   const sectionEntry = entries.find((e: { entryName: string }) =>
     /^Contents\/section\d+\.xml$/i.test(e.entryName)
   );
@@ -210,6 +209,8 @@ export function extractHwpxTableStructure(templateBuffer: Buffer): { structure: 
   const tcTag = sectionXml.includes('<hp:tc') ? 'hp:tc' : 'tc';
 
   const tables = findBlocks(sectionXml, tblTag);
+  if (tables.length === 0) return null;
+
   const result: DocxTableStructure = { tables: [], emptyCells: [], hasEmptyCells: false };
 
   tables.forEach((tbl, tableIndex) => {
@@ -228,19 +229,12 @@ export function extractHwpxTableStructure(templateBuffer: Buffer): { structure: 
 
         row.push({
           fieldId: `field_${tableIndex}_${rowIndex}_${colIndex}`,
-          tableIndex,
-          rowIndex,
-          colIndex,
-          isEmpty,
-          text,
-          contextLabel: '',
-          gridSpan,
+          tableIndex, rowIndex, colIndex,
+          isEmpty, text, contextLabel: '', gridSpan,
         });
       });
 
-      if (rowIndex === 0) {
-        headers = row.map(c => c.text);
-      }
+      if (rowIndex === 0) headers = row.map(c => c.text);
       parsedRows.push(row);
     });
 
@@ -248,9 +242,7 @@ export function extractHwpxTableStructure(templateBuffer: Buffer): { structure: 
       for (let c = 0; c < parsedRows[r].length; c++) {
         const cell = parsedRows[r][c];
         cell.contextLabel = headers[c] ?? '';
-        if (cell.isEmpty) {
-          result.emptyCells.push(cell);
-        }
+        if (cell.isEmpty) result.emptyCells.push(cell);
       }
     }
 
@@ -265,6 +257,7 @@ export function extractHwpxTableStructure(templateBuffer: Buffer): { structure: 
 export async function renderHwpxFromFormData(
   templateBuffer: Buffer,
   formData: DocxFormData,
+  structure: DocxTableStructure,
   title: string,
 ): Promise<RenderOutput> {
   const AdmZip = (await import('adm-zip')).default;
@@ -277,21 +270,61 @@ export async function renderHwpxFromFormData(
   if (!sectionEntry) throw new Error('HWPX section XML을 찾을 수 없습니다.');
 
   let xml = sectionEntry.getData().toString('utf-8');
+  const tblTag = xml.includes('<hp:tbl') ? 'hp:tbl' : 'tbl';
+  const trTag = xml.includes('<hp:tr') ? 'hp:tr' : 'tr';
+  const tcTag = xml.includes('<hp:tc') ? 'hp:tc' : 'tc';
+  const tTag = xml.includes('<hp:t') ? 'hp:t' : 't';
 
-  // 각 필드의 내용을 XML에 삽입
-  for (const [fieldId, content] of Object.entries(formData)) {
+  // 역순으로 빈 셀에 내용 직접 주입 (플레이스홀더 단계 불필요)
+  const sortedCells = [...structure.emptyCells].sort((a, b) => {
+    if (a.tableIndex !== b.tableIndex) return b.tableIndex - a.tableIndex;
+    if (a.rowIndex !== b.rowIndex) return b.rowIndex - a.rowIndex;
+    return b.colIndex - a.colIndex;
+  });
+
+  const tblBlocks = findBlocks(xml, tblTag);
+
+  for (const cell of sortedCells) {
+    const content = formData[cell.fieldId] ?? '';
     if (!content) continue;
-    // XML 이스케이프
+
     const escaped = content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-    // 방법: 빈 <hp:t> 태그를 찾아 내용 삽입은 복잡하므로
-    // 플레이스홀더 방식 사용 — 먼저 빈 셀에 fieldId를 넣고 치환
-    const placeholder = `__CLIO_${fieldId}__`;
-    xml = xml.replace(placeholder, escaped);
-  }
+    const tbl = tblBlocks[cell.tableIndex];
+    if (!tbl) continue;
+    const rows = findBlocks(tbl.content, trTag);
+    const row = rows[cell.rowIndex];
+    if (!row) continue;
+    const cells = findBlocks(row.content, tcTag);
+    const tc = cells[cell.colIndex];
+    if (!tc) continue;
 
-  // 미치환된 플레이스홀더 제거
-  xml = xml.replace(/__CLIO_field_\d+_\d+_\d+__/g, '');
+    let cellXml = tc.content;
+    const tRegex = new RegExp(`<${tTag}([^>]*)>([^<]*)</${tTag}>`);
+
+    if (tRegex.test(cellXml)) {
+      // 기존 빈 <hp:t>에 내용 삽입
+      let replaced = false;
+      cellXml = cellXml.replace(tRegex, (match, attrs, text) => {
+        if (!replaced && text.replace(/[\d.]/g, '').trim() === '') {
+          replaced = true;
+          return `<${tTag}${attrs}>${escaped}</${tTag}>`;
+        }
+        return match;
+      });
+    } else {
+      // <hp:t> 없으면 셀 끝에 paragraph 추가
+      const closeTag = `</${tcTag}>`;
+      cellXml = cellXml.replace(
+        new RegExp(`${closeTag.replace(/[/]/g, '\\/')}$`),
+        `<hp:p><hp:run><hp:char><${tTag}>${escaped}</${tTag}></hp:char></hp:run></hp:p>${closeTag}`,
+      );
+    }
+
+    const absStart = tbl.start + row.start + tc.start;
+    const absEnd = tbl.start + row.start + tc.end;
+    xml = xml.slice(0, absStart) + cellXml + xml.slice(absEnd);
+  }
 
   zip.updateFile(sectionEntry.entryName, Buffer.from(xml, 'utf-8'));
   const buffer = zip.toBuffer();
@@ -302,84 +335,4 @@ export async function renderHwpxFromFormData(
     extension: 'hwpx',
     fileName: `${title}.hwpx`,
   };
-}
-
-/** HWPX XML의 빈 셀에 플레이스홀더를 삽입하고 Buffer 반환 */
-export function injectHwpxPlaceholders(
-  templateBuffer: Buffer,
-  structure: DocxTableStructure,
-): Buffer {
-  const AdmZip = require('adm-zip');
-  const zip = new AdmZip(templateBuffer);
-  const entries = zip.getEntries();
-
-  const sectionEntry = entries.find((e: { entryName: string }) =>
-    /^Contents\/section\d+\.xml$/i.test(e.entryName)
-  );
-  if (!sectionEntry) return templateBuffer;
-
-  let xml = sectionEntry.getData().toString('utf-8');
-  const tblTag = xml.includes('<hp:tbl') ? 'hp:tbl' : 'tbl';
-  const trTag = xml.includes('<hp:tr') ? 'hp:tr' : 'tr';
-  const tcTag = xml.includes('<hp:tc') ? 'hp:tc' : 'tc';
-  const tTag = xml.includes('<hp:t') ? 'hp:t' : 't';
-
-  // 역순으로 처리
-  const sortedCells = [...structure.emptyCells].sort((a, b) => {
-    if (a.tableIndex !== b.tableIndex) return b.tableIndex - a.tableIndex;
-    if (a.rowIndex !== b.rowIndex) return b.rowIndex - a.rowIndex;
-    return b.colIndex - a.colIndex;
-  });
-
-  const tblBlocks = findBlocks(xml, tblTag);
-
-  for (const cell of sortedCells) {
-    const tbl = tblBlocks[cell.tableIndex];
-    if (!tbl) continue;
-    const rows = findBlocks(tbl.content, trTag);
-    const row = rows[cell.rowIndex];
-    if (!row) continue;
-    const cells = findBlocks(row.content, tcTag);
-    const tc = cells[cell.colIndex];
-    if (!tc) continue;
-
-    const placeholder = `__CLIO_${cell.fieldId}__`;
-    let cellXml = tc.content;
-
-    // 빈 <hp:t> 또는 <t>에 플레이스홀더 삽입
-    const tRegex = new RegExp(`<${tTag}([^>]*)>([^<]*)</${tTag}>`);
-    const hasT = tRegex.test(cellXml);
-
-    if (hasT) {
-      let replaced = false;
-      cellXml = cellXml.replace(tRegex, (match, attrs, text) => {
-        if (!replaced && text.replace(/[\d.]/g, '').trim() === '') {
-          replaced = true;
-          return `<${tTag}${attrs}>${placeholder}</${tTag}>`;
-        }
-        return match;
-      });
-    } else {
-      // <hp:t> 없으면 </hp:p> 앞에 삽입
-      const pCloseTag = xml.includes('</hp:p>') ? '</hp:p>' : '</p>';
-      cellXml = cellXml.replace(
-        new RegExp(`</${tTag === 'hp:t' ? 'hp:run' : 'run'}>`),
-        `<${tTag}>${placeholder}</${tTag}></${tTag === 'hp:t' ? 'hp:run' : 'run'}>`,
-      );
-      // 폴백: 직접 치환이 안 되면 단순 run 삽입
-      if (!cellXml.includes(placeholder)) {
-        cellXml = cellXml.replace(
-          new RegExp(`</${tTag === 'hp:tc' ? 'hp:tc' : 'tc'}>`),
-          `<hp:p><hp:run><hp:char><${tTag}>${placeholder}</${tTag}></hp:char></hp:run></hp:p></${tTag === 'hp:tc' ? 'hp:tc' : 'tc'}>`,
-        );
-      }
-    }
-
-    const absStart = tbl.start + row.start + tc.start;
-    const absEnd = tbl.start + row.start + tc.end;
-    xml = xml.slice(0, absStart) + cellXml + xml.slice(absEnd);
-  }
-
-  zip.updateFile(sectionEntry.entryName, Buffer.from(xml, 'utf-8'));
-  return zip.toBuffer();
 }

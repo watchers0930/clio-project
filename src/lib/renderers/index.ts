@@ -8,6 +8,7 @@ export { renderDocx, renderDocxFromTemplate, renderDocxFromFormData, extractDocx
 export { renderXlsx, renderXlsxFromTemplate } from './xlsx-renderer';
 export { renderPptx, renderPptxFromTemplate } from './pptx-renderer';
 export { renderHwpx, renderHwpxFromFormData, extractHwpxTableStructure } from './hwpx-renderer';
+// injectHwpxPlaceholders는 renderHwpxFromFormData 내부에서 직접 처리
 export { renderPdf } from './pdf-renderer';
 export type {
   OutputFormat,
@@ -74,7 +75,7 @@ export async function renderDocument(
     case 'hwpx':
       // 폼 데이터 기반: 빈 셀에 내용 주입
       if (result.templateBuffer && result.hwpxFormData && result.hwpxTableStructure) {
-        return renderHwpxFromFormData(result.templateBuffer, result.hwpxFormData, result.title);
+        return renderHwpxFromFormData(result.templateBuffer, result.hwpxFormData, result.hwpxTableStructure, result.title);
       }
       // 새로 생성
       if (!result.markdown) throw new Error('HWPX 렌더링에 마크다운 콘텐츠가 필요합니다.');
