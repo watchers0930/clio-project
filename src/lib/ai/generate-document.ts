@@ -607,15 +607,34 @@ export async function generateDocxFormData(params: {
 
 ## 메타데이터 자동 매핑
 지시사항에 아래 정보가 포함되어 있으면 해당 필드에 자동 배치하세요:
+- "작성일자: ..." 또는 "회의일시: ..." → 해당 라벨 옆 빈칸에
 - "보고번호: ..." → 보고번호 옆 빈칸에
-- "작성일자: ..." → 작성일자 옆 빈칸에
 - "작성자: ..." → 작성자 옆 빈칸에
-- "부서명: ..." → 부서명 옆 빈칸에
+- "부서명: ..." 또는 "부서: ..." → 부서 옆 빈칸에
+- "참석자: ..." → 참석자 옆 빈칸에
 
-## 업무 내용 매핑
-지시사항에서 "금일 업무:" 또는 "금일업무:"로 시작하는 내용은 "금일 업무내용" 영역의 번호별 행에 배치하세요.
-"명일 업무:" 또는 "명일업무:"로 시작하는 내용은 "명일 업무내용" 영역에 배치하세요.
-"비고:" 로 시작하는 내용은 "비고" 영역에 배치하세요.
+## 양식 유형별 매핑 가이드
+
+### 회의록
+- "회의일시" 옆 빈칸 → 회의 날짜/시간
+- "부서" 옆 빈칸 → 주관 부서명
+- "작성자" 옆 빈칸 → 작성자 이름
+- "참석자" 옆 빈칸 → 참석자 목록 (쉼표 구분)
+- "회의안건" 영역의 번호별 빈칸 → 안건 항목들
+- "회의내용" 영역의 "내용" 열 빈칸 → 논의 내용을 상세히 기술
+- "회의내용" 영역의 "비고" 열 빈칸 → 보충 설명이나 참고사항
+- "결정사항" 영역의 "내용" 열 빈칸 → 결정된 사항들
+- "결정사항" 영역의 "진행일정" 열 빈칸 → 각 결정사항의 일정/기한
+- "특이사항" 영역 빈칸 → 특별히 언급할 사항
+
+### 업무일지
+- "금일 업무:" 또는 "금일업무:" → "금일 업무내용" 영역의 번호별 행에 배치
+- "명일 업무:" 또는 "명일업무:" → "명일 업무내용" 영역에 배치
+- "비고:" → "비고" 영역에 배치
+
+### 기타 양식
+- 라벨(왼쪽 셀 또는 헤더 행)의 의미를 파악하고 지시사항에서 관련 내용을 추출하여 매핑
+- 큰 빈칸(회의내용 등)은 지시사항의 핵심 내용을 충실히 반영하여 상세히 작성
 
 ## 출력 형식
 반드시 아래 JSON 객체 형식으로만 출력하세요. 다른 텍스트는 포함하지 마세요.
@@ -711,9 +730,23 @@ export async function generateForFormat(params: {
           const tableStructure = extractDocxTableStructure(rest.templateBuffer!);
 
           if (tableStructure.hasEmptyCells) {
-            // 프로그래밍 방식으로 직접 매핑 (AI 미사용)
-            const docxFormData = mapFormDataDirect(tableStructure, rest.instructions ?? '');
-            return { format, title, docxFormData, tableStructure, templateBuffer: rest.templateBuffer! };
+            // 1차: 프로그래밍 매핑 시도
+            const directData = mapFormDataDirect(tableStructure, rest.instructions ?? '');
+            const filledCount = Object.values(directData).filter(v => v && v.trim()).length;
+
+            // 채운 셀이 전체 빈 셀의 30% 미만이면 AI로 대체
+            if (filledCount < tableStructure.emptyCells.length * 0.3) {
+              console.log(`[generateForFormat] 직접 매핑 부족 (${filledCount}/${tableStructure.emptyCells.length}), AI 생성으로 전환`);
+              const docxFormData = await generateDocxFormData({
+                templateName,
+                tableStructure,
+                sourceChunks: rest.sourceChunks,
+                instructions: rest.instructions,
+              });
+              return { format, title, docxFormData, tableStructure, templateBuffer: rest.templateBuffer! };
+            }
+
+            return { format, title, docxFormData: directData, tableStructure, templateBuffer: rest.templateBuffer! };
           }
         } catch (e) {
           console.error('[generateForFormat] DOCX 구조 분석 실패, 텍스트 치환 폴백:', e);
