@@ -929,16 +929,29 @@ export default function DocumentsPage() {
                     </div>
                   )}
 
-                  {/* XLSX/PPTX 직접 다운로드 버튼 */}
+                  {/* 파일 다운로드 버튼 */}
                   {generatedDownloadUrl && (
-                    <a
-                      href={generatedDownloadUrl}
-                      download
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await fetch(generatedDownloadUrl);
+                          if (!res.ok) throw new Error('다운로드 실패');
+                          const blob = await res.blob();
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${generatedDoc?.title ?? '문서'}.${outputFormat}`;
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          URL.revokeObjectURL(url);
+                        } catch { alert('다운로드에 실패했습니다.'); }
+                      }}
                       className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#0071e3] text-white text-sm font-medium hover:bg-[#005bb5] transition-colors"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
                       {outputFormat.toUpperCase()} 파일 다운로드
-                    </a>
+                    </button>
                   )}
                 </div>
               )}
