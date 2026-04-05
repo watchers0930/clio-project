@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '템플릿을 선택하거나 문서 구조를 입력해주세요.' }, { status: 400 });
     }
 
-    const format = outputFormat as OutputFormat;
+    let format = outputFormat as OutputFormat;
     if (!VALID_FORMATS.includes(format)) {
       return NextResponse.json({ error: `지원하지 않는 포맷: ${outputFormat}` }, { status: 400 });
     }
@@ -140,6 +140,19 @@ export async function POST(request: NextRequest) {
         } catch (e) {
           console.error(`[generate] extract template:`, e);
         }
+      }
+    }
+
+    // 템플릿 파일 확장자와 출력 포맷 불일치 시 자동 보정
+    if (tmpl?.template_file_id && templateBuffer) {
+      const { data: tplFileCheck } = await supabase.from('files').select('name').eq('id', tmpl.template_file_id).single();
+      const tplExt = tplFileCheck?.name?.split('.').pop()?.toLowerCase() ?? '';
+      if (tplExt === 'hwpx' && format === 'docx') {
+        format = 'hwpx';
+        console.log('[generate] 포맷 자동 보정: docx → hwpx (템플릿 파일이 HWPX)');
+      } else if (tplExt === 'docx' && format === 'hwpx') {
+        format = 'docx';
+        console.log('[generate] 포맷 자동 보정: hwpx → docx (템플릿 파일이 DOCX)');
       }
     }
 
