@@ -195,14 +195,16 @@ export async function POST(request: NextRequest) {
         if (/^(소속|성명|연락처|서명|참석자)$/.test(label)) fd[cell.fieldId] = '';
         if (/보고처/.test(label)) fd[cell.fieldId] = userDept;
         if (/보고서명/.test(label)) fd[cell.fieldId] = templateName;
-        // 담당 → row 0은 빈칸, row 1 col 0(담당 바로 아래)에만 이름
+        // 담당 → row 0은 빈칸
         if (/^담당$/.test(label)) fd[cell.fieldId] = '';
-        // 보고서 헤더 영역(row 1, col 0) = 담당 바로 아래
-        if (/보고서/.test(label) && cell.rowIndex === 1 && cell.colIndex === 0 && !dangdangFilled) {
-          fd[cell.fieldId] = userName; dangdangFilled = true;
+        // 보고서(20 년 월 일) 영역: row 1 col 0은 담당 아래 = 이름, 나머지는 빈칸
+        if (/보고서\s*\(/.test(label)) {
+          if (cell.rowIndex === 1 && cell.colIndex === 0 && !dangdangFilled) {
+            fd[cell.fieldId] = userName; dangdangFilled = true;
+          } else {
+            fd[cell.fieldId] = '';
+          }
         }
-        // 보고서(20 년 월 일) 영역 → 날짜 넣지 않음 (빈칸)
-        if (/보고서\s*\(/.test(label)) fd[cell.fieldId] = '';
       }
 
       const rendered = await renderDocument(generationResult, theme);
@@ -273,10 +275,13 @@ export async function POST(request: NextRequest) {
         if (/보고처/.test(label)) hfd[cell.fieldId] = userDept;
         if (/보고서명/.test(label)) hfd[cell.fieldId] = templateName;
         if (/^담당$/.test(label)) hfd[cell.fieldId] = '';
-        if (/보고서/.test(label) && cell.rowIndex === 1 && cell.colIndex === 0 && !hdangFilled) {
-          hfd[cell.fieldId] = userName; hdangFilled = true;
+        if (/보고서\s*\(/.test(label)) {
+          if (cell.rowIndex === 1 && cell.colIndex === 0 && !hdangFilled) {
+            hfd[cell.fieldId] = userName; hdangFilled = true;
+          } else {
+            hfd[cell.fieldId] = '';
+          }
         }
-        if (/보고서\s*\(/.test(label)) hfd[cell.fieldId] = '';
       }
       // (행 배분 제거 — AI가 번호 단락으로 한 셀에 작성)
 

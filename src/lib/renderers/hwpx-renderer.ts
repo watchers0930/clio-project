@@ -346,6 +346,42 @@ export async function renderHwpxFromFormData(
     xml = xml.slice(0, absStart) + cellXml + xml.slice(absEnd);
   }
 
+  // ── 빈 셀 높이 최소화 (빈 줄 안 보이게) ──
+  const tblsAfter = findBlocks(xml, tblTag);
+  for (let ti = tblsAfter.length - 1; ti >= 0; ti--) {
+    const tblA = tblsAfter[ti];
+    const rowsA = findBlocks(tblA.content, trTag);
+    let modified = tblA.content;
+    for (let ri = rowsA.length - 1; ri >= 1; ri--) {
+      const rowCellsA = findBlocks(rowsA[ri].content, tcTag);
+      // 셀 내 텍스트 확인
+      const allEmpty = rowCellsA.every(tc => {
+        const tR = new RegExp(`<${tTag}[^>]*>([^<]*)</${tTag}>`, 'g');
+        let txt = '';
+        let m2;
+        while ((m2 = tR.exec(tc.content)) !== null) txt += m2[1];
+        return txt.replace(/[\d.]/g, '').trim() === '';
+      });
+      if (allEmpty) {
+        // cellSz height를 1로 줄이기
+        let newRow = rowsA[ri].content.replace(
+          /(<hp:cellSz[^>]*\sheight=")(\d+)(")/g,
+          '$11$3'
+        );
+        // cellMargin top/bottom도 0으로
+        newRow = newRow.replace(
+          /(<hp:cellMargin[^>]*\stop=")(\d+)(")/g, '$10$3'
+        ).replace(
+          /(<hp:cellMargin[^>]*\sbottom=")(\d+)(")/g, '$10$3'
+        );
+        modified = modified.slice(0, rowsA[ri].start) + newRow + modified.slice(rowsA[ri].end);
+      }
+    }
+    if (modified !== tblA.content) {
+      xml = xml.slice(0, tblA.start) + modified + xml.slice(tblA.end);
+    }
+  }
+
   zip.file(sectionFile, xml);
   const buffer = Buffer.from(zip.generate({ type: 'nodebuffer' }));
 
