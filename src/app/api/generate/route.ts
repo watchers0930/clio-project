@@ -195,13 +195,34 @@ export async function POST(request: NextRequest) {
         if (/^(소속|성명|연락처|서명|참석자)$/.test(label)) fd[cell.fieldId] = '';
         if (/보고처/.test(label)) fd[cell.fieldId] = userDept;
         if (/보고서명/.test(label)) fd[cell.fieldId] = templateName;
-        // 담당 → 첫 번째 매칭만 사용자 이름, 나머지는 빈칸
+        // 담당 → 아래 빈칸(row >= 1)에만 이름, 옆 빈칸(row 0)은 빈칸
         if (/^담당$/.test(label)) {
-          if (!dangdangFilled) { fd[cell.fieldId] = userName; dangdangFilled = true; }
+          if (cell.rowIndex >= 1 && !dangdangFilled) { fd[cell.fieldId] = userName; dangdangFilled = true; }
           else fd[cell.fieldId] = '';
         }
         // 보고서(20 년 월 일) 영역 → 날짜 넣지 않음 (빈칸)
         if (/보고서\s*\(/.test(label)) fd[cell.fieldId] = '';
+      }
+
+      // 단일 열 테이블 내용 배분 (정보출처, 보고내용, 문제점 등)
+      const tableGroups = new Map<number, typeof cells>();
+      for (const cell of cells) {
+        if (!tableGroups.has(cell.tableIndex)) tableGroups.set(cell.tableIndex, []);
+        tableGroups.get(cell.tableIndex)!.push(cell);
+      }
+      for (const [, tCells] of tableGroups) {
+        const emptyCells = tCells.filter(c => c.isEmpty && c.rowIndex > 0);
+        if (emptyCells.length < 2) continue;
+        // 첫 번째 셀에 모든 내용이 몰려있으면 줄 단위로 배분
+        const first = emptyCells[0];
+        const content = fd[first.fieldId] ?? '';
+        if (!content || !content.includes('\n')) continue;
+        const lines = content.split('\n').filter(l => l.trim());
+        if (lines.length <= 1) continue;
+        // 행 수에 맞게 배분
+        for (let i = 0; i < emptyCells.length; i++) {
+          fd[emptyCells[i].fieldId] = i < lines.length ? lines[i] : '';
+        }
       }
 
       const rendered = await renderDocument(generationResult, theme);
@@ -272,10 +293,28 @@ export async function POST(request: NextRequest) {
         if (/보고처/.test(label)) hfd[cell.fieldId] = userDept;
         if (/보고서명/.test(label)) hfd[cell.fieldId] = templateName;
         if (/^담당$/.test(label)) {
-          if (!hdangFilled) { hfd[cell.fieldId] = userName; hdangFilled = true; }
+          if (cell.rowIndex >= 1 && !hdangFilled) { hfd[cell.fieldId] = userName; hdangFilled = true; }
           else hfd[cell.fieldId] = '';
         }
         if (/보고서\s*\(/.test(label)) hfd[cell.fieldId] = '';
+      }
+      // 단일 열 테이블 내용 배분
+      const htableGroups = new Map<number, typeof hcells>();
+      for (const cell of hcells) {
+        if (!htableGroups.has(cell.tableIndex)) htableGroups.set(cell.tableIndex, []);
+        htableGroups.get(cell.tableIndex)!.push(cell);
+      }
+      for (const [, tCells] of htableGroups) {
+        const emptyCells = tCells.filter(c => c.isEmpty && c.rowIndex > 0);
+        if (emptyCells.length < 2) continue;
+        const first = emptyCells[0];
+        const content = hfd[first.fieldId] ?? '';
+        if (!content || !content.includes('\n')) continue;
+        const lines = content.split('\n').filter(l => l.trim());
+        if (lines.length <= 1) continue;
+        for (let i = 0; i < emptyCells.length; i++) {
+          hfd[emptyCells[i].fieldId] = i < lines.length ? lines[i] : '';
+        }
       }
 
       const rendered = await renderDocument(generationResult, theme);
