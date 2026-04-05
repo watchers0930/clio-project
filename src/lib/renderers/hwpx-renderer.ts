@@ -346,34 +346,6 @@ export async function renderHwpxFromFormData(
     xml = xml.slice(0, absStart) + cellXml + xml.slice(absEnd);
   }
 
-  // ── 빈 행 삭제: 내용 주입 후 남은 빈 행 제거 (유동적 행 수) ──
-  const tblBlocksAfter = findBlocks(xml, tblTag);
-  // 역순으로 처리
-  for (let ti = tblBlocksAfter.length - 1; ti >= 0; ti--) {
-    const tbl = tblBlocksAfter[ti];
-    const rows = findBlocks(tbl.content, trTag);
-    if (rows.length <= 1) continue; // 헤더만 있는 테이블 스킵
-
-    let newTblContent = tbl.content;
-    // 역순으로 행 검사, 빈 행이면 삭제
-    for (let ri = rows.length - 1; ri >= 1; ri--) {
-      const rowCells = findBlocks(rows[ri].content, tcTag);
-      const allEmpty = rowCells.every(tc => {
-        const tRegex2 = new RegExp(`<${tTag}[^>]*>([^<]*)</${tTag}>`, 'g');
-        let txt = '';
-        let m2;
-        while ((m2 = tRegex2.exec(tc.content)) !== null) txt += m2[1];
-        return txt.replace(/[\d.]/g, '').trim() === '';
-      });
-      if (allEmpty) {
-        newTblContent = newTblContent.slice(0, rows[ri].start) + newTblContent.slice(rows[ri].end);
-      }
-    }
-    if (newTblContent !== tbl.content) {
-      xml = xml.slice(0, tbl.start) + newTblContent + xml.slice(tbl.end);
-    }
-  }
-
   zip.file(sectionFile, xml);
   const buffer = Buffer.from(zip.generate({ type: 'nodebuffer' }));
 
