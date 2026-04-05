@@ -234,14 +234,14 @@ export function extractDocxTableStructure(templateBuffer: Buffer): DocxTableStru
       parsedRows.push(row);
     });
 
-    // 빈 셀에 contextLabel 매핑 (왼쪽 이웃 셀 우선, 없으면 헤더)
-    for (let r = 1; r < parsedRows.length; r++) {
+    // 빈 셀에 contextLabel 매핑 (row 0 포함 — 작성자 소속/직급/명 등 첫 행 빈칸도 감지)
+    for (let r = 0; r < parsedRows.length; r++) {
       for (let c = 0; c < parsedRows[r].length; c++) {
         const cell = parsedRows[r][c];
         const leftNeighbor = c > 0 ? parsedRows[r][c - 1] : null;
         cell.contextLabel = (leftNeighbor && !leftNeighbor.isEmpty && leftNeighbor.text)
           ? leftNeighbor.text
-          : (headers[c] ?? '');
+          : (r > 0 ? (headers[c] ?? '') : '');
         if (cell.isEmpty) {
           result.emptyCells.push(cell);
         }
@@ -291,8 +291,15 @@ export function injectPlaceholders(
     const placeholder = `{{${cell.fieldId}}}`;
     placeholderMap[cell.fieldId] = cell.contextLabel || `행${cell.rowIndex}_열${cell.colIndex}`;
 
-    // 셀 내 XML에서 빈 w:t에 placeholder 삽입
+    // 셀 수직 정렬을 상단(top)으로 설정
     let cellXml = tc.content;
+    if (/<w:tcPr>/.test(cellXml) && !/<w:vAlign/.test(cellXml)) {
+      cellXml = cellXml.replace(/<\/w:tcPr>/, '<w:vAlign w:val="top"/></w:tcPr>');
+    } else if (!/<w:tcPr>/.test(cellXml)) {
+      cellXml = cellXml.replace(/<w:tc[\s>]/, (m) => `${m.slice(0, -1)}><w:tcPr><w:vAlign w:val="top"/></w:tcPr>`);
+    }
+
+    // 셀 내 XML에서 빈 w:t에 placeholder 삽입
     const hasRunWithText = /<w:r[^>]*>[\s\S]*?<w:t[^>]*>[^<]*<\/w:t>[\s\S]*?<\/w:r>/.test(cellXml);
 
     if (hasRunWithText) {
@@ -366,17 +373,22 @@ export async function renderDocxFromFormData(
     }
   }
 
-  // 폰트를 페이퍼로지로 변경
+  // 폰트를 페이퍼로지로 변경 (document.xml + styles.xml + theme)
   const zipFinal = doc.getZip();
-  const docXmlPath = 'word/document.xml';
-  const docFile = zipFinal.file(docXmlPath);
-  if (docFile) {
-    let docXml = docFile.asText();
-    // eastAsia, hAnsi, ascii 폰트를 페이퍼로지로 교체
-    docXml = docXml.replace(/w:eastAsia="[^"]*"/g, 'w:eastAsia="페이퍼로지"');
-    docXml = docXml.replace(/w:hAnsi="[^"]*"/g, 'w:hAnsi="페이퍼로지"');
-    docXml = docXml.replace(/w:ascii="[^"]*"/g, 'w:ascii="페이퍼로지"');
-    zipFinal.file(docXmlPath, docXml);
+  const fontTargets = ['word/document.xml', 'word/styles.xml', 'word/theme/theme1.xml'];
+  for (const xmlPath of fontTargets) {
+    const f = zipFinal.file(xmlPath);
+    if (!f) continue;
+    let content = f.asText();
+    content = content.replace(/w:eastAsia="[^"]*"/g, 'w:eastAsia="페이퍼로지"');
+    content = content.replace(/w:hAnsi="[^"]*"/g, 'w:hAnsi="페이퍼로지"');
+    content = content.replace(/w:ascii="[^"]*"/g, 'w:ascii="페이퍼로지"');
+    content = content.replace(/w:cs="[^"]*"/g, 'w:cs="페이퍼로지"');
+    // theme 폰트도 교체
+    content = content.replace(/<a:latin typeface="[^"]*"/g, '<a:latin typeface="페이퍼로지"');
+    content = content.replace(/<a:ea typeface="[^"]*"/g, '<a:ea typeface="페이퍼로지"');
+    content = content.replace(/<a:cs typeface="[^"]*"/g, '<a:cs typeface="페이퍼로지"');
+    zipFinal.file(xmlPath, content);
   }
 
   const buffer = Buffer.from(zipFinal.generate({ type: 'nodebuffer' }));
