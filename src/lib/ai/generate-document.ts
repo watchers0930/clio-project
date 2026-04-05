@@ -818,10 +818,23 @@ export async function generateForFormat(params: {
 
           console.log('[HWPX] extractHwpxTableStructure result:', hwpxResult ? `tables=${hwpxResult.structure.tables.length}, emptyCells=${hwpxResult.structure.emptyCells.length}` : 'null');
           if (hwpxResult && hwpxResult.structure.hasEmptyCells) {
-            // 프로그래밍 방식으로 직접 매핑 (AI 미사용)
-            const hwpxFormData = mapFormDataDirect(hwpxResult.structure, rest.instructions ?? '');
-            console.log('[HWPX] mapFormDataDirect keys:', Object.keys(hwpxFormData).length);
-            return { format, title, hwpxFormData, hwpxTableStructure: hwpxResult.structure, templateBuffer: rest.templateBuffer! };
+            // 1차: 프로그래밍 직접 매핑
+            const directData = mapFormDataDirect(hwpxResult.structure, rest.instructions ?? '');
+            const filledCount = Object.values(directData).filter(v => v && v.trim()).length;
+            console.log('[HWPX] mapFormDataDirect filled:', filledCount, '/', hwpxResult.structure.emptyCells.length);
+
+            // 채운 셀이 30% 미만이면 AI로 대체
+            if (filledCount < hwpxResult.structure.emptyCells.length * 0.3) {
+              console.log('[HWPX] 직접 매핑 부족, AI 생성으로 전환');
+              const hwpxFormData = await generateDocxFormData({
+                templateName,
+                tableStructure: hwpxResult.structure,
+                sourceChunks: rest.sourceChunks,
+                instructions: rest.instructions,
+              });
+              return { format, title, hwpxFormData, hwpxTableStructure: hwpxResult.structure, templateBuffer: rest.templateBuffer! };
+            }
+            return { format, title, hwpxFormData: directData, hwpxTableStructure: hwpxResult.structure, templateBuffer: rest.templateBuffer! };
           }
         } catch (e) {
           console.error('[HWPX] 구조 분석 실패, 마크다운 폴백:', e instanceof Error ? e.message : e, e instanceof Error ? e.stack : '');

@@ -244,6 +244,20 @@ export async function POST(request: NextRequest) {
 
     // HWPX 폼 데이터 기반: 빈 셀에 내용 주입 → Storage 업로드
     if (generationResult.hwpxFormData && generationResult.templateBuffer && generationResult.hwpxTableStructure) {
+      // ── HWPX 프로그래밍 후처리 (DOCX와 동일) ──
+      const hfd = generationResult.hwpxFormData;
+      const hcells = generationResult.hwpxTableStructure.emptyCells;
+      for (const cell of hcells) {
+        const label = cell.contextLabel;
+        if (/작성자\s*명/.test(label)) hfd[cell.fieldId] = userName;
+        if (/작성자\s*직급/.test(label)) hfd[cell.fieldId] = userPosition;
+        if (/작성자\s*소속/.test(label)) hfd[cell.fieldId] = userDept;
+        if (/회의\s*(일시|일자)/.test(label)) hfd[cell.fieldId] = todayStr;
+        if (/^(소속|성명|연락처|서명|참석자)$/.test(label)) hfd[cell.fieldId] = '';
+        if (/보고처/.test(label)) hfd[cell.fieldId] = userDept;
+        if (/보고서명/.test(label)) hfd[cell.fieldId] = templateName;
+      }
+
       const rendered = await renderDocument(generationResult, theme);
       const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
 
