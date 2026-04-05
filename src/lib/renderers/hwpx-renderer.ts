@@ -307,35 +307,55 @@ export async function renderHwpxFromFormData(
     if (!tc) continue;
 
     let cellXml = tc.content;
-    const tRegex = new RegExp(`<${tTag}([^>]*)>([^<]*)</${tTag}>`);
-    let injected = false;
 
-    // 방법 1: 기존 빈 <hp:t>에 내용 삽입
-    if (tRegex.test(cellXml)) {
-      cellXml = cellXml.replace(tRegex, (match, attrs, text) => {
-        if (!injected && text.replace(/[\d.]/g, '').trim() === '') {
-          injected = true;
-          return `<${tTag}${attrs}>${escaped}</${tTag}>`;
-        }
-        return match;
-      });
-    }
+    // ── 줄바꿈(\n) 처리: 여러 줄이면 별도 <hp:p> 단락으로 분리 ──
+    if (escaped.includes('\n')) {
+      const charMatch = cellXml.match(/charPrIDRef="(\d+)"/);
+      const charPrId = charMatch ? charMatch[1] : '1';
+      const runTag = cellXml.includes('<hp:run') ? 'hp:run' : 'run';
+      const pTagLocal = cellXml.includes('<hp:p') ? 'hp:p' : 'p';
 
-    // 방법 2: self-closing <hp:run/> → <hp:run><hp:t>내용</hp:t></hp:run>
-    if (!injected && cellXml.includes('<hp:run charPrIDRef=')) {
-      cellXml = cellXml.replace(
-        /<hp:run(\s+charPrIDRef="[^"]*")\/>/,
-        `<hp:run$1><hp:t>${escaped}</hp:t></hp:run>`,
-      );
-      injected = true;
-    }
+      const paragraphs = escaped.split('\n').map(line =>
+        `<${pTagLocal} paraPrIDRef="2"><${runTag} charPrIDRef="${charPrId}"><${tTag}>${line || ' '}</${tTag}></${runTag}></${pTagLocal}>`
+      ).join('');
 
-    // 방법 3: </hp:p> 앞에 run 삽입
-    if (!injected) {
-      cellXml = cellXml.replace(
-        /<\/hp:p>/,
-        `<hp:run><hp:t>${escaped}</hp:t></hp:run></hp:p>`,
-      );
+      const firstP = cellXml.indexOf(`<${pTagLocal}`);
+      const lastPEnd = cellXml.lastIndexOf(`</${pTagLocal}>`);
+      if (firstP !== -1 && lastPEnd !== -1) {
+        cellXml = cellXml.slice(0, firstP) + paragraphs + cellXml.slice(lastPEnd + `</${pTagLocal}>`.length);
+      }
+    } else {
+      // 단일 라인: 기존 주입 방식
+      const tRegex = new RegExp(`<${tTag}([^>]*)>([^<]*)</${tTag}>`);
+      let injected = false;
+
+      // 방법 1: 기존 빈 <hp:t>에 내용 삽입
+      if (tRegex.test(cellXml)) {
+        cellXml = cellXml.replace(tRegex, (match, attrs, text) => {
+          if (!injected && text.replace(/[\d.]/g, '').trim() === '') {
+            injected = true;
+            return `<${tTag}${attrs}>${escaped}</${tTag}>`;
+          }
+          return match;
+        });
+      }
+
+      // 방법 2: self-closing <hp:run/> → <hp:run><hp:t>내용</hp:t></hp:run>
+      if (!injected && cellXml.includes('<hp:run charPrIDRef=')) {
+        cellXml = cellXml.replace(
+          /<hp:run(\s+charPrIDRef="[^"]*")\/>/,
+          `<hp:run$1><hp:t>${escaped}</hp:t></hp:run>`,
+        );
+        injected = true;
+      }
+
+      // 방법 3: </hp:p> 앞에 run 삽입
+      if (!injected) {
+        cellXml = cellXml.replace(
+          /<\/hp:p>/,
+          `<hp:run><hp:t>${escaped}</hp:t></hp:run></hp:p>`,
+        );
+      }
     }
 
     // 서식 통일: paraPrIDRef를 2(JUSTIFY/좌측정렬)로 변경 — CENTER 방지
