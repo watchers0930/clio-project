@@ -377,28 +377,22 @@ export async function renderDocxFromFormData(
     }
   }
 
-  // 연락처 열 삭제 (참석자 테이블에서 "연락처" 헤더 열 제거)
+  // 연락처 열 삭제 + 테이블 너비 100% 설정
   {
     const zz = doc.getZip();
     const dxf = zz.file('word/document.xml');
     if (dxf) {
       let dx = dxf.asText();
       const tables = findTopLevelBlocks(dx, 'w:tbl');
-      // 역순으로 처리 (뒤에서부터 삭제해야 위치 안 밀림)
       for (let ti = tables.length - 1; ti >= 0; ti--) {
         const tbl = tables[ti];
-        // 이 테이블에 "연락처" 텍스트가 포함된 헤더가 있는지 확인
         if (!tbl.content.includes('연락처')) continue;
         const rows = findTopLevelBlocks(tbl.content, 'w:tr');
         if (rows.length === 0) continue;
-        // 첫 행에서 "연락처" 열 인덱스 찾기
         const firstRowCells = findTopLevelBlocks(rows[0].content, 'w:tc');
         let colIdx = -1;
         for (let ci = 0; ci < firstRowCells.length; ci++) {
-          if (extractCellText(firstRowCells[ci].content).includes('연락처')) {
-            colIdx = ci;
-            break;
-          }
+          if (extractCellText(firstRowCells[ci].content).includes('연락처')) { colIdx = ci; break; }
         }
         if (colIdx === -1) continue;
         // 각 행에서 해당 열의 셀 제거 (역순)
@@ -407,13 +401,18 @@ export async function renderDocxFromFormData(
           const rowCells = findTopLevelBlocks(rows[ri].content, 'w:tc');
           if (colIdx < rowCells.length) {
             const cellToRemove = rowCells[colIdx];
-            const absInRow = cellToRemove.start;
-            const newRowContent = rows[ri].content.slice(0, absInRow) + rows[ri].content.slice(cellToRemove.end);
+            const newRowContent = rows[ri].content.slice(0, cellToRemove.start) + rows[ri].content.slice(cellToRemove.end);
             newTblContent = newTblContent.slice(0, rows[ri].start) + newRowContent + newTblContent.slice(rows[ri].end);
-            // 행 위치 재계산 필요 → 단순히 테이블 전체를 다시 파싱
           }
         }
-        // 테이블 콘텐츠를 한 번에 교체
+        // gridCol 제거 (n번째 gridCol 삭제)
+        const gridColRegex = /<w:gridCol[^/]*\/>/g;
+        let gcIdx = 0;
+        newTblContent = newTblContent.replace(gridColRegex, (match) => {
+          return gcIdx++ === colIdx ? '' : match;
+        });
+        // 테이블 너비를 100%로 설정 (상단 테이블과 동일 너비)
+        newTblContent = newTblContent.replace(/<w:tblW[^/]*\/>/, '<w:tblW w:w="5000" w:type="pct"/>');
         dx = dx.slice(0, tbl.start) + newTblContent + dx.slice(tbl.end);
       }
       zz.file('word/document.xml', dx);
