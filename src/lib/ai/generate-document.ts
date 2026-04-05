@@ -694,14 +694,20 @@ ${fieldList}
 
 ${contextText ? `## 참조 자료:\n${contextText}\n` : ''}
 ${instructions ? `## 지시사항 (이 내용으로 빈칸을 채우세요):\n${instructions}\n\n` : ''}
-위 양식의 빈 필드를 지시사항과 참조 자료를 바탕으로 채워 JSON 객체로 출력하세요.`;
+위 양식의 빈 필드를 지시사항과 참조 자료를 바탕으로 채워 JSON 객체로 출력하세요.
+
+중요: 보고서, 제안서 등 분석형 문서의 경우:
+- "보고 내용과 의견", "회의내용", "내용" 등 큰 영역은 반드시 500자 이상 상세하게 작성하세요.
+- 단답형이 아닌, 배경→분석→근거→제안 순서로 논리적으로 서술하세요.
+- 참조 자료의 핵심 데이터를 인용하며 구체적인 수치와 사례를 포함하세요.
+- "문제점" 영역도 구체적 리스크와 대응 방안을 함께 기술하세요.`;
 
   const { text } = await generateText({
     model: openai('gpt-4o'),
     system: systemPrompt,
     prompt: userPrompt,
-    maxTokens: 8000,
-    temperature: 0.2,
+    maxTokens: 12000,
+    temperature: 0.4,
   });
 
   return parseJsonResponse<DocxFormData>(text, {});
