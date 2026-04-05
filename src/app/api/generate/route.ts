@@ -279,7 +279,6 @@ export async function POST(request: NextRequest) {
         if (/보고서\s*\(/.test(label)) hfd[cell.fieldId] = '';
       }
       // (행 배분 제거 — AI가 번호 단락으로 한 셀에 작성)
-      }
 
       const rendered = await renderDocument(generationResult, theme);
       const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
