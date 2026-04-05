@@ -242,14 +242,14 @@ export function extractHwpxTableStructure(templateBuffer: Buffer): { structure: 
       parsedRows.push(row);
     });
 
-    for (let r = 1; r < parsedRows.length; r++) {
+    // row 0 포함 — 담당, 보고처(부서) 등 첫 행 빈칸도 감지
+    for (let r = 0; r < parsedRows.length; r++) {
       for (let c = 0; c < parsedRows[r].length; c++) {
         const cell = parsedRows[r][c];
-        // 왼쪽 이웃 셀의 텍스트를 context로 사용 (같은 행), 없으면 헤더
         const leftNeighbor = c > 0 ? parsedRows[r][c - 1] : null;
         cell.contextLabel = (leftNeighbor && !leftNeighbor.isEmpty && leftNeighbor.text)
           ? leftNeighbor.text
-          : (headers[c] ?? '');
+          : (r > 0 ? (headers[c] ?? '') : '');
         if (cell.isEmpty) result.emptyCells.push(cell);
       }
     }

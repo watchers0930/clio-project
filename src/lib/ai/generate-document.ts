@@ -706,8 +706,8 @@ ${instructions ? `## 지시사항 (이 내용으로 빈칸을 채우세요):\n${
     model: openai('gpt-4o'),
     system: systemPrompt,
     prompt: userPrompt,
-    maxTokens: 12000,
-    temperature: 0.4,
+    maxTokens: 8000,
+    temperature: 0.2,
   });
 
   return parseJsonResponse<DocxFormData>(text, {});
