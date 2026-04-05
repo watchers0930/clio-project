@@ -185,24 +185,23 @@ export async function POST(request: NextRequest) {
       // ── 프로그래밍 후처리: AI 결과를 강제 보정 ──
       const fd = generationResult.docxFormData;
       const cells = generationResult.tableStructure.emptyCells;
+      let dangdangFilled = false;
       for (const cell of cells) {
         const label = cell.contextLabel;
-        // 작성자명 → 로그인 사용자 이름 강제
         if (/작성자\s*명/.test(label)) fd[cell.fieldId] = userName;
-        // 작성자 직급 → 로그인 사용자 직급 강제
         if (/작성자\s*직급/.test(label)) fd[cell.fieldId] = userPosition;
-        // 작성자 소속 → 로그인 사용자 부서 강제
         if (/작성자\s*소속/.test(label)) fd[cell.fieldId] = userDept;
-        // 회의일시/회의일자 → 날짜만 (시간 제외)
         if (/회의\s*(일시|일자)/.test(label)) fd[cell.fieldId] = todayStr;
-        // 참석자 테이블 → 내용 안 넣음 (빈칸 유지)
         if (/^(소속|성명|연락처|서명|참석자)$/.test(label)) fd[cell.fieldId] = '';
-        // 보고서: 보고처(부서) → 로그인 사용자 부서
         if (/보고처/.test(label)) fd[cell.fieldId] = userDept;
-        // 보고서: 보고서명 → 문서 제목
         if (/보고서명/.test(label)) fd[cell.fieldId] = templateName;
-        // 보고서: 담당 → 로그인 사용자 이름
-        if (/^담당$/.test(label)) fd[cell.fieldId] = userName;
+        // 담당 → 첫 번째 매칭만 사용자 이름, 나머지는 빈칸
+        if (/^담당$/.test(label)) {
+          if (!dangdangFilled) { fd[cell.fieldId] = userName; dangdangFilled = true; }
+          else fd[cell.fieldId] = '';
+        }
+        // 보고서(20 년 월 일) 영역 → 날짜 넣지 않음 (빈칸)
+        if (/보고서\s*\(/.test(label)) fd[cell.fieldId] = '';
       }
 
       const rendered = await renderDocument(generationResult, theme);
@@ -262,6 +261,7 @@ export async function POST(request: NextRequest) {
       // ── HWPX 프로그래밍 후처리 (DOCX와 동일) ──
       const hfd = generationResult.hwpxFormData;
       const hcells = generationResult.hwpxTableStructure.emptyCells;
+      let hdangFilled = false;
       for (const cell of hcells) {
         const label = cell.contextLabel;
         if (/작성자\s*명/.test(label)) hfd[cell.fieldId] = userName;
@@ -271,7 +271,11 @@ export async function POST(request: NextRequest) {
         if (/^(소속|성명|연락처|서명|참석자)$/.test(label)) hfd[cell.fieldId] = '';
         if (/보고처/.test(label)) hfd[cell.fieldId] = userDept;
         if (/보고서명/.test(label)) hfd[cell.fieldId] = templateName;
-        if (/^담당$/.test(label)) hfd[cell.fieldId] = userName;
+        if (/^담당$/.test(label)) {
+          if (!hdangFilled) { hfd[cell.fieldId] = userName; hdangFilled = true; }
+          else hfd[cell.fieldId] = '';
+        }
+        if (/보고서\s*\(/.test(label)) hfd[cell.fieldId] = '';
       }
 
       const rendered = await renderDocument(generationResult, theme);
