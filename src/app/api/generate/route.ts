@@ -180,10 +180,14 @@ export async function POST(request: NextRequest) {
         if (/작성자\s*직급/.test(label)) fd[cell.fieldId] = userPosition;
         // 작성자 소속 → 로그인 사용자 부서 강제
         if (/작성자\s*소속/.test(label)) fd[cell.fieldId] = userDept;
-        // 회의일시 → 날짜만 (시간 제외)
-        if (/회의\s*일시/.test(label)) fd[cell.fieldId] = todayStr;
+        // 회의일시/회의일자 → 날짜만 (시간 제외)
+        if (/회의\s*(일시|일자)/.test(label)) fd[cell.fieldId] = todayStr;
         // 참석자 테이블 → 내용 안 넣음 (빈칸 유지)
         if (/^(소속|성명|연락처|서명|참석자)$/.test(label)) fd[cell.fieldId] = '';
+        // 보고서: 보고처(부서) → 로그인 사용자 부서
+        if (/보고처/.test(label)) fd[cell.fieldId] = userDept;
+        // 보고서: 보고서명 → 문서 제목
+        if (/보고서명/.test(label)) fd[cell.fieldId] = templateName;
       }
 
       const rendered = await renderDocument(generationResult, theme);
