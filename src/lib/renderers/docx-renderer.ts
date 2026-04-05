@@ -366,7 +366,20 @@ export async function renderDocxFromFormData(
     }
   }
 
-  const buffer = Buffer.from(doc.getZip().generate({ type: 'nodebuffer' }));
+  // 폰트를 페이퍼로지로 변경
+  const zipFinal = doc.getZip();
+  const docXmlPath = 'word/document.xml';
+  const docFile = zipFinal.file(docXmlPath);
+  if (docFile) {
+    let docXml = docFile.asText();
+    // eastAsia, hAnsi, ascii 폰트를 페이퍼로지로 교체
+    docXml = docXml.replace(/w:eastAsia="[^"]*"/g, 'w:eastAsia="페이퍼로지"');
+    docXml = docXml.replace(/w:hAnsi="[^"]*"/g, 'w:hAnsi="페이퍼로지"');
+    docXml = docXml.replace(/w:ascii="[^"]*"/g, 'w:ascii="페이퍼로지"');
+    zipFinal.file(docXmlPath, docXml);
+  }
+
+  const buffer = Buffer.from(zipFinal.generate({ type: 'nodebuffer' }));
 
   return {
     buffer,
