@@ -188,6 +188,8 @@ export async function POST(request: NextRequest) {
         if (/보고처/.test(label)) fd[cell.fieldId] = userDept;
         // 보고서: 보고서명 → 문서 제목
         if (/보고서명/.test(label)) fd[cell.fieldId] = templateName;
+        // 보고서: 담당 → 로그인 사용자 이름
+        if (/^담당$/.test(label)) fd[cell.fieldId] = userName;
       }
 
       const rendered = await renderDocument(generationResult, theme);
@@ -256,6 +258,7 @@ export async function POST(request: NextRequest) {
         if (/^(소속|성명|연락처|서명|참석자)$/.test(label)) hfd[cell.fieldId] = '';
         if (/보고처/.test(label)) hfd[cell.fieldId] = userDept;
         if (/보고서명/.test(label)) hfd[cell.fieldId] = templateName;
+        if (/^담당$/.test(label)) hfd[cell.fieldId] = userName;
       }
 
       const rendered = await renderDocument(generationResult, theme);
