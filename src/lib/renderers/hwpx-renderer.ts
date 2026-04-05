@@ -315,8 +315,8 @@ export async function renderHwpxFromFormData(
       const runTag = cellXml.includes('<hp:run') ? 'hp:run' : 'run';
       const pTagLocal = cellXml.includes('<hp:p') ? 'hp:p' : 'p';
 
-      const paragraphs = escaped.split('\n').map(line =>
-        `<${pTagLocal} paraPrIDRef="2"><${runTag} charPrIDRef="${charPrId}"><${tTag}>${line || ' '}</${tTag}></${runTag}></${pTagLocal}>`
+      const paragraphs = escaped.split('\n').filter(line => line.trim() !== '').map(line =>
+        `<${pTagLocal} paraPrIDRef="2"><${runTag} charPrIDRef="${charPrId}"><${tTag}>${line}</${tTag}></${runTag}></${pTagLocal}>`
       ).join('');
 
       const firstP = cellXml.indexOf(`<${pTagLocal}`);
