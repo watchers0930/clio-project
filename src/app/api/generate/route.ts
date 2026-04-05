@@ -65,13 +65,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
     }
 
-    // 사용자 정보 조회 (이름, 부서)
+    // 사용자 정보 조회 (이름, 부서, 직급)
     const { data: userData } = await supabase
       .from('users')
-      .select('name, departments:department_id(name)')
+      .select('name, position, departments:department_id(name)')
       .eq('id', authUserId)
       .single();
     const userName = (userData as Record<string, unknown>)?.name as string ?? '';
+    const userPosition = (userData as Record<string, unknown>)?.position as string ?? '';
     const userDept = ((userData as Record<string, unknown>)?.departments as { name: string } | null)?.name ?? '';
 
     // 템플릿 조회 (직접 작성 모드에서는 건너뜀)
@@ -175,6 +176,8 @@ export async function POST(request: NextRequest) {
         const label = cell.contextLabel;
         // 작성자명 → 로그인 사용자 이름 강제
         if (/작성자\s*명/.test(label)) fd[cell.fieldId] = userName;
+        // 작성자 직급 → 로그인 사용자 직급 강제
+        if (/작성자\s*직급/.test(label)) fd[cell.fieldId] = userPosition;
         // 작성자 소속 → 로그인 사용자 부서 강제
         if (/작성자\s*소속/.test(label)) fd[cell.fieldId] = userDept;
       }
