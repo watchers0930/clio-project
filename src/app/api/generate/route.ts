@@ -205,27 +205,6 @@ export async function POST(request: NextRequest) {
         if (/보고서\s*\(/.test(label)) fd[cell.fieldId] = '';
       }
 
-      // 단일 열 테이블 내용 배분 (정보출처, 보고내용, 문제점 등)
-      const tableGroups = new Map<number, typeof cells>();
-      for (const cell of cells) {
-        if (!tableGroups.has(cell.tableIndex)) tableGroups.set(cell.tableIndex, []);
-        tableGroups.get(cell.tableIndex)!.push(cell);
-      }
-      for (const [, tCells] of tableGroups) {
-        const emptyCells = tCells.filter(c => c.isEmpty && c.rowIndex > 0);
-        if (emptyCells.length < 2) continue;
-        // 첫 번째 셀에 모든 내용이 몰려있으면 줄 단위로 배분
-        const first = emptyCells[0];
-        const content = fd[first.fieldId] ?? '';
-        if (!content || !content.includes('\n')) continue;
-        const lines = content.split('\n').filter(l => l.trim());
-        if (lines.length <= 1) continue;
-        // 행 수에 맞게 배분
-        for (let i = 0; i < emptyCells.length; i++) {
-          fd[emptyCells[i].fieldId] = i < lines.length ? lines[i] : '';
-        }
-      }
-
       const rendered = await renderDocument(generationResult, theme);
       const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
 
@@ -299,23 +278,7 @@ export async function POST(request: NextRequest) {
         }
         if (/보고서\s*\(/.test(label)) hfd[cell.fieldId] = '';
       }
-      // 단일 열 테이블 내용 배분
-      const htableGroups = new Map<number, typeof hcells>();
-      for (const cell of hcells) {
-        if (!htableGroups.has(cell.tableIndex)) htableGroups.set(cell.tableIndex, []);
-        htableGroups.get(cell.tableIndex)!.push(cell);
-      }
-      for (const [, tCells] of htableGroups) {
-        const emptyCells = tCells.filter(c => c.isEmpty && c.rowIndex > 0);
-        if (emptyCells.length < 2) continue;
-        const first = emptyCells[0];
-        const content = hfd[first.fieldId] ?? '';
-        if (!content || !content.includes('\n')) continue;
-        const lines = content.split('\n').filter(l => l.trim());
-        if (lines.length <= 1) continue;
-        for (let i = 0; i < emptyCells.length; i++) {
-          hfd[emptyCells[i].fieldId] = i < lines.length ? lines[i] : '';
-        }
+      // (행 배분 제거 — AI가 번호 단락으로 한 셀에 작성)
       }
 
       const rendered = await renderDocument(generationResult, theme);
