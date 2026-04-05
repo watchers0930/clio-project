@@ -124,14 +124,30 @@ function findTopLevelBlocks(xml: string, tagName: string): { content: string; st
   const blocks: { content: string; start: number; end: number }[] = [];
   const openTag = `<${tagName}`;
   const closeTag = `</${tagName}>`;
+
+  // 정확한 태그만 매칭하는 헬퍼 (예: <w:tbl> 또는 <w:tbl ... 은 매칭, <w:tblPr 은 무시)
+  function findExactTag(src: string, from: number): number {
+    let idx = from;
+    while (idx < src.length) {
+      const found = src.indexOf(openTag, idx);
+      if (found === -1) return -1;
+      const afterChar = src[found + openTag.length];
+      if (afterChar === '>' || afterChar === ' ' || afterChar === '/' || afterChar === '\n' || afterChar === '\r') {
+        return found;
+      }
+      idx = found + 1;
+    }
+    return -1;
+  }
+
   let pos = 0;
   while (pos < xml.length) {
-    const start = xml.indexOf(openTag, pos);
+    const start = findExactTag(xml, pos);
     if (start === -1) break;
     let depth = 1;
     let scan = start + openTag.length;
     while (depth > 0 && scan < xml.length) {
-      const nextOpen = xml.indexOf(openTag, scan);
+      const nextOpen = findExactTag(xml, scan);
       const nextClose = xml.indexOf(closeTag, scan);
       if (nextClose === -1) break;
       if (nextOpen !== -1 && nextOpen < nextClose) {
@@ -139,11 +155,7 @@ function findTopLevelBlocks(xml: string, tagName: string): { content: string; st
         scan = nextOpen + openTag.length;
       } else {
         depth--;
-        if (depth === 0) {
-          scan = nextClose + closeTag.length;
-        } else {
-          scan = nextClose + closeTag.length;
-        }
+        scan = nextClose + closeTag.length;
       }
     }
     blocks.push({ content: xml.slice(start, scan), start, end: scan });
