@@ -168,6 +168,45 @@ export async function POST(request: NextRequest) {
 
     // DOCX 폼 데이터 기반: 빈 셀에 내용 주입 → Storage 업로드
     if (generationResult.docxFormData && generationResult.templateBuffer && generationResult.tableStructure) {
+      // ── 프로그래밍 후처리: AI 결과를 강제 보정 ──
+      const fd = generationResult.docxFormData;
+      const cells = generationResult.tableStructure.emptyCells;
+      for (const cell of cells) {
+        const label = cell.contextLabel;
+        // 작성자명 → 로그인 사용자 이름 강제
+        if (/작성자\s*명/.test(label)) fd[cell.fieldId] = userName;
+        // 작성자 소속 → 로그인 사용자 부서 강제
+        if (/작성자\s*소속/.test(label)) fd[cell.fieldId] = userDept;
+      }
+      // 참석자 테이블 소속/성명 매핑 강제 수정
+      const participantText = (instructions ?? '').match(/참석자[:\s]*(.+)/)?.[1] ?? '';
+      if (participantText) {
+        // "김동의(대표/개발팀/010-1234-5678), 이수진(팀장/개발팀)" 파싱
+        const people = participantText.split(/,\s*/).map(p => {
+          const nameMatch = p.match(/^([^(]+)/);
+          const infoMatch = p.match(/\(([^)]+)\)/);
+          const name = nameMatch?.[1]?.trim() ?? '';
+          const parts = infoMatch?.[1]?.split('/').map(s => s.trim()) ?? [];
+          // 부서 = 연락처(숫자) 아니고 직급 아닌 것 중 마지막
+          const dept = parts.find(s => !/^\d|^[0-9-]+$/.test(s) && !/대표|팀장|부장|차장|과장|대리|사원|이사|상무|전무/.test(s)) ?? parts[1] ?? '';
+          return { name, dept };
+        });
+        // 참석자 테이블의 셀을 찾아서 강제 매핑
+        let personIdx = 0;
+        const sortedCells = [...cells].sort((a, b) => a.tableIndex - b.tableIndex || a.rowIndex - b.rowIndex || a.colIndex - b.colIndex);
+        for (const cell of sortedCells) {
+          const lbl = cell.contextLabel;
+          if (lbl === '소속' && personIdx < people.length) {
+            fd[cell.fieldId] = people[personIdx].dept;
+          } else if (lbl === '성명' && personIdx < people.length) {
+            fd[cell.fieldId] = people[personIdx].name;
+            personIdx++; // 성명 셀 이후 다음 참석자로
+          } else if (lbl === '연락처' || lbl === '서명') {
+            fd[cell.fieldId] = '';
+          }
+        }
+      }
+
       const rendered = await renderDocument(generationResult, theme);
       const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
 

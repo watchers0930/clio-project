@@ -291,12 +291,16 @@ export function injectPlaceholders(
     const placeholder = `{{${cell.fieldId}}}`;
     placeholderMap[cell.fieldId] = cell.contextLabel || `행${cell.rowIndex}_열${cell.colIndex}`;
 
-    // 셀 수직 정렬을 상단(top)으로 설정
+    // 셀 수직 정렬을 상단(top)으로 강제 설정
     let cellXml = tc.content;
-    if (/<w:tcPr>/.test(cellXml) && !/<w:vAlign/.test(cellXml)) {
+    if (/<w:vAlign[^/]*\/>/.test(cellXml)) {
+      cellXml = cellXml.replace(/<w:vAlign[^/]*\/>/, '<w:vAlign w:val="top"/>');
+    } else if (/<w:tcPr\/>/.test(cellXml)) {
+      cellXml = cellXml.replace(/<w:tcPr\/>/, '<w:tcPr><w:vAlign w:val="top"/></w:tcPr>');
+    } else if (/<w:tcPr>/.test(cellXml)) {
       cellXml = cellXml.replace(/<\/w:tcPr>/, '<w:vAlign w:val="top"/></w:tcPr>');
-    } else if (!/<w:tcPr>/.test(cellXml)) {
-      cellXml = cellXml.replace(/<w:tc[\s>]/, (m) => `${m.slice(0, -1)}><w:tcPr><w:vAlign w:val="top"/></w:tcPr>`);
+    } else {
+      cellXml = cellXml.replace(/(<w:tc[^>]*>)/, '$1<w:tcPr><w:vAlign w:val="top"/></w:tcPr>');
     }
 
     // 셀 내 XML에서 빈 w:t에 placeholder 삽입
@@ -370,6 +374,49 @@ export async function renderDocxFromFormData(
         xmlContent = xmlContent.replace(new RegExp(escaped, 'g'), newText);
       }
       zipAfter.file(xmlPath, xmlContent);
+    }
+  }
+
+  // 연락처 열 삭제 (참석자 테이블에서 "연락처" 헤더 열 제거)
+  {
+    const zz = doc.getZip();
+    const dxf = zz.file('word/document.xml');
+    if (dxf) {
+      let dx = dxf.asText();
+      const tables = findTopLevelBlocks(dx, 'w:tbl');
+      // 역순으로 처리 (뒤에서부터 삭제해야 위치 안 밀림)
+      for (let ti = tables.length - 1; ti >= 0; ti--) {
+        const tbl = tables[ti];
+        // 이 테이블에 "연락처" 텍스트가 포함된 헤더가 있는지 확인
+        if (!tbl.content.includes('연락처')) continue;
+        const rows = findTopLevelBlocks(tbl.content, 'w:tr');
+        if (rows.length === 0) continue;
+        // 첫 행에서 "연락처" 열 인덱스 찾기
+        const firstRowCells = findTopLevelBlocks(rows[0].content, 'w:tc');
+        let colIdx = -1;
+        for (let ci = 0; ci < firstRowCells.length; ci++) {
+          if (extractCellText(firstRowCells[ci].content).includes('연락처')) {
+            colIdx = ci;
+            break;
+          }
+        }
+        if (colIdx === -1) continue;
+        // 각 행에서 해당 열의 셀 제거 (역순)
+        let newTblContent = tbl.content;
+        for (let ri = rows.length - 1; ri >= 0; ri--) {
+          const rowCells = findTopLevelBlocks(rows[ri].content, 'w:tc');
+          if (colIdx < rowCells.length) {
+            const cellToRemove = rowCells[colIdx];
+            const absInRow = cellToRemove.start;
+            const newRowContent = rows[ri].content.slice(0, absInRow) + rows[ri].content.slice(cellToRemove.end);
+            newTblContent = newTblContent.slice(0, rows[ri].start) + newRowContent + newTblContent.slice(rows[ri].end);
+            // 행 위치 재계산 필요 → 단순히 테이블 전체를 다시 파싱
+          }
+        }
+        // 테이블 콘텐츠를 한 번에 교체
+        dx = dx.slice(0, tbl.start) + newTblContent + dx.slice(tbl.end);
+      }
+      zz.file('word/document.xml', dx);
     }
   }
 
