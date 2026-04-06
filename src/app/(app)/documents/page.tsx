@@ -550,9 +550,9 @@ export default function DocumentsPage() {
       {/* ── View/Edit Document Modal ── */}
       {viewDoc && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="view-doc-title" onKeyDown={(e) => { if (e.key === 'Escape' && !isEdited) setViewDoc(null); }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col">
             {/* Header */}
-            <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between shrink-0">
+            <div className="px-8 py-6 border-b border-[#e5e5e7] flex items-center justify-between shrink-0">
               <div className="flex-1 min-w-0">
                 {isDraft ? (
                   <input
@@ -575,7 +575,7 @@ export default function DocumentsPage() {
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto px-6 py-6">
+            <div className="flex-1 overflow-y-auto px-8 py-6">
               {isDraft ? (
                 <textarea
                   value={editContent}
@@ -600,7 +600,7 @@ export default function DocumentsPage() {
 
             {/* 제안서 디자인 프롬프트 */}
             {isProposal && (
-              <div className="px-6 py-4 border-t border-[#e5e5e7] shrink-0">
+              <div className="px-8 py-5 border-t border-[#e5e5e7] shrink-0">
                 <div className="flex items-center gap-3 mb-3">
                   <span className="text-sm font-medium text-[#1d1d1f]">AI 디자인 프롬프트</span>
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-gradient-to-r from-[#0071e3] to-[#5856d6] text-white font-medium">GenSpark / Gamma / Canva</span>
@@ -649,7 +649,7 @@ export default function DocumentsPage() {
 
             {/* 제안서 AI 컨텍스트 다운로드 */}
             {isProposal && (
-              <div className="px-6 py-4 border-t border-[#e5e5e7] shrink-0">
+              <div className="px-8 py-5 border-t border-[#e5e5e7] shrink-0">
                 <div className="flex items-center gap-3 mb-3">
                   <span className="text-sm font-medium text-[#1d1d1f]">AI 컨텍스트 다운로드</span>
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-gradient-to-r from-[#34c759] to-[#30d158] text-white font-medium">ChatGPT / Gemini / Claude</span>
@@ -705,7 +705,7 @@ export default function DocumentsPage() {
             )}
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-[#e5e5e7] flex items-center justify-between shrink-0">
+            <div className="px-8 py-5 border-t border-[#e5e5e7] flex items-center justify-between shrink-0">
               <div>
                 {isDraft ? (
                   <button onClick={handleComplete} disabled={saving} className="px-5 py-2.5 rounded-xl bg-[#30d158] text-white text-sm font-medium hover:bg-[#28b94c] disabled:opacity-50 transition-colors">
@@ -741,9 +741,9 @@ export default function DocumentsPage() {
       {/* ── New Document Modal ── */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="new-doc-title" onKeyDown={(e) => { if (e.key === 'Escape') resetModal(); }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
             {/* modal header */}
-            <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between sticky top-0 bg-white rounded-t-2xl z-10">
+            <div className="px-8 py-6 border-b border-[#e5e5e7] flex items-center justify-between sticky top-0 bg-white rounded-t-2xl z-10">
               <h2 id="new-doc-title" className="text-lg font-semibold text-[#1d1d1f]">새 문서 생성</h2>
               <button onClick={resetModal} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -752,7 +752,7 @@ export default function DocumentsPage() {
 
             {/* steps indicator */}
             {step <= 4 && (
-              <div className="px-6 py-6">
+              <div className="px-8 py-6">
                 <div className="flex items-center gap-2">
                   {[1, 2, 3, 4].map((s) => (
                     <div key={s} className="flex items-center gap-2 flex-1">
@@ -776,10 +776,10 @@ export default function DocumentsPage() {
               </div>
             )}
 
-            <div className="px-6 pt-2 pb-8">
+            <div className="px-8 py-6">
               {/* Step 1: Select template */}
               {step === 1 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                   {/* 템플릿 없이 생성 */}
                   <button
                     onClick={() => { setSelectedTemplate('__none__'); setCustomStructure(''); }}
@@ -892,7 +892,7 @@ export default function DocumentsPage() {
                         <p className="text-sm text-[#6e6e73]">검색 결과가 없습니다</p>
                       </div>
                     ) : (
-                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                      <div className="space-y-2 max-h-80 overflow-y-auto">
                         {filtered.map((f) => (
                           <label
                             key={f.id}
@@ -916,61 +916,63 @@ export default function DocumentsPage() {
 
               {/* Step 3: Instructions + Output Format */}
               {step === 3 && (
-                <div>
-                  {/* 출력 포맷 선택 */}
-                  <div>
-                    <p className="text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 10 }}>출력 포맷</p>
-                    <div className="grid grid-cols-5 gap-2">
-                      {[
-                        { value: 'docx', label: 'DOCX', icon: '📝', desc: 'Word 문서' },
-                        { value: 'pdf', label: 'PDF', icon: '📕', desc: 'PDF 문서' },
-                        { value: 'hwpx', label: 'HWPX', icon: '📘', desc: '한글 문서' },
-                        { value: 'xlsx', label: 'XLSX', icon: '📊', desc: 'Excel 보고서' },
-                        { value: 'pptx', label: 'PPTX', icon: '📙', desc: '프레젠테이션' },
-                      ].map((f) => (
-                        <button
-                          key={f.value}
-                          onClick={() => setOutputFormat(f.value)}
-                          className={`p-3 rounded-xl border text-center transition-all ${outputFormat === f.value ? 'border-[#0071e3] bg-[#f0f5ff] ring-2 ring-[#0071e3]/30' : 'border-[#e5e5e7] hover:border-[#0071e3]'}`}
-                        >
-                          <span className="text-xl">{f.icon}</span>
-                          <p className="text-xs font-bold text-[#1d1d1f] mt-1">{f.label}</p>
-                          <p className="text-[10px] text-[#6e6e73]">{f.desc}</p>
-                        </button>
-                      ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-5">
+                    {/* 출력 포맷 선택 */}
+                    <div>
+                      <p className="text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 10 }}>출력 포맷</p>
+                      <div className="grid grid-cols-5 gap-2">
+                        {[
+                          { value: 'docx', label: 'DOCX', icon: '📝', desc: 'Word 문서' },
+                          { value: 'pdf', label: 'PDF', icon: '📕', desc: 'PDF 문서' },
+                          { value: 'hwpx', label: 'HWPX', icon: '📘', desc: '한글 문서' },
+                          { value: 'xlsx', label: 'XLSX', icon: '📊', desc: 'Excel 보고서' },
+                          { value: 'pptx', label: 'PPTX', icon: '📙', desc: '프레젠테이션' },
+                        ].map((f) => (
+                          <button
+                            key={f.value}
+                            onClick={() => setOutputFormat(f.value)}
+                            className={`p-3 rounded-xl border text-center transition-all ${outputFormat === f.value ? 'border-[#0071e3] bg-[#f0f5ff] ring-2 ring-[#0071e3]/30' : 'border-[#e5e5e7] hover:border-[#0071e3]'}`}
+                          >
+                            <span className="text-xl">{f.icon}</span>
+                            <p className="text-xs font-bold text-[#1d1d1f] mt-1">{f.label}</p>
+                            <p className="text-[10px] text-[#6e6e73]">{f.desc}</p>
+                          </button>
+                        ))}
+                      </div>
+                      {(outputFormat === 'xlsx' || outputFormat === 'pptx') && (
+                        <p className="text-xs text-[#0071e3] bg-[#f0f5ff] px-3 py-2 rounded-lg mt-2">
+                          {outputFormat === 'xlsx' ? 'AI가 데이터 테이블을 구조화하여 Excel 파일로 생성합니다.' : 'AI가 슬라이드 구성을 자동으로 설계하여 PPT 파일로 생성합니다.'}
+                        </p>
+                      )}
                     </div>
-                    {(outputFormat === 'xlsx' || outputFormat === 'pptx') && (
-                      <p className="text-xs text-[#0071e3] bg-[#f0f5ff] px-3 py-2 rounded-lg mt-2">
-                        {outputFormat === 'xlsx' ? 'AI가 데이터 테이블을 구조화하여 Excel 파일로 생성합니다.' : 'AI가 슬라이드 구성을 자동으로 설계하여 PPT 파일로 생성합니다.'}
-                      </p>
-                    )}
                   </div>
-
-                  {/* 문서 구조 (직접 작성 모드) */}
-                  {selectedTemplate === '__none__' && (
-                    <div style={{ marginTop: 20 }}>
-                      <p className="text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>문서 구조 *</p>
-                      <p className="text-xs text-[#6e6e73]" style={{ marginBottom: 8 }}>AI가 이 구조를 따라 문서를 생성합니다</p>
+                  <div className="space-y-5">
+                    {/* 추가 지시사항 */}
+                    <div>
+                      <p className="text-sm text-[#6e6e73]" style={{ marginBottom: 10 }}>추가 지시사항 (선택)</p>
                       <textarea
-                        value={customStructure}
-                        onChange={(e) => setCustomStructure(e.target.value)}
-                        placeholder={"예:\n# 업무일지\n## 오늘의 업무\n- 주요 업무 내용 1\n- 주요 업무 내용 2\n## 문제점 및 해결 방안\n## 내일의 계획"}
-                        rows={6}
-                        className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none font-mono"
+                        value={instructions}
+                        onChange={(e) => setInstructions(e.target.value)}
+                        placeholder="예: 핵심 수치 위주로 요약해 주세요. 표 형태로 정리해 주세요."
+                        rows={8}
+                        className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none"
                       />
                     </div>
-                  )}
-
-                  {/* 추가 지시사항 */}
-                  <div>
-                    <p className="text-sm text-[#6e6e73]" style={{ marginTop: 20, marginBottom: 10 }}>추가 지시사항 (선택)</p>
-                    <textarea
-                      value={instructions}
-                      onChange={(e) => setInstructions(e.target.value)}
-                      placeholder="예: 핵심 수치 위주로 요약해 주세요. 표 형태로 정리해 주세요."
-                      rows={4}
-                      className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none"
-                    />
+                    {/* 문서 구조 (직접 작성 모드) */}
+                    {selectedTemplate === '__none__' && (
+                      <div>
+                        <p className="text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>문서 구조 *</p>
+                        <p className="text-xs text-[#6e6e73]" style={{ marginBottom: 8 }}>AI가 이 구조를 따라 문서를 생성합니다</p>
+                        <textarea
+                          value={customStructure}
+                          onChange={(e) => setCustomStructure(e.target.value)}
+                          placeholder={"예:\n# 업무일지\n## 오늘의 업무\n- 주요 업무 내용 1\n- 주요 업무 내용 2\n## 문제점 및 해결 방안\n## 내일의 계획"}
+                          rows={6}
+                          className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none font-mono"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -978,7 +980,7 @@ export default function DocumentsPage() {
               {/* Step 4: Confirm */}
               {step === 4 && (
                 <div className="space-y-4">
-                  <div className="bg-[#f5f5f7] rounded-xl p-5 space-y-4 text-sm">
+                  <div className="bg-[#f5f5f7] rounded-xl p-6 space-y-4 text-sm">
                     <div className="flex justify-between">
                       <span className="text-[#6e6e73]">템플릿</span>
                       <span className="text-[#1d1d1f] font-medium">{selectedTemplate === '__none__' ? '직접 작성' : templates.find((t) => t.id === selectedTemplate)?.name}</span>
@@ -1160,13 +1162,13 @@ export default function DocumentsPage() {
             </div>
 
             {/* modal footer */}
-            <div className="px-6 py-5 border-t border-[#e5e5e7] flex items-center justify-between sticky bottom-0 bg-white rounded-b-2xl">
+            <div className="px-8 py-5 border-t border-[#e5e5e7] flex items-center justify-between sticky bottom-0 bg-white rounded-b-2xl">
               <button
                 onClick={() => {
                   if (step === 1 || step === 5) resetModal();
                   else setStep(step - 1);
                 }}
-                className="px-5 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
+                className="px-6 py-3 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
               >
                 {step === 1 || step === 5 ? '닫기' : '이전'}
               </button>
@@ -1174,7 +1176,7 @@ export default function DocumentsPage() {
                 <button
                   disabled={!canNext()}
                   onClick={() => setStep(step + 1)}
-                  className="px-6 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-7 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   다음
                 </button>
@@ -1183,7 +1185,7 @@ export default function DocumentsPage() {
                 <button
                   disabled={generating}
                   onClick={handleGenerate}
-                  className="px-6 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-7 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {generating ? '생성 중...' : '문서 생성'}
                 </button>
@@ -1194,7 +1196,7 @@ export default function DocumentsPage() {
                     if (generatedDoc) openDocModal(generatedDoc);
                     resetModal();
                   }}
-                  className="px-6 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors"
+                  className="px-7 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors"
                 >
                   문서 편집
                 </button>

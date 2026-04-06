@@ -547,7 +547,7 @@ function FilesPage() {
       {/* ── Upload Modal ── */}
       {showUpload && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) { setShowUpload(false); setUploadProgress(null); setSelectedFiles([]); } }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 p-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-[#1d1d1f]">파일 업로드</h2>
               <button onClick={() => { setShowUpload(false); setUploadProgress(null); setSelectedFiles([]); }} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
@@ -612,7 +612,7 @@ function FilesPage() {
                 </div>
                 <button
                   onClick={handleUpload}
-                  className="mt-3 w-full py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors"
+                  className="mt-3 w-full py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors"
                 >
                   {selectedFiles.length}개 파일 업로드
                 </button>
@@ -637,7 +637,7 @@ function FilesPage() {
       {/* ── Detail Modal ── */}
       {detailFile && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) setDetailFile(null); }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-[#1d1d1f]">파일 상세</h2>
               <button onClick={() => setDetailFile(null)} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
@@ -664,11 +664,11 @@ function FilesPage() {
               <div className="flex justify-between"><dt className="text-[#6e6e73]">업로드일</dt><dd className="text-[#1d1d1f] font-medium">{detailFile.uploadDate}</dd></div>
               <div className="flex justify-between"><dt className="text-[#6e6e73]">상태</dt><dd className="text-[#1d1d1f] font-medium">{detailFile.status}</dd></div>
             </dl>
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => { handleDownload(detailFile); setDetailFile(null); }} className="flex-1 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors">
+            <div className="flex gap-3 mt-8">
+              <button onClick={() => { handleDownload(detailFile); setDetailFile(null); }} className="flex-1 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors">
                 다운로드
               </button>
-              <button onClick={() => setDetailFile(null)} className="flex-1 py-2.5 rounded-xl border border-[#e5e5e7] text-sm font-medium text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">
+              <button onClick={() => setDetailFile(null)} className="flex-1 py-3 rounded-xl border border-[#e5e5e7] text-sm font-medium text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">
                 닫기
               </button>
             </div>
@@ -679,8 +679,8 @@ function FilesPage() {
       {/* ── Delete Confirm Modal ── */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) setDeleteConfirm(null); }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6 text-center">
-            <div className="w-14 h-14 rounded-full bg-[#f5f5f7] flex items-center justify-center mx-auto mb-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-8 text-center">
+            <div className="w-14 h-14 rounded-full bg-[#f5f5f7] flex items-center justify-center mx-auto mb-5">
               <svg className="w-7 h-7 text-[#ff3b30]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
               </svg>
@@ -704,7 +704,7 @@ function FilesPage() {
       {/* ── Scrape Modal ── */}
       {showScrape && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget && !scrapeLoading) setShowScrape(false); }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 p-8">
             <div className="flex items-center justify-between" style={{ marginBottom: 20 }}>
               <h2 className="text-lg font-semibold text-[#1d1d1f]">URL 상품 링크 수집</h2>
               {!scrapeLoading && (

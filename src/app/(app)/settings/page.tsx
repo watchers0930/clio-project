@@ -419,11 +419,11 @@ export default function SettingsPage() {
       {showDeptModal && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowDeptModal(false)} />
-          <div style={{ position: 'relative', width: '100%', maxWidth: 480, backgroundColor: '#fff', borderRadius: 16, border: '1px solid #e5e5e7', padding: '40px 48px' }}>
-            <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8, color: '#1d1d1f' }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: 480, backgroundColor: '#fff', borderRadius: 16, border: '1px solid #e5e5e7', padding: '48px 48px' }}>
+            <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 12, color: '#1d1d1f' }}>
               {editDept ? '부서 수정' : '부서 추가'}
             </h2>
-            <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 32 }}>
+            <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 28 }}>
               {editDept ? '부서 정보를 수정합니다.' : '새로운 부서를 추가합니다.'}
             </p>
 
@@ -457,11 +457,11 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 32 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 28 }}>
               <button
                 onClick={() => setShowDeptModal(false)}
                 className="hover:bg-[#f5f5f7] transition-colors"
-                style={{ padding: '12px 24px', fontSize: 15, fontWeight: 500, borderRadius: 12, border: 'none', backgroundColor: 'transparent', color: '#6e6e73', cursor: 'pointer' }}
+                style={{ height: 52, padding: '0 24px', fontSize: 15, fontWeight: 500, borderRadius: 12, border: 'none', backgroundColor: 'transparent', color: '#6e6e73', cursor: 'pointer' }}
               >
                 취소
               </button>
@@ -469,7 +469,7 @@ export default function SettingsPage() {
                 onClick={saveDept}
                 disabled={saving || !deptName.trim() || !deptCode.trim()}
                 className="hover:bg-[#0071e3] transition-colors"
-                style={{ padding: '12px 32px', fontSize: 15, fontWeight: 600, borderRadius: 12, border: 'none', backgroundColor: '#1d1d1f', color: '#fff', cursor: 'pointer', opacity: (saving || !deptName.trim() || !deptCode.trim()) ? 0.4 : 1 }}
+                style={{ height: 52, padding: '0 32px', fontSize: 15, fontWeight: 600, borderRadius: 12, border: 'none', backgroundColor: '#1d1d1f', color: '#fff', cursor: 'pointer', opacity: (saving || !deptName.trim() || !deptCode.trim()) ? 0.4 : 1 }}
               >
                 {saving ? '저장 중...' : (editDept ? '수정' : '추가')}
               </button>
@@ -482,9 +482,9 @@ export default function SettingsPage() {
       {showUserModal && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowUserModal(false)} />
-          <div style={{ position: 'relative', width: '100%', maxWidth: 480, backgroundColor: '#fff', borderRadius: 16, border: '1px solid #e5e5e7', padding: '40px 48px' }}>
-            <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8, color: '#1d1d1f' }}>{editUser ? '사용자 수정' : '사용자 추가'}</h2>
-            <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 32 }}>{editUser ? '사용자 정보를 수정합니다.' : '새로운 사용자 계정을 생성합니다.'}</p>
+          <div style={{ position: 'relative', width: '100%', maxWidth: 480, backgroundColor: '#fff', borderRadius: 16, border: '1px solid #e5e5e7', padding: '48px 48px' }}>
+            <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 12, color: '#1d1d1f' }}>{editUser ? '사용자 수정' : '사용자 추가'}</h2>
+            <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 28 }}>{editUser ? '사용자 정보를 수정합니다.' : '새로운 사용자 계정을 생성합니다.'}</p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
               <div>
@@ -543,14 +543,14 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 32 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 28 }}>
               <button onClick={() => setShowUserModal(false)} className="hover:bg-[#f5f5f7] transition-colors"
-                style={{ padding: '12px 24px', fontSize: 15, fontWeight: 500, borderRadius: 12, border: 'none', backgroundColor: 'transparent', color: '#6e6e73', cursor: 'pointer' }}>
+                style={{ height: 52, padding: '0 24px', fontSize: 15, fontWeight: 500, borderRadius: 12, border: 'none', backgroundColor: 'transparent', color: '#6e6e73', cursor: 'pointer' }}>
                 취소
               </button>
               <button onClick={saveUser} disabled={userSaving || !userName.trim() || !userEmail.trim() || (!editUser && !userPassword.trim())}
                 className="hover:bg-[#0071e3] transition-colors"
-                style={{ padding: '12px 32px', fontSize: 15, fontWeight: 600, borderRadius: 12, border: 'none', backgroundColor: '#1d1d1f', color: '#fff', cursor: 'pointer', opacity: (userSaving || !userName.trim() || !userEmail.trim() || (!editUser && !userPassword.trim())) ? 0.4 : 1 }}>
+                style={{ height: 52, padding: '0 32px', fontSize: 15, fontWeight: 600, borderRadius: 12, border: 'none', backgroundColor: '#1d1d1f', color: '#fff', cursor: 'pointer', opacity: (userSaving || !userName.trim() || !userEmail.trim() || (!editUser && !userPassword.trim())) ? 0.4 : 1 }}>
                 {userSaving ? '저장 중...' : (editUser ? '수정' : '추가')}
               </button>
             </div>

@@ -375,12 +375,12 @@ export default function MessagesPage() {
       {showFileModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={() => setShowFileModal(false)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-5 border-b border-[#e5e5e7] flex items-center justify-between">
+            <div className="px-8 py-6 border-b border-[#e5e5e7] flex items-center justify-between">
               <h3 className="text-base font-semibold text-[#1d1d1f]">파일 공유</h3>
               <button onClick={() => setShowFileModal(false)} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]"><X size={18} /></button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-5 py-4">
+            <div className="flex-1 overflow-y-auto px-8 py-5">
               <p className="text-xs text-[#6e6e73] mb-4">내 파일함에서 공유할 파일을 선택하세요. 파일은 이동되지 않고 읽기 권한만 부여됩니다.</p>
 
               {filesLoading ? (
@@ -406,7 +406,7 @@ export default function MessagesPage() {
             </div>
 
             {/* 만료 기간 설정 */}
-            <div className="px-5 py-4 border-t border-[#e5e5e7]">
+            <div className="px-8 py-5 border-t border-[#e5e5e7]">
               <div className="flex items-center gap-3 mb-4">
                 <Clock size={14} className="text-[#6e6e73] shrink-0" />
                 <label className="text-xs text-[#6e6e73]">공유 기간</label>
@@ -433,21 +433,21 @@ export default function MessagesPage() {
       {viewingFile && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={() => setViewingFile(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-5 border-b border-[#e5e5e7] flex items-center justify-between">
+            <div className="px-8 py-6 border-b border-[#e5e5e7] flex items-center justify-between">
               <div className="flex items-center gap-3 min-w-0">
                 <FileText size={18} className="text-[#0071e3] shrink-0" />
                 <h3 className="text-base font-semibold text-[#1d1d1f] truncate">{viewingFile.name}</h3>
               </div>
               <button onClick={() => setViewingFile(null)} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]"><X size={18} /></button>
             </div>
-            <div className="px-5 py-5">
+            <div className="px-8 py-6">
               {fileViewLoading ? (
                 <p className="text-sm text-[#6e6e73] text-center py-6">파일 정보를 불러오는 중...</p>
               ) : (
                 <pre className="text-sm text-[#1d1d1f] whitespace-pre-wrap bg-[#f5f5f7] rounded-xl px-4 py-4 leading-relaxed">{viewingFile.content}</pre>
               )}
             </div>
-            <div className="px-5 py-4 border-t border-[#e5e5e7]">
+            <div className="px-8 py-5 border-t border-[#e5e5e7]">
               <button onClick={() => { if (viewingFile) window.open(`/files?highlight=${viewingFile.id}`, '_blank'); }}
                 className="w-full py-2.5 rounded-xl bg-[#f5f5f7] text-[#1d1d1f] text-sm font-medium hover:bg-[#e5e5e7] transition-colors">
                 파일함에서 열기

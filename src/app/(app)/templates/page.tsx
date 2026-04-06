@@ -461,7 +461,7 @@ export default function TemplatesPage() {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="tmpl-modal-title" onKeyDown={(e) => { if (e.key === 'Escape') resetForm(); }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[85vh] overflow-y-auto">
-            <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between">
+            <div className="px-8 py-6 border-b border-[#e5e5e7] flex items-center justify-between">
               <h2 id="tmpl-modal-title" className="text-lg font-semibold text-[#1d1d1f]">
                 {editId ? '템플릿 편집' : '새 템플릿 만들기'}
               </h2>
@@ -469,7 +469,7 @@ export default function TemplatesPage() {
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            <div className="px-6 py-6 space-y-8">
+            <div className="px-8 py-6 space-y-6">
               {/* Icon selector */}
               <div>
                 <label className="block text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>아이콘</label>
@@ -613,12 +613,12 @@ export default function TemplatesPage() {
                 )}
               </div>
             </div>
-            <div className="px-6 py-5 border-t border-[#e5e5e7] flex justify-end gap-3">
-              <button onClick={resetForm} className="px-5 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">취소</button>
+            <div className="px-8 py-5 border-t border-[#e5e5e7] flex justify-end gap-3">
+              <button onClick={resetForm} className="px-6 py-3 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">취소</button>
               <button
                 onClick={handleSave}
                 disabled={!formName.trim() || saving}
-                className="px-6 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-6 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {saving ? '저장 중...' : editId ? '수정' : '생성'}
               </button>

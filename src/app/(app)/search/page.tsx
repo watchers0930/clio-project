@@ -330,13 +330,13 @@ export default function SearchPage() {
       {(previewData || previewLoading) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) { setPreviewData(null); } }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-[#e5e5e7] shrink-0">
+            <div className="flex items-center justify-between px-8 py-6 border-b border-[#e5e5e7] shrink-0">
               <h2 className="text-lg font-semibold text-[#1d1d1f] truncate">{previewLoading ? '불러오는 중...' : previewData?.name}</h2>
               <button onClick={() => setPreviewData(null)} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto px-6 py-5">
+            <div className="flex-1 overflow-y-auto px-8 py-6">
               {previewLoading ? (
                 <div className="flex items-center justify-center py-16">
                   <div className="w-8 h-8 border-2 border-[#0071e3] border-t-transparent rounded-full animate-spin" />
