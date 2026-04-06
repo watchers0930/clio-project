@@ -975,7 +975,7 @@ export default function DocumentsPage() {
                         const fields = contractSchema.fields.filter(f => f.group === group);
                         return (
                           <div key={group}>
-                            <h4 className="text-sm font-semibold text-[#1d1d1f] mb-3 flex items-center gap-2">
+                            <h4 className="text-sm font-semibold text-[#1d1d1f] mb-3 flex items-center gap-2" style={{ marginTop: 10 }}>
                               <span className="w-1.5 h-1.5 rounded-full bg-[#0071e3]" />
                               {group}
                             </h4>
