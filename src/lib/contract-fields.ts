@@ -37,9 +37,9 @@ const SYSTEM_CONTRACT_FIELDS: ContractField[] = [
   { key: 'vatAmount', label: '부가가치세 (원) — 자동계산', type: 'number', placeholder: '자동 계산됨', group: '금액', half: true },
   // 대금 지급
   { key: 'advanceRate', label: '선급금 비율 (%)', type: 'number', placeholder: '20', group: '대금지급', half: true },
-  { key: 'progressRate', label: '중도금 비율 (%)', type: 'number', placeholder: '40', group: '대금지급', half: true },
-  { key: 'progressCount', label: '중도금 지급회수', type: 'number', placeholder: '2', group: '대금지급', half: true },
-  { key: 'finalRate', label: '잔금 비율 (%)', type: 'number', placeholder: '40', group: '대금지급', half: true },
+  { key: 'progressRate', label: '중도금 총 비율 (%)', type: 'number', placeholder: '60', group: '대금지급', half: true },
+  { key: 'progressCount', label: '중도금 지급회수', type: 'number', placeholder: '3', group: '대금지급', half: true },
+  { key: 'finalRate', label: '잔금 비율 (%)', type: 'number', placeholder: '20', group: '대금지급', half: true },
   // 발주자
   { key: 'clientName', label: '상호 또는 명칭', type: 'text', placeholder: '(주)OO기업', required: true, group: '발주자', half: true },
   { key: 'clientPhone', label: '전화번호', type: 'text', placeholder: '02-1234-5678', group: '발주자', half: true },
