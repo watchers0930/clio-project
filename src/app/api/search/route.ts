@@ -154,16 +154,18 @@ export async function POST(request: NextRequest) {
     results.sort((a, b) => b.relevance - a.relevance);
     results = results.slice(0, 10);
 
-    // 상위 3개에 AI 요약 생성
-    for (let i = 0; i < Math.min(3, results.length); i++) {
-      if (results[i].excerpt && results[i].excerpt.length > 20) {
-        try {
-          results[i].aiSummary = await summarizeText(results[i].excerpt);
-        } catch {
-          results[i].aiSummary = `${results[i].name} 파일에 대한 요약입니다.`;
+    // 전체 결과에 AI 요약 생성
+    await Promise.all(
+      results.map(async (r) => {
+        if (r.excerpt && r.excerpt.length > 20) {
+          try {
+            r.aiSummary = await summarizeText(r.excerpt);
+          } catch {
+            r.aiSummary = `${r.name} 파일에 대한 요약입니다.`;
+          }
         }
-      }
-    }
+      })
+    );
 
     // audit_logs
     const authUserId = await getAuthUserId(supabase);
