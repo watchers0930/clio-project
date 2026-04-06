@@ -658,13 +658,13 @@ function FilesPage() {
                 </div>
               </div>
             </div>
-            <dl className="space-y-3 text-sm">
+            <dl className="text-sm" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div className="flex justify-between"><dt className="text-[#6e6e73]">부서</dt><dd className="text-[#1d1d1f] font-medium">{detailFile.department}</dd></div>
               <div className="flex justify-between"><dt className="text-[#6e6e73]">크기</dt><dd className="text-[#1d1d1f] font-medium">{detailFile.size}</dd></div>
               <div className="flex justify-between"><dt className="text-[#6e6e73]">업로드일</dt><dd className="text-[#1d1d1f] font-medium">{detailFile.uploadDate}</dd></div>
               <div className="flex justify-between"><dt className="text-[#6e6e73]">상태</dt><dd className="text-[#1d1d1f] font-medium">{detailFile.status}</dd></div>
             </dl>
-            <div className="flex gap-3 mt-8">
+            <div className="flex gap-3" style={{ marginTop: 28 }}>
               <button onClick={() => { handleDownload(detailFile); setDetailFile(null); }} className="flex-1 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors">
                 다운로드
               </button>
