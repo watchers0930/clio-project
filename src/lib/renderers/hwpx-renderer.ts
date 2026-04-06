@@ -366,12 +366,14 @@ export async function renderHwpxFromFormData(
     xml = xml.slice(0, absStart) + cellXml + xml.slice(absEnd);
   }
 
-  // ── 빈 행 높이 최소화 + 텍스트 제거 (행 구조 유지, 내용만 비움) ──
+  // ── 빈 행 완전 삭제 + rowCnt 업데이트 ──
   const tblsAfter = findBlocks(xml, tblTag);
   for (let ti = tblsAfter.length - 1; ti >= 0; ti--) {
     const tblA = tblsAfter[ti];
     const rowsA = findBlocks(tblA.content, trTag);
     let modified = tblA.content;
+    let deletedCount = 0;
+
     for (let ri = rowsA.length - 1; ri >= 1; ri--) {
       const rowCellsA = findBlocks(rowsA[ri].content, tcTag);
       const allEmpty = rowCellsA.every(tc => {
@@ -382,22 +384,28 @@ export async function renderHwpxFromFormData(
         return txt.replace(/[\d.]/g, '').trim() === '';
       });
       if (allEmpty) {
-        // 행 높이 최소화
-        let newRow = rowsA[ri].content.replace(
-          /(<hp:cellSz[^>]*\sheight=")(\d+)(")/g, '$11$3'
-        ).replace(
-          /(<hp:cellMargin[^>]*\stop=")(\d+)(")/g, '$10$3'
-        ).replace(
-          /(<hp:cellMargin[^>]*\sbottom=")(\d+)(")/g, '$10$3'
-        );
-        // 셀 안의 텍스트도 모두 비우기 (번호 "1.", "2." 등 제거)
-        newRow = newRow.replace(
-          new RegExp(`(<${tTag}[^>]*>)[^<]*(</${tTag}>)`, 'g'), '$1$2'
-        );
-        modified = modified.slice(0, rowsA[ri].start) + newRow + modified.slice(rowsA[ri].end);
+        modified = modified.slice(0, rowsA[ri].start) + modified.slice(rowsA[ri].end);
+        deletedCount++;
       }
     }
-    if (modified !== tblA.content) {
+
+    if (deletedCount > 0) {
+      // rowCnt 업데이트
+      const newRowCnt = rowsA.length - deletedCount;
+      modified = modified.replace(/rowCnt="\d+"/, `rowCnt="${newRowCnt}"`);
+      // 테이블 전체 높이도 재계산 (남은 행 높이 합산)
+      const remainingRows = findBlocks(modified, trTag);
+      let totalHeight = 0;
+      for (const rr of remainingRows) {
+        const hMatch = rr.content.match(/hp:cellSz[^>]*height="(\d+)"/);
+        if (hMatch) totalHeight += parseInt(hMatch[1], 10);
+      }
+      if (totalHeight > 0) {
+        modified = modified.replace(
+          /(<hp:sz[^>]*\sheight=")(\d+)(")/,
+          `$1${totalHeight}$3`
+        );
+      }
       xml = xml.slice(0, tblA.start) + modified + xml.slice(tblA.end);
     }
   }
