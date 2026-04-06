@@ -982,7 +982,7 @@ export default function DocumentsPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-5" style={{ marginBottom: 10 }}>
                               {fields.map(field => (
                                 <div key={field.key} className={field.half ? '' : 'md:col-span-2'}>
-                                  <label className="block text-xs text-[#6e6e73] mb-2">
+                                  <label className="block text-xs text-[#6e6e73] mb-2" style={{ marginTop: 5 }}>
                                     {field.label} {field.required && <span className="text-[#ff3b30]">*</span>}
                                   </label>
                                   {field.type === 'address' ? (
