@@ -188,7 +188,9 @@ export default function DocumentsPage() {
     setSelectedFiles(new Set());
     setInstructions('');
     setCustomStructure('');
-    setContractFormData({});
+    const now = new Date();
+    const todayFormatted = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`;
+    setContractFormData({ signDate: todayFormatted });
     setGenerating(false);
     setGeneratedDoc(null);
     setOutputFormat('docx');
