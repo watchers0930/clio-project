@@ -298,6 +298,29 @@ export default function SearchPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
                       </svg>
                     </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await fetch(`/api/files/${r.id}/download`);
+                          if (!res.ok) { alert('다운로드 실패'); return; }
+                          const data = await res.json();
+                          if (data.url) {
+                            const dlRes = await fetch(data.url);
+                            const blob = await dlRes.blob();
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url; a.download = r.name; a.click();
+                            URL.revokeObjectURL(url);
+                          }
+                        } catch { alert('다운로드 실패'); }
+                      }}
+                      className="flex items-center gap-1.5 text-sm text-[#6e6e73] hover:text-[#1d1d1f] font-medium transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                      </svg>
+                      원본 다운로드
+                    </button>
                   </div>
                   {expandedSummary === r.id && (
                     <div className="mt-4 p-5 rounded-xl bg-[#f5f5f7] text-sm text-[#1d1d1f] leading-relaxed">
