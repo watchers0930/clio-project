@@ -115,26 +115,67 @@ export function renderSystemContract(
     xml = replaceHpT(xml, '% ', `${formData.finalRate}% `);
   }
 
-  // 금액 치환 — 테이블 1의 빈 지급금액 셀 (행1~3 열2 + 행4 합계)
-  // 빈 <hp:t> 태그는 테이블 내부에만 있으므로, 테이블 영역에서만 치환
+  // 금액 치환 — 테이블 1의 빈 지급금액 셀 (행1~3 열2, 행4 합계 열2)
+  // 빈 셀에는 <hp:t> 태그 자체가 없음 → </hp:p> 앞에 <hp:run><hp:t>금액</hp:t></hp:run> 삽입
   if (total > 0) {
-    // 테이블 1 영역 찾기
-    const tblStart = xml.indexOf('<hp:tbl', xml.indexOf('<hp:tbl') + 1); // 두 번째 테이블
-    if (tblStart !== -1) {
-      const tblEnd = xml.indexOf('</hp:tbl>', tblStart) + 9;
-      let tblXml = xml.slice(tblStart, tblEnd);
+    const firstTbl = xml.indexOf('<hp:tbl');
+    const secondTbl = xml.indexOf('<hp:tbl', firstTbl + 1);
+    if (secondTbl !== -1) {
+      const secondTblEnd = xml.indexOf('</hp:tbl>', secondTbl) + 9;
+      let tblXml = xml.slice(secondTbl, secondTblEnd);
 
-      // 빈 <hp:t></hp:t> 또는 <hp:t> </hp:t>를 순서대로 금액으로 채움
-      const amounts = [advAmt, progAmt, finAmt, total].filter(a => a > 0);
-      for (const amt of amounts) {
-        // 빈 hp:t를 하나씩 찾아 채움
-        tblXml = tblXml.replace(
-          /(<hp:t[^>]*>)\s*(<\/hp:t>)/,
-          `$1${formatAmount(amt)}$2`
-        );
+      // 행/셀 파싱
+      const rowRegex = /<hp:tr[\s>]/g;
+      const rowStarts: number[] = [];
+      let rm;
+      while ((rm = rowRegex.exec(tblXml)) !== null) rowStarts.push(rm.index);
+
+      // 행1(선급금)→열2, 행2(중도금)→열2, 행3(잔금)→열2, 행4(합계)→열2
+      const amountMap = [
+        { row: 1, col: 2, value: advAmt },
+        { row: 2, col: 2, value: progAmt },
+        { row: 3, col: 2, value: finAmt },
+        { row: 4, col: 2, value: total },
+      ];
+
+      // 역순으로 처리 (위치 변동 방지)
+      for (let ai = amountMap.length - 1; ai >= 0; ai--) {
+        const { row, col, value } = amountMap[ai];
+        if (value <= 0 || row >= rowStarts.length) continue;
+
+        // 해당 행 범위
+        const rowStart = rowStarts[row];
+        const rowEnd = row + 1 < rowStarts.length
+          ? rowStarts[row + 1]
+          : tblXml.indexOf('</hp:tbl>');
+        const rowXml = tblXml.slice(rowStart, rowEnd);
+
+        // 해당 열의 <hp:tc> 찾기
+        const tcStarts: number[] = [];
+        const tcRegex = /<hp:tc[\s>]/g;
+        let tcm;
+        while ((tcm = tcRegex.exec(rowXml)) !== null) tcStarts.push(tcm.index);
+        if (col >= tcStarts.length) continue;
+
+        const tcStart = tcStarts[col];
+        const tcEnd = col + 1 < tcStarts.length ? tcStarts[col + 1] : rowXml.length;
+        let cellXml = rowXml.slice(tcStart, tcEnd);
+
+        // </hp:p> 앞에 run+text 삽입
+        const pEndIdx = cellXml.lastIndexOf('</hp:p>');
+        if (pEndIdx !== -1) {
+          const charMatch = cellXml.match(/charPrIDRef="(\d+)"/);
+          const charId = charMatch ? charMatch[1] : '6';
+          const insert = `<hp:run charPrIDRef="${charId}"><hp:t>${esc(formatAmount(value))}</hp:t></hp:run>`;
+          cellXml = cellXml.slice(0, pEndIdx) + insert + cellXml.slice(pEndIdx);
+        }
+
+        // 행 XML 교체
+        const newRowXml = rowXml.slice(0, tcStart) + cellXml + rowXml.slice(tcEnd);
+        tblXml = tblXml.slice(0, rowStart) + newRowXml + tblXml.slice(rowEnd);
       }
 
-      xml = xml.slice(0, tblStart) + tblXml + xml.slice(tblEnd);
+      xml = xml.slice(0, secondTbl) + tblXml + xml.slice(secondTblEnd);
     }
   }
 
