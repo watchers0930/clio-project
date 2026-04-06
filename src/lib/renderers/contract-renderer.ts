@@ -104,73 +104,71 @@ export function renderSystemContract(
   const progAmt = Math.round(total * progRate / 100);
   const finAmt = total - advAmt - progAmt; // 잔금은 나머지로 정확히
 
-  // 비율 치환 (% 셀 — 순서대로 선급금, 중도금, 잔금)
-  if (formData.advanceRate) {
-    xml = replaceHpT(xml, '% ', `${formData.advanceRate}% `);
-  }
-  if (formData.progressRate) {
-    xml = replaceHpT(xml, '% ', `${formData.progressRate}% `);
-  }
-  if (formData.finalRate) {
-    xml = replaceHpT(xml, '% ', `${formData.finalRate}% `);
-  }
-
-  // 금액 치환 — 테이블 1의 빈 지급금액 셀 (행1~3 열2, 행4 합계 열2)
-  // 빈 셀에는 <hp:t> 태그 자체가 없음 → </hp:p> 앞에 <hp:run><hp:t>금액</hp:t></hp:run> 삽입
-  if (total > 0) {
+  // 대금 지급 테이블 — 비율 + 금액을 셀 단위로 직접 주입
+  {
     const firstTbl = xml.indexOf('<hp:tbl');
     const secondTbl = xml.indexOf('<hp:tbl', firstTbl + 1);
     if (secondTbl !== -1) {
       const secondTblEnd = xml.indexOf('</hp:tbl>', secondTbl) + 9;
       let tblXml = xml.slice(secondTbl, secondTblEnd);
 
-      // 행/셀 파싱
-      const rowRegex = /<hp:tr[\s>]/g;
+      // 행 시작 위치
       const rowStarts: number[] = [];
+      const rowRegex = /<hp:tr[\s>]/g;
       let rm;
       while ((rm = rowRegex.exec(tblXml)) !== null) rowStarts.push(rm.index);
 
-      // 행1(선급금)→열2, 행2(중도금)→열2, 행3(잔금)→열2, 행4(합계)→열2
-      const amountMap = [
-        { row: 1, col: 2, value: advAmt },
-        { row: 2, col: 2, value: progAmt },
-        { row: 3, col: 2, value: finAmt },
-        { row: 4, col: 2, value: total },
-      ];
+      // 주입할 데이터: { row, col, value, mode }
+      // mode: 'replace' = 기존 <hp:t> 내용 교체, 'insert' = 빈 셀에 삽입
+      const injections: { row: number; col: number; value: string; mode: 'replace' | 'insert' }[] = [];
 
-      // 역순으로 처리 (위치 변동 방지)
-      for (let ai = amountMap.length - 1; ai >= 0; ai--) {
-        const { row, col, value } = amountMap[ai];
-        if (value <= 0 || row >= rowStarts.length) continue;
+      // 비율 (열1 — 기존 "%" 텍스트를 "20%" 등으로 교체)
+      if (formData.advanceRate) injections.push({ row: 1, col: 1, value: `${formData.advanceRate}%`, mode: 'replace' });
+      if (formData.progressRate) injections.push({ row: 2, col: 1, value: `${formData.progressRate}%`, mode: 'replace' });
+      if (formData.finalRate) injections.push({ row: 3, col: 1, value: `${formData.finalRate}%`, mode: 'replace' });
 
-        // 해당 행 범위
-        const rowStart = rowStarts[row];
-        const rowEnd = row + 1 < rowStarts.length
-          ? rowStarts[row + 1]
-          : tblXml.indexOf('</hp:tbl>');
+      // 금액 (열2 — 빈 셀에 삽입)
+      if (advAmt > 0) injections.push({ row: 1, col: 2, value: formatAmount(advAmt), mode: 'insert' });
+      if (progAmt > 0) injections.push({ row: 2, col: 2, value: formatAmount(progAmt), mode: 'insert' });
+      if (finAmt > 0) injections.push({ row: 3, col: 2, value: formatAmount(finAmt), mode: 'insert' });
+      if (total > 0) injections.push({ row: 4, col: 2, value: formatAmount(total), mode: 'insert' });
+
+      // 역순 처리
+      injections.sort((a, b) => b.row - a.row || b.col - a.col);
+
+      for (const inj of injections) {
+        if (inj.row >= rowStarts.length) continue;
+
+        const rowStart = rowStarts[inj.row];
+        const rowEnd = inj.row + 1 < rowStarts.length ? rowStarts[inj.row + 1] : tblXml.indexOf('</hp:tbl>');
         const rowXml = tblXml.slice(rowStart, rowEnd);
 
-        // 해당 열의 <hp:tc> 찾기
         const tcStarts: number[] = [];
         const tcRegex = /<hp:tc[\s>]/g;
         let tcm;
         while ((tcm = tcRegex.exec(rowXml)) !== null) tcStarts.push(tcm.index);
-        if (col >= tcStarts.length) continue;
+        if (inj.col >= tcStarts.length) continue;
 
-        const tcStart = tcStarts[col];
-        const tcEnd = col + 1 < tcStarts.length ? tcStarts[col + 1] : rowXml.length;
+        const tcStart = tcStarts[inj.col];
+        const tcEnd = inj.col + 1 < tcStarts.length ? tcStarts[inj.col + 1] : rowXml.length;
         let cellXml = rowXml.slice(tcStart, tcEnd);
 
-        // </hp:p> 앞에 run+text 삽입
-        const pEndIdx = cellXml.lastIndexOf('</hp:p>');
-        if (pEndIdx !== -1) {
-          const charMatch = cellXml.match(/charPrIDRef="(\d+)"/);
-          const charId = charMatch ? charMatch[1] : '6';
-          const insert = `<hp:run charPrIDRef="${charId}"><hp:t>${esc(formatAmount(value))}</hp:t></hp:run>`;
-          cellXml = cellXml.slice(0, pEndIdx) + insert + cellXml.slice(pEndIdx);
+        if (inj.mode === 'replace') {
+          // 기존 <hp:t>%</hp:t> → <hp:t>20%</hp:t>
+          cellXml = cellXml.replace(
+            /(<hp:t[^>]*>)[^<]*(<\/hp:t>)/,
+            `$1${esc(inj.value)}$2`
+          );
+        } else {
+          // 빈 셀: </hp:p> 앞에 run 삽입
+          const pEndIdx = cellXml.lastIndexOf('</hp:p>');
+          if (pEndIdx !== -1) {
+            const charMatch = cellXml.match(/charPrIDRef="(\d+)"/);
+            const charId = charMatch ? charMatch[1] : '6';
+            cellXml = cellXml.slice(0, pEndIdx) + `<hp:run charPrIDRef="${charId}"><hp:t>${esc(inj.value)}</hp:t></hp:run>` + cellXml.slice(pEndIdx);
+          }
         }
 
-        // 행 XML 교체
         const newRowXml = rowXml.slice(0, tcStart) + cellXml + rowXml.slice(tcEnd);
         tblXml = tblXml.slice(0, rowStart) + newRowXml + tblXml.slice(rowEnd);
       }
