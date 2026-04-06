@@ -776,19 +776,32 @@ export async function generateForFormat(params: {
           const tableStructure = extractDocxTableStructure(rest.templateBuffer!);
 
           if (tableStructure.hasEmptyCells) {
+            // ── 1열 테이블(콘텐츠 섹션)은 AI에게 첫 셀만 노출 ──
+            const firstPerTbl = new Map<number, number>();
+            for (const c of tableStructure.emptyCells) {
+              const prev = firstPerTbl.get(c.tableIndex);
+              if (prev === undefined || c.rowIndex < prev) firstPerTbl.set(c.tableIndex, c.rowIndex);
+            }
+            const trimmedCells = tableStructure.emptyCells.filter(c => {
+              const colCount = tableStructure.tables[c.tableIndex]?.rows[0]?.length ?? 1;
+              if (colCount > 1) return true; // 메타데이터: 전부 유지
+              return c.rowIndex === firstPerTbl.get(c.tableIndex); // 콘텐츠: 첫 셀만
+            });
+            const trimmedStructure = { ...tableStructure, emptyCells: trimmedCells };
+
             // 1차: 프로그래밍 매핑 시도
-            const directData = mapFormDataDirect(tableStructure, rest.instructions ?? '');
+            const directData = mapFormDataDirect(trimmedStructure, rest.instructions ?? '');
             const filledCount = Object.values(directData).filter(v => v && v.trim()).length;
 
             // 채운 셀이 전체 빈 셀의 30% 미만이면 AI로 대체
-            if (filledCount < tableStructure.emptyCells.length * 0.3) {
-              console.log(`[generateForFormat] 직접 매핑 부족 (${filledCount}/${tableStructure.emptyCells.length}), AI 생성으로 전환`);
+            if (filledCount < trimmedStructure.emptyCells.length * 0.3) {
               const docxFormData = await generateDocxFormData({
                 templateName,
-                tableStructure,
+                tableStructure: trimmedStructure, // AI는 섹션당 1필드만 봄
                 sourceChunks: rest.sourceChunks,
                 instructions: rest.instructions,
               });
+              // 렌더러에는 전체 구조 전달 (빈 행 삭제용)
               return { format, title, docxFormData, tableStructure, templateBuffer: rest.templateBuffer! };
             }
 

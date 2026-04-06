@@ -415,6 +415,32 @@ export async function renderDocxFromFormData(
         newTblContent = newTblContent.replace(/<w:tblW[^/]*\/>/, '<w:tblW w:w="5000" w:type="pct"/>');
         dx = dx.slice(0, tbl.start) + newTblContent + dx.slice(tbl.end);
       }
+      // ── 1열 테이블 빈 행 삭제 (회의결과 등 내용 섹션) ──
+      const allTables = findTopLevelBlocks(dx, 'w:tbl');
+      for (let ti2 = allTables.length - 1; ti2 >= 0; ti2--) {
+        const tbl2 = allTables[ti2];
+        const rows2 = findTopLevelBlocks(tbl2.content, 'w:tr');
+        if (rows2.length <= 1) continue;
+        // 첫 행의 열 수 확인 — 1열 테이블만 처리
+        const firstRowCells2 = findTopLevelBlocks(rows2[0].content, 'w:tc');
+        if (firstRowCells2.length > 1) continue;
+
+        let modified2 = tbl2.content;
+        for (let ri2 = rows2.length - 1; ri2 >= 1; ri2--) {
+          const rowCells2 = findTopLevelBlocks(rows2[ri2].content, 'w:tc');
+          const allEmpty2 = rowCells2.every(tc2 => {
+            const txt = extractCellText(tc2.content);
+            return txt.replace(/[\d.]/g, '').trim() === '';
+          });
+          if (allEmpty2) {
+            modified2 = modified2.slice(0, rows2[ri2].start) + modified2.slice(rows2[ri2].end);
+          }
+        }
+        if (modified2 !== tbl2.content) {
+          dx = dx.slice(0, tbl2.start) + modified2 + dx.slice(tbl2.end);
+        }
+      }
+
       zz.file('word/document.xml', dx);
     }
   }
