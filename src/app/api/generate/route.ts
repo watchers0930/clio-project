@@ -37,44 +37,34 @@ export const maxDuration = 60;
  * 연속 행 판정: emptyCells를 (tableIndex, colIndex)별로 그룹핑 후 rowIndex 연속 여부 확인.
  * 섹션 헤더(비어있지 않은 행)가 있으면 자연스럽게 그룹이 끊어짐.
  */
+/**
+ * 같은 테이블+같은 열의 빈 셀 내용을 첫 셀로 합치고 나머지 비우기.
+ * 연속행 여부 무관 — 같은 (tableIndex, colIndex)면 무조건 합침.
+ */
 function consolidateSectionCells(
   fd: Record<string, string>,
   emptyCells: Array<{ fieldId: string; tableIndex: number; rowIndex: number; colIndex: number }>,
 ) {
-  const sorted = [...emptyCells].sort((a, b) =>
-    a.tableIndex - b.tableIndex || a.colIndex - b.colIndex || a.rowIndex - b.rowIndex
-  );
+  const groups = new Map<string, Array<{ fieldId: string; rowIndex: number }>>();
 
-  console.log('[consolidate] emptyCells count:', sorted.length);
-  console.log('[consolidate] cells:', sorted.map(c => `${c.fieldId}(t${c.tableIndex}r${c.rowIndex}c${c.colIndex})=${(fd[c.fieldId] || '').slice(0, 20)}`).join(' | '));
-
-  const groups: Array<typeof sorted> = [];
-  for (const cell of sorted) {
-    const last = groups[groups.length - 1];
-    if (
-      last &&
-      cell.tableIndex === last[last.length - 1].tableIndex &&
-      cell.colIndex === last[last.length - 1].colIndex &&
-      cell.rowIndex === last[last.length - 1].rowIndex + 1
-    ) {
-      last.push(cell);
-    } else {
-      groups.push([cell]);
-    }
+  for (const cell of emptyCells) {
+    const key = `${cell.tableIndex}_${cell.colIndex}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push({ fieldId: cell.fieldId, rowIndex: cell.rowIndex });
   }
 
-  console.log('[consolidate] groups:', groups.map(g => `[${g.map(c => c.fieldId).join(',')}]`).join(' '));
+  for (const [, cells] of groups) {
+    if (cells.length <= 1) continue;
+    cells.sort((a, b) => a.rowIndex - b.rowIndex);
 
-  for (const group of groups) {
-    if (group.length <= 1) continue;
-    const merged = group
+    const merged = cells
       .map(c => fd[c.fieldId] || '')
       .filter(v => v.trim() !== '')
       .join('\n');
-    console.log(`[consolidate] merging ${group.length} cells → ${group[0].fieldId}: ${merged.slice(0, 50)}...`);
-    fd[group[0].fieldId] = merged;
-    for (let i = 1; i < group.length; i++) {
-      fd[group[i].fieldId] = '';
+
+    fd[cells[0].fieldId] = merged;
+    for (let i = 1; i < cells.length; i++) {
+      fd[cells[i].fieldId] = '';
     }
   }
 }
