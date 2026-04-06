@@ -74,7 +74,7 @@ const VALID_FORMATS: OutputFormat[] = ['docx', 'pdf', 'hwpx', 'xlsx', 'pptx'];
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { templateId, sourceFileIds, instructions, outputFormat = 'docx', font, customStructure } = body;
+    const { templateId, sourceFileIds, instructions, outputFormat = 'docx', font, customStructure, contractFormData } = body;
 
     // 폰트 테마 생성
     const fontParam = typeof font === 'string' ? font : '맑은 고딕';
@@ -202,6 +202,62 @@ export async function POST(request: NextRequest) {
     const enrichedInstructions = instructions
       ? `${userMeta}\n\n${instructions}`
       : userMeta;
+
+    // ── 계약서 직접 치환 경로 (AI 미사용) ──
+    if (contractFormData && typeof contractFormData === 'object' && Object.keys(contractFormData).length > 0 && templateBuffer) {
+      const { isContractTemplate } = await import('@/lib/contract-fields');
+      if (isContractTemplate(templateName)) {
+        const { renderSystemContract } = await import('@/lib/renderers/contract-renderer');
+        const dateStr = todayStr;
+        const title = `${templateName} (${dateStr} 생성)`;
+
+        const rendered = renderSystemContract(templateBuffer, contractFormData as Record<string, string>, title);
+        const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
+
+        const { error: uploadErr } = await supabase.storage
+          .from('files')
+          .upload(storagePath, rendered.buffer, { contentType: rendered.mimeType, upsert: false });
+
+        if (uploadErr) {
+          console.error('[generate] Contract upload error:', uploadErr.message);
+          return NextResponse.json({ error: '파일 업로드 실패' }, { status: 500 });
+        }
+
+        const { data: urlData } = await supabase.storage.from('files').createSignedUrl(storagePath, 3600);
+
+        const { data: newDoc } = await supabase.from('documents').insert({
+          title,
+          content: `[계약서 자동 작성] ${templateName}`,
+          template_id: templateId,
+          source_file_ids: sourceFileIds ?? [],
+          instructions: JSON.stringify(contractFormData),
+          status: 'completed',
+          created_by: authUserId,
+        }).select().single();
+
+        await supabase.from('audit_logs').insert({
+          user_id: authUserId,
+          action: 'document.create',
+          target_type: 'document',
+          target_id: newDoc?.id ?? '',
+          details: { title, format: 'hwpx', mode: 'contract-direct' },
+        }).then(() => {}, () => {});
+
+        return NextResponse.json({
+          document: {
+            id: newDoc?.id,
+            title,
+            template: templateName,
+            createdAt: dateStr,
+            status: '완료',
+            sourceCount: 0,
+            content: `[계약서 자동 작성] ${templateName}`,
+          },
+          format: 'hwpx',
+          downloadUrl: urlData?.signedUrl ?? null,
+        }, { status: 201 });
+      }
+    }
 
     // AI 콘텐츠 생성 (포맷별 분기)
     const generationResult = await generateForFormat({

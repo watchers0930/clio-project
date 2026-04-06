@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { isContractTemplate, getContractSchema, type ContractField } from '@/lib/contract-fields';
 
 /* ────────────────────────── types ────────────────────────── */
 interface Document {
@@ -65,6 +66,7 @@ export default function DocumentsPage() {
   const [outputFormat, setOutputFormat] = useState<string>('docx');
   const [generatedDownloadUrl, setGeneratedDownloadUrl] = useState<string | null>(null);
   const [generatedOutline, setGeneratedOutline] = useState<Record<string, unknown> | null>(null);
+  const [contractFormData, setContractFormData] = useState<Record<string, string>>({});
 
   // Step 2: file search & filter
   const [fileSearch, setFileSearch] = useState('');
@@ -156,6 +158,7 @@ export default function DocumentsPage() {
     setSelectedFiles(new Set());
     setInstructions('');
     setCustomStructure('');
+    setContractFormData({});
     setGenerating(false);
     setGeneratedDoc(null);
     setOutputFormat('docx');
@@ -190,6 +193,10 @@ export default function DocumentsPage() {
         ? `## 문서 구조:\n${customStructure.trim()}\n\n${instructions.trim() ? `## 추가 지시사항:\n${instructions.trim()}` : ''}`
         : instructions.trim() || undefined;
 
+      // 계약서 여부 판별
+      const selTmplObj = templates.find(t => t.id === selectedTemplate);
+      const isContract = selTmplObj ? isContractTemplate(selTmplObj.name) : false;
+
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -197,9 +204,10 @@ export default function DocumentsPage() {
           templateId: isCustom ? undefined : selectedTemplate,
           sourceFileIds: Array.from(selectedFiles),
           instructions: finalInstructions,
-          outputFormat,
+          outputFormat: isContract ? 'hwpx' : outputFormat,
           font: selectedFont,
           customStructure: isCustom ? customStructure.trim() : undefined,
+          ...(isContract && Object.keys(contractFormData).length > 0 ? { contractFormData } : {}),
         }),
       });
       if (res.ok) {
@@ -914,68 +922,122 @@ export default function DocumentsPage() {
                 );
               })()}
 
-              {/* Step 3: Instructions + Output Format */}
-              {step === 3 && (
-                <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-8">
-                  <div className="space-y-5">
-                    {/* 출력 포맷 선택 */}
-                    <div>
-                      <p className="text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 10 }}>출력 포맷</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {[
-                          { value: 'docx', label: 'DOCX', icon: '📝', desc: 'Word 문서' },
-                          { value: 'pdf', label: 'PDF', icon: '📕', desc: 'PDF 문서' },
-                          { value: 'hwpx', label: 'HWPX', icon: '📘', desc: '한글 문서' },
-                          { value: 'xlsx', label: 'XLSX', icon: '📊', desc: 'Excel 보고서' },
-                          { value: 'pptx', label: 'PPTX', icon: '📙', desc: '프레젠테이션' },
-                        ].map((f) => (
-                          <button
-                            key={f.value}
-                            onClick={() => setOutputFormat(f.value)}
-                            className={`p-3 rounded-xl border text-center transition-all ${outputFormat === f.value ? 'border-[#0071e3] bg-[#f0f5ff] ring-2 ring-[#0071e3]/30' : 'border-[#e5e5e7] hover:border-[#0071e3]'}`}
-                          >
-                            <span className="text-xl">{f.icon}</span>
-                            <p className="text-xs font-bold text-[#1d1d1f] mt-1">{f.label}</p>
-                            <p className="text-[10px] text-[#6e6e73]">{f.desc}</p>
-                          </button>
-                        ))}
+              {/* Step 3: Instructions + Output Format / 계약서 입력 폼 */}
+              {step === 3 && (() => {
+                const selTmpl = templates.find(t => t.id === selectedTemplate);
+                const contractSchema = selTmpl ? getContractSchema(selTmpl.name) : null;
+
+                // ── 계약서 입력 폼 ──
+                if (contractSchema) {
+                  const groups = [...new Set(contractSchema.fields.map(f => f.group))];
+                  return (
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-3 p-4 rounded-xl bg-[#f0f5ff] border border-[#d0e2ff]">
+                        <svg className="w-5 h-5 text-[#0071e3] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+                        <div>
+                          <p className="text-sm font-semibold text-[#1d1d1f]">계약서 자동 작성</p>
+                          <p className="text-xs text-[#6e6e73]">아래 항목을 입력하면 표준계약서 양식에 자동으로 반영됩니다. AI 토큰을 사용하지 않습니다.</p>
+                        </div>
                       </div>
-                      {(outputFormat === 'xlsx' || outputFormat === 'pptx') && (
-                        <p className="text-xs text-[#0071e3] bg-[#f0f5ff] px-3 py-2 rounded-lg mt-2">
-                          {outputFormat === 'xlsx' ? 'AI가 데이터 테이블을 구조화하여 Excel 파일로 생성합니다.' : 'AI가 슬라이드 구성을 자동으로 설계하여 PPT 파일로 생성합니다.'}
-                        </p>
+                      {groups.map(group => {
+                        const fields = contractSchema.fields.filter(f => f.group === group);
+                        return (
+                          <div key={group}>
+                            <h4 className="text-sm font-semibold text-[#1d1d1f] mb-3 flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#0071e3]" />
+                              {group}
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
+                              {fields.map(field => (
+                                <div key={field.key} className={field.half ? '' : 'md:col-span-2'}>
+                                  <label className="block text-xs text-[#6e6e73] mb-1">
+                                    {field.label} {field.required && <span className="text-[#ff3b30]">*</span>}
+                                  </label>
+                                  <input
+                                    type={field.type === 'number' ? 'text' : field.type}
+                                    inputMode={field.type === 'number' ? 'numeric' : undefined}
+                                    value={contractFormData[field.key] ?? ''}
+                                    onChange={(e) => {
+                                      let val = e.target.value;
+                                      if (field.type === 'number') val = val.replace(/[^0-9]/g, '');
+                                      setContractFormData(prev => ({ ...prev, [field.key]: val }));
+                                    }}
+                                    placeholder={field.placeholder}
+                                    className="w-full px-4 py-2.5 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#c7c7cc] focus:outline-none focus:ring-2 focus:ring-[#0071e3] transition-shadow"
+                                  />
+                                  {field.type === 'number' && contractFormData[field.key] && (
+                                    <p className="text-[11px] text-[#0071e3] mt-0.5">{Number(contractFormData[field.key]).toLocaleString('ko-KR')}원</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                }
+
+                // ── 일반 문서 (기존 UI) ──
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-8">
+                    <div className="space-y-5">
+                      <div>
+                        <p className="text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 10 }}>출력 포맷</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { value: 'docx', label: 'DOCX', icon: '📝', desc: 'Word 문서' },
+                            { value: 'pdf', label: 'PDF', icon: '📕', desc: 'PDF 문서' },
+                            { value: 'hwpx', label: 'HWPX', icon: '📘', desc: '한글 문서' },
+                            { value: 'xlsx', label: 'XLSX', icon: '📊', desc: 'Excel 보고서' },
+                            { value: 'pptx', label: 'PPTX', icon: '📙', desc: '프레젠테이션' },
+                          ].map((f) => (
+                            <button
+                              key={f.value}
+                              onClick={() => setOutputFormat(f.value)}
+                              className={`p-3 rounded-xl border text-center transition-all ${outputFormat === f.value ? 'border-[#0071e3] bg-[#f0f5ff] ring-2 ring-[#0071e3]/30' : 'border-[#e5e5e7] hover:border-[#0071e3]'}`}
+                            >
+                              <span className="text-xl">{f.icon}</span>
+                              <p className="text-xs font-bold text-[#1d1d1f] mt-1">{f.label}</p>
+                              <p className="text-[10px] text-[#6e6e73]">{f.desc}</p>
+                            </button>
+                          ))}
+                        </div>
+                        {(outputFormat === 'xlsx' || outputFormat === 'pptx') && (
+                          <p className="text-xs text-[#0071e3] bg-[#f0f5ff] px-3 py-2 rounded-lg mt-2">
+                            {outputFormat === 'xlsx' ? 'AI가 데이터 테이블을 구조화하여 Excel 파일로 생성합니다.' : 'AI가 슬라이드 구성을 자동으로 설계하여 PPT 파일로 생성합니다.'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-5">
+                      <div className="flex flex-col h-full">
+                        <p className="text-sm text-[#6e6e73]" style={{ marginBottom: 10 }}>추가 지시사항 (선택)</p>
+                        <textarea
+                          value={instructions}
+                          onChange={(e) => setInstructions(e.target.value)}
+                          placeholder="예: 핵심 수치 위주로 요약해 주세요. 표 형태로 정리해 주세요."
+                          rows={14}
+                          className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none"
+                        />
+                      </div>
+                      {selectedTemplate === '__none__' && (
+                        <div>
+                          <p className="text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>문서 구조 *</p>
+                          <p className="text-xs text-[#6e6e73]" style={{ marginBottom: 8 }}>AI가 이 구조를 따라 문서를 생성합니다</p>
+                          <textarea
+                            value={customStructure}
+                            onChange={(e) => setCustomStructure(e.target.value)}
+                            placeholder={"예:\n# 업무일지\n## 오늘의 업무\n- 주요 업무 내용 1\n- 주요 업무 내용 2\n## 문제점 및 해결 방안\n## 내일의 계획"}
+                            rows={6}
+                            className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none font-mono"
+                          />
+                        </div>
                       )}
                     </div>
                   </div>
-                  <div className="space-y-5">
-                    {/* 추가 지시사항 */}
-                    <div className="flex flex-col h-full">
-                      <p className="text-sm text-[#6e6e73]" style={{ marginBottom: 10 }}>추가 지시사항 (선택)</p>
-                      <textarea
-                        value={instructions}
-                        onChange={(e) => setInstructions(e.target.value)}
-                        placeholder="예: 핵심 수치 위주로 요약해 주세요. 표 형태로 정리해 주세요."
-                        rows={14}
-                        className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none"
-                      />
-                    </div>
-                    {/* 문서 구조 (직접 작성 모드) */}
-                    {selectedTemplate === '__none__' && (
-                      <div>
-                        <p className="text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>문서 구조 *</p>
-                        <p className="text-xs text-[#6e6e73]" style={{ marginBottom: 8 }}>AI가 이 구조를 따라 문서를 생성합니다</p>
-                        <textarea
-                          value={customStructure}
-                          onChange={(e) => setCustomStructure(e.target.value)}
-                          placeholder={"예:\n# 업무일지\n## 오늘의 업무\n- 주요 업무 내용 1\n- 주요 업무 내용 2\n## 문제점 및 해결 방안\n## 내일의 계획"}
-                          rows={6}
-                          className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none font-mono"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Step 4: Confirm */}
               {step === 4 && (
