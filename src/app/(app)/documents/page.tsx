@@ -252,6 +252,7 @@ export default function DocumentsPage() {
           setDocs((prev) => [newDoc, ...prev]);
           if (data.downloadUrl) setGeneratedDownloadUrl(data.downloadUrl);
           if (data.outline) setGeneratedOutline(data.outline);
+          if (data.format) setOutputFormat(data.format);
           setStep(5);
         }
       } else {
