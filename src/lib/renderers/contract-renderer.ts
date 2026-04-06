@@ -149,7 +149,11 @@ export function renderSystemContract(
   console.log(`[contract-renderer] hp:t tags: ${openTags}/${closeTags}`, openTags === closeTags ? 'OK' : 'MISMATCH');
 
   zip.file(sectionFile, xml);
-  const buffer = Buffer.from(zip.generate({ type: 'nodebuffer' }));
+  const buffer = Buffer.from(zip.generate({
+    type: 'nodebuffer',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 6 },
+  }));
 
   return {
     buffer,
