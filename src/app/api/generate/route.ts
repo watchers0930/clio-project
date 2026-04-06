@@ -45,6 +45,9 @@ function consolidateSectionCells(
     a.tableIndex - b.tableIndex || a.colIndex - b.colIndex || a.rowIndex - b.rowIndex
   );
 
+  console.log('[consolidate] emptyCells count:', sorted.length);
+  console.log('[consolidate] cells:', sorted.map(c => `${c.fieldId}(t${c.tableIndex}r${c.rowIndex}c${c.colIndex})=${(fd[c.fieldId] || '').slice(0, 20)}`).join(' | '));
+
   const groups: Array<typeof sorted> = [];
   for (const cell of sorted) {
     const last = groups[groups.length - 1];
@@ -60,12 +63,15 @@ function consolidateSectionCells(
     }
   }
 
+  console.log('[consolidate] groups:', groups.map(g => `[${g.map(c => c.fieldId).join(',')}]`).join(' '));
+
   for (const group of groups) {
     if (group.length <= 1) continue;
     const merged = group
       .map(c => fd[c.fieldId] || '')
       .filter(v => v.trim() !== '')
       .join('\n');
+    console.log(`[consolidate] merging ${group.length} cells → ${group[0].fieldId}: ${merged.slice(0, 50)}...`);
     fd[group[0].fieldId] = merged;
     for (let i = 1; i < group.length; i++) {
       fd[group[i].fieldId] = '';
