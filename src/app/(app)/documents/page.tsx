@@ -228,6 +228,8 @@ export default function DocumentsPage() {
       // 계약서 여부 판별
       const selTmplObj = templates.find(t => t.id === selectedTemplate);
       const isContract = selTmplObj ? isContractTemplate(selTmplObj.name) : false;
+      if (isContract) setOutputFormat('hwpx');
+      const actualFormat = isContract ? 'hwpx' : outputFormat;
 
       const res = await fetch('/api/generate', {
         method: 'POST',
@@ -236,7 +238,7 @@ export default function DocumentsPage() {
           templateId: isCustom ? undefined : selectedTemplate,
           sourceFileIds: Array.from(selectedFiles),
           instructions: finalInstructions,
-          outputFormat: isContract ? 'hwpx' : outputFormat,
+          outputFormat: actualFormat,
           font: selectedFont,
           customStructure: isCustom ? customStructure.trim() : undefined,
           ...(isContract && Object.keys(contractFormData).length > 0 ? { contractFormData } : {}),
