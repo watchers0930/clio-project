@@ -366,7 +366,7 @@ export async function renderHwpxFromFormData(
     xml = xml.slice(0, absStart) + cellXml + xml.slice(absEnd);
   }
 
-  // ── 빈 행 완전 삭제 (숫자/점만 있는 행 = 빈 행) ──
+  // ── 빈 행 높이 최소화 + 텍스트 제거 (행 구조 유지, 내용만 비움) ──
   const tblsAfter = findBlocks(xml, tblTag);
   for (let ti = tblsAfter.length - 1; ti >= 0; ti--) {
     const tblA = tblsAfter[ti];
@@ -382,8 +382,19 @@ export async function renderHwpxFromFormData(
         return txt.replace(/[\d.]/g, '').trim() === '';
       });
       if (allEmpty) {
-        // 행 자체를 XML에서 제거
-        modified = modified.slice(0, rowsA[ri].start) + modified.slice(rowsA[ri].end);
+        // 행 높이 최소화
+        let newRow = rowsA[ri].content.replace(
+          /(<hp:cellSz[^>]*\sheight=")(\d+)(")/g, '$11$3'
+        ).replace(
+          /(<hp:cellMargin[^>]*\stop=")(\d+)(")/g, '$10$3'
+        ).replace(
+          /(<hp:cellMargin[^>]*\sbottom=")(\d+)(")/g, '$10$3'
+        );
+        // 셀 안의 텍스트도 모두 비우기 (번호 "1.", "2." 등 제거)
+        newRow = newRow.replace(
+          new RegExp(`(<${tTag}[^>]*>)[^<]*(</${tTag}>)`, 'g'), '$1$2'
+        );
+        modified = modified.slice(0, rowsA[ri].start) + newRow + modified.slice(rowsA[ri].end);
       }
     }
     if (modified !== tblA.content) {
