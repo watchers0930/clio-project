@@ -487,7 +487,7 @@ export default function DocumentsPage() {
           <p className="text-[#6e6e73] mt-1" style={{ marginBottom: 10 }}>AI를 활용하여 문서를 자동으로 생성하세요</p>
         </div>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => { const n = new Date(); setContractFormData({ signDate: `${n.getFullYear()}/${String(n.getMonth()+1).padStart(2,'0')}/${String(n.getDate()).padStart(2,'0')}` }); setShowModal(true); }}
           className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors shadow-sm"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -507,7 +507,7 @@ export default function DocumentsPage() {
           </div>
           <h3 className="text-lg font-semibold text-[#1d1d1f]" style={{ marginBottom: 20 }}>생성된 문서가 없습니다</h3>
           <p className="text-[#6e6e73] text-sm" style={{ marginBottom: 20 }}>새 문서 생성 버튼을 눌러 첫 문서를 만들어 보세요</p>
-          <button onClick={() => setShowModal(true)} className="px-6 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors">
+          <button onClick={() => { const n = new Date(); setContractFormData({ signDate: `${n.getFullYear()}/${String(n.getMonth()+1).padStart(2,'0')}/${String(n.getDate()).padStart(2,'0')}` }); setShowModal(true); }} className="px-6 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors">
             새 문서 생성
           </button>
         </div>
