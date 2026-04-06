@@ -31,6 +31,48 @@ const FONT_MAP: Record<string, string> = {
 
 export const maxDuration = 60;
 
+/**
+ * 같은 섹션(연속 행)의 내용을 첫 셀에 합치고 나머지 비우기.
+ * AI가 행별로 분산 채우는 문제를 프로그래밍으로 보정.
+ * 연속 행 판정: emptyCells를 (tableIndex, colIndex)별로 그룹핑 후 rowIndex 연속 여부 확인.
+ * 섹션 헤더(비어있지 않은 행)가 있으면 자연스럽게 그룹이 끊어짐.
+ */
+function consolidateSectionCells(
+  fd: Record<string, string>,
+  emptyCells: Array<{ fieldId: string; tableIndex: number; rowIndex: number; colIndex: number }>,
+) {
+  const sorted = [...emptyCells].sort((a, b) =>
+    a.tableIndex - b.tableIndex || a.colIndex - b.colIndex || a.rowIndex - b.rowIndex
+  );
+
+  const groups: Array<typeof sorted> = [];
+  for (const cell of sorted) {
+    const last = groups[groups.length - 1];
+    if (
+      last &&
+      cell.tableIndex === last[last.length - 1].tableIndex &&
+      cell.colIndex === last[last.length - 1].colIndex &&
+      cell.rowIndex === last[last.length - 1].rowIndex + 1
+    ) {
+      last.push(cell);
+    } else {
+      groups.push([cell]);
+    }
+  }
+
+  for (const group of groups) {
+    if (group.length <= 1) continue;
+    const merged = group
+      .map(c => fd[c.fieldId] || '')
+      .filter(v => v.trim() !== '')
+      .join('\n');
+    fd[group[0].fieldId] = merged;
+    for (let i = 1; i < group.length; i++) {
+      fd[group[i].fieldId] = '';
+    }
+  }
+}
+
 const VALID_FORMATS: OutputFormat[] = ['docx', 'pdf', 'hwpx', 'xlsx', 'pptx'];
 
 export async function POST(request: NextRequest) {
@@ -207,6 +249,9 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // ── 섹션 통합: 여러 행에 분산된 내용을 첫 셀로 합침 ──
+      consolidateSectionCells(fd, cells);
+
       const rendered = await renderDocument(generationResult, theme);
       const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
 
@@ -283,7 +328,9 @@ export async function POST(request: NextRequest) {
           }
         }
       }
-      // (행 배분 제거 — AI가 번호 단락으로 한 셀에 작성)
+
+      // ── 섹션 통합: 여러 행에 분산된 내용을 첫 셀로 합침 ──
+      consolidateSectionCells(hfd, hcells);
 
       const rendered = await renderDocument(generationResult, theme);
       const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
