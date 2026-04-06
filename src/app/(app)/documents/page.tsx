@@ -954,9 +954,11 @@ export default function DocumentsPage() {
                                     {field.label} {field.required && <span className="text-[#ff3b30]">*</span>}
                                   </label>
                                   <input
-                                    type={field.type === 'number' ? 'text' : field.type}
+                                    type="text"
                                     inputMode={field.type === 'number' ? 'numeric' : undefined}
-                                    value={contractFormData[field.key] ?? ''}
+                                    value={field.type === 'number' && contractFormData[field.key]
+                                      ? Number(contractFormData[field.key]).toLocaleString('ko-KR')
+                                      : (contractFormData[field.key] ?? '')}
                                     onChange={(e) => {
                                       let val = e.target.value;
                                       if (field.type === 'number') val = val.replace(/[^0-9]/g, '');
@@ -965,9 +967,6 @@ export default function DocumentsPage() {
                                     placeholder={field.placeholder}
                                     className="w-full px-4 py-2.5 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#c7c7cc] focus:outline-none focus:ring-2 focus:ring-[#0071e3] transition-shadow"
                                   />
-                                  {field.type === 'number' && contractFormData[field.key] && (
-                                    <p className="text-[11px] text-[#0071e3] mt-0.5">{Number(contractFormData[field.key]).toLocaleString('ko-KR')}원</p>
-                                  )}
                                 </div>
                               ))}
                             </div>

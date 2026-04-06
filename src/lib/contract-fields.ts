@@ -28,10 +28,10 @@ export function isContractTemplate(name: string): boolean {
 const SYSTEM_CONTRACT_FIELDS: ContractField[] = [
   // 기본정보
   { key: 'contractName', label: '계약명', type: 'text', placeholder: 'OO시스템 구축 사업', required: true, group: '기본정보' },
-  { key: 'startDate', label: '계약 시작일', type: 'date', required: true, group: '기본정보', half: true },
-  { key: 'endDate', label: '계약 종료일', type: 'date', required: true, group: '기본정보', half: true },
-  { key: 'deliveryDate', label: '납기일', type: 'date', required: true, group: '기본정보' },
-  { key: 'signDate', label: '계약 체결일', type: 'date', required: true, group: '기본정보' },
+  { key: 'startDate', label: '계약 시작일', type: 'text', placeholder: 'yyyy/mm/dd', required: true, group: '기본정보', half: true },
+  { key: 'endDate', label: '계약 종료일', type: 'text', placeholder: 'yyyy/mm/dd', required: true, group: '기본정보', half: true },
+  { key: 'deliveryDate', label: '납기일', type: 'text', placeholder: 'yyyy/mm/dd', required: true, group: '기본정보' },
+  { key: 'signDate', label: '계약 체결일', type: 'text', placeholder: 'yyyy/mm/dd', required: true, group: '기본정보' },
   // 금액
   { key: 'totalAmount', label: '계약금액 (원)', type: 'number', placeholder: '500000000', required: true, group: '금액' },
   { key: 'supplyAmount', label: '공급가액 (원)', type: 'number', placeholder: '454545455', group: '금액', half: true },
@@ -104,8 +104,8 @@ export function amountToKorean(n: number): string {
   return result;
 }
 
-/** 날짜 포맷 (2026-05-01 → { year: "2026", month: "5", day: "1" }) */
+/** 날짜 포맷 (yyyy/mm/dd 또는 yyyy-mm-dd → { year, month, day }) */
 export function parseDate(dateStr: string): { year: string; month: string; day: string } {
-  const [y, m, d] = dateStr.split('-');
+  const [y, m, d] = dateStr.split(/[\/\-]/);
   return { year: y, month: String(parseInt(m)), day: String(parseInt(d)) };
 }
