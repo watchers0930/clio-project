@@ -13,17 +13,13 @@ function esc(s: string): string {
 }
 
 /**
- * <hp:t> 태그의 텍스트 내용을 통째로 치환.
- * 정확한 기존 텍스트 → 새 텍스트로 바꿈. 첫 번째 매칭만.
+ * XML 내에서 oldText를 찾아 newText로 치환 (첫 번째 매칭만).
+ * <hp:t> 태그 경계를 넘지 않도록 단순 문자열 검색 사용.
  */
 function replaceHpT(xml: string, oldText: string, newText: string): string {
-  const escapedSearch = oldText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const regex = new RegExp(
-    `(<hp:t[^>]*>)([^<]*?)(${escapedSearch})([^<]*?)(</hp:t>)`
-  );
-  return xml.replace(regex, (_, open, before, _match, after, close) => {
-    return open + before + esc(newText) + after + close;
-  });
+  const idx = xml.indexOf(oldText);
+  if (idx === -1) return xml;
+  return xml.slice(0, idx) + esc(newText) + xml.slice(idx + oldText.length);
 }
 
 export function renderSystemContract(
