@@ -224,9 +224,13 @@ export async function POST(request: NextRequest) {
 
     // DOCX 폼 데이터 기반: 빈 셀에 내용 주입 → Storage 업로드
     if (generationResult.docxFormData && generationResult.templateBuffer && generationResult.tableStructure) {
-      // ── 프로그래밍 후처리: AI 결과를 강제 보정 ──
       const fd = generationResult.docxFormData;
       const cells = generationResult.tableStructure.emptyCells;
+
+      // ── 1단계: 섹션 통합 (AI가 행별 분산한 내용을 첫 셀로 합침) ──
+      consolidateSectionCells(fd, cells);
+
+      // ── 2단계: 메타데이터 강제 보정 (통합 결과를 덮어씀) ──
       let dangdangFilled = false;
       for (const cell of cells) {
         const label = cell.contextLabel;
@@ -237,9 +241,7 @@ export async function POST(request: NextRequest) {
         if (/^(소속|성명|연락처|서명|참석자)$/.test(label)) fd[cell.fieldId] = '';
         if (/보고처/.test(label)) fd[cell.fieldId] = userDept;
         if (/보고서명/.test(label)) fd[cell.fieldId] = templateName;
-        // 담당 → row 0은 빈칸
         if (/^담당$/.test(label)) fd[cell.fieldId] = '';
-        // 보고서(20 년 월 일) 영역: row 1 col 0은 담당 아래 = 이름, 나머지는 빈칸
         if (/보고서\s*\(/.test(label)) {
           if (cell.rowIndex === 1 && cell.colIndex === 0 && !dangdangFilled) {
             fd[cell.fieldId] = userName; dangdangFilled = true;
@@ -248,9 +250,6 @@ export async function POST(request: NextRequest) {
           }
         }
       }
-
-      // ── 섹션 통합: 여러 행에 분산된 내용을 첫 셀로 합침 ──
-      consolidateSectionCells(fd, cells);
 
       const rendered = await renderDocument(generationResult, theme);
       const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
@@ -306,9 +305,13 @@ export async function POST(request: NextRequest) {
 
     // HWPX 폼 데이터 기반: 빈 셀에 내용 주입 → Storage 업로드
     if (generationResult.hwpxFormData && generationResult.templateBuffer && generationResult.hwpxTableStructure) {
-      // ── HWPX 프로그래밍 후처리 (DOCX와 동일) ──
       const hfd = generationResult.hwpxFormData;
       const hcells = generationResult.hwpxTableStructure.emptyCells;
+
+      // ── 1단계: 섹션 통합 (AI가 행별 분산한 내용을 첫 셀로 합침) ──
+      consolidateSectionCells(hfd, hcells);
+
+      // ── 2단계: 메타데이터 강제 보정 (통합 결과를 덮어씀) ──
       let hdangFilled = false;
       for (const cell of hcells) {
         const label = cell.contextLabel;
@@ -328,9 +331,6 @@ export async function POST(request: NextRequest) {
           }
         }
       }
-
-      // ── 섹션 통합: 여러 행에 분산된 내용을 첫 셀로 합침 ──
-      consolidateSectionCells(hfd, hcells);
 
       const rendered = await renderDocument(generationResult, theme);
       const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
