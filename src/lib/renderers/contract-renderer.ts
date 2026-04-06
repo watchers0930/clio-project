@@ -95,7 +95,16 @@ export function renderSystemContract(
     );
   }
 
-  // ── 대금 지급 비율 (% 셀 — 순서대로 선급금, 중도금, 잔금) ──
+  // ── 대금 지급 비율 + 금액 계산 ──
+  const total = Number(formData.totalAmount || 0);
+  const advRate = Number(formData.advanceRate || 0);
+  const progRate = Number(formData.progressRate || 0);
+  const finRate = Number(formData.finalRate || 0);
+  const advAmt = Math.round(total * advRate / 100);
+  const progAmt = Math.round(total * progRate / 100);
+  const finAmt = total - advAmt - progAmt; // 잔금은 나머지로 정확히
+
+  // 비율 치환 (% 셀 — 순서대로 선급금, 중도금, 잔금)
   if (formData.advanceRate) {
     xml = replaceHpT(xml, '% ', `${formData.advanceRate}% `);
   }
@@ -104,6 +113,29 @@ export function renderSystemContract(
   }
   if (formData.finalRate) {
     xml = replaceHpT(xml, '% ', `${formData.finalRate}% `);
+  }
+
+  // 금액 치환 — 테이블 1의 빈 지급금액 셀 (행1~3 열2 + 행4 합계)
+  // 빈 <hp:t> 태그는 테이블 내부에만 있으므로, 테이블 영역에서만 치환
+  if (total > 0) {
+    // 테이블 1 영역 찾기
+    const tblStart = xml.indexOf('<hp:tbl', xml.indexOf('<hp:tbl') + 1); // 두 번째 테이블
+    if (tblStart !== -1) {
+      const tblEnd = xml.indexOf('</hp:tbl>', tblStart) + 9;
+      let tblXml = xml.slice(tblStart, tblEnd);
+
+      // 빈 <hp:t></hp:t> 또는 <hp:t> </hp:t>를 순서대로 금액으로 채움
+      const amounts = [advAmt, progAmt, finAmt, total].filter(a => a > 0);
+      for (const amt of amounts) {
+        // 빈 hp:t를 하나씩 찾아 채움
+        tblXml = tblXml.replace(
+          /(<hp:t[^>]*>)\s*(<\/hp:t>)/,
+          `$1${formatAmount(amt)}$2`
+        );
+      }
+
+      xml = xml.slice(0, tblStart) + tblXml + xml.slice(tblEnd);
+    }
   }
 
   // ── 계약 체결일 ──
