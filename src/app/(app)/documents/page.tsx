@@ -1252,7 +1252,8 @@ export default function DocumentsPage() {
                           const url = URL.createObjectURL(blob);
                           const a = document.createElement('a');
                           a.href = url;
-                          a.download = `${generatedDoc?.title ?? '문서'}.${outputFormat}`;
+                          const dlExt = generatedDownloadUrl?.split('/').pop()?.split('.').pop()?.split('?')[0] ?? outputFormat;
+                          a.download = `${generatedDoc?.title ?? '문서'}.${dlExt}`;
                           document.body.appendChild(a);
                           a.click();
                           document.body.removeChild(a);
