@@ -977,10 +977,10 @@ export default function DocumentsPage() {
                               <span className="w-1.5 h-1.5 rounded-full bg-[#0071e3]" />
                               {group}
                             </h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-5" style={{ marginBottom: 10 }}>
                               {fields.map(field => (
                                 <div key={field.key} className={field.half ? '' : 'md:col-span-2'}>
-                                  <label className="block text-xs text-[#6e6e73] mb-1">
+                                  <label className="block text-xs text-[#6e6e73] mb-2">
                                     {field.label} {field.required && <span className="text-[#ff3b30]">*</span>}
                                   </label>
                                   {field.type === 'address' ? (
