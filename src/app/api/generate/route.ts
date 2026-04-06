@@ -211,13 +211,13 @@ export async function POST(request: NextRequest) {
         const dateStr = todayStr;
         const title = `${templateName} (${dateStr} 생성)`;
 
-        console.log('[generate] 계약서 직접 치환 시작:', templateName, 'buffer:', templateBuffer.length, 'bytes, fields:', Object.keys(contractFormData).length);
+        console.log('[generate] 계약서 직접 치환 시작:', templateName, 'buffer:', templateBuffer.length, 'bytes, ZIP magic:', templateBuffer[0] === 0x50 && templateBuffer[1] === 0x4B ? 'OK' : 'FAIL');
         let rendered;
         try {
           rendered = renderSystemContract(templateBuffer, contractFormData as Record<string, string>, title);
-          console.log('[generate] 계약서 렌더링 완료:', rendered.buffer.length, 'bytes');
+          console.log('[generate] 계약서 렌더링 완료:', rendered.buffer.length, 'bytes, ZIP magic:', rendered.buffer[0] === 0x50 && rendered.buffer[1] === 0x4B ? 'OK' : 'FAIL');
         } catch (renderErr) {
-          console.error('[generate] 계약서 렌더링 에러:', renderErr instanceof Error ? renderErr.message : renderErr);
+          console.error('[generate] 계약서 렌더링 에러:', renderErr instanceof Error ? renderErr.message : renderErr, renderErr instanceof Error ? renderErr.stack : '');
           return NextResponse.json({ error: '계약서 생성 실패: ' + (renderErr instanceof Error ? renderErr.message : '알 수 없는 오류') }, { status: 500 });
         }
         const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;

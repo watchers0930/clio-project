@@ -32,6 +32,8 @@ export function renderSystemContract(
   if (!sectionFile) throw new Error('HWPX section XML을 찾을 수 없습니다.');
 
   let xml = zip.file(sectionFile)!.asText();
+  const originalXmlLen = xml.length;
+  console.log(`[contract-renderer] sectionFile: ${sectionFile}, xmlLen: ${originalXmlLen}`);
 
   // ── 1. 계약명 ──
   if (formData.contractName) {
@@ -140,6 +142,11 @@ export function renderSystemContract(
   if (formData.supplierCeo) {
     xml = replaceHpT(xml, '대표자 성명 :            (인)', `대표자 성명 : ${formData.supplierCeo} (인)`);
   }
+
+  // XML 무결성 체크
+  const openTags = (xml.match(/<hp:t[ >]/g) || []).length;
+  const closeTags = (xml.match(/<\/hp:t>/g) || []).length;
+  console.log(`[contract-renderer] hp:t tags: ${openTags}/${closeTags}`, openTags === closeTags ? 'OK' : 'MISMATCH');
 
   zip.file(sectionFile, xml);
   const buffer = Buffer.from(zip.generate({ type: 'nodebuffer' }));
