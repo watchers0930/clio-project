@@ -195,6 +195,7 @@ export function renderSystemContract(
         let rx = row.content;
         if (advRate > 0) rx = injectCell(rx, cs, 1, `${advRate}%`, 'replace');
         if (advAmt > 0) { const cs2 = getCells(rx); rx = injectCell(rx, cs2, 2, formatAmount(advAmt), 'insert'); }
+        if (formData.advancePayDate) { const cs3 = getCells(rx); rx = injectCell(rx, cs3, 3, formData.advancePayDate, 'insert'); }
         tblXml = tblXml.slice(0, row.start) + rx + tblXml.slice(row.end);
       }
 
@@ -220,6 +221,7 @@ export function renderSystemContract(
         let rx = row.content;
         if (finRate > 0) rx = injectCell(rx, cs, 1, `${finRate}%`, 'replace');
         if (finAmt > 0) { const cs2 = getCells(rx); rx = injectCell(rx, cs2, 2, formatAmount(finAmt), 'insert'); }
+        if (formData.finalPayDate) { const cs3 = getCells(rx); rx = injectCell(rx, cs3, 3, formData.finalPayDate, 'insert'); }
         tblXml = tblXml.slice(0, row.start) + rx + tblXml.slice(row.end);
       }
 
