@@ -824,22 +824,34 @@ export async function generateForFormat(params: {
           const { extractHwpxTableStructure } = await import('@/lib/renderers/hwpx-renderer');
           const hwpxResult = extractHwpxTableStructure(rest.templateBuffer!);
 
-          console.log('[HWPX] extractHwpxTableStructure result:', hwpxResult ? `tables=${hwpxResult.structure.tables.length}, emptyCells=${hwpxResult.structure.emptyCells.length}` : 'null');
           if (hwpxResult && hwpxResult.structure.hasEmptyCells) {
+            // ── 1열 테이블(콘텐츠 섹션)은 AI에게 첫 셀만 노출 ──
+            // 다열 테이블(메타데이터)은 전부 노출
+            const firstPerTable = new Map<number, number>();
+            for (const c of hwpxResult.structure.emptyCells) {
+              const prev = firstPerTable.get(c.tableIndex);
+              if (prev === undefined || c.rowIndex < prev) firstPerTable.set(c.tableIndex, c.rowIndex);
+            }
+            const trimmedCells = hwpxResult.structure.emptyCells.filter(c => {
+              const colCount = hwpxResult.structure.tables[c.tableIndex]?.rows[0]?.length ?? 1;
+              if (colCount > 1) return true; // 메타데이터 테이블: 전부 유지
+              return c.rowIndex === firstPerTable.get(c.tableIndex); // 콘텐츠: 첫 셀만
+            });
+            const trimmedStructure = { ...hwpxResult.structure, emptyCells: trimmedCells };
+
             // 1차: 프로그래밍 직접 매핑
-            const directData = mapFormDataDirect(hwpxResult.structure, rest.instructions ?? '');
+            const directData = mapFormDataDirect(trimmedStructure, rest.instructions ?? '');
             const filledCount = Object.values(directData).filter(v => v && v.trim()).length;
-            console.log('[HWPX] mapFormDataDirect filled:', filledCount, '/', hwpxResult.structure.emptyCells.length);
 
             // 채운 셀이 30% 미만이면 AI로 대체
-            if (filledCount < hwpxResult.structure.emptyCells.length * 0.3) {
-              console.log('[HWPX] 직접 매핑 부족, AI 생성으로 전환');
+            if (filledCount < trimmedStructure.emptyCells.length * 0.3) {
               const hwpxFormData = await generateDocxFormData({
                 templateName,
-                tableStructure: hwpxResult.structure,
+                tableStructure: trimmedStructure, // AI는 섹션당 1필드만 봄
                 sourceChunks: rest.sourceChunks,
                 instructions: rest.instructions,
               });
+              // 렌더러에는 전체 구조 전달 (빈 행 삭제용)
               return { format, title, hwpxFormData, hwpxTableStructure: hwpxResult.structure, templateBuffer: rest.templateBuffer! };
             }
             return { format, title, hwpxFormData: directData, hwpxTableStructure: hwpxResult.structure, templateBuffer: rest.templateBuffer! };
