@@ -851,7 +851,7 @@ export default function DocumentsPage() {
                     </div>
 
                     {/* 필터 */}
-                    <div className="flex gap-2 flex-wrap">
+                    <div className="flex gap-2 flex-wrap" style={{ marginBottom: 10 }}>
                       <select
                         value={fileDeptFilter}
                         onChange={(e) => setFileDeptFilter(e.target.value)}
@@ -892,7 +892,7 @@ export default function DocumentsPage() {
                         <p className="text-sm text-[#6e6e73]">검색 결과가 없습니다</p>
                       </div>
                     ) : (
-                      <div className="space-y-3 max-h-80 overflow-y-auto">
+                      <div className="max-h-80 overflow-y-auto" style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                         {filtered.map((f) => (
                           <label
                             key={f.id}
