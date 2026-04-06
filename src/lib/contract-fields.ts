@@ -30,7 +30,6 @@ const SYSTEM_CONTRACT_FIELDS: ContractField[] = [
   { key: 'contractName', label: '계약명', type: 'text', placeholder: 'OO시스템 구축 사업', required: true, group: '기본정보' },
   { key: 'startDate', label: '계약 시작일', type: 'text', placeholder: 'yyyy/mm/dd', required: true, group: '기본정보', half: true },
   { key: 'endDate', label: '계약 종료일', type: 'text', placeholder: 'yyyy/mm/dd', required: true, group: '기본정보', half: true },
-  { key: 'deliveryDate', label: '납기일', type: 'text', placeholder: 'yyyy/mm/dd', required: true, group: '기본정보' },
   { key: 'signDate', label: '계약 체결일', type: 'text', placeholder: 'yyyy/mm/dd', required: true, group: '기본정보' },
   // 금액
   { key: 'totalAmount', label: '계약금액 (원)', type: 'number', placeholder: '500000000', required: true, group: '금액' },
@@ -41,10 +40,6 @@ const SYSTEM_CONTRACT_FIELDS: ContractField[] = [
   { key: 'progressRate', label: '중도금 비율 (%)', type: 'number', placeholder: '40', group: '대금지급', half: true },
   { key: 'progressCount', label: '중도금 지급회수', type: 'number', placeholder: '2', group: '대금지급', half: true },
   { key: 'finalRate', label: '잔금 비율 (%)', type: 'number', placeholder: '40', group: '대금지급', half: true },
-  // 보증
-  { key: 'performanceBond', label: '계약이행보증금 (원)', type: 'number', placeholder: '50000000', group: '보증', half: true },
-  { key: 'warrantyBond', label: '하자보수보증금 (원)', type: 'number', placeholder: '50000000', group: '보증', half: true },
-  { key: 'warrantyPeriod', label: '하자담보책임기간', type: 'text', placeholder: '1년', group: '보증' },
   // 발주자
   { key: 'clientName', label: '상호 또는 명칭', type: 'text', placeholder: '(주)OO기업', required: true, group: '발주자', half: true },
   { key: 'clientPhone', label: '전화번호', type: 'text', placeholder: '02-1234-5678', group: '발주자', half: true },
