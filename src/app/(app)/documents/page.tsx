@@ -892,11 +892,11 @@ export default function DocumentsPage() {
                         <p className="text-sm text-[#6e6e73]">검색 결과가 없습니다</p>
                       </div>
                     ) : (
-                      <div className="space-y-2 max-h-80 overflow-y-auto">
+                      <div className="space-y-3 max-h-80 overflow-y-auto">
                         {filtered.map((f) => (
                           <label
                             key={f.id}
-                            className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-colors ${selectedFiles.has(f.id) ? 'border-[#0071e3] bg-[#f0f5ff]' : 'border-[#e5e5e7] hover:bg-[#f5f5f7]'}`}
+                            className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${selectedFiles.has(f.id) ? 'border-[#0071e3] bg-[#f0f5ff]' : 'border-[#e5e5e7] hover:bg-[#f5f5f7]'}`}
                           >
                             <input type="checkbox" checked={selectedFiles.has(f.id)} onChange={() => toggleFile(f.id)} className="rounded border-[#e5e5e7] text-[#0071e3] focus:ring-[#0071e3] shrink-0" />
                             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${FILE_TYPE_COLORS[f.type] ?? 'bg-gray-50 text-gray-600'}`}>
@@ -916,12 +916,12 @@ export default function DocumentsPage() {
 
               {/* Step 3: Instructions + Output Format */}
               {step === 3 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-8">
                   <div className="space-y-5">
                     {/* 출력 포맷 선택 */}
                     <div>
                       <p className="text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 10 }}>출력 포맷</p>
-                      <div className="grid grid-cols-5 gap-2">
+                      <div className="grid grid-cols-3 gap-2">
                         {[
                           { value: 'docx', label: 'DOCX', icon: '📝', desc: 'Word 문서' },
                           { value: 'pdf', label: 'PDF', icon: '📕', desc: 'PDF 문서' },
@@ -949,13 +949,13 @@ export default function DocumentsPage() {
                   </div>
                   <div className="space-y-5">
                     {/* 추가 지시사항 */}
-                    <div>
+                    <div className="flex flex-col h-full">
                       <p className="text-sm text-[#6e6e73]" style={{ marginBottom: 10 }}>추가 지시사항 (선택)</p>
                       <textarea
                         value={instructions}
                         onChange={(e) => setInstructions(e.target.value)}
                         placeholder="예: 핵심 수치 위주로 요약해 주세요. 표 형태로 정리해 주세요."
-                        rows={8}
+                        rows={14}
                         className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none"
                       />
                     </div>
