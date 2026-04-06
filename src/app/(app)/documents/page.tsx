@@ -67,6 +67,36 @@ export default function DocumentsPage() {
   const [generatedDownloadUrl, setGeneratedDownloadUrl] = useState<string | null>(null);
   const [generatedOutline, setGeneratedOutline] = useState<Record<string, unknown> | null>(null);
   const [contractFormData, setContractFormData] = useState<Record<string, string>>({});
+  const [dateErrors, setDateErrors] = useState<Record<string, string>>({});
+
+  // 날짜 유효성 검증 (yyyy/mm/dd)
+  const validateDate = (key: string, val: string) => {
+    if (!val) { setDateErrors(prev => { const n = { ...prev }; delete n[key]; return n; }); return; }
+    const m = val.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
+    if (!m) {
+      if (val.replace(/[\d/]/g, '').length > 0 || val.length >= 10) {
+        setDateErrors(prev => ({ ...prev, [key]: 'yyyy/mm/dd 형식으로 입력하세요' }));
+      }
+      return;
+    }
+    const [, ys, ms, ds] = m;
+    const y = parseInt(ys), mo = parseInt(ms), d = parseInt(ds);
+    if (mo < 1 || mo > 12) { setDateErrors(prev => ({ ...prev, [key]: '월은 01~12 사이여야 합니다' })); return; }
+    const lastDay = new Date(y, mo, 0).getDate();
+    if (d < 1 || d > lastDay) { setDateErrors(prev => ({ ...prev, [key]: `${mo}월은 ${lastDay}일까지입니다` })); return; }
+    if (y < 2000 || y > 2099) { setDateErrors(prev => ({ ...prev, [key]: '연도는 2000~2099 사이여야 합니다' })); return; }
+    setDateErrors(prev => { const n = { ...prev }; delete n[key]; return n; });
+  };
+
+  // 날짜 자동 포맷 (숫자 입력 → yyyy/mm/dd 자동 슬래시)
+  const handleDateInput = (key: string, raw: string) => {
+    const digits = raw.replace(/[^\d]/g, '').slice(0, 8);
+    let formatted = digits;
+    if (digits.length > 4) formatted = digits.slice(0, 4) + '/' + digits.slice(4);
+    if (digits.length > 6) formatted = digits.slice(0, 4) + '/' + digits.slice(4, 6) + '/' + digits.slice(6);
+    setContractFormData(prev => ({ ...prev, [key]: formatted }));
+    validateDate(key, formatted);
+  };
 
   // Step 2: file search & filter
   const [fileSearch, setFileSearch] = useState('');
@@ -992,6 +1022,21 @@ export default function DocumentsPage() {
                                         </span>
                                       )}
                                     </div>
+                                  ) : field.placeholder === 'yyyy/mm/dd' ? (
+                                    <>
+                                      <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={contractFormData[field.key] ?? ''}
+                                        onChange={(e) => handleDateInput(field.key, e.target.value)}
+                                        placeholder="yyyy/mm/dd"
+                                        maxLength={10}
+                                        className={`w-full px-4 py-2.5 rounded-xl border text-sm text-[#1d1d1f] placeholder:text-[#c7c7cc] focus:outline-none focus:ring-2 transition-shadow ${dateErrors[field.key] ? 'border-[#ff3b30] focus:ring-[#ff3b30]/30 bg-[#fff5f5]' : 'border-[#e5e5e7] focus:ring-[#0071e3] bg-white'}`}
+                                      />
+                                      {dateErrors[field.key] && (
+                                        <p className="text-[11px] text-[#ff3b30] mt-0.5">{dateErrors[field.key]}</p>
+                                      )}
+                                    </>
                                   ) : (
                                     <input
                                       type="text"
@@ -1002,7 +1047,16 @@ export default function DocumentsPage() {
                                       onChange={(e) => {
                                         let val = e.target.value;
                                         if (field.type === 'number') val = val.replace(/[^0-9]/g, '');
-                                        setContractFormData(prev => ({ ...prev, [field.key]: val }));
+                                        setContractFormData(prev => {
+                                          const next = { ...prev, [field.key]: val };
+                                          // 계약금액 입력 시 공급가액/부가세 자동 계산
+                                          if (field.key === 'totalAmount' && val) {
+                                            const total = Number(val);
+                                            next.supplyAmount = String(Math.round(total / 1.1));
+                                            next.vatAmount = String(total - Math.round(total / 1.1));
+                                          }
+                                          return next;
+                                        });
                                       }}
                                       placeholder={field.placeholder}
                                       className="w-full px-4 py-2.5 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#c7c7cc] focus:outline-none focus:ring-2 focus:ring-[#0071e3] transition-shadow"

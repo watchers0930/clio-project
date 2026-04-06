@@ -34,8 +34,8 @@ const SYSTEM_CONTRACT_FIELDS: ContractField[] = [
   { key: 'signDate', label: '계약 체결일', type: 'text', placeholder: 'yyyy/mm/dd', required: true, group: '기본정보' },
   // 금액
   { key: 'totalAmount', label: '계약금액 (원)', type: 'number', placeholder: '500000000', required: true, group: '금액' },
-  { key: 'supplyAmount', label: '공급가액 (원)', type: 'number', placeholder: '454545455', group: '금액', half: true },
-  { key: 'vatAmount', label: '부가가치세 (원)', type: 'number', placeholder: '45454545', group: '금액', half: true },
+  { key: 'supplyAmount', label: '공급가액 (원) — 자동계산', type: 'number', placeholder: '자동 계산됨', group: '금액', half: true },
+  { key: 'vatAmount', label: '부가가치세 (원) — 자동계산', type: 'number', placeholder: '자동 계산됨', group: '금액', half: true },
   // 대금 지급
   { key: 'advanceRate', label: '선급금 비율 (%)', type: 'number', placeholder: '20', group: '대금지급', half: true },
   { key: 'progressRate', label: '중도금 비율 (%)', type: 'number', placeholder: '40', group: '대금지급', half: true },
