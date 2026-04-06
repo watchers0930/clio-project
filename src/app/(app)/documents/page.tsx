@@ -253,6 +253,7 @@ export default function DocumentsPage() {
           if (data.downloadUrl) setGeneratedDownloadUrl(data.downloadUrl);
           if (data.outline) setGeneratedOutline(data.outline);
           if (data.format) setOutputFormat(data.format);
+          if (data.mode) console.log('[생성 모드]', data.mode);
           setStep(5);
         }
       } else {

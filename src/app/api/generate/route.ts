@@ -262,10 +262,12 @@ export async function POST(request: NextRequest) {
             content: `[계약서 자동 작성] ${templateName}`,
           },
           format: 'hwpx',
+          mode: 'contract-direct',
           downloadUrl: urlData?.signedUrl ?? null,
         }, { status: 201 });
       }
     }
+    console.log('[generate] 계약서 경로 미진입. contractFormData:', !!contractFormData, 'templateBuffer:', !!templateBuffer, 'templateName:', templateName);
 
     // AI 콘텐츠 생성 (포맷별 분기)
     const generationResult = await generateForFormat({
