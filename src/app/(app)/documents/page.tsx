@@ -953,20 +953,61 @@ export default function DocumentsPage() {
                                   <label className="block text-xs text-[#6e6e73] mb-1">
                                     {field.label} {field.required && <span className="text-[#ff3b30]">*</span>}
                                   </label>
-                                  <input
-                                    type="text"
-                                    inputMode={field.type === 'number' ? 'numeric' : undefined}
-                                    value={field.type === 'number' && contractFormData[field.key]
-                                      ? Number(contractFormData[field.key]).toLocaleString('ko-KR')
-                                      : (contractFormData[field.key] ?? '')}
-                                    onChange={(e) => {
-                                      let val = e.target.value;
-                                      if (field.type === 'number') val = val.replace(/[^0-9]/g, '');
-                                      setContractFormData(prev => ({ ...prev, [field.key]: val }));
-                                    }}
-                                    placeholder={field.placeholder}
-                                    className="w-full px-4 py-2.5 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#c7c7cc] focus:outline-none focus:ring-2 focus:ring-[#0071e3] transition-shadow"
-                                  />
+                                  {field.type === 'address' ? (
+                                    <div
+                                      onClick={() => {
+                                        const script = document.createElement('script');
+                                        script.src = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
+                                        script.onload = () => {
+                                          new (window as unknown as Record<string, unknown>).daum.Postcode({
+                                            oncomplete: (data: { address: string; zonecode: string }) => {
+                                              setContractFormData(prev => ({
+                                                ...prev,
+                                                [field.key]: `(${data.zonecode}) ${data.address}`,
+                                              }));
+                                            },
+                                          }).open();
+                                        };
+                                        if ((window as unknown as Record<string, unknown>).daum) {
+                                          new (window as unknown as Record<string, unknown>).daum.Postcode({
+                                            oncomplete: (data: { address: string; zonecode: string }) => {
+                                              setContractFormData(prev => ({
+                                                ...prev,
+                                                [field.key]: `(${data.zonecode}) ${data.address}`,
+                                              }));
+                                            },
+                                          }).open();
+                                        } else {
+                                          document.head.appendChild(script);
+                                        }
+                                      }}
+                                      className="w-full px-4 py-2.5 rounded-xl border border-[#e5e5e7] bg-[#f5f5f7] text-sm cursor-pointer hover:border-[#0071e3] transition-colors flex items-center gap-2"
+                                    >
+                                      {contractFormData[field.key] ? (
+                                        <span className="text-[#1d1d1f]">{contractFormData[field.key]}</span>
+                                      ) : (
+                                        <span className="text-[#c7c7cc] flex items-center gap-1.5">
+                                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                                          클릭하여 주소 검색
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <input
+                                      type="text"
+                                      inputMode={field.type === 'number' ? 'numeric' : undefined}
+                                      value={field.type === 'number' && contractFormData[field.key]
+                                        ? Number(contractFormData[field.key]).toLocaleString('ko-KR')
+                                        : (contractFormData[field.key] ?? '')}
+                                      onChange={(e) => {
+                                        let val = e.target.value;
+                                        if (field.type === 'number') val = val.replace(/[^0-9]/g, '');
+                                        setContractFormData(prev => ({ ...prev, [field.key]: val }));
+                                      }}
+                                      placeholder={field.placeholder}
+                                      className="w-full px-4 py-2.5 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#c7c7cc] focus:outline-none focus:ring-2 focus:ring-[#0071e3] transition-shadow"
+                                    />
+                                  )}
                                 </div>
                               ))}
                             </div>

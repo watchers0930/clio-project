@@ -6,7 +6,7 @@
 export interface ContractField {
   key: string;
   label: string;
-  type: 'text' | 'date' | 'number' | 'select';
+  type: 'text' | 'date' | 'number' | 'select' | 'address';
   placeholder?: string;
   required?: boolean;
   options?: string[]; // select용
@@ -48,12 +48,12 @@ const SYSTEM_CONTRACT_FIELDS: ContractField[] = [
   // 발주자
   { key: 'clientName', label: '상호 또는 명칭', type: 'text', placeholder: '(주)OO기업', required: true, group: '발주자', half: true },
   { key: 'clientPhone', label: '전화번호', type: 'text', placeholder: '02-1234-5678', group: '발주자', half: true },
-  { key: 'clientAddress', label: '주소', type: 'text', placeholder: '서울시 강남구 ...', group: '발주자' },
+  { key: 'clientAddress', label: '주소', type: 'address', placeholder: '클릭하여 주소 검색', group: '발주자' },
   { key: 'clientCeo', label: '대표자 성명', type: 'text', placeholder: '홍길동', required: true, group: '발주자' },
   // 공급자
   { key: 'supplierName', label: '상호 또는 명칭', type: 'text', placeholder: '(주)OO소프트', required: true, group: '공급자', half: true },
   { key: 'supplierPhone', label: '전화번호', type: 'text', placeholder: '02-9876-5432', group: '공급자', half: true },
-  { key: 'supplierAddress', label: '주소', type: 'text', placeholder: '서울시 서초구 ...', group: '공급자' },
+  { key: 'supplierAddress', label: '주소', type: 'address', placeholder: '클릭하여 주소 검색', group: '공급자' },
   { key: 'supplierCeo', label: '대표자 성명', type: 'text', placeholder: '김철수', required: true, group: '공급자' },
 ];
 
