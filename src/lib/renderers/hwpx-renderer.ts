@@ -411,7 +411,14 @@ export async function renderHwpxFromFormData(
   }
 
   zip.file(sectionFile, xml);
-  const buffer = Buffer.from(zip.generate({ type: 'nodebuffer', compression: 'DEFLATE', compressionOptions: { level: 6 } }));
+  // HWPX 규격: mimetype은 STORE, 나머지는 DEFLATE
+  for (const name of Object.keys(zip.files)) {
+    if (name === 'mimetype' || zip.files[name].dir) continue;
+    const f = zip.file(name);
+    if (f) zip.file(name, f.asUint8Array(), { compression: 'DEFLATE', compressionOptions: { level: 6 } });
+  }
+  zip.file('mimetype', zip.file('mimetype')?.asText() ?? 'application/hwp+zip', { compression: 'STORE' });
+  const buffer = Buffer.from(zip.generate({ type: 'nodebuffer' }));
 
   return {
     buffer,

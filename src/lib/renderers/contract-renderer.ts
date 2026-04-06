@@ -157,8 +157,11 @@ export function renderSystemContract(
         let rs = getRows(tblXml);
         const origRow = getRowXml(tblXml, rs, 2);
         const clones: string[] = [];
+        let idCounter = Date.now(); // 고유 ID 생성용
         for (let i = 0; i < progCount; i++) {
           let clone = origRow.content;
+          // 복제된 행의 id 속성을 고유하게 변경
+          clone = clone.replace(/ id="\d+"/g, () => ` id="${idCounter++}"`);
           // "중도금" 텍스트를 "중도금 N차"로 변경
           clone = clone.replace(
             /(<hp:t[^>]*>)(중도금)(<\/hp:t>)/,
@@ -282,11 +285,16 @@ export function renderSystemContract(
   console.log(`[contract-renderer] hp:t tags: ${openTags}/${closeTags}`, openTags === closeTags ? 'OK' : 'MISMATCH');
 
   zip.file(sectionFile, xml);
-  const buffer = Buffer.from(zip.generate({
-    type: 'nodebuffer',
-    compression: 'DEFLATE',
-    compressionOptions: { level: 6 },
-  }));
+
+  // HWPX 규격: mimetype은 STORE, 나머지는 DEFLATE
+  for (const name of Object.keys(zip.files)) {
+    if (name === 'mimetype' || zip.files[name].dir) continue;
+    const content = zip.file(name);
+    if (content) zip.file(name, content.asUint8Array(), { compression: 'DEFLATE', compressionOptions: { level: 6 } });
+  }
+  zip.file('mimetype', 'application/hwp+zip', { compression: 'STORE' });
+
+  const buffer = Buffer.from(zip.generate({ type: 'nodebuffer' }));
 
   return {
     buffer,
