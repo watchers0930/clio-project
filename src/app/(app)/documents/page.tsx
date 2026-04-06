@@ -1102,6 +1102,59 @@ export default function DocumentsPage() {
                       {outputFormat.toUpperCase()} 파일 다운로드
                     </button>
                   )}
+
+                  {/* 제안서 AI 컨텍스트 다운로드 (Step 5) */}
+                  {templates.find(t => t.id === selectedTemplate)?.name === '제안서' && generatedDoc?.id && (
+                    <div className="mt-4 p-4 rounded-xl bg-[#f0faf2] border border-[#d1f0d9]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm font-medium text-[#1d1d1f]">AI 컨텍스트 다운로드</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-gradient-to-r from-[#34c759] to-[#30d158] text-white font-medium">ChatGPT / Gemini / Claude</span>
+                      </div>
+                      <p className="text-xs text-[#6e6e73] mb-3">다른 AI 도구에서 활용할 수 있는 컨텍스트 파일</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(`/api/documents/${generatedDoc!.id}/ai-context`, {
+                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ lang: 'ko' }),
+                              });
+                              if (!res.ok) { alert('생성 실패'); return; }
+                              const { context, fileName } = await res.json();
+                              const blob = new Blob([context], { type: 'text/plain;charset=utf-8' });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a'); a.href = url; a.download = fileName; a.click();
+                              URL.revokeObjectURL(url);
+                            } catch { alert('다운로드 실패'); }
+                          }}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium border border-[#34c759] text-[#34c759] hover:bg-white transition-colors flex items-center gap-1.5"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                          국문
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(`/api/documents/${generatedDoc!.id}/ai-context`, {
+                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ lang: 'en' }),
+                              });
+                              if (!res.ok) { alert('Failed'); return; }
+                              const { context, fileName } = await res.json();
+                              const blob = new Blob([context], { type: 'text/plain;charset=utf-8' });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a'); a.href = url; a.download = fileName; a.click();
+                              URL.revokeObjectURL(url);
+                            } catch { alert('Download failed'); }
+                          }}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium border border-[#30d158] text-[#30d158] hover:bg-white transition-colors flex items-center gap-1.5"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                          English
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
