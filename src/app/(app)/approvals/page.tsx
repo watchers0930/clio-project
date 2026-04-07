@@ -80,8 +80,12 @@ export default function ApprovalsPage() {
           createdAt: d.data.created_at?.split('T')[0] ?? '',
           templateName: d.data.template_name ?? '',
         });
+      } else {
+        setViewDoc({ id: docId, title: '(조회 실패)', content: d.error ?? '문서를 불러올 수 없습니다.', status: '', createdAt: '', templateName: '' });
       }
-    } catch {}
+    } catch {
+      setViewDoc({ id: docId, title: '(오류)', content: '서버 오류가 발생했습니다.', status: '', createdAt: '', templateName: '' });
+    }
     setViewLoading(false);
   };
 

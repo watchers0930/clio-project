@@ -21,13 +21,38 @@ export async function GET(
       return NextResponse.json<ApiResponse>({ success: false, error: '인증이 필요합니다.' }, { status: 401 });
     }
 
-    const { data, error } = await supabase
+    // 본인 문서 먼저 조회, 없으면 결재자인지 확인 후 admin으로 조회
+    let data: Record<string, unknown> | null = null;
+    const { data: ownDoc } = await supabase
       .from('documents')
       .select('*, templates:template_id(name)')
       .eq('id', id)
       .single();
 
-    if (error || !data) {
+    if (ownDoc) {
+      data = ownDoc;
+    } else {
+      // 결재자인지 확인
+      const admin = createAdminSupabaseClient();
+      const { data: approval } = await admin
+        .from('approvals')
+        .select('id')
+        .eq('document_id', id)
+        .eq('approver_id', authUserId)
+        .limit(1)
+        .maybeSingle();
+
+      if (approval) {
+        const { data: adminDoc } = await admin
+          .from('documents')
+          .select('*, templates:template_id(name)')
+          .eq('id', id)
+          .single();
+        data = adminDoc;
+      }
+    }
+
+    if (!data) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: '문서를 찾을 수 없습니다.' },
         { status: 404 },
