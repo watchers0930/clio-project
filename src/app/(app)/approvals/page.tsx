@@ -40,7 +40,7 @@ export default function ApprovalsPage() {
   const [loading, setLoading] = useState(true);
 
   // 문서 내용 보기 모달
-  const [viewDoc, setViewDoc] = useState<{ id: string; title: string; content: string; status: string; createdAt: string; templateName: string; downloadUrl?: string; isFileBased?: boolean } | null>(null);
+  const [viewDoc, setViewDoc] = useState<{ id: string; title: string; content: string; status: string; createdAt: string; templateName: string; isFileBased?: boolean } | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
 
   // 승인/반려 모달 상태
@@ -72,19 +72,8 @@ export default function ApprovalsPage() {
       const res = await fetch(`/api/documents/${docId}`);
       const d = await res.json();
       if (d.success && d.data) {
-        // 파일 기반 문서면 다운로드 URL도 가져오기
-        let downloadUrl = '';
         const rawContent = d.data.content ?? '';
         const isFileBased = rawContent.startsWith('[') && rawContent.length < 200;
-        if (isFileBased) {
-          try {
-            const dlRes = await fetch(`/api/documents/${docId}/download?format=docx`);
-            if (dlRes.ok) {
-              const dlData = await dlRes.json();
-              downloadUrl = dlData.url ?? dlData.downloadUrl ?? '';
-            }
-          } catch {}
-        }
 
         setViewDoc({
           id: d.data.id,
@@ -93,14 +82,13 @@ export default function ApprovalsPage() {
           status: d.data.status,
           createdAt: d.data.created_at?.split('T')[0] ?? '',
           templateName: d.data.template_name ?? '',
-          downloadUrl,
           isFileBased,
         });
       } else {
-        setViewDoc({ id: docId, title: '(조회 실패)', content: d.error ?? '문서를 불러올 수 없습니다.', status: '', createdAt: '', templateName: '', downloadUrl: '', isFileBased: false });
+        setViewDoc({ id: docId, title: '(조회 실패)', content: d.error ?? '문서를 불러올 수 없습니다.', status: '', createdAt: '', templateName: '' });
       }
     } catch {
-      setViewDoc({ id: docId, title: '(오류)', content: '서버 오류가 발생했습니다.', status: '', createdAt: '', templateName: '', downloadUrl: '', isFileBased: false });
+      setViewDoc({ id: docId, title: '(오류)', content: '서버 오류가 발생했습니다.', status: '', createdAt: '', templateName: '' });
     }
     setViewLoading(false);
   };
@@ -378,19 +366,13 @@ export default function ApprovalsPage() {
                       <svg className="w-12 h-12 mx-auto mb-3 text-[#7C8494] opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m.75 12l3 3m0 0l3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
                       <p className="text-[14px] text-[#1B1F2B] font-medium mb-1">파일로 생성된 문서입니다</p>
                       <p className="text-[12px] text-[#7C8494] mb-4">{viewDoc.content}</p>
-                      {viewDoc.downloadUrl ? (
-                        <a
-                          href={viewDoc.downloadUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#2E6FF2] text-white text-[13px] font-medium rounded-lg hover:bg-[#1a5ad9] transition-colors"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
-                          파일 다운로드
-                        </a>
-                      ) : (
-                        <p className="text-[12px] text-[#7C8494]">다운로드 링크를 가져올 수 없습니다.</p>
-                      )}
+                      <a
+                        href={`/api/documents/${viewDoc.id}/download?format=docx`}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#2E6FF2] text-white text-[13px] font-medium rounded-lg hover:bg-[#1a5ad9] transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                        파일 다운로드
+                      </a>
                     </div>
                   ) : (
                     <div className="whitespace-pre-wrap text-[13px] text-[#1B1F2B] leading-relaxed">
