@@ -1452,7 +1452,7 @@ export default function DocumentsPage() {
               placeholder="이름 또는 이메일 검색..."
               value={approvalSearch}
               onChange={(e) => setApprovalSearch(e.target.value)}
-              className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/30 focus:border-[#2E6FF2] mb-3"
+              className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/30 focus:border-[#2E6FF2] mb-[5px]"
             />
 
             <div className="max-h-[240px] overflow-y-auto border border-[#E2E5EA] rounded-lg">
@@ -1489,7 +1489,7 @@ export default function DocumentsPage() {
               )}
             </div>
 
-            <div className="flex gap-2 justify-end mt-5">
+            <div className="flex gap-2 justify-end mt-[15px]">
               <button
                 onClick={() => setShowApprovalModal(false)}
                 className="px-4 py-2 text-[13px] text-[#7C8494] hover:text-[#1B1F2B] transition-colors"
