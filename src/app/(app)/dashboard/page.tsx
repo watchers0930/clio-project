@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   FolderOpen, FileText, Users, Search,
   Upload, Sparkles, FilePlus, LayoutTemplate,
-  ArrowUpRight, Clock, Loader2
+  ArrowUpRight, Clock, Loader2, ClipboardCheck
 } from 'lucide-react';
 
 interface UserInfo {
@@ -18,6 +18,7 @@ interface DashboardData {
   total_documents: number;
   total_users: number;
   total_templates: number;
+  pending_approvals: number;
   recent_activity: Array<{
     id: string;
     user_id: string;
@@ -64,6 +65,9 @@ const ACTION_LABELS: Record<string, string> = {
   'file.delete': '파일을 삭제했습니다.',
   'document.create': '문서를 생성했습니다.',
   'document.delete': '문서를 삭제했습니다.',
+  'document.submit_approval': '결재를 요청했습니다.',
+  'document.approve': '문서를 승인했습니다.',
+  'document.reject': '문서를 반려했습니다.',
   'template.create': '템플릿을 생성했습니다.',
   'search': '검색을 수행했습니다.',
 };
@@ -129,11 +133,14 @@ export default function DashboardPage() {
     fetchData();
   }, [fetchData]);
 
+  const pendingApprovals = data?.pending_approvals ?? 0;
   const stats = [
     { label: '전체 파일', value: data?.total_files ?? 0, icon: FolderOpen },
     { label: '생성 문서', value: data?.total_documents ?? 0, icon: FileText },
     { label: '활성 사용자', value: data?.total_users ?? 0, icon: Users },
-    { label: '검색 횟수', value: data?.recent_activity?.filter(a => a.action === 'search').length ?? 0, icon: Search },
+    ...(pendingApprovals > 0
+      ? [{ label: '결재 대기', value: pendingApprovals, icon: ClipboardCheck, href: '/approvals' }]
+      : [{ label: '검색 횟수', value: data?.recent_activity?.filter(a => a.action === 'search').length ?? 0, icon: Search }]),
   ];
 
   // 파일 유형 분포 계산

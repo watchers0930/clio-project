@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { ApiResponse, DashboardStats } from '@/lib/supabase/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 
 export async function GET() {
@@ -44,11 +45,24 @@ export async function GET() {
       departmentBreakdown[deptName] = (departmentBreakdown[deptName] ?? 0) + 1;
     }
 
+    // 결재 대기 건수
+    let pendingApprovals = 0;
+    try {
+      const admin = createAdminSupabaseClient();
+      const { count } = await admin
+        .from('approvals')
+        .select('*', { count: 'exact', head: true })
+        .eq('approver_id', authUserId)
+        .eq('status', 'pending');
+      pendingApprovals = count ?? 0;
+    } catch {}
+
     const stats: DashboardStats = {
       total_files: r1.count ?? 0,
       total_documents: r2.count ?? 0,
       total_users: r3.count ?? 0,
       total_templates: r4.count ?? 0,
+      pending_approvals: pendingApprovals,
       recent_activity: r5.data ?? [],
       file_type_breakdown: fileTypeBreakdown,
       department_breakdown: departmentBreakdown,

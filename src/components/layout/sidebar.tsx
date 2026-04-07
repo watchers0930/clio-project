@@ -9,6 +9,7 @@ import {
   FolderOpen,
   FileText,
   FilePlus,
+  ClipboardCheck,
   MessageSquare,
   Settings,
   ChevronsLeft,
@@ -29,6 +30,7 @@ const navItems: NavItem[] = [
   { label: '파일 관리', href: '/files', icon: FolderOpen },
   { label: '템플릿', href: '/templates', icon: FileText },
   { label: '문서 생성', href: '/documents', icon: FilePlus },
+  { label: '결재함', href: '/approvals', icon: ClipboardCheck, badge: true },
   { label: '메시지', href: '/messages', icon: MessageSquare, badge: true },
   { label: '설정', href: '/settings', icon: Settings },
 ];
@@ -42,6 +44,7 @@ function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
   const [unreadTotal, setUnreadTotal] = useState(0);
+  const [pendingApprovals, setPendingApprovals] = useState(0);
 
   useEffect(() => {
     try {
@@ -60,6 +63,19 @@ function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     };
     fetchUnread();
     const timer = setInterval(fetchUnread, 10000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // 결재 대기 건수 폴링 (30초)
+  useEffect(() => {
+    const fetchPending = () => {
+      fetch('/api/approvals')
+        .then(r => r.json())
+        .then(d => { if (d.success) setPendingApprovals(d.count ?? 0); })
+        .catch(() => {});
+    };
+    fetchPending();
+    const timer = setInterval(fetchPending, 30000);
     return () => clearInterval(timer);
   }, []);
 
@@ -102,20 +118,26 @@ function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
             >
               <div className="relative flex-shrink-0">
                 <Icon size={17} strokeWidth={1.5} />
-                {item.badge && unreadTotal > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center" style={{ padding: '0 3px' }}>
-                    {unreadTotal > 99 ? '99+' : unreadTotal}
-                  </span>
-                )}
+                {item.badge && (() => {
+                  const count = item.href === '/approvals' ? pendingApprovals : unreadTotal;
+                  return count > 0 ? (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center" style={{ padding: '0 3px' }}>
+                      {count > 99 ? '99+' : count}
+                    </span>
+                  ) : null;
+                })()}
               </div>
               {!collapsed && (
                 <span className="flex-1">{item.label}</span>
               )}
-              {!collapsed && item.badge && unreadTotal > 0 && (
-                <span className="min-w-[20px] h-[20px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center" style={{ padding: '0 5px' }}>
-                  {unreadTotal > 99 ? '99+' : unreadTotal}
-                </span>
-              )}
+              {!collapsed && item.badge && (() => {
+                const count = item.href === '/approvals' ? pendingApprovals : unreadTotal;
+                return count > 0 ? (
+                  <span className="min-w-[20px] h-[20px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center" style={{ padding: '0 5px' }}>
+                    {count > 99 ? '99+' : count}
+                  </span>
+                ) : null;
+              })()}
             </Link>
           );
         })}

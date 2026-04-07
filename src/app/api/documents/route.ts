@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
         title: d.title,
         template: tmplJoin?.name ?? '기본',
         createdAt: d.created_at?.split('T')[0] ?? '',
-        status: d.status === 'completed' ? '완료' : '초안',
+        status: ({ completed: '완료', draft: '초안', submitted: '결재중', approved: '승인됨', rejected: '반려됨' } as Record<string, string>)[d.status] ?? d.status,
         sourceCount: d.source_file_ids?.length ?? 0,
         content: d.content,
       };

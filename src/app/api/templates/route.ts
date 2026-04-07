@@ -126,6 +126,7 @@ export async function POST(request: NextRequest) {
     let departmentId: string | null = null;
     let scope = '전사 공용';
     let templateFileId: string | null = null;
+    let placeholdersData: unknown = null;
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
@@ -148,6 +149,7 @@ export async function POST(request: NextRequest) {
       departmentId = body.departmentId || null;
       scope = body.scope ?? '전사 공용';
       if (body.templateFileId) templateFileId = body.templateFileId;
+      if (body.placeholders) placeholdersData = body.placeholders;
     }
 
     if (!name) {
@@ -162,7 +164,7 @@ export async function POST(request: NextRequest) {
       department_id: departmentId,
       scope: scopeValue,
       content: content,
-      placeholders: [],
+      placeholders: placeholdersData ?? [],
       created_by: authUserId,
     };
     if (templateFileId) insertData.template_file_id = templateFileId;
@@ -187,7 +189,7 @@ export async function POST(request: NextRequest) {
         department: deptJoin?.name ?? '전사',
         departmentId: newTmpl.department_id,
         scope: scope ?? '전사 공용',
-        placeholders: [],
+        placeholders: Array.isArray(newTmpl.placeholders) ? newTmpl.placeholders : [],
         lastUpdated: newTmpl.updated_at.split('T')[0],
         usageCount: 0,
         templateFile: fileJoin ? {

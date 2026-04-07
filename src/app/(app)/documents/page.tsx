@@ -9,7 +9,7 @@ interface Document {
   title: string;
   template: string;
   createdAt: string;
-  status: '초안' | '완료';
+  status: '초안' | '완료' | '결재중' | '승인됨' | '반려됨';
   sourceCount: number;
   content?: string;
 }
@@ -41,6 +41,9 @@ interface SourceFile {
 const statusColor: Record<string, string> = {
   '초안': 'bg-[#f5f5f7] text-[#ff9f0a]',
   '완료': 'bg-[#f5f5f7] text-[#30d158]',
+  '결재중': 'bg-[#2E6FF2]/10 text-[#2E6FF2]',
+  '승인됨': 'bg-[#30d158]/10 text-[#30d158]',
+  '반려됨': 'bg-[#ff3b30]/10 text-[#ff3b30]',
 };
 
 const TEMPLATE_ICONS: Record<string, string> = {
@@ -111,6 +114,13 @@ export default function DocumentsPage() {
   const [editContent, setEditContent] = useState('');
   const [editTitle, setEditTitle] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // 결재 요청 모달
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [approvalUsers, setApprovalUsers] = useState<Array<{ id: string; name: string; email: string; department?: string }>>([]);
+  const [approvalSearch, setApprovalSearch] = useState('');
+  const [selectedApprover, setSelectedApprover] = useState<string | null>(null);
+  const [submittingApproval, setSubmittingApproval] = useState(false);
 
   // Templates and source files from API
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -387,8 +397,47 @@ export default function DocumentsPage() {
     }
   };
 
+  const openApprovalModal = async () => {
+    setShowApprovalModal(true);
+    setSelectedApprover(null);
+    setApprovalSearch('');
+    try {
+      const res = await fetch('/api/users');
+      const d = await res.json();
+      if (d.success) {
+        const currentUser = JSON.parse(localStorage.getItem('clio_user') ?? '{}');
+        setApprovalUsers((d.data ?? []).filter((u: { id: string }) => u.id !== currentUser.id));
+      }
+    } catch {}
+  };
+
+  const handleSubmitApproval = async () => {
+    if (!viewDoc || !selectedApprover) return;
+    setSubmittingApproval(true);
+    try {
+      const res = await fetch(`/api/documents/${viewDoc.id}/submit-approval`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approverId: selectedApprover }),
+      });
+      const d = await res.json();
+      if (d.success) {
+        const updated = { ...viewDoc, status: '결재중' as const };
+        setViewDoc(updated);
+        setDocs((prev) => prev.map((doc) => doc.id === viewDoc.id ? updated : doc));
+        setShowApprovalModal(false);
+      } else {
+        alert(d.error ?? '결재 요청 실패');
+      }
+    } catch {
+      alert('서버 오류');
+    }
+    setSubmittingApproval(false);
+  };
+
   const isEdited = viewDoc ? (editContent !== (viewDoc.content ?? '') || editTitle !== viewDoc.title) : false;
   const isDraft = viewDoc?.status === '초안';
+  const isRejected = viewDoc?.status === '반려됨';
 
   const FONT_OPTIONS = ['맑은 고딕', '나눔고딕', '바탕', '돋움', '굴림', '나눔명조', 'Arial', 'Times New Roman'];
   const DOWNLOAD_FORMAT_OPTIONS = ['docx', 'hwpx', 'pdf'] as const;
@@ -750,15 +799,41 @@ export default function DocumentsPage() {
 
             {/* Footer */}
             <div className="px-8 py-5 border-t border-[#e5e5e7] flex items-center justify-between shrink-0">
-              <div>
-                {isDraft ? (
-                  <button onClick={handleComplete} disabled={saving} className="px-5 py-2.5 rounded-xl bg-[#30d158] text-white text-sm font-medium hover:bg-[#28b94c] disabled:opacity-50 transition-colors">
-                    {saving ? '처리 중...' : '완료'}
-                  </button>
-                ) : (
+              <div className="flex gap-2">
+                {isDraft && (
+                  <>
+                    <button onClick={handleComplete} disabled={saving} className="px-5 py-2.5 rounded-xl bg-[#30d158] text-white text-sm font-medium hover:bg-[#28b94c] disabled:opacity-50 transition-colors">
+                      {saving ? '처리 중...' : '완료'}
+                    </button>
+                    <button onClick={openApprovalModal} className="px-5 py-2.5 rounded-xl bg-[#2E6FF2] text-white text-sm font-medium hover:bg-[#1a5ad9] transition-colors">
+                      결재 요청
+                    </button>
+                  </>
+                )}
+                {isRejected && (
+                  <>
+                    <button onClick={openApprovalModal} className="px-5 py-2.5 rounded-xl bg-[#2E6FF2] text-white text-sm font-medium hover:bg-[#1a5ad9] transition-colors">
+                      재요청
+                    </button>
+                    <button onClick={handleRevertToDraft} disabled={saving} className="px-5 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] disabled:opacity-50 transition-colors">
+                      초안으로 되돌리기
+                    </button>
+                  </>
+                )}
+                {viewDoc?.status === '완료' && (
                   <button onClick={handleRevertToDraft} disabled={saving} className="px-5 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] disabled:opacity-50 transition-colors">
                     초안으로 되돌리기
                   </button>
+                )}
+                {viewDoc?.status === '결재중' && (
+                  <span className="px-5 py-2.5 rounded-xl bg-[#2E6FF2]/10 text-[#2E6FF2] text-sm font-medium">
+                    결재 진행 중
+                  </span>
+                )}
+                {viewDoc?.status === '승인됨' && (
+                  <span className="px-5 py-2.5 rounded-xl bg-[#30d158]/10 text-[#30d158] text-sm font-medium">
+                    승인 완료
+                  </span>
                 )}
               </div>
               <div className="flex gap-3">
@@ -1364,6 +1439,72 @@ export default function DocumentsPage() {
                   문서 편집
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ────── 결재 요청 모달 ────── */}
+      {showApprovalModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4" style={{ padding: '28px 32px' }}>
+            <h3 className="text-[16px] font-semibold text-[#1B1F2B] mb-5">결재자 선택</h3>
+
+            <input
+              type="text"
+              placeholder="이름 또는 이메일 검색..."
+              value={approvalSearch}
+              onChange={(e) => setApprovalSearch(e.target.value)}
+              className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/30 focus:border-[#2E6FF2] mb-3"
+            />
+
+            <div className="max-h-[240px] overflow-y-auto border border-[#E2E5EA] rounded-lg">
+              {approvalUsers
+                .filter((u) => {
+                  if (!approvalSearch) return true;
+                  const q = approvalSearch.toLowerCase();
+                  return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+                })
+                .map((u) => (
+                  <button
+                    key={u.id}
+                    onClick={() => setSelectedApprover(u.id)}
+                    className={`w-full text-left px-4 py-3 flex items-center gap-3 border-b border-[#E2E5EA] last:border-0 transition-colors ${
+                      selectedApprover === u.id ? 'bg-[#2E6FF2]/5' : 'hover:bg-[#f9fafb]'
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-[#2E6FF2]/10 flex items-center justify-center text-[12px] font-semibold text-[#2E6FF2] flex-shrink-0">
+                      {u.name.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-medium text-[#1B1F2B]">{u.name}</p>
+                      <p className="text-[11px] text-[#7C8494] truncate">{u.email}{u.department ? ` · ${u.department}` : ''}</p>
+                    </div>
+                    {selectedApprover === u.id && (
+                      <svg className="w-5 h-5 text-[#2E6FF2] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </button>
+                ))}
+              {approvalUsers.length === 0 && (
+                <p className="text-center py-6 text-[13px] text-[#7C8494]">사용자가 없습니다.</p>
+              )}
+            </div>
+
+            <div className="flex gap-2 justify-end mt-5">
+              <button
+                onClick={() => setShowApprovalModal(false)}
+                className="px-4 py-2 text-[13px] text-[#7C8494] hover:text-[#1B1F2B] transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSubmitApproval}
+                disabled={!selectedApprover || submittingApproval}
+                className="px-5 py-2 text-[13px] font-medium text-white bg-[#2E6FF2] rounded-lg hover:bg-[#1a5ad9] disabled:opacity-40 transition-colors"
+              >
+                {submittingApproval ? '요청 중...' : '결재 요청'}
+              </button>
             </div>
           </div>
         </div>

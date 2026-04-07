@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { ApiResponse } from '@/lib/supabase/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 
 export async function GET(
@@ -36,9 +37,38 @@ export async function GET(
     const { templates: tmplJoin, ...docData } = data as Record<string, unknown>;
     const tmpl = tmplJoin as { name: string } | null;
 
+    // 최신 결재 정보 조회
+    let approval = null;
+    try {
+      const admin = createAdminSupabaseClient();
+      const { data: approvalRow } = await admin
+        .from('approvals')
+        .select('*')
+        .eq('document_id', id)
+        .order('requested_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (approvalRow) {
+        const [approverRes, requesterRes] = await Promise.all([
+          admin.from('users').select('id, name, email').eq('id', approvalRow.approver_id).single(),
+          admin.from('users').select('id, name, email').eq('id', approvalRow.requester_id).single(),
+        ]);
+        approval = {
+          id: approvalRow.id,
+          status: approvalRow.status,
+          comment: approvalRow.comment,
+          requestedAt: approvalRow.requested_at,
+          decidedAt: approvalRow.decided_at,
+          approver: approverRes.data,
+          requester: requesterRes.data,
+        };
+      }
+    } catch {}
+
     return NextResponse.json<ApiResponse>({
       success: true,
-      data: { ...docData, template_name: tmpl?.name },
+      data: { ...docData, template_name: tmpl?.name, approval },
     });
   } catch {
     return NextResponse.json<ApiResponse>(

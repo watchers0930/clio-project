@@ -52,6 +52,20 @@ export default function TemplatesPage() {
   const [formRemoveFile, setFormRemoveFile] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // 자가등록 모달 상태
+  const [showAutoReg, setShowAutoReg] = useState(false);
+  const [autoRegStep, setAutoRegStep] = useState(1);
+  const [autoRegFile, setAutoRegFile] = useState<File | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [detectedPlaceholders, setDetectedPlaceholders] = useState<Array<{ key: string; label: string; type: string; location: string; context?: string; selected: boolean }>>([]);
+  const [autoRegFileId, setAutoRegFileId] = useState<string | null>(null);
+  const [autoRegPreview, setAutoRegPreview] = useState('');
+  const [autoRegName, setAutoRegName] = useState('');
+  const [autoRegDesc, setAutoRegDesc] = useState('');
+  const [autoRegDeptId, setAutoRegDeptId] = useState('');
+  const [autoRegScope, setAutoRegScope] = useState<'전사 공용' | '부서 전용'>('전사 공용');
+  const [autoRegSaving, setAutoRegSaving] = useState(false);
+
   const loadTemplates = useCallback(async () => {
     try {
       const res = await fetch('/api/templates');
@@ -360,6 +374,13 @@ export default function TemplatesPage() {
                 선택
               </button>
               <button
+                onClick={() => { setShowAutoReg(true); setAutoRegStep(1); setAutoRegFile(null); setDetectedPlaceholders([]); setAutoRegFileId(null); setAutoRegPreview(''); setAutoRegName(''); setAutoRegDesc(''); }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[#2E6FF2] text-[#2E6FF2] text-sm font-medium hover:bg-[#2E6FF2]/5 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
+                파일에서 등록
+              </button>
+              <button
                 onClick={openCreate}
                 className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors shadow-sm"
               >
@@ -623,6 +644,245 @@ export default function TemplatesPage() {
                 {saving ? '저장 중...' : editId ? '수정' : '생성'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* ────── 자가등록 모달 ────── */}
+      {showAutoReg && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4" style={{ padding: '28px 32px' }}>
+            {/* 스텝 인디케이터 */}
+            <div className="flex items-center gap-3 mb-6">
+              {[1, 2, 3].map((s) => (
+                <div key={s} className="flex items-center gap-2">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-semibold ${
+                    autoRegStep >= s ? 'bg-[#2E6FF2] text-white' : 'bg-[#f5f5f7] text-[#7C8494]'
+                  }`}>{s}</div>
+                  <span className={`text-[12px] ${autoRegStep >= s ? 'text-[#1B1F2B] font-medium' : 'text-[#7C8494]'}`}>
+                    {s === 1 ? '파일 업로드' : s === 2 ? '빈칸 확인' : '정보 입력'}
+                  </span>
+                  {s < 3 && <div className="w-6 h-px bg-[#E2E5EA]" />}
+                </div>
+              ))}
+            </div>
+
+            {/* Step 1: 파일 업로드 */}
+            {autoRegStep === 1 && (
+              <div>
+                <div
+                  className="border-2 border-dashed border-[#E2E5EA] rounded-xl p-8 text-center hover:border-[#2E6FF2] transition-colors cursor-pointer"
+                  onClick={() => document.getElementById('auto-reg-file')?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const f = e.dataTransfer.files[0];
+                    if (f) setAutoRegFile(f);
+                  }}
+                >
+                  <input
+                    id="auto-reg-file"
+                    type="file"
+                    accept=".docx,.hwpx"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) setAutoRegFile(f);
+                    }}
+                  />
+                  {autoRegFile ? (
+                    <div>
+                      <svg className="w-10 h-10 mx-auto mb-2 text-[#30d158]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      <p className="text-[14px] font-medium text-[#1B1F2B]">{autoRegFile.name}</p>
+                      <p className="text-[12px] text-[#7C8494] mt-1">{(autoRegFile.size / 1024).toFixed(1)} KB</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <svg className="w-10 h-10 mx-auto mb-2 text-[#7C8494]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
+                      <p className="text-[14px] text-[#1B1F2B]">DOCX 또는 HWPX 파일을 드래그하거나 클릭</p>
+                      <p className="text-[12px] text-[#7C8494] mt-1">양식 문서의 빈칸을 자동으로 감지합니다</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2 justify-end mt-5">
+                  <button onClick={() => setShowAutoReg(false)} className="px-4 py-2 text-[13px] text-[#7C8494]">취소</button>
+                  <button
+                    onClick={async () => {
+                      if (!autoRegFile) return;
+                      setAnalyzing(true);
+                      try {
+                        const fd = new FormData();
+                        fd.append('file', autoRegFile);
+                        const res = await fetch('/api/templates/analyze', { method: 'POST', body: fd });
+                        const d = await res.json();
+                        if (d.success) {
+                          setAutoRegFileId(d.data.fileId);
+                          setAutoRegPreview(d.data.preview);
+                          setAutoRegName(autoRegFile.name.replace(/\.(docx|hwpx)$/i, ''));
+                          setDetectedPlaceholders(
+                            (d.data.placeholders ?? []).map((p: { key: string; label: string; type: string; location: string; context?: string }) => ({ ...p, selected: true }))
+                          );
+                          setAutoRegStep(2);
+                        } else {
+                          alert(d.error ?? '분석 실패');
+                        }
+                      } catch { alert('서버 오류'); }
+                      setAnalyzing(false);
+                    }}
+                    disabled={!autoRegFile || analyzing}
+                    className="px-5 py-2 text-[13px] font-medium text-white bg-[#2E6FF2] rounded-lg hover:bg-[#1a5ad9] disabled:opacity-40 transition-colors"
+                  >
+                    {analyzing ? '분석 중...' : '분석 시작'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: 플레이스홀더 확인 */}
+            {autoRegStep === 2 && (
+              <div>
+                <p className="text-[13px] text-[#7C8494] mb-3">감지된 빈칸/플레이스홀더 ({detectedPlaceholders.length}개)</p>
+
+                {detectedPlaceholders.length === 0 ? (
+                  <div className="text-center py-8 text-[#7C8494] text-[13px]">
+                    <p>감지된 빈칸이 없습니다.</p>
+                    <p className="text-[12px] mt-1">이 파일을 그대로 템플릿으로 등록할 수 있습니다.</p>
+                  </div>
+                ) : (
+                  <div className="max-h-[280px] overflow-y-auto border border-[#E2E5EA] rounded-lg">
+                    {detectedPlaceholders.map((p, i) => (
+                      <div key={p.key} className="flex items-center gap-3 px-4 py-2.5 border-b border-[#E2E5EA] last:border-0">
+                        <input
+                          type="checkbox"
+                          checked={p.selected}
+                          onChange={() => setDetectedPlaceholders(prev => prev.map((pp, ii) => ii === i ? { ...pp, selected: !pp.selected } : pp))}
+                          className="accent-[#2E6FF2]"
+                        />
+                        <input
+                          type="text"
+                          value={p.label}
+                          onChange={(e) => setDetectedPlaceholders(prev => prev.map((pp, ii) => ii === i ? { ...pp, label: e.target.value } : pp))}
+                          className="flex-1 text-[13px] text-[#1B1F2B] border-0 border-b border-transparent hover:border-[#E2E5EA] focus:border-[#2E6FF2] focus:outline-none py-0.5"
+                        />
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                          p.type === 'blank' ? 'bg-[#ff9f0a]/10 text-[#ff9f0a]' :
+                          p.type === 'placeholder' ? 'bg-[#2E6FF2]/10 text-[#2E6FF2]' :
+                          p.type === 'underline' ? 'bg-[#7C8494]/10 text-[#7C8494]' :
+                          'bg-[#30d158]/10 text-[#30d158]'
+                        }`}>
+                          {p.type === 'blank' ? '빈칸' : p.type === 'placeholder' ? '변수' : p.type === 'underline' ? '밑줄' : '괄호'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {autoRegPreview && (
+                  <details className="mt-3">
+                    <summary className="text-[12px] text-[#7C8494] cursor-pointer">미리보기</summary>
+                    <pre className="mt-1 p-3 bg-[#f9fafb] rounded-lg text-[11px] text-[#7C8494] max-h-[120px] overflow-y-auto whitespace-pre-wrap">{autoRegPreview}</pre>
+                  </details>
+                )}
+
+                <div className="flex gap-2 justify-end mt-5">
+                  <button onClick={() => setAutoRegStep(1)} className="px-4 py-2 text-[13px] text-[#7C8494]">이전</button>
+                  <button
+                    onClick={() => setAutoRegStep(3)}
+                    className="px-5 py-2 text-[13px] font-medium text-white bg-[#2E6FF2] rounded-lg hover:bg-[#1a5ad9] transition-colors"
+                  >
+                    다음
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: 정보 입력 */}
+            {autoRegStep === 3 && (
+              <div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[13px] text-[#7C8494] mb-1.5">템플릿 이름</label>
+                    <input
+                      type="text"
+                      value={autoRegName}
+                      onChange={(e) => setAutoRegName(e.target.value)}
+                      className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/30 focus:border-[#2E6FF2]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[13px] text-[#7C8494] mb-1.5">설명</label>
+                    <textarea
+                      value={autoRegDesc}
+                      onChange={(e) => setAutoRegDesc(e.target.value)}
+                      rows={2}
+                      className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/30 focus:border-[#2E6FF2] resize-none"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[13px] text-[#7C8494] mb-1.5">부서</label>
+                      <select
+                        value={autoRegDeptId}
+                        onChange={(e) => setAutoRegDeptId(e.target.value)}
+                        className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/30"
+                      >
+                        <option value="">전사</option>
+                        {deptList.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[13px] text-[#7C8494] mb-1.5">공개 범위</label>
+                      <select
+                        value={autoRegScope}
+                        onChange={(e) => setAutoRegScope(e.target.value as '전사 공용' | '부서 전용')}
+                        className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/30"
+                      >
+                        <option value="전사 공용">전사 공용</option>
+                        <option value="부서 전용">부서 전용</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 justify-end mt-6">
+                  <button onClick={() => setAutoRegStep(2)} className="px-4 py-2 text-[13px] text-[#7C8494]">이전</button>
+                  <button
+                    onClick={async () => {
+                      if (!autoRegName.trim()) { alert('이름을 입력해주세요.'); return; }
+                      setAutoRegSaving(true);
+                      try {
+                        const selectedPhs = detectedPlaceholders.filter(p => p.selected).map(({ key, label, type, location, context }) => ({ key, label, type, location, context }));
+                        const res = await fetch('/api/templates', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            name: autoRegName.trim(),
+                            description: autoRegDesc.trim(),
+                            departmentId: autoRegDeptId || null,
+                            scope: autoRegScope,
+                            content: '',
+                            templateFileId: autoRegFileId,
+                            placeholders: selectedPhs,
+                          }),
+                        });
+                        const d = await res.json();
+                        if (d.template) {
+                          setShowAutoReg(false);
+                          loadTemplates();
+                        } else {
+                          alert(d.error ?? '등록 실패');
+                        }
+                      } catch { alert('서버 오류'); }
+                      setAutoRegSaving(false);
+                    }}
+                    disabled={autoRegSaving || !autoRegName.trim()}
+                    className="px-5 py-2 text-[13px] font-medium text-white bg-[#2E6FF2] rounded-lg hover:bg-[#1a5ad9] disabled:opacity-40 transition-colors"
+                  >
+                    {autoRegSaving ? '등록 중...' : '템플릿 등록'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
