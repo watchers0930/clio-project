@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { renderDocx } from '@/lib/renderers/docx-renderer';
 import { renderHwpx } from '@/lib/renderers/hwpx-renderer';
@@ -43,13 +44,36 @@ export async function GET(
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
     }
 
-    const { data: doc, error } = await supabase
+    // 본인 문서 조회, 없으면 결재자인지 확인 후 admin으로 조회
+    let doc: { id: string; title: string; content: string | null } | null = null;
+    const { data: ownDoc } = await supabase
       .from('documents')
       .select('id, title, content')
       .eq('id', id)
       .single();
 
-    if (error || !doc) {
+    if (ownDoc) {
+      doc = ownDoc;
+    } else {
+      const admin = createAdminSupabaseClient();
+      const { data: approval } = await admin
+        .from('approvals')
+        .select('id')
+        .eq('document_id', id)
+        .eq('approver_id', authUserId)
+        .limit(1)
+        .maybeSingle();
+      if (approval) {
+        const { data: adminDoc } = await admin
+          .from('documents')
+          .select('id, title, content')
+          .eq('id', id)
+          .single();
+        doc = adminDoc;
+      }
+    }
+
+    if (!doc) {
       return NextResponse.json({ error: '문서를 찾을 수 없습니다.' }, { status: 404 });
     }
 
