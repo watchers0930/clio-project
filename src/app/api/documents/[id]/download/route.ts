@@ -100,11 +100,14 @@ export async function GET(
     }
 
     const fileName = encodeURIComponent(rendered.fileName);
+    const inline = url.searchParams.get('inline') === 'true';
 
     return new NextResponse(rendered.buffer, {
       headers: {
         'Content-Type': rendered.mimeType,
-        'Content-Disposition': `attachment; filename*=UTF-8''${fileName}`,
+        'Content-Disposition': inline
+          ? `inline; filename*=UTF-8''${fileName}`
+          : `attachment; filename*=UTF-8''${fileName}`,
         'Content-Length': String(rendered.buffer.length),
       },
     });
