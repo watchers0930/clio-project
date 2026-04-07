@@ -40,7 +40,7 @@ export default function ApprovalsPage() {
   const [loading, setLoading] = useState(true);
 
   // 문서 내용 보기 모달
-  const [viewDoc, setViewDoc] = useState<{ id: string; title: string; content: string; status: string; createdAt: string; templateName: string; isFileBased?: boolean } | null>(null);
+  const [viewDoc, setViewDoc] = useState<{ id: string; title: string; content: string; status: string; createdAt: string; templateName: string } | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
 
   // 승인/반려 모달 상태
@@ -72,23 +72,19 @@ export default function ApprovalsPage() {
       const res = await fetch(`/api/documents/${docId}`);
       const d = await res.json();
       if (d.success && d.data) {
-        const rawContent = d.data.content ?? '';
-        const isFileBased = rawContent.startsWith('[') && rawContent.length < 200;
-
         setViewDoc({
           id: d.data.id,
           title: d.data.title,
-          content: rawContent,
+          content: d.data.content ?? '',
           status: d.data.status,
           createdAt: d.data.created_at?.split('T')[0] ?? '',
           templateName: d.data.template_name ?? '',
-          isFileBased,
         });
       } else {
-        setViewDoc({ id: docId, title: '(조회 실패)', content: d.error ?? '문서를 불러올 수 없습니다.', status: '', createdAt: '', templateName: '' });
+        setViewDoc({ id: docId, title: '조회 실패', content: d.error ?? '문서를 불러올 수 없습니다.', status: '', createdAt: '', templateName: '' });
       }
     } catch {
-      setViewDoc({ id: docId, title: '(오류)', content: '서버 오류가 발생했습니다.', status: '', createdAt: '', templateName: '' });
+      setViewDoc({ id: docId, title: '오류', content: '서버 오류가 발생했습니다.', status: '', createdAt: '', templateName: '' });
     }
     setViewLoading(false);
   };
@@ -339,7 +335,7 @@ export default function ApprovalsPage() {
       {/* ────── 문서 내용 보기 모달 ────── */}
       {(viewDoc || viewLoading) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => { if (!viewLoading) setViewDoc(null); }}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-xl shadow-2xl flex flex-col" style={{ width: 'calc(100vw - 80px)', height: 'calc(100vh - 80px)' }} onClick={(e) => e.stopPropagation()}>
             {viewLoading ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="animate-spin text-[#7C8494]" size={24} />
@@ -359,33 +355,23 @@ export default function ApprovalsPage() {
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
                 </div>
-                {/* 본문 */}
-                <div className="flex-1 overflow-hidden">
-                  {viewDoc.isFileBased ? (
-                    <iframe
-                      src={`/api/documents/${viewDoc.id}/download?format=pdf&inline=true`}
-                      className="w-full h-full border-0"
-                      title={viewDoc.title}
-                    />
-                  ) : (
-                    <div className="h-full overflow-y-auto px-8 py-6">
-                      <div className="whitespace-pre-wrap text-[13px] text-[#1B1F2B] leading-relaxed">
-                        {viewDoc.content || '(내용 없음)'}
-                      </div>
-                    </div>
-                  )}
+                {/* 본문 — 무조건 PDF로 변환하여 표시 */}
+                <div className="flex-1 overflow-hidden bg-[#525659]">
+                  <iframe
+                    src={`/api/documents/${viewDoc.id}/download?format=pdf&inline=true`}
+                    className="w-full h-full border-0"
+                    title={viewDoc.title}
+                  />
                 </div>
                 {/* 하단 */}
                 <div className="px-8 py-4 border-t border-[#E2E5EA] flex justify-between items-center shrink-0">
-                  {viewDoc.isFileBased && (
-                    <a
-                      href={`/api/documents/${viewDoc.id}/download?format=docx`}
-                      className="text-[13px] text-[#2E6FF2] hover:underline"
-                    >
-                      원본 다운로드
-                    </a>
-                  )}
-                  <button onClick={() => setViewDoc(null)} className="px-5 py-2 text-[13px] text-[#7C8494] hover:text-[#1B1F2B] transition-colors ml-auto">
+                  <a
+                    href={`/api/documents/${viewDoc.id}/download?format=docx`}
+                    className="text-[13px] text-[#2E6FF2] hover:underline"
+                  >
+                    DOCX 다운로드
+                  </a>
+                  <button onClick={() => setViewDoc(null)} className="px-5 py-2 text-[13px] text-[#7C8494] hover:text-[#1B1F2B] transition-colors">
                     닫기
                   </button>
                 </div>
