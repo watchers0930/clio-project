@@ -615,12 +615,6 @@ export default function DocumentsPage() {
                 </div>
               </div>
                 <div className="flex gap-2 mt-4 pt-3 border-t border-[#f5f5f7] ml-7 flex-wrap">
-                  <button
-                    onClick={() => openDocModal(d)}
-                    className="px-4 py-2 rounded-lg text-sm text-[#0071e3] hover:bg-[#f5f5f7] transition-colors"
-                  >
-                    {d.status === '초안' ? '편집' : '보기'}
-                  </button>
                   {d.status === '완료' && (
                     <button
                       onClick={() => { openDocModal(d); setTimeout(() => openApprovalModal(), 100); }}
@@ -630,16 +624,22 @@ export default function DocumentsPage() {
                     </button>
                   )}
                   <button
-                    onClick={() => handleDownload(d)}
+                    onClick={() => openDocModal(d)}
                     className="px-4 py-2 rounded-lg text-sm text-[#0071e3] hover:bg-[#f5f5f7] transition-colors"
                   >
-                    다운로드
+                    {d.status === '초안' ? '편집' : '보기'}
                   </button>
                   <button
                     onClick={() => handleDelete(d.id)}
                     className="px-4 py-2 rounded-lg text-sm text-[#ff3b30] hover:bg-[#f5f5f7] transition-colors"
                   >
                     삭제
+                  </button>
+                  <button
+                    onClick={() => handleDownload(d)}
+                    className="px-4 py-2 rounded-lg text-sm text-[#0071e3] hover:bg-[#f5f5f7] transition-colors"
+                  >
+                    다운로드
                   </button>
                 </div>
               </div>
