@@ -614,13 +614,21 @@ export default function DocumentsPage() {
                   <span>소스 파일 {d.sourceCount}개</span>
                 </div>
               </div>
-                <div className="flex gap-2 mt-4 pt-3 border-t border-[#f5f5f7] ml-7">
+                <div className="flex gap-2 mt-4 pt-3 border-t border-[#f5f5f7] ml-7 flex-wrap">
                   <button
                     onClick={() => openDocModal(d)}
                     className="px-4 py-2 rounded-lg text-sm text-[#0071e3] hover:bg-[#f5f5f7] transition-colors"
                   >
                     {d.status === '초안' ? '편집' : '보기'}
                   </button>
+                  {d.status === '완료' && (
+                    <button
+                      onClick={() => { openDocModal(d); setTimeout(() => openApprovalModal(), 100); }}
+                      className="px-4 py-2 rounded-lg text-sm text-white bg-[#2E6FF2] hover:bg-[#1a5ad9] transition-colors"
+                    >
+                      결재 요청
+                    </button>
+                  )}
                   <button
                     onClick={() => handleDownload(d)}
                     className="px-4 py-2 rounded-lg text-sm text-[#0071e3] hover:bg-[#f5f5f7] transition-colors"
@@ -801,29 +809,19 @@ export default function DocumentsPage() {
             <div className="px-8 py-5 border-t border-[#e5e5e7] flex items-center justify-between shrink-0">
               <div className="flex gap-2">
                 {isDraft && (
+                  <button onClick={handleComplete} disabled={saving} className="px-5 py-2.5 rounded-xl bg-[#30d158] text-white text-sm font-medium hover:bg-[#28b94c] disabled:opacity-50 transition-colors">
+                    {saving ? '처리 중...' : '완료'}
+                  </button>
+                )}
+                {viewDoc?.status === '완료' && (
                   <>
-                    <button onClick={handleComplete} disabled={saving} className="px-5 py-2.5 rounded-xl bg-[#30d158] text-white text-sm font-medium hover:bg-[#28b94c] disabled:opacity-50 transition-colors">
-                      {saving ? '처리 중...' : '완료'}
-                    </button>
                     <button onClick={openApprovalModal} className="px-5 py-2.5 rounded-xl bg-[#2E6FF2] text-white text-sm font-medium hover:bg-[#1a5ad9] transition-colors">
                       결재 요청
-                    </button>
-                  </>
-                )}
-                {isRejected && (
-                  <>
-                    <button onClick={openApprovalModal} className="px-5 py-2.5 rounded-xl bg-[#2E6FF2] text-white text-sm font-medium hover:bg-[#1a5ad9] transition-colors">
-                      재요청
                     </button>
                     <button onClick={handleRevertToDraft} disabled={saving} className="px-5 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] disabled:opacity-50 transition-colors">
                       초안으로 되돌리기
                     </button>
                   </>
-                )}
-                {viewDoc?.status === '완료' && (
-                  <button onClick={handleRevertToDraft} disabled={saving} className="px-5 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] disabled:opacity-50 transition-colors">
-                    초안으로 되돌리기
-                  </button>
                 )}
                 {viewDoc?.status === '결재중' && (
                   <span className="px-5 py-2.5 rounded-xl bg-[#2E6FF2]/10 text-[#2E6FF2] text-sm font-medium">

@@ -45,8 +45,8 @@ export async function POST(
       return NextResponse.json({ success: false, error: '본인 문서만 결재 요청할 수 있습니다.' }, { status: 403 });
     }
 
-    if (doc.status !== 'draft' && doc.status !== 'rejected') {
-      return NextResponse.json({ success: false, error: '초안 또는 반려 상태만 결재 요청 가능합니다.' }, { status: 400 });
+    if (doc.status !== 'completed' && doc.status !== 'rejected') {
+      return NextResponse.json({ success: false, error: '완료 또는 반려 상태만 결재 요청 가능합니다.' }, { status: 400 });
     }
 
     // 결재자 존재 확인
