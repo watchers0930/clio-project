@@ -45,10 +45,10 @@ export async function GET(
     }
 
     // 본인 문서 조회, 없으면 결재자인지 확인 후 admin으로 조회
-    let doc: { id: string; title: string; content: string | null } | null = null;
+    let doc: { id: string; title: string; content: string | null; storage_path: string | null } | null = null;
     const { data: ownDoc } = await supabase
       .from('documents')
-      .select('id, title, content')
+      .select('id, title, content, storage_path')
       .eq('id', id)
       .single();
 
@@ -66,7 +66,7 @@ export async function GET(
       if (approval) {
         const { data: adminDoc } = await admin
           .from('documents')
-          .select('id, title, content')
+          .select('id, title, content, storage_path')
           .eq('id', id)
           .single();
         doc = adminDoc;
@@ -77,6 +77,65 @@ export async function GET(
       return NextResponse.json({ error: '문서를 찾을 수 없습니다.' }, { status: 404 });
     }
 
+    const inline = url.searchParams.get('inline') === 'true';
+
+    // storage_path가 있고 inline(미리보기) 요청이면 실제 파일을 PDF로 서빙
+    // storage_path가 있고 다운로드 요청이면 실제 파일을 원본 포맷으로 서빙
+    if (doc.storage_path) {
+      const adminClient = createAdminSupabaseClient();
+      const { data: blob, error: dlErr } = await adminClient.storage.from('files').download(doc.storage_path);
+      if (!dlErr && blob) {
+        const fileBuffer = Buffer.from(await blob.arrayBuffer());
+        const ext = doc.storage_path.split('.').pop()?.toLowerCase() ?? '';
+        const mimeMap: Record<string, string> = {
+          hwpx: 'application/haansofthwpx',
+          docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          pdf: 'application/pdf',
+        };
+
+        if (inline) {
+          // 미리보기: 마크다운 content가 있으면 PDF 렌더, 없으면 원본 파일 서빙
+          const content = doc.content ?? '';
+          const isLabel = content.startsWith('[') && content.length < 200;
+          if (!isLabel && content.length > 50) {
+            // 마크다운 content → PDF 렌더
+            const theme: CorporateTheme = { ...DEFAULT_THEME, fontFamily: fontParam, fontFamilyEn: fontFamily };
+            const rendered = await renderPdf(content, doc.title, theme);
+            const fileName = encodeURIComponent(rendered.fileName);
+            return new NextResponse(rendered.buffer, {
+              headers: {
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `inline; filename*=UTF-8''${fileName}`,
+                'Content-Length': String(rendered.buffer.length),
+              },
+            });
+          }
+          // 파일 기반 문서 → 원본 파일 그대로 inline 서빙
+          const fileName = encodeURIComponent(`${doc.title}.${ext}`);
+          return new NextResponse(fileBuffer, {
+            headers: {
+              'Content-Type': mimeMap[ext] ?? 'application/octet-stream',
+              'Content-Disposition': `inline; filename*=UTF-8''${fileName}`,
+              'Content-Length': String(fileBuffer.length),
+            },
+          });
+        }
+
+        // 다운로드: 원본 파일 서빙
+        const fileName = encodeURIComponent(`${doc.title}.${ext}`);
+        return new NextResponse(fileBuffer, {
+          headers: {
+            'Content-Type': mimeMap[ext] ?? 'application/octet-stream',
+            'Content-Disposition': `attachment; filename*=UTF-8''${fileName}`,
+            'Content-Length': String(fileBuffer.length),
+          },
+        });
+      }
+    }
+
+    // storage_path 없으면 기존 방식: content를 렌더링
     const content = doc.content ?? '';
     const theme: CorporateTheme = {
       ...DEFAULT_THEME,
@@ -100,7 +159,6 @@ export async function GET(
     }
 
     const fileName = encodeURIComponent(rendered.fileName);
-    const inline = url.searchParams.get('inline') === 'true';
 
     return new NextResponse(rendered.buffer, {
       headers: {

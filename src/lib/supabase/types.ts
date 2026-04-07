@@ -88,6 +88,7 @@ export interface DbDocument {
   source_file_ids: string[];
   instructions: string | null;
   status: string;
+  storage_path: string | null;
   created_by: string | null;
   created_at: string;
 }
@@ -195,8 +196,8 @@ export interface Database {
       };
       documents: {
         Row: DbDocument;
-        Insert: { id?: string; title: string; content?: string | null; template_id?: string | null; source_file_ids?: string[]; instructions?: string | null; status?: string; created_by?: string | null; created_at?: string };
-        Update: { title?: string; content?: string | null; template_id?: string | null; source_file_ids?: string[]; instructions?: string | null; status?: string; created_by?: string | null };
+        Insert: { id?: string; title: string; content?: string | null; template_id?: string | null; source_file_ids?: string[]; instructions?: string | null; status?: string; storage_path?: string | null; created_by?: string | null; created_at?: string };
+        Update: { title?: string; content?: string | null; template_id?: string | null; source_file_ids?: string[]; instructions?: string | null; status?: string; storage_path?: string | null; created_by?: string | null };
         Relationships: [];
       };
       channels: {

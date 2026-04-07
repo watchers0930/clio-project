@@ -240,6 +240,7 @@ export async function POST(request: NextRequest) {
           source_file_ids: sourceFileIds ?? [],
           instructions: JSON.stringify(contractFormData),
           status: 'completed',
+          storage_path: storagePath,
           created_by: authUserId,
         }).select().single();
 
@@ -339,6 +340,7 @@ export async function POST(request: NextRequest) {
         source_file_ids: sourceFileIds ?? [],
         instructions: instructions ?? null,
         status: 'completed',
+        storage_path: storagePath,
         created_by: authUserId,
       }).select().single();
 
@@ -420,6 +422,7 @@ export async function POST(request: NextRequest) {
         source_file_ids: sourceFileIds ?? [],
         instructions: instructions ?? null,
         status: 'completed',
+        storage_path: storagePath,
         created_by: authUserId,
       }).select().single();
 
@@ -474,6 +477,7 @@ export async function POST(request: NextRequest) {
         source_file_ids: sourceFileIds ?? [],
         instructions: instructions ?? null,
         status: 'completed',
+        storage_path: storagePath,
         created_by: authUserId,
       }).select().single();
 
@@ -553,6 +557,8 @@ export async function POST(request: NextRequest) {
           .upload(filePath, rendered.buffer, { contentType: rendered.mimeType, upsert: false });
         if (upErr) {
           console.error(`[generate] ${format.toUpperCase()} Storage upload error:`, upErr.message);
+        } else {
+          await supabase.from('documents').update({ storage_path: filePath }).eq('id', newDoc.id).then(() => {}, () => {});
         }
         const { data: fileUrl } = await supabase.storage
           .from('files')
@@ -620,6 +626,7 @@ export async function POST(request: NextRequest) {
       source_file_ids: sourceFileIds ?? [],
       instructions: instructions ?? null,
       status: 'completed',
+      storage_path: storagePath,
       created_by: authUserId,
     }).select().single();
 
