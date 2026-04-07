@@ -1455,7 +1455,7 @@ export default function DocumentsPage() {
               className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/30 focus:border-[#2E6FF2] mb-[5px]"
             />
 
-            <div className="max-h-[240px] overflow-y-auto border border-[#E2E5EA] rounded-lg">
+            <div className="max-h-[240px] overflow-y-auto border border-[#E2E5EA] rounded-lg mt-[5px] mb-[15px]">
               {approvalUsers
                 .filter((u) => {
                   if (!approvalSearch) return true;

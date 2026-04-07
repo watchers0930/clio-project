@@ -39,7 +39,11 @@ export default function ApprovalsPage() {
   const [myRequests, setMyRequests] = useState<MyRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 모달 상태
+  // 문서 내용 보기 모달
+  const [viewDoc, setViewDoc] = useState<{ id: string; title: string; content: string; status: string; createdAt: string; templateName: string } | null>(null);
+  const [viewLoading, setViewLoading] = useState(false);
+
+  // 승인/반려 모달 상태
   const [actionTarget, setActionTarget] = useState<PendingApproval | null>(null);
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
   const [actionComment, setActionComment] = useState('');
@@ -60,6 +64,26 @@ export default function ApprovalsPage() {
   }, [tab]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const openDocView = async (docId: string) => {
+    setViewLoading(true);
+    setViewDoc(null);
+    try {
+      const res = await fetch(`/api/documents/${docId}`);
+      const d = await res.json();
+      if (d.success && d.data) {
+        setViewDoc({
+          id: d.data.id,
+          title: d.data.title,
+          content: d.data.content ?? '',
+          status: d.data.status,
+          createdAt: d.data.created_at?.split('T')[0] ?? '',
+          templateName: d.data.template_name ?? '',
+        });
+      }
+    } catch {}
+    setViewLoading(false);
+  };
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -160,7 +184,11 @@ export default function ApprovalsPage() {
               <tbody>
                 {pendingList.map((item) => (
                   <tr key={item.id} className="border-b border-[#E2E5EA] last:border-0 hover:bg-[#f9fafb] transition-colors">
-                    <td className="py-3.5 px-5 text-[13px] text-[#1B1F2B] font-medium">{item.documentTitle}</td>
+                    <td className="py-3.5 px-5 text-[13px] text-[#1B1F2B] font-medium">
+                      <button onClick={() => openDocView(item.documentId)} className="text-[#2E6FF2] hover:underline text-left">
+                        {item.documentTitle}
+                      </button>
+                    </td>
                     <td className="py-3.5 px-5 text-[13px] text-[#7C8494]">{item.requester?.name ?? '-'}</td>
                     <td className="py-3.5 px-5 text-[13px] text-[#7C8494]">{item.requester?.department ?? '-'}</td>
                     <td className="py-3.5 px-5 text-[13px] text-[#7C8494]">{formatDate(item.requestedAt)}</td>
@@ -211,7 +239,11 @@ export default function ApprovalsPage() {
                   const badge = STATUS_BADGE[item.status] ?? STATUS_BADGE.pending;
                   return (
                     <tr key={item.id} className="border-b border-[#E2E5EA] last:border-0 hover:bg-[#f9fafb] transition-colors">
-                      <td className="py-3.5 px-5 text-[13px] text-[#1B1F2B] font-medium">{item.documentTitle}</td>
+                      <td className="py-3.5 px-5 text-[13px] text-[#1B1F2B] font-medium">
+                        <button onClick={() => openDocView(item.documentId)} className="text-[#2E6FF2] hover:underline text-left">
+                          {item.documentTitle}
+                        </button>
+                      </td>
                       <td className="py-3.5 px-5 text-[13px] text-[#7C8494]">{item.approver?.name ?? '-'}</td>
                       <td className="py-3.5 px-5">
                         <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium ${badge.color}`}>
@@ -292,6 +324,47 @@ export default function ApprovalsPage() {
                 {processing ? <Loader2 className="animate-spin" size={14} /> : actionType === 'approve' ? '승인' : '반려'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ────── 문서 내용 보기 모달 ────── */}
+      {(viewDoc || viewLoading) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => { if (!viewLoading) setViewDoc(null); }}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            {viewLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="animate-spin text-[#7C8494]" size={24} />
+              </div>
+            ) : viewDoc && (
+              <>
+                {/* 헤더 */}
+                <div className="px-8 py-5 border-b border-[#E2E5EA] flex items-center justify-between shrink-0">
+                  <div>
+                    <h3 className="text-[16px] font-semibold text-[#1B1F2B]">{viewDoc.title}</h3>
+                    <div className="flex gap-3 mt-1 text-[12px] text-[#7C8494]">
+                      {viewDoc.templateName && <span>템플릿: {viewDoc.templateName}</span>}
+                      <span>{viewDoc.createdAt}</span>
+                    </div>
+                  </div>
+                  <button onClick={() => setViewDoc(null)} className="text-[#7C8494] hover:text-[#1B1F2B] transition-colors">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
+                {/* 본문 */}
+                <div className="flex-1 overflow-y-auto px-8 py-6">
+                  <div className="whitespace-pre-wrap text-[13px] text-[#1B1F2B] leading-relaxed">
+                    {viewDoc.content || '(내용 없음)'}
+                  </div>
+                </div>
+                {/* 하단 */}
+                <div className="px-8 py-4 border-t border-[#E2E5EA] flex justify-end shrink-0">
+                  <button onClick={() => setViewDoc(null)} className="px-5 py-2 text-[13px] text-[#7C8494] hover:text-[#1B1F2B] transition-colors">
+                    닫기
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
