@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, ListFilter } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import TodoItemRow from './todo-item';
 import type { TodoItem, TodoStatus } from '@/lib/supabase/types';
 
@@ -31,7 +31,6 @@ export default function TodoList({
 }: TodoListProps) {
   const filtered = filter === 'all' ? todos : todos.filter((t) => t.status === filter);
 
-  // 정렬: active 먼저, 그 안에서 priority(high>medium>low), 그 다음 due_date
   const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
   const sorted = [...filtered].sort((a, b) => {
     if (a.status !== b.status) return a.status === 'active' ? -1 : 1;
@@ -47,48 +46,47 @@ export default function TodoList({
   return (
     <div>
       {/* 헤더 */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <ListFilter size={16} className="text-clio-text-secondary" />
-          <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <div className="flex gap-1 bg-[#f5f5f7] rounded-lg p-1">
             {FILTERS.map((f) => (
               <button
                 key={f.value}
                 onClick={() => onFilterChange(f.value)}
-                className={`px-3 py-1 text-xs rounded-md transition-colors ${
-                  filter === f.value
-                    ? 'bg-white text-navy font-medium shadow-sm'
-                    : 'text-clio-text-secondary hover:text-navy'
-                }`}
+                className="px-3.5 py-1.5 text-[12px] font-medium rounded-md transition-all"
+                style={{
+                  backgroundColor: filter === f.value ? '#fff' : 'transparent',
+                  color: filter === f.value ? '#1B1F2B' : '#7C8494',
+                  boxShadow: filter === f.value ? '0 1px 2px rgba(0,0,0,0.06)' : undefined,
+                }}
               >
                 {f.label}
               </button>
             ))}
           </div>
-          <span className="text-xs text-clio-text-secondary ml-2">
-            {sorted.length}건
-          </span>
+          <span className="text-[12px] text-[#7C8494]">{sorted.length}건</span>
         </div>
 
         <button
           onClick={onAdd}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-white bg-[#2E6FF2] rounded-lg hover:bg-[#1A5AD9] transition-colors"
         >
-          <Plus size={16} />
+          <Plus size={15} />
           할일 추가
         </button>
       </div>
 
       {/* 목록 */}
       {sorted.length === 0 ? (
-        <div className="text-center py-16 text-clio-text-secondary">
-          <p className="text-sm">할일이 없습니다</p>
-          <button onClick={onAdd} className="text-sm text-accent hover:underline mt-2">
+        <div className="text-center py-20 text-[#7C8494]">
+          <div className="text-[40px] mb-3 opacity-20">&#x2713;</div>
+          <p className="text-[14px]">할일이 없습니다</p>
+          <button onClick={onAdd} className="text-[13px] text-[#2E6FF2] hover:underline mt-2">
             새 할일 추가하기
           </button>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="bg-white rounded-xl border border-[#E2E5EA] overflow-hidden">
           {sorted.map((todo) => (
             <TodoItemRow
               key={todo.id}

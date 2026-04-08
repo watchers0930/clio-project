@@ -14,6 +14,8 @@ interface CalendarGridProps {
   onEventClick: (event: CalendarEvent) => void;
 }
 
+const WEEKDAY_COLORS = ['#ff3b30', '#1B1F2B', '#1B1F2B', '#1B1F2B', '#1B1F2B', '#1B1F2B', '#2E6FF2'];
+
 export default function CalendarGrid({
   year,
   month,
@@ -34,15 +36,14 @@ export default function CalendarGrid({
     });
 
   return (
-    <div className="border border-clio-border rounded-xl overflow-hidden bg-white">
+    <div className="bg-white rounded-xl border border-[#E2E5EA] overflow-hidden">
       {/* 요일 헤더 */}
-      <div className="grid grid-cols-7 border-b border-clio-border">
+      <div className="grid grid-cols-7 border-b border-[#E2E5EA] bg-[#f9fafb]">
         {WEEKDAY_LABELS.map((label, i) => (
           <div
             key={label}
-            className={`text-center text-xs font-semibold py-2.5 ${
-              i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : 'text-clio-text-secondary'
-            }`}
+            className="text-center text-[11px] font-semibold py-2.5"
+            style={{ color: WEEKDAY_COLORS[i] }}
           >
             {label}
           </div>

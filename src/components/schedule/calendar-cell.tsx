@@ -1,7 +1,6 @@
 'use client';
 
 import { isSameMonth, isSameDay, isToday } from 'date-fns';
-import { cn } from '@/lib/utils';
 import type { CalendarEvent, EventType } from '@/lib/supabase/types';
 import { getEventTypeColor } from '@/lib/schedule-utils';
 
@@ -31,49 +30,52 @@ export default function CalendarCell({
   return (
     <div
       onClick={() => onClick(date)}
-      className={cn(
-        'min-h-[100px] p-1.5 border-b border-r border-clio-border/50 cursor-pointer transition-colors hover:bg-accent/5',
-        !inMonth && 'bg-gray-50/60',
-        isSelected && 'bg-accent/10 ring-1 ring-accent/30',
-      )}
+      className="min-h-[96px] p-2 border-b border-r border-[#E2E5EA]/60 cursor-pointer transition-colors hover:bg-[#f9fafb]"
+      style={{
+        backgroundColor: isSelected ? 'rgba(46,111,242,0.06)' : !inMonth ? '#fafafa' : undefined,
+        boxShadow: isSelected ? 'inset 0 0 0 1px rgba(46,111,242,0.25)' : undefined,
+      }}
     >
       <div className="flex items-center justify-between mb-1">
         <span
-          className={cn(
-            'text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full',
-            !inMonth && 'text-gray-300',
-            inMonth && isSun && 'text-red-500',
-            inMonth && isSat && 'text-blue-500',
-            inMonth && !isSun && !isSat && 'text-navy',
-            today && 'bg-accent text-white',
-          )}
+          className="text-[12px] font-medium w-6 h-6 flex items-center justify-center rounded-full font-num"
+          style={{
+            color: !inMonth
+              ? '#d1d5db'
+              : today
+                ? '#fff'
+                : isSun
+                  ? '#ff3b30'
+                  : isSat
+                    ? '#2E6FF2'
+                    : '#1B1F2B',
+            backgroundColor: today ? '#2E6FF2' : undefined,
+          }}
         >
           {dayNum}
         </span>
       </div>
 
       <div className="space-y-0.5">
-        {events.slice(0, 3).map((evt) => (
-          <button
-            key={evt.id}
-            onClick={(e) => {
-              e.stopPropagation();
-              onEventClick(evt);
-            }}
-            className="w-full text-left px-1.5 py-0.5 rounded text-[10px] leading-tight truncate hover:opacity-80 transition-opacity"
-            style={{
-              backgroundColor: getEventTypeColor(evt.event_type as EventType) + '18',
-              color: getEventTypeColor(evt.event_type as EventType),
-              borderLeft: `2px solid ${getEventTypeColor(evt.event_type as EventType)}`,
-            }}
-          >
-            {evt.title}
-          </button>
-        ))}
+        {events.slice(0, 3).map((evt) => {
+          const color = getEventTypeColor(evt.event_type as EventType);
+          return (
+            <button
+              key={evt.id}
+              onClick={(e) => { e.stopPropagation(); onEventClick(evt); }}
+              className="w-full text-left px-1.5 py-[3px] rounded text-[10px] leading-tight truncate hover:opacity-80 transition-opacity"
+              style={{
+                backgroundColor: color + '14',
+                color,
+                borderLeft: `2px solid ${color}`,
+              }}
+            >
+              {evt.title}
+            </button>
+          );
+        })}
         {events.length > 3 && (
-          <span className="text-[10px] text-clio-text-secondary pl-1">
-            +{events.length - 3}개 더
-          </span>
+          <span className="text-[10px] text-[#7C8494] pl-1">+{events.length - 3}개 더</span>
         )}
       </div>
     </div>

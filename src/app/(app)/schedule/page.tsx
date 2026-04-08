@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { CalendarDays, CheckSquare } from 'lucide-react';
+import { CalendarDays, CheckSquare, Loader2 } from 'lucide-react';
 import { startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
-import CalendarView from '@/components/schedule/calendar-view';
+import CalendarHeader from '@/components/schedule/calendar-header';
+import CalendarGrid from '@/components/schedule/calendar-grid';
 import EventFormModal from '@/components/schedule/event-form-modal';
 import type { EventFormData } from '@/components/schedule/event-form-modal';
 import TodoList from '@/components/schedule/todo-list';
@@ -14,6 +15,7 @@ type Tab = 'calendar' | 'todo';
 
 export default function SchedulePage() {
   const [activeTab, setActiveTab] = useState<Tab>('calendar');
+  const [loading, setLoading] = useState(true);
 
   // 캘린더 상태
   const now = new Date();
@@ -42,6 +44,7 @@ export default function SchedulePage() {
 
   // 일정 로드
   const fetchEvents = useCallback(() => {
+    setLoading(true);
     const start = startOfMonth(new Date(year, month)).toISOString();
     const end = endOfMonth(new Date(year, month)).toISOString();
     const params = new URLSearchParams({ start, end });
@@ -50,7 +53,8 @@ export default function SchedulePage() {
     fetch(`/api/events?${params}`)
       .then((r) => r.json())
       .then((res) => { if (res.success) setEvents(res.data ?? []); })
-      .then(() => {}, () => {});
+      .then(() => {}, () => {})
+      .finally(() => setLoading(false));
   }, [year, month, selectedDept]);
 
   useEffect(() => { fetchEvents(); }, [fetchEvents]);
@@ -66,42 +70,20 @@ export default function SchedulePage() {
   useEffect(() => { fetchTodos(); }, [fetchTodos]);
 
   // 월 이동
-  const goNextMonth = () => {
-    const d = addMonths(new Date(year, month), 1);
-    setYear(d.getFullYear());
-    setMonth(d.getMonth());
-  };
-  const goPrevMonth = () => {
-    const d = subMonths(new Date(year, month), 1);
-    setYear(d.getFullYear());
-    setMonth(d.getMonth());
-  };
-  const goToday = () => {
-    const t = new Date();
-    setYear(t.getFullYear());
-    setMonth(t.getMonth());
-  };
+  const goNextMonth = () => { const d = addMonths(new Date(year, month), 1); setYear(d.getFullYear()); setMonth(d.getMonth()); };
+  const goPrevMonth = () => { const d = subMonths(new Date(year, month), 1); setYear(d.getFullYear()); setMonth(d.getMonth()); };
+  const goToday = () => { const t = new Date(); setYear(t.getFullYear()); setMonth(t.getMonth()); };
 
   // 일정 CRUD
   const handleCreateEvent = async (data: EventFormData) => {
-    const res = await fetch('/api/events', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
+    const res = await fetch('/api/events', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     if ((await res.json()).success) fetchEvents();
   };
-
   const handleUpdateEvent = async (data: EventFormData) => {
     if (!selectedEvent) return;
-    const res = await fetch(`/api/events/${selectedEvent.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
+    const res = await fetch(`/api/events/${selectedEvent.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     if ((await res.json()).success) fetchEvents();
   };
-
   const handleDeleteEvent = async () => {
     if (!selectedEvent) return;
     const res = await fetch(`/api/events/${selectedEvent.id}`, { method: 'DELETE' });
@@ -110,75 +92,58 @@ export default function SchedulePage() {
 
   // 할일 CRUD
   const handleCreateTodo = async (data: { title: string; description: string; due_date: string; priority: TodoPriority }) => {
-    const res = await fetch('/api/todos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
+    const res = await fetch('/api/todos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     if ((await res.json()).success) fetchTodos();
   };
-
   const handleUpdateTodo = async (data: { title: string; description: string; due_date: string; priority: TodoPriority }) => {
     if (!selectedTodo) return;
-    const res = await fetch(`/api/todos/${selectedTodo.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
+    const res = await fetch(`/api/todos/${selectedTodo.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     if ((await res.json()).success) fetchTodos();
   };
-
   const handleToggleTodo = async (id: string) => {
     const todo = todos.find((t) => t.id === id);
     if (!todo) return;
     const newStatus = todo.status === 'active' ? 'completed' : 'active';
-    const res = await fetch(`/api/todos/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus }),
-    });
+    const res = await fetch(`/api/todos/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
     if ((await res.json()).success) fetchTodos();
   };
-
   const handleDeleteTodo = async (id: string) => {
     const res = await fetch(`/api/todos/${id}`, { method: 'DELETE' });
     if ((await res.json()).success) fetchTodos();
   };
 
+  const activeTodoCount = todos.filter((t) => t.status === 'active').length;
+
   return (
-    <div className="space-y-6">
-      {/* 페이지 헤더 */}
-      <div>
-        <h1 className="text-xl font-bold text-navy">일정 / 할일</h1>
-        <p className="text-sm text-clio-text-secondary mt-1">팀 일정을 공유하고 개인 할일을 관리하세요</p>
+    <div className="w-full" style={{ maxWidth: '94%', margin: '0 auto', paddingTop: 36, paddingBottom: 40 }}>
+      {/* 헤더 */}
+      <div className="flex items-center gap-3 mb-8">
+        <CalendarDays size={24} className="text-[#2E6FF2]" />
+        <h1 className="text-[22px] font-semibold text-[#1B1F2B]">일정 / 할일</h1>
       </div>
 
       {/* 탭 */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 mb-6 bg-[#f5f5f7] rounded-lg p-1 w-fit">
         <button
           onClick={() => setActiveTab('calendar')}
-          className={`flex items-center gap-2 px-5 py-2 text-sm rounded-lg transition-colors ${
-            activeTab === 'calendar'
-              ? 'bg-white text-navy font-semibold shadow-sm'
-              : 'text-clio-text-secondary hover:text-navy'
+          className={`flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded-md transition-all ${
+            activeTab === 'calendar' ? 'bg-white text-[#1B1F2B] shadow-sm' : 'text-[#7C8494] hover:text-[#1B1F2B]'
           }`}
         >
-          <CalendarDays size={16} />
+          <CalendarDays size={15} />
           캘린더
         </button>
         <button
           onClick={() => setActiveTab('todo')}
-          className={`flex items-center gap-2 px-5 py-2 text-sm rounded-lg transition-colors ${
-            activeTab === 'todo'
-              ? 'bg-white text-navy font-semibold shadow-sm'
-              : 'text-clio-text-secondary hover:text-navy'
+          className={`flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded-md transition-all ${
+            activeTab === 'todo' ? 'bg-white text-[#1B1F2B] shadow-sm' : 'text-[#7C8494] hover:text-[#1B1F2B]'
           }`}
         >
-          <CheckSquare size={16} />
+          <CheckSquare size={15} />
           할일
-          {todos.filter((t) => t.status === 'active').length > 0 && (
-            <span className="ml-1 px-1.5 py-0.5 text-[10px] bg-accent text-white rounded-full">
-              {todos.filter((t) => t.status === 'active').length}
+          {activeTodoCount > 0 && (
+            <span className="ml-0.5 px-1.5 py-0.5 text-[10px] font-semibold bg-[#2E6FF2] text-white rounded-full font-num">
+              {activeTodoCount}
             </span>
           )}
         </button>
@@ -186,28 +151,40 @@ export default function SchedulePage() {
 
       {/* 콘텐츠 */}
       {activeTab === 'calendar' ? (
-        <CalendarView
-          year={year}
-          month={month}
-          events={events}
-          selectedDate={selectedDate}
-          departments={departments}
-          selectedDept={selectedDept}
-          onPrevMonth={goPrevMonth}
-          onNextMonth={goNextMonth}
-          onToday={goToday}
-          onDeptChange={setSelectedDept}
-          onDateClick={(date) => {
-            setSelectedDate(date);
-            setSelectedEvent(null);
-            setEventModalOpen(true);
-          }}
-          onEventClick={(event) => {
-            setSelectedEvent(event);
-            setSelectedDate(null);
-            setEventModalOpen(true);
-          }}
-        />
+        loading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="animate-spin text-[#7C8494]" size={24} />
+          </div>
+        ) : (
+          <>
+            <CalendarHeader
+              year={year}
+              month={month}
+              onPrev={goPrevMonth}
+              onNext={goNextMonth}
+              onToday={goToday}
+              departments={departments}
+              selectedDept={selectedDept}
+              onDeptChange={setSelectedDept}
+            />
+            <CalendarGrid
+              year={year}
+              month={month}
+              events={events}
+              selectedDate={selectedDate}
+              onDateClick={(date) => {
+                setSelectedDate(date);
+                setSelectedEvent(null);
+                setEventModalOpen(true);
+              }}
+              onEventClick={(event) => {
+                setSelectedEvent(event);
+                setSelectedDate(null);
+                setEventModalOpen(true);
+              }}
+            />
+          </>
+        )
       ) : (
         <TodoList
           todos={todos}
