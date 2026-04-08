@@ -420,61 +420,91 @@ export default function TemplatesPage() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {filtered.map((t) => (
-            <div
-              key={t.id}
-              onClick={selectMode ? () => toggleSelect(t.id) : undefined}
-              className={`bg-white rounded-2xl border p-5 shadow-sm hover:shadow-md transition-all ${selectMode ? 'cursor-pointer' : ''} ${selectedIds.has(t.id) ? 'border-[#0071e3] ring-2 ring-[#0071e3]/20' : 'border-[#e5e5e7]'}`}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  {selectMode && (
-                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${selectedIds.has(t.id) ? 'bg-[#0071e3] border-[#0071e3]' : 'border-[#d1d1d6]'}`}>
-                      {selectedIds.has(t.id) && (
-                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {filtered.map((t) => {
+            const isSelected = selectedIds.has(t.id);
+            return (
+              <div
+                key={t.id}
+                onClick={selectMode ? () => toggleSelect(t.id) : undefined}
+                className="bg-white rounded-xl border overflow-hidden transition-all hover:shadow-lg group"
+                style={{
+                  borderColor: isSelected ? '#2E6FF2' : '#E2E5EA',
+                  boxShadow: isSelected ? '0 0 0 1px #2E6FF2' : '0 1px 3px rgba(0,0,0,0.04)',
+                  cursor: selectMode ? 'pointer' : undefined,
+                }}
+              >
+                {/* 상단 컬러 바 */}
+                <div style={{ height: 3, backgroundColor: '#2E6FF2' }} />
+
+                {/* 카드 본문 */}
+                <div style={{ padding: '18px 20px 14px' }}>
+                  {/* 아이콘 + 체크박스 */}
+                  <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
+                    <div className="flex items-center gap-2.5">
+                      {selectMode && (
+                        <div
+                          className="w-[16px] h-[16px] rounded flex items-center justify-center border-2 transition-colors"
+                          style={{
+                            borderColor: isSelected ? '#2E6FF2' : '#E2E5EA',
+                            backgroundColor: isSelected ? '#2E6FF2' : 'transparent',
+                          }}
+                        >
+                          {isSelected && (
+                            <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                          )}
+                        </div>
                       )}
+                      <span className="text-2xl">{t.icon}</span>
                     </div>
-                  )}
-                  <span className="text-3xl">{t.icon}</span>
+                    <div className="flex items-center gap-1.5">
+                      {t.templateFile && (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md" style={{ backgroundColor: '#2E6FF2' + '12', color: '#2E6FF2' }}>
+                          {t.templateFile.type}
+                        </span>
+                      )}
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-md" style={{ backgroundColor: '#2E6FF2' + '12', color: '#2E6FF2' }}>
+                        {t.scope === '전사 공용' ? '전사' : '부서'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 제목 + 설명 */}
+                  <h3 className="text-[13px] font-semibold text-[#1B1F2B] truncate" style={{ marginBottom: 4 }}>{t.name}</h3>
+                  <p className="text-[11px] text-[#7C8494] line-clamp-2" style={{ marginBottom: 12 }}>{t.description}</p>
+
+                  {/* 메타 정보 */}
+                  <div className="flex items-center gap-3 text-[10px] text-[#7C8494]">
+                    <span>{t.department}</span>
+                    <span>사용 {t.usageCount}회</span>
+                    <span className="font-num">{t.lastUpdated}</span>
+                  </div>
                 </div>
-                <div className="flex gap-1">
+
+                {/* 액션 버튼 */}
+                <div className="flex items-center border-t border-[#E2E5EA]/60">
                   <button
-                    onClick={() => openEdit(t)}
-                    title="편집"
-                    className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73] hover:text-[#0071e3] transition-colors"
+                    onClick={(e) => { e.stopPropagation(); openEdit(t); }}
+                    className="flex-1 py-2.5 text-[12px] font-medium text-[#1B1F2B] hover:bg-[#f5f5f7] transition-colors border-r border-[#E2E5EA]/60"
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /></svg>
+                    편집
                   </button>
                   <button
-                    onClick={() => handleDuplicate(t)}
-                    title="복제"
-                    className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73] hover:text-[#0071e3] transition-colors"
+                    onClick={(e) => { e.stopPropagation(); handleDuplicate(t); }}
+                    className="flex-1 py-2.5 text-[12px] font-medium text-[#1B1F2B] hover:bg-[#f5f5f7] transition-colors border-r border-[#E2E5EA]/60"
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>
+                    복제
                   </button>
                   <button
-                    onClick={() => handleDelete(t.id)}
-                    title="삭제"
-                    className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73] hover:text-[#ff3b30] transition-colors"
+                    onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }}
+                    className="flex-1 py-2.5 text-[12px] font-medium text-[#ff3b30]/70 hover:bg-[#ff3b30]/5 hover:text-[#ff3b30] transition-colors"
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                    삭제
                   </button>
                 </div>
               </div>
-              <h3 className="font-semibold text-[#1d1d1f] mb-1">{t.name}</h3>
-              <p className="text-sm text-[#6e6e73] line-clamp-2 mb-3">{t.description}</p>
-              <div className="flex flex-wrap gap-2 items-center text-xs">
-                <span className="px-2 py-0.5 rounded-full bg-[#f5f5f7] text-[#1d1d1f] font-medium">{t.department}</span>
-                {t.templateFile && (
-                  <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium">{t.templateFile.type}</span>
-                )}
-                <span className="text-[#6e6e73]">사용 {t.usageCount}회</span>
-                <span className="text-[#6e6e73]">·</span>
-                <span className="text-[#6e6e73]">{t.lastUpdated}</span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
