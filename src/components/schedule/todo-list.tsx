@@ -46,7 +46,7 @@ export default function TodoList({
   return (
     <div>
       {/* 헤더 */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between" style={{ marginBottom: 30 }}>
         <div className="flex items-center gap-3">
           <div className="flex gap-1 bg-[#f5f5f7] rounded-lg p-1">
             {FILTERS.map((f) => (
