@@ -27,6 +27,15 @@ export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 /** 채널 유형 */
 export type ChannelType = 'department' | 'direct' | 'group';
 
+/** 일정 유형 */
+export type EventType = 'meeting' | 'deadline' | 'personal' | 'company' | 'other';
+
+/** 할일 우선순위 */
+export type TodoPriority = 'high' | 'medium' | 'low';
+
+/** 할일 상태 */
+export type TodoStatus = 'active' | 'completed';
+
 // ---------------------------------------------------------------------------
 // DB Row 타입 (Supabase 제네릭용 — optional 필드 없이 엄격하게 정의)
 // ---------------------------------------------------------------------------
@@ -144,6 +153,36 @@ export interface DbAuditLog {
   created_at: string;
 }
 
+/** 일정 (DB Row) */
+export interface DbEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  location: string | null;
+  event_type: string;
+  start_at: string;
+  end_at: string;
+  all_day: boolean;
+  department_id: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** 할일 (DB Row) */
+export interface DbTodo {
+  id: string;
+  title: string;
+  description: string | null;
+  due_date: string | null;
+  priority: string;
+  status: string;
+  completed_at: string | null;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
 /** 파일 청크 (DB Row) */
 export interface DbFileChunk {
   id: string;
@@ -222,6 +261,18 @@ export interface Database {
         Row: DbApproval;
         Insert: { id?: string; document_id: string; requester_id: string; approver_id: string; status?: string; comment?: string | null; requested_at?: string; decided_at?: string | null };
         Update: { status?: string; comment?: string | null; decided_at?: string | null };
+        Relationships: [];
+      };
+      events: {
+        Row: DbEvent;
+        Insert: { id?: string; title: string; description?: string | null; location?: string | null; event_type?: string; start_at: string; end_at: string; all_day?: boolean; department_id?: string | null; created_by: string; created_at?: string; updated_at?: string };
+        Update: { title?: string; description?: string | null; location?: string | null; event_type?: string; start_at?: string; end_at?: string; all_day?: boolean; department_id?: string | null; updated_at?: string };
+        Relationships: [];
+      };
+      todos: {
+        Row: DbTodo;
+        Insert: { id?: string; title: string; description?: string | null; due_date?: string | null; priority?: string; status?: string; completed_at?: string | null; user_id: string; created_at?: string; updated_at?: string };
+        Update: { title?: string; description?: string | null; due_date?: string | null; priority?: string; status?: string; completed_at?: string | null; updated_at?: string };
         Relationships: [];
       };
       audit_logs: {
@@ -371,6 +422,38 @@ export interface Message {
   document_id?: string | null;
   is_read?: boolean;
   created_at: string;
+}
+
+/** 캘린더 일정 */
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description?: string | null;
+  location?: string | null;
+  event_type: EventType;
+  start_at: string;
+  end_at: string;
+  all_day: boolean;
+  department_id?: string | null;
+  created_by: string;
+  creator_name?: string;
+  department_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** 할일 항목 */
+export interface TodoItem {
+  id: string;
+  title: string;
+  description?: string | null;
+  due_date?: string | null;
+  priority: TodoPriority;
+  status: TodoStatus;
+  completed_at?: string | null;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // ---------------------------------------------------------------------------

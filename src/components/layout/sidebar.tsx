@@ -10,6 +10,7 @@ import {
   FileText,
   FilePlus,
   ClipboardCheck,
+  CalendarDays,
   MessageSquare,
   Settings,
   ChevronsLeft,
@@ -31,6 +32,7 @@ const navItems: NavItem[] = [
   { label: '템플릿', href: '/templates', icon: FileText },
   { label: '문서 생성', href: '/documents', icon: FilePlus },
   { label: '결재함', href: '/approvals', icon: ClipboardCheck, badge: true },
+  { label: '일정/할일', href: '/schedule', icon: CalendarDays },
   { label: '메시지', href: '/messages', icon: MessageSquare, badge: true },
   { label: '설정', href: '/settings', icon: Settings },
 ];
