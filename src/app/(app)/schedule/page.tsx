@@ -123,7 +123,7 @@ export default function SchedulePage() {
       </div>
 
       {/* 탭 */}
-      <div className="flex gap-1 mb-6 bg-[#f5f5f7] rounded-lg p-1 w-fit">
+      <div className="flex gap-1 bg-[#f5f5f7] rounded-lg p-1 w-fit" style={{ marginBottom: 34 }}>
         <button
           onClick={() => setActiveTab('calendar')}
           className={`flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded-md transition-all ${
