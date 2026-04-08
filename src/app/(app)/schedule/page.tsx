@@ -117,13 +117,13 @@ export default function SchedulePage() {
   return (
     <div className="w-full" style={{ maxWidth: '94%', margin: '0 auto', paddingTop: 36, paddingBottom: 40 }}>
       {/* 헤더 */}
-      <div className="flex items-center gap-3 mb-8">
+      <div className="flex items-center gap-3" style={{ marginBottom: 10 }}>
         <CalendarDays size={24} className="text-[#2E6FF2]" />
         <h1 className="text-[22px] font-semibold text-[#1B1F2B]">일정 / 할일</h1>
       </div>
 
       {/* 탭 */}
-      <div className="flex gap-1 bg-[#f5f5f7] rounded-lg p-1 w-fit" style={{ marginBottom: 34 }}>
+      <div className="flex gap-1 bg-[#f5f5f7] rounded-lg p-1 w-fit" style={{ marginBottom: 10 }}>
         <button
           onClick={() => setActiveTab('calendar')}
           className={`flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded-md transition-all ${
