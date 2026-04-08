@@ -39,19 +39,19 @@ interface SourceFile {
 }
 
 const statusColor: Record<string, string> = {
-  '초안': 'bg-[#ff9f0a]/8 text-[#ff9f0a]',
-  '완료': 'bg-[#30d158]/8 text-[#30d158]',
-  '결재중': 'bg-[#2E6FF2]/8 text-[#2E6FF2]',
-  '승인됨': 'bg-[#30d158]/8 text-[#30d158]',
-  '반려됨': 'bg-[#ff3b30]/8 text-[#ff3b30]',
+  '초안': 'bg-[#2E6FF2]/8 text-[#2E6FF2]',
+  '완료': 'bg-[#1A5AD9]/8 text-[#1A5AD9]',
+  '결재중': 'bg-[#5B8FF7]/8 text-[#5B8FF7]',
+  '승인됨': 'bg-[#0D47A1]/8 text-[#0D47A1]',
+  '반려됨': 'bg-[#7C8494]/8 text-[#7C8494]',
 };
 
 const statusDot: Record<string, string> = {
-  '초안': '#ff9f0a',
-  '완료': '#30d158',
-  '결재중': '#2E6FF2',
-  '승인됨': '#30d158',
-  '반려됨': '#ff3b30',
+  '초안': '#2E6FF2',
+  '완료': '#1A5AD9',
+  '결재중': '#5B8FF7',
+  '승인됨': '#0D47A1',
+  '반려됨': '#7C8494',
 };
 
 const TEMPLATE_ICONS: Record<string, string> = {
