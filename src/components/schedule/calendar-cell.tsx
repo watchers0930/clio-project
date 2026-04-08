@@ -40,7 +40,7 @@ export default function CalendarCell({
       {/* 날짜 */}
       <div className="mb-1.5">
         <span
-          className="text-[12px] font-semibold w-6 h-6 flex items-center justify-center rounded-full font-num"
+          className={`text-[12px] w-6 h-6 flex items-center justify-center rounded-full font-num ${today ? 'font-bold' : 'font-normal'}`}
           style={{
             color: !inMonth
               ? '#d1d5db'
