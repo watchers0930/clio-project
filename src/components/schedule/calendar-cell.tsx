@@ -1,8 +1,9 @@
 'use client';
 
-import { isSameMonth, isSameDay, isToday } from 'date-fns';
+import { isSameMonth, isToday } from 'date-fns';
 import type { CalendarEvent, EventType } from '@/lib/supabase/types';
-import { getEventTypeColor } from '@/lib/schedule-utils';
+import { getEventTypeColor, getEventTypeLabel } from '@/lib/schedule-utils';
+import { format } from 'date-fns';
 
 interface CalendarCellProps {
   date: Date;
@@ -30,15 +31,16 @@ export default function CalendarCell({
   return (
     <div
       onClick={() => onClick(date)}
-      className="min-h-[96px] p-2 border-b border-r border-[#E2E5EA]/60 cursor-pointer transition-colors hover:bg-[#f9fafb]"
+      className="min-h-[120px] p-2 border-b border-r border-[#E2E5EA]/60 cursor-pointer transition-colors hover:bg-[#f9fafb]"
       style={{
         backgroundColor: isSelected ? 'rgba(46,111,242,0.06)' : !inMonth ? '#fafafa' : undefined,
-        boxShadow: isSelected ? 'inset 0 0 0 1px rgba(46,111,242,0.25)' : undefined,
+        boxShadow: isSelected ? 'inset 0 0 0 1.5px rgba(46,111,242,0.35)' : undefined,
       }}
     >
-      <div className="flex items-center justify-between mb-1">
+      {/* 날짜 */}
+      <div className="mb-1.5">
         <span
-          className="text-[12px] font-medium w-6 h-6 flex items-center justify-center rounded-full font-num"
+          className="text-[12px] font-semibold w-6 h-6 flex items-center justify-center rounded-full font-num"
           style={{
             color: !inMonth
               ? '#d1d5db'
@@ -56,26 +58,40 @@ export default function CalendarCell({
         </span>
       </div>
 
-      <div className="space-y-0.5">
+      {/* 일정 목록 */}
+      <div className="space-y-1">
         {events.slice(0, 3).map((evt) => {
           const color = getEventTypeColor(evt.event_type as EventType);
+          const timeStr = evt.all_day ? '종일' : format(new Date(evt.start_at), 'HH:mm');
           return (
             <button
               key={evt.id}
               onClick={(e) => { e.stopPropagation(); onEventClick(evt); }}
-              className="w-full text-left px-1.5 py-[3px] rounded text-[10px] leading-tight truncate hover:opacity-80 transition-opacity"
+              className="w-full text-left rounded-md hover:brightness-95 transition-all"
               style={{
-                backgroundColor: color + '14',
-                color,
-                borderLeft: `2px solid ${color}`,
+                backgroundColor: color + '28',
+                borderLeft: `3px solid ${color}`,
+                padding: '4px 6px',
               }}
             >
-              {evt.title}
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] font-num flex-shrink-0" style={{ color: color + 'cc' }}>
+                  {timeStr}
+                </span>
+                <span
+                  className="text-[11px] font-medium truncate"
+                  style={{ color: '#1B1F2B' }}
+                >
+                  {evt.title}
+                </span>
+              </div>
             </button>
           );
         })}
         {events.length > 3 && (
-          <span className="text-[10px] text-[#7C8494] pl-1">+{events.length - 3}개 더</span>
+          <span className="text-[10px] text-[#2E6FF2] font-medium pl-1 cursor-pointer hover:underline">
+            +{events.length - 3}개 더
+          </span>
         )}
       </div>
     </div>
