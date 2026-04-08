@@ -107,7 +107,7 @@ export default function EventFormModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
           <h3 className="text-[16px] font-semibold text-[#1B1F2B]">
             {isEdit ? '일정 수정' : '일정 등록'}
           </h3>
@@ -116,10 +116,10 @@ export default function EventFormModal({
           </button>
         </div>
 
-        <div className="space-y-5">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {/* 제목 */}
           <div>
-            <label className="block text-[12px] font-medium text-[#7C8494] mb-2.5">제목</label>
+            <label className="block text-[12px] font-medium text-[#7C8494] mb-1">제목</label>
             <input
               type="text"
               value={form.title}
@@ -131,7 +131,7 @@ export default function EventFormModal({
 
           {/* 유형 */}
           <div>
-            <label className="block text-[12px] font-medium text-[#7C8494] mb-2.5">유형</label>
+            <label className="block text-[12px] font-medium text-[#7C8494] mb-1">유형</label>
             <div className="flex gap-2 flex-wrap">
               {EVENT_TYPES.map((type) => (
                 <button
@@ -165,7 +165,7 @@ export default function EventFormModal({
           {/* 시작/종료 */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[12px] font-medium text-[#7C8494] mb-2.5">시작</label>
+              <label className="block text-[12px] font-medium text-[#7C8494] mb-1">시작</label>
               <input
                 type={form.all_day ? 'date' : 'datetime-local'}
                 value={form.all_day ? form.start_at.split('T')[0] : form.start_at}
@@ -174,7 +174,7 @@ export default function EventFormModal({
               />
             </div>
             <div>
-              <label className="block text-[12px] font-medium text-[#7C8494] mb-2.5">종료</label>
+              <label className="block text-[12px] font-medium text-[#7C8494] mb-1">종료</label>
               <input
                 type={form.all_day ? 'date' : 'datetime-local'}
                 value={form.all_day ? form.end_at.split('T')[0] : form.end_at}
@@ -186,7 +186,7 @@ export default function EventFormModal({
 
           {/* 장소 */}
           <div>
-            <label className="block text-[12px] font-medium text-[#7C8494] mb-2.5">장소</label>
+            <label className="block text-[12px] font-medium text-[#7C8494] mb-1">장소</label>
             <input
               type="text"
               value={form.location}
@@ -198,7 +198,7 @@ export default function EventFormModal({
 
           {/* 공개 범위 */}
           <div>
-            <label className="block text-[12px] font-medium text-[#7C8494] mb-2.5">공개 범위</label>
+            <label className="block text-[12px] font-medium text-[#7C8494] mb-1">공개 범위</label>
             <select
               value={form.department_id ?? ''}
               onChange={(e) => setForm({ ...form, department_id: e.target.value || null })}
@@ -213,7 +213,7 @@ export default function EventFormModal({
 
           {/* 설명 */}
           <div>
-            <label className="block text-[12px] font-medium text-[#7C8494] mb-2.5">설명</label>
+            <label className="block text-[12px] font-medium text-[#7C8494] mb-1">설명</label>
             <textarea
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -225,7 +225,7 @@ export default function EventFormModal({
         </div>
 
         {/* 버튼 */}
-        <div className="flex items-center justify-between mt-6">
+        <div className="flex items-center justify-between" style={{ marginTop: 10 }}>
           <div>
             {isEdit && onDelete && (
               <button
