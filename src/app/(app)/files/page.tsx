@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
+import { FILE_TYPE_BADGE, FILE_STATUS_COLOR } from '@/lib/constants/ui';
+import { formatSize, getFileType } from '@/lib/utils/format';
 
 /* ────────────────────────── types ────────────────────────── */
 interface FileItem {
@@ -20,43 +22,11 @@ interface FileItem {
 const TYPES = ['전체', 'PDF', 'DOCX', 'PPTX', 'XLSX', 'MD'];
 const STATUSES = ['전체', '완료', '처리중', '오류'];
 
-const statusColor: Record<string, string> = {
-  '완료': 'bg-[#f5f5f7] text-[#30d158]',
-  '처리중': 'bg-[#f5f5f7] text-[#ff9f0a]',
-  '오류': 'bg-[#f5f5f7] text-[#ff3b30]',
-};
-
-const typeIconColor: Record<string, string> = {
-  PDF: 'text-[#1d1d1f]',
-  DOCX: 'text-[#1d1d1f]',
-  PPTX: 'text-[#1d1d1f]',
-  XLSX: 'text-[#1d1d1f]',
-  MD: 'text-[#1d1d1f]',
-};
-
-const typeBadge: Record<string, string> = {
-  PDF: 'bg-[#f5f5f7] text-[#1d1d1f]',
-  DOCX: 'bg-[#f5f5f7] text-[#1d1d1f]',
-  PPTX: 'bg-[#f5f5f7] text-[#1d1d1f]',
-  XLSX: 'bg-[#f5f5f7] text-[#1d1d1f]',
-  MD: 'bg-[#f5f5f7] text-[#1d1d1f]',
-};
+// 공통 상수 사용: FILE_TYPE_BADGE, FILE_STATUS_COLOR (from @/lib/constants/ui)
 
 const PAGE_SIZE = 6;
 
-// formatFileSize, getFileType — 로컬에서만 사용 (API 응답이 이미 포맷된 값을 제공)
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-void formatFileSize; // 업로드 미리보기용으로 유지
-
-function getFileType(name: string): string {
-  const ext = name.split('.').pop()?.toUpperCase() ?? '';
-  if (['PDF', 'DOCX', 'PPTX', 'XLSX', 'MD', 'HWP'].includes(ext)) return ext;
-  return ext || 'FILE';
-}
+// formatSize, getFileType → @/lib/utils/format 에서 import
 
 /* ────────────────────────── page ─────────────────────────── */
 export default function FilesPageWrapper() {
@@ -460,18 +430,18 @@ function FilesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <button onClick={() => setDetailFile(f)} className="flex items-center gap-2 text-left group">
-                        <svg className={`w-5 h-5 shrink-0 ${typeIconColor[f.type] ?? 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <svg className={`w-5 h-5 shrink-0 ${FILE_TYPE_BADGE[f.type] ?? 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                         </svg>
                         <span className="font-medium text-[#1d1d1f] truncate max-w-[200px] group-hover:text-[#0071e3] transition-colors">{f.name}</span>
-                        <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${typeBadge[f.type] ?? 'bg-gray-100 text-gray-600'}`}>{f.type}</span>
+                        <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${FILE_TYPE_BADGE[f.type] ?? 'bg-gray-100 text-gray-600'}`}>{f.type}</span>
                       </button>
                     </td>
                     <td className="px-4 py-3 hidden sm:table-cell text-[#6e6e73]">{f.department}</td>
                     <td className="px-4 py-3 hidden md:table-cell text-[#6e6e73]">{f.size}</td>
                     <td className="px-4 py-3 hidden md:table-cell text-[#6e6e73]">{f.uploadDate}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${statusColor[f.status]}`}>{f.status}</span>
+                      <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${FILE_STATUS_COLOR[f.status]}`}>{f.status}</span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
@@ -503,12 +473,12 @@ function FilesPage() {
           {paged.map((f) => (
             <div key={f.id} className="bg-white rounded-2xl border border-[#e5e5e7] p-5 shadow-sm hover:shadow-md transition-shadow group relative">
               <div className="flex items-center gap-3 mb-3">
-                <div className={`w-10 h-10 rounded-xl bg-[#f5f5f7] flex items-center justify-center ${typeIconColor[f.type] ?? 'text-gray-400'}`}>
+                <div className={`w-10 h-10 rounded-xl bg-[#f5f5f7] flex items-center justify-center ${FILE_TYPE_BADGE[f.type] ?? 'text-gray-400'}`}>
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                   </svg>
                 </div>
-                <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${statusColor[f.status]}`}>{f.status}</span>
+                <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${FILE_STATUS_COLOR[f.status]}`}>{f.status}</span>
                 {/* grid actions */}
                 <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button onClick={() => setDetailFile(f)} title="보기" className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73] hover:text-[#0071e3]">
@@ -531,7 +501,7 @@ function FilesPage() {
                 <span>{f.uploadDate}</span>
               </div>
               <div className="flex items-center gap-2 mt-2">
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${typeBadge[f.type] ?? 'bg-gray-100 text-gray-600'}`}>{f.type}</span>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${FILE_TYPE_BADGE[f.type] ?? 'bg-gray-100 text-gray-600'}`}>{f.type}</span>
                 <span className="text-xs text-[#6e6e73]">{f.department}</span>
               </div>
             </div>
@@ -598,7 +568,7 @@ function FilesPage() {
               <div className="mt-4 p-4 bg-[#f5f5f7] rounded-xl border border-[#e5e5e7]">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-sm font-medium text-[#1d1d1f]">
-                    {selectedFiles.length}개 파일 · {formatFileSize(selectedFiles.reduce((s, f) => s + f.size, 0))}
+                    {selectedFiles.length}개 파일 · {formatSize(selectedFiles.reduce((s, f) => s + f.size, 0))}
                   </p>
                   <button onClick={() => { setSelectedFiles([]); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="text-xs text-[#6e6e73] hover:text-[#1d1d1f]">
                     전체 삭제
@@ -607,14 +577,14 @@ function FilesPage() {
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {selectedFiles.map((file, idx) => (
                     <div key={`${file.name}-${idx}`} className="flex items-center gap-3 bg-white rounded-lg px-3 py-2 border border-[#e5e5e7]">
-                      <div className={`w-8 h-8 rounded-lg bg-[#f5f5f7] flex items-center justify-center shrink-0 ${typeIconColor[getFileType(file.name)] ?? 'text-gray-400'}`}>
+                      <div className={`w-8 h-8 rounded-lg bg-[#f5f5f7] flex items-center justify-center shrink-0 ${FILE_TYPE_BADGE[getFileType(file.name)] ?? 'text-gray-400'}`}>
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                         </svg>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-[#1d1d1f] truncate">{file.name}</p>
-                        <p className="text-xs text-[#6e6e73]">{formatFileSize(file.size)}</p>
+                        <p className="text-xs text-[#6e6e73]">{formatSize(file.size)}</p>
                       </div>
                       <button onClick={() => setSelectedFiles((prev) => prev.filter((_, i) => i !== idx))} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73] shrink-0">
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -657,7 +627,7 @@ function FilesPage() {
               </button>
             </div>
             <div className="flex items-center gap-4 mb-6">
-              <div className={`w-14 h-14 rounded-2xl bg-[#f5f5f7] flex items-center justify-center ${typeIconColor[detailFile.type] ?? 'text-gray-400'}`}>
+              <div className={`w-14 h-14 rounded-2xl bg-[#f5f5f7] flex items-center justify-center ${FILE_TYPE_BADGE[detailFile.type] ?? 'text-gray-400'}`}>
                 <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                 </svg>
@@ -665,8 +635,8 @@ function FilesPage() {
               <div className="min-w-0">
                 <h3 className="font-semibold text-[#1d1d1f] truncate">{detailFile.name}</h3>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${typeBadge[detailFile.type] ?? 'bg-gray-100 text-gray-600'}`}>{detailFile.type}</span>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusColor[detailFile.status]}`}>{detailFile.status}</span>
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${FILE_TYPE_BADGE[detailFile.type] ?? 'bg-gray-100 text-gray-600'}`}>{detailFile.type}</span>
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${FILE_STATUS_COLOR[detailFile.status]}`}>{detailFile.status}</span>
                 </div>
               </div>
             </div>

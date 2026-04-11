@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     try {
       const fullText = await extractText(arrayBuffer, file.type, normalizedName);
       preview = fullText.slice(0, 500);
-    } catch {}
+    } catch (e) { console.warn("[api]", e); }
 
     return NextResponse.json({
       success: true,

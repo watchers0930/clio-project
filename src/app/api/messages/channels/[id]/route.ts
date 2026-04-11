@@ -58,7 +58,7 @@ export async function GET(
         .update({ last_read_at: new Date().toISOString() })
         .eq('channel_id', channelId)
         .eq('user_id', authUserId);
-    } catch {}
+    } catch (e) { console.warn("[api]", e); }
 
     return NextResponse.json({ success: true, data: messages });
   } catch {

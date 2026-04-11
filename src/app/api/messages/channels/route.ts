@@ -130,8 +130,8 @@ export async function DELETE(request: NextRequest) {
     const admin = createAdminSupabaseClient();
 
     // 메시지 삭제 → 멤버십 삭제 → 채널 삭제
-    try { await admin.from('messages').delete().eq('channel_id', id); } catch {}
-    try { await admin.from('channel_members').delete().eq('channel_id', id); } catch {}
+    try { await admin.from('messages').delete().eq('channel_id', id); } catch (e) { console.warn('[cleanup]', e); }
+    try { await admin.from('channel_members').delete().eq('channel_id', id); } catch (e) { console.warn('[cleanup]', e); }
     const { error } = await admin.from('channels').delete().eq('id', id);
 
     if (error) return NextResponse.json({ success: false, error: '채널 삭제 실패' }, { status: 500 });

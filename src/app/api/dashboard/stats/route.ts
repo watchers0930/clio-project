@@ -110,7 +110,7 @@ export async function GET() {
         .eq('approver_id', authUserId)
         .eq('status', 'pending');
       pendingApprovals = count ?? 0;
-    } catch {}
+    } catch (e) { console.warn("[api]", e); }
 
     const stats: DashboardStats = {
       total_files: r1.count ?? 0,

@@ -3,6 +3,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { isContractTemplate, getContractSchema, type ContractField } from '@/lib/contract-fields';
 import { useAuthStore } from '@/store/auth-store';
+import { ShareLinkModal } from '@/components/documents/ShareLinkModal';
+import { VersionPanel } from '@/components/documents/VersionPanel';
+import { ApprovalModal } from '@/components/documents/ApprovalModal';
+import { DOCUMENT_STATUS_BADGE } from '@/lib/constants/ui';
 
 /* ────────────────────────── types ────────────────────────── */
 interface Document {
@@ -128,14 +132,9 @@ export default function DocumentsPage() {
   const [fileDeptFilter, setFileDeptFilter] = useState('전체');
   const [fileTypeFilter, setFileTypeFilter] = useState('전체');
 
-  // 공유 링크 모달
+  // 공유 링크 모달 (ShareLinkModal 컴포넌트로 이동)
   const [shareDocId, setShareDocId] = useState<string | null>(null);
   const [shareDocTitle, setShareDocTitle] = useState('');
-  const [shareExpiresInDays, setShareExpiresInDays] = useState('7');
-  const [sharePassword, setSharePassword] = useState('');
-  const [shareCreating, setShareCreating] = useState(false);
-  const [shareResult, setShareResult] = useState<string | null>(null);
-  const [shareCopied, setShareCopied] = useState(false);
 
   // Bulk select
   const [selectedDocIds, setSelectedDocIds] = useState<Set<string>>(new Set());
@@ -152,11 +151,9 @@ export default function DocumentsPage() {
   const [versionLoading, setVersionLoading] = useState(false);
   const [newVersionDocId, setNewVersionDocId] = useState<string | null>(null);
 
-  // 결재 요청 모달
+  // 결재 요청 모달 (ApprovalModal 컴포넌트로 이동)
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [approvalUsers, setApprovalUsers] = useState<Array<{ id: string; name: string; email: string; department?: string }>>([]);
-  const [approvalSearch, setApprovalSearch] = useState('');
-  const [selectedApprover, setSelectedApprover] = useState<string | null>(null);
   const [submittingApproval, setSubmittingApproval] = useState(false);
 
   // Templates and source files from API
@@ -363,38 +360,6 @@ export default function DocumentsPage() {
     }
   };
 
-  const createShareLink = async () => {
-    if (!shareDocId || shareCreating) return;
-    setShareCreating(true);
-    try {
-      const res = await fetch('/api/share', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          resourceType: 'document',
-          resourceId: shareDocId,
-          title: shareDocTitle,
-          expiresInDays: shareExpiresInDays ? parseInt(shareExpiresInDays) : undefined,
-          password: sharePassword || undefined,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setShareResult(`${window.location.origin}${data.url}`);
-      } else {
-        alert(data.error ?? '링크 생성 실패');
-      }
-    } catch { alert('링크 생성 중 오류가 발생했습니다.'); }
-    setShareCreating(false);
-  };
-
-  const copyShareLink = async () => {
-    if (!shareResult) return;
-    await navigator.clipboard.writeText(shareResult);
-    setShareCopied(true);
-    setTimeout(() => setShareCopied(false), 2000);
-  };
-
   const openVersionPanel = async (docId: string) => {
     setVersionPanelDocId(docId);
     setVersionLoading(true);
@@ -482,25 +447,25 @@ export default function DocumentsPage() {
 
   const openApprovalModal = async () => {
     setShowApprovalModal(true);
-    setSelectedApprover(null);
-    setApprovalSearch('');
     try {
       const res = await fetch('/api/users');
       const d = await res.json();
       if (d.success) {
         setApprovalUsers((d.data ?? []).filter((u: { id: string }) => u.id !== storeUser?.id));
       }
-    } catch {}
+    } catch {
+      console.error('[결재 모달] 사용자 목록 로드 실패');
+    }
   };
 
-  const handleSubmitApproval = async () => {
-    if (!viewDoc || !selectedApprover) return;
+  const handleSubmitApproval = async (approverId: string) => {
+    if (!viewDoc) return;
     setSubmittingApproval(true);
     try {
       const res = await fetch(`/api/documents/${viewDoc.id}/submit-approval`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approverId: selectedApprover }),
+        body: JSON.stringify({ approverId }),
       });
       const d = await res.json();
       if (d.success) {
@@ -1589,238 +1554,45 @@ export default function DocumentsPage() {
       )}
       {/* ────── 결재 요청 모달 ────── */}
       {showApprovalModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4" style={{ padding: '28px 32px' }}>
-            <h3 className="text-[16px] font-semibold text-[#1B1F2B] mb-5">결재자 선택</h3>
-
-            <input
-              type="text"
-              placeholder="이름 또는 이메일 검색..."
-              value={approvalSearch}
-              onChange={(e) => setApprovalSearch(e.target.value)}
-              className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/30 focus:border-[#2E6FF2]"
-            />
-
-            <div className="max-h-[240px] overflow-y-auto border border-[#E2E5EA] rounded-lg" style={{ marginTop: 5, marginBottom: 15 }}>
-              {approvalUsers
-                .filter((u) => {
-                  if (!approvalSearch) return true;
-                  const q = approvalSearch.toLowerCase();
-                  return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
-                })
-                .map((u) => (
-                  <button
-                    key={u.id}
-                    onClick={() => setSelectedApprover(u.id)}
-                    className={`w-full text-left px-4 py-3 flex items-center gap-3 border-b border-[#E2E5EA] last:border-0 transition-colors ${
-                      selectedApprover === u.id ? 'bg-[#2E6FF2]/5' : 'hover:bg-[#f9fafb]'
-                    }`}
-                  >
-                    <div className="w-8 h-8 rounded-full bg-[#2E6FF2]/10 flex items-center justify-center text-[12px] font-semibold text-[#2E6FF2] flex-shrink-0">
-                      {u.name.charAt(0)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium text-[#1B1F2B]">{u.name}</p>
-                      <p className="text-[11px] text-[#7C8494] truncate">{u.email}{u.department ? ` · ${u.department}` : ''}</p>
-                    </div>
-                    {selectedApprover === u.id && (
-                      <svg className="w-5 h-5 text-[#2E6FF2] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                  </button>
-                ))}
-              {approvalUsers.length === 0 && (
-                <p className="text-center py-6 text-[13px] text-[#7C8494]">사용자가 없습니다.</p>
-              )}
-            </div>
-
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => setShowApprovalModal(false)}
-                className="px-4 py-2 text-[13px] text-[#7C8494] hover:text-[#1B1F2B] transition-colors"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleSubmitApproval}
-                disabled={!selectedApprover || submittingApproval}
-                className="px-5 py-2 text-[13px] font-medium text-white bg-[#2E6FF2] rounded-lg hover:bg-[#1a5ad9] disabled:opacity-40 transition-colors"
-              >
-                {submittingApproval ? '요청 중...' : '결재 요청'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ApprovalModal
+          users={approvalUsers}
+          submitting={submittingApproval}
+          onClose={() => setShowApprovalModal(false)}
+          onSubmit={handleSubmitApproval}
+        />
       )}
 
       {/* ── 공유 링크 생성 모달 ── */}
       {shareDocId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
-          onClick={(e) => { if (e.target === e.currentTarget) { setShareDocId(null); setShareResult(null); } }}>
-          <div className="bg-white rounded-2xl border border-[#e5e5e7] shadow-xl w-full max-w-md p-8">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-base font-semibold text-[#1d1d1f]">외부 공유 링크 생성</h2>
-                <p className="text-xs text-[#6e6e73] mt-0.5 truncate max-w-xs">{shareDocTitle}</p>
-              </div>
-              <button onClick={() => { setShareDocId(null); setShareResult(null); }} className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-
-            {!shareResult ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div>
-                  <label className="block text-sm font-medium text-[#6e6e73] mb-2">만료 기간</label>
-                  <select value={shareExpiresInDays} onChange={(e) => setShareExpiresInDays(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-[#e5e5e7] bg-[#f5f5f7] text-sm text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3]">
-                    <option value="1">1일</option>
-                    <option value="7">7일</option>
-                    <option value="30">30일</option>
-                    <option value="90">90일</option>
-                    <option value="">만료 없음</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#6e6e73] mb-2">비밀번호 <span className="text-xs text-[#a1a1a6]">(선택)</span></label>
-                  <input type="password" value={sharePassword} onChange={(e) => setSharePassword(e.target.value)}
-                    placeholder="설정하지 않으면 공개 링크"
-                    className="w-full px-3 py-2.5 rounded-xl border border-[#e5e5e7] bg-[#f5f5f7] text-sm text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3]" />
-                </div>
-                <button onClick={createShareLink} disabled={shareCreating}
-                  className="w-full py-3 rounded-xl bg-[#0071e3] text-white text-sm font-medium hover:bg-[#005bbf] transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
-                  {shareCreating ? (
-                    <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>생성 중...</>
-                  ) : '링크 생성'}
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-[#f5f5f7] border border-[#e5e5e7]">
-                  <p className="text-sm text-[#1d1d1f] flex-1 truncate font-mono text-xs">{shareResult}</p>
-                  <button onClick={copyShareLink} className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${shareCopied ? 'bg-[#34c759] text-white' : 'bg-[#0071e3] text-white hover:bg-[#005bbf]'}`}>
-                    {shareCopied ? '복사됨!' : '복사'}
-                  </button>
-                </div>
-                <div className="flex gap-2 text-xs text-[#6e6e73]">
-                  {shareExpiresInDays && <span>⏱ {shareExpiresInDays}일 후 만료</span>}
-                  {sharePassword && <span>🔒 비밀번호 설정됨</span>}
-                </div>
-                <button onClick={() => { setShareResult(null); setSharePassword(''); }}
-                  className="w-full py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">
-                  새 링크 생성
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+        <ShareLinkModal
+          docId={shareDocId}
+          docTitle={shareDocTitle}
+          onClose={() => setShareDocId(null)}
+        />
       )}
 
       {/* ── 버전 히스토리 패널 ── */}
       {versionPanelDocId && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-end"
-          onClick={(e) => { if (e.target === e.currentTarget) setVersionPanelDocId(null); }}
-          style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
-        >
-          <div className="bg-white h-full w-full max-w-sm flex flex-col shadow-2xl">
-            {/* 헤더 */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-[#e5e5e7]">
-              <div>
-                <h2 className="text-base font-semibold text-[#1d1d1f]">버전 이력</h2>
-                <p className="text-xs text-[#6e6e73] mt-0.5">문서의 모든 버전을 확인합니다</p>
-              </div>
-              <button
-                onClick={() => setVersionPanelDocId(null)}
-                className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* 새 버전 생성 버튼 */}
-            <div className="px-6 py-4 border-b border-[#e5e5e7]">
-              <button
-                onClick={() => {
-                  setNewVersionDocId(versionPanelDocId);
-                  setVersionPanelDocId(null);
-                  const n = new Date();
-                  setContractFormData({ signDate: `${n.getFullYear()}/${String(n.getMonth()+1).padStart(2,'0')}/${String(n.getDate()).padStart(2,'0')}` });
-                  setShowModal(true);
-                }}
-                className="w-full py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors"
-              >
-                + 새 버전 생성
-              </button>
-            </div>
-
-            {/* 버전 타임라인 */}
-            <div className="flex-1 overflow-y-auto px-6 py-4">
-              {versionLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <svg className="w-6 h-6 animate-spin text-[#0071e3]" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                </div>
-              ) : versionItems.length === 0 ? (
-                <p className="text-sm text-[#6e6e73] text-center py-12">버전 정보가 없습니다.</p>
-              ) : (
-                <div className="relative">
-                  {/* 타임라인 세로선 */}
-                  <div className="absolute left-[11px] top-2 bottom-2 w-px bg-[#e5e5e7]" />
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                    {versionItems.map((v) => (
-                      <div key={v.id} className="flex gap-4 relative">
-                        {/* 점 */}
-                        <div
-                          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 z-10 ${
-                            v.isCurrent
-                              ? 'bg-[#0071e3] border-[#0071e3]'
-                              : 'bg-white border-[#d1d1d6]'
-                          }`}
-                        >
-                          <span className={`text-[9px] font-bold ${v.isCurrent ? 'text-white' : 'text-[#6e6e73]'}`}>
-                            {v.versionNumber}
-                          </span>
-                        </div>
-                        {/* 내용 */}
-                        <div className="flex-1 pb-1">
-                          <div className="flex items-start justify-between gap-2">
-                            <p className={`text-sm font-medium ${v.isCurrent ? 'text-[#0071e3]' : 'text-[#1d1d1f]'} leading-snug`}>
-                              {v.title}
-                              {v.isCurrent && <span className="ml-1.5 text-[10px] bg-[#0071e3]/10 text-[#0071e3] px-1.5 py-0.5 rounded font-semibold">현재</span>}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            <span className="text-[11px] text-[#6e6e73]">{v.createdAt}</span>
-                            {v.createdBy && <span className="text-[11px] text-[#6e6e73]">· {v.createdBy}</span>}
-                          </div>
-                          <button
-                            onClick={() => {
-                              const doc = docs.find((d) => d.id === v.id);
-                              if (doc) { setVersionPanelDocId(null); handleDownload(doc); }
-                              else {
-                                // 다운로드용 임시 doc 객체
-                                handleDownload({ id: v.id, title: v.title, template: '', createdAt: v.createdAt, status: v.status as Document['status'], sourceCount: 0 });
-                              }
-                            }}
-                            className="mt-2 text-[11px] text-[#0071e3] hover:underline"
-                          >
-                            다운로드
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <VersionPanel
+          docId={versionPanelDocId}
+          items={versionItems}
+          loading={versionLoading}
+          onClose={() => setVersionPanelDocId(null)}
+          onCreateNewVersion={(docId) => {
+            setNewVersionDocId(docId);
+            setVersionPanelDocId(null);
+            const n = new Date();
+            setContractFormData({ signDate: `${n.getFullYear()}/${String(n.getMonth()+1).padStart(2,'0')}/${String(n.getDate()).padStart(2,'0')}` });
+            setShowModal(true);
+          }}
+          onDownload={(id, title, status, createdAt) => {
+            const doc = docs.find((d) => d.id === id);
+            if (doc) { setVersionPanelDocId(null); handleDownload(doc); }
+            else {
+              handleDownload({ id, title, template: '', createdAt, status: status as Document['status'], sourceCount: 0 });
+            }
+          }}
+        />
       )}
     </div>
   );

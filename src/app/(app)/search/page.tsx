@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { FILE_TYPE_BADGE } from '@/lib/constants/ui';
 
 /* ────────────────────────── types ────────────────────────── */
 interface SearchResult {
@@ -23,14 +24,7 @@ interface ChatMessage {
 const FILE_TYPES = ['전체', 'PDF', 'DOCX', 'PPTX', 'XLSX', 'MD', 'M4A'];
 const SORT_OPTIONS = ['관련도순', '최신순', '오래된순', '이름순'];
 
-const typeBadge: Record<string, string> = {
-  PDF: 'bg-[#f5f5f7] text-[#1d1d1f]',
-  DOCX: 'bg-[#f5f5f7] text-[#1d1d1f]',
-  PPTX: 'bg-[#f5f5f7] text-[#1d1d1f]',
-  XLSX: 'bg-[#f5f5f7] text-[#1d1d1f]',
-  MD: 'bg-[#f5f5f7] text-[#1d1d1f]',
-  M4A: 'bg-[#f5f5f7] text-[#1d1d1f]',
-};
+// typeBadge → FILE_TYPE_BADGE from @/lib/constants/ui
 
 /* ────────────────────────── page ─────────────────────────── */
 export default function SearchPage() {
@@ -299,7 +293,7 @@ export default function SearchPage() {
                       </div>
                       <p className="text-sm text-[#6e6e73] leading-relaxed mb-3">{r.excerpt}</p>
                       <div className="flex flex-wrap gap-2 items-center">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${typeBadge[r.fileType] ?? 'bg-gray-100 text-gray-600'}`}>
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${FILE_TYPE_BADGE[r.fileType] ?? 'bg-gray-100 text-gray-600'}`}>
                           {r.fileType}
                         </span>
                         <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#f5f5f7] text-[#1d1d1f]">

@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     if (insertErr) {
       console.error('[users/POST] insert error:', insertErr.message);
       // Auth 계정도 롤백 (고아 방지)
-      try { await adminClient.auth.admin.deleteUser(authData.user.id); } catch {}
+      try { await adminClient.auth.admin.deleteUser(authData.user.id); } catch (e) { console.error("[users] auth rollback failed:", e); }
       return NextResponse.json({ success: false, error: '프로필 저장에 실패했습니다: ' + insertErr.message }, { status: 500 });
     }
 
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
             { channel_id: channel.id, user_id: authData.user.id },
             { onConflict: 'channel_id,user_id' }
           );
-        } catch {}
+        } catch (e) { console.warn("[users] cleanup:", e); }
       }
     }
 
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
         target_id: authData.user.id,
         details: { email, name, role: role ?? 'user' },
       });
-    } catch {}
+    } catch (e) { console.warn("[users] cleanup:", e); }
 
     return NextResponse.json({ success: true, data: newUser }, { status: 201 });
   } catch (err) {
@@ -269,7 +269,7 @@ export async function PUT(request: NextRequest) {
         target_id: id,
         details: { changes: updateData },
       });
-    } catch {}
+    } catch (e) { console.warn("[users] cleanup:", e); }
 
     return NextResponse.json({ success: true, data });
   } catch (err) {
@@ -303,7 +303,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // 채널 멤버십 제거
-    try { await supabase.from('channel_members').delete().eq('user_id', id); } catch {}
+    try { await supabase.from("channel_members").delete().eq("user_id", id); } catch (e) { console.warn("[users] channel cleanup failed:", e); }
 
     // users 테이블에서 완전 삭제
     const { error } = await supabase.from('users').delete().eq('id', id);
@@ -313,7 +313,7 @@ export async function DELETE(request: NextRequest) {
 
     // Supabase Auth에서도 삭제
     const adminClient = createAdminSupabaseClient();
-    try { await adminClient.auth.admin.deleteUser(id); } catch {}
+    try { await adminClient.auth.admin.deleteUser(id); } catch (e) { console.error("[users] auth delete failed:", e); }
 
     try {
       await supabase.from('audit_logs').insert({
@@ -323,7 +323,7 @@ export async function DELETE(request: NextRequest) {
         target_id: id,
         details: {},
       });
-    } catch {}
+    } catch (e) { console.warn("[users] cleanup:", e); }
 
     return NextResponse.json({ success: true });
   } catch {

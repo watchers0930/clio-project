@@ -89,7 +89,7 @@ export async function GET(
           requester: requesterRes.data,
         };
       }
-    } catch {}
+    } catch (e) { console.warn("[api]", e); }
 
     return NextResponse.json<ApiResponse>({
       success: true,

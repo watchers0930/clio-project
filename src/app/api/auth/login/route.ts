@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
         setAll(cookies) {
           cookies.forEach(({ name, value, options }) => {
             cookiesToSet.push({ name, value, options: options as Record<string, unknown> });
-            try { cookieStore.set(name, value, options); } catch {}
+            try { cookieStore.set(name, value, options); } catch (e) { console.warn('[cleanup]', e); }
           });
         },
       },

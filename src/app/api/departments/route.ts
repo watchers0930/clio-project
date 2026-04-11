@@ -53,10 +53,10 @@ export async function POST(request: NextRequest) {
     }).select().single();
 
     if (managerId && channel) {
-      try { await supabase.from('channel_members').insert({ channel_id: channel.id, user_id: managerId }); } catch {}
+      try { await supabase.from('channel_members').insert({ channel_id: channel.id, user_id: managerId }); } catch (e) { console.warn('[cleanup]', e); }
     }
 
-    try { await supabase.from('audit_logs').insert({ user_id: authUserId, action: 'dept.create', target_type: 'department', target_id: dept.id, details: { name, code } }); } catch {}
+    try { await supabase.from('audit_logs').insert({ user_id: authUserId, action: 'dept.create', target_type: 'department', target_id: dept.id, details: { name, code } }); } catch (e) { console.warn('[cleanup]', e); }
 
     return NextResponse.json({ success: true, data: { ...dept, memberCount: 0 } }, { status: 201 });
   } catch (err) {
@@ -95,7 +95,7 @@ export async function PUT(request: NextRequest) {
     if (error) return NextResponse.json({ success: false, error: '부서 수정 실패: ' + error.message }, { status: 500 });
 
     if (name) {
-      try { await supabase.from('channels').update({ name }).eq('department_id', id).eq('type', 'department'); } catch {}
+      try { await supabase.from('channels').update({ name }).eq('department_id', id).eq('type', 'department'); } catch (e) { console.warn('[cleanup]', e); }
     }
 
     return NextResponse.json({ success: true, data });
@@ -132,13 +132,13 @@ export async function DELETE(request: NextRequest) {
     }
 
     // 연결된 채널 삭제
-    try { await supabase.from('channels').delete().eq('department_id', id).eq('type', 'department'); } catch {}
+    try { await supabase.from('channels').delete().eq('department_id', id).eq('type', 'department'); } catch (e) { console.warn('[cleanup]', e); }
 
     // 부서 완전 삭제
     const { error: delErr } = await supabase.from('departments').delete().eq('id', id);
     if (delErr) return NextResponse.json({ success: false, error: '부서 삭제 실패: ' + delErr.message }, { status: 500 });
 
-    try { await supabase.from('audit_logs').insert({ user_id: authUserId, action: 'dept.delete', target_type: 'department', target_id: id, details: {} }); } catch {}
+    try { await supabase.from('audit_logs').insert({ user_id: authUserId, action: 'dept.delete', target_type: 'department', target_id: id, details: {} }); } catch (e) { console.warn('[cleanup]', e); }
 
     return NextResponse.json({ success: true });
   } catch {

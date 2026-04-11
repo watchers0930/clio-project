@@ -95,7 +95,7 @@ export default function MessagesPage() {
         // 모든 부서 기본 펼침
         setExpandedDepts(new Set(tree.map((d: DeptTree) => d.id)));
       }
-    } catch {}
+    } catch (e) { console.warn("[ui]", e); }
     finally { setLoading(false); }
   }, [currentUser?.id]);
 
@@ -140,7 +140,7 @@ export default function MessagesPage() {
         await loadData();
         if (json.data?.id) openChannel(json.data.id);
       }
-    } catch {} finally {
+    } catch (e) { console.warn("[ui]", e); } finally {
       dmCreatingRef.current = false;
     }
   };
@@ -175,7 +175,7 @@ export default function MessagesPage() {
           return { ...prev, [channelId]: apiMsgs };
         });
       }
-    } catch {}
+    } catch (e) { console.warn("[ui]", e); }
   }, [currentUser?.id]);
 
   const openChannel = async (channelId: string) => {
@@ -245,7 +245,7 @@ export default function MessagesPage() {
           id: f.id, name: f.name, type: f.type, size: f.size,
         })));
       }
-    } catch {} finally { setFilesLoading(false); }
+    } catch (e) { console.warn("[ui]", e); } finally { setFilesLoading(false); }
   };
 
   // 파일 공유 모달 열기
@@ -556,7 +556,7 @@ export default function MessagesPage() {
                       {c.lastMessage && <p className="text-xs text-[#6e6e73] truncate">{c.lastMessage}</p>}
                     </div>
                   </button>
-                  <button onClick={async (e) => { e.stopPropagation(); if (!confirm('이 대화를 삭제하시겠습니까?')) return; try { const admin = await fetch('/api/messages/channels?id=' + c.id, { method: 'DELETE' }); if (admin.ok) { if (activeChannel === c.id) setActiveChannel(null); await loadData(); } } catch {} }}
+                  <button onClick={async (e) => { e.stopPropagation(); if (!confirm('이 대화를 삭제하시겠습니까?')) return; try { const admin = await fetch('/api/messages/channels?id=' + c.id, { method: 'DELETE' }); if (admin.ok) { if (activeChannel === c.id) setActiveChannel(null); await loadData(); } } catch (e) { console.warn("[ui]", e); } }}
                     className="p-1 rounded-lg text-transparent group-hover:text-[#a1a1a6] hover:!text-[#ff3b30] hover:bg-red-50 transition-all shrink-0">
                     <Trash2 size={14} />
                   </button>

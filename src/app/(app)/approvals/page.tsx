@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ClipboardCheck, Clock, CheckCircle, XCircle, Send, Loader2, MessageSquare } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
+import { APPROVAL_STATUS_BADGE } from '@/lib/constants/ui';
+import { formatDate } from '@/lib/utils/format';
 
 /* ────────────────────────── types ────────────────────────── */
 interface PendingApproval {
@@ -27,11 +29,7 @@ interface MyRequest {
   decidedAt: string | null;
 }
 
-const STATUS_BADGE: Record<string, { label: string; color: string }> = {
-  pending: { label: '대기', color: 'text-[#ff9f0a] bg-[#ff9f0a]/10' },
-  approved: { label: '승인', color: 'text-[#30d158] bg-[#30d158]/10' },
-  rejected: { label: '반려', color: 'text-[#ff3b30] bg-[#ff3b30]/10' },
-};
+// STATUS_BADGE → APPROVAL_STATUS_BADGE from @/lib/constants/ui
 
 /* ────────────────────────── page ─────────────────────────── */
 export default function ApprovalsPage() {
@@ -60,7 +58,7 @@ export default function ApprovalsPage() {
         if (tab === 'pending') setPendingList(d.data);
         else setMyRequests(d.data);
       }
-    } catch {}
+    } catch (e) { console.warn("[ui]", e); }
     setLoading(false);
   }, [tab]);
 
@@ -118,16 +116,7 @@ export default function ApprovalsPage() {
     setProcessing(false);
   };
 
-  const formatDate = (iso: string) => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    const now = new Date();
-    const diff = now.getTime() - d.getTime();
-    if (diff < 60000) return '방금 전';
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}분 전`;
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}시간 전`;
-    return d.toISOString().split('T')[0];
-  };
+  // formatDate → @/lib/utils/format 에서 import
 
   return (
     <div className="w-full" style={{ maxWidth: '94%', margin: '0 auto', paddingTop: 36, paddingBottom: 40 }}>
@@ -236,7 +225,7 @@ export default function ApprovalsPage() {
               </thead>
               <tbody>
                 {myRequests.map((item) => {
-                  const badge = STATUS_BADGE[item.status] ?? STATUS_BADGE.pending;
+                  const badge = APPROVAL_STATUS_BADGE[item.status] ?? APPROVAL_STATUS_BADGE.pending;
                   return (
                     <tr key={item.id} className="border-b border-[#E2E5EA] last:border-0 hover:bg-[#f9fafb] transition-colors">
                       <td className="py-3.5 px-5 text-[13px] text-[#1B1F2B] font-medium">

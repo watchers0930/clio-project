@@ -8,6 +8,8 @@ import {
   Upload, Sparkles, FilePlus, LayoutTemplate,
   ArrowUpRight, Clock, Loader2, ClipboardCheck
 } from 'lucide-react';
+import { FILE_TYPE_BADGE, FILE_STATUS_COLOR, ACTION_LABELS, CHART_COLORS } from '@/lib/constants/ui';
+import { formatTimeAgo } from '@/lib/utils/format';
 
 interface UserInfo {
   name: string;
@@ -47,31 +49,7 @@ const quickActions = [
   { label: '템플릿 관리', href: '/templates', icon: LayoutTemplate },
 ];
 
-const typeColors: Record<string, string> = {
-  PDF: 'bg-[#f5f5f7] text-[#1d1d1f]',
-  DOCX: 'bg-[#f5f5f7] text-[#1d1d1f]',
-  XLSX: 'bg-[#f5f5f7] text-[#1d1d1f]',
-  PPTX: 'bg-[#f5f5f7] text-[#1d1d1f]',
-  MD: 'bg-[#f5f5f7] text-[#1d1d1f]',
-};
-
-const statusColors: Record<string, string> = {
-  '완료': 'text-[#30d158]',
-  '처리중': 'text-[#ff9f0a]',
-  '오류': 'text-[#ff3b30]',
-};
-
-const ACTION_LABELS: Record<string, string> = {
-  'file.upload': '파일을 업로드했습니다.',
-  'file.delete': '파일을 삭제했습니다.',
-  'document.create': '문서를 생성했습니다.',
-  'document.delete': '문서를 삭제했습니다.',
-  'document.submit_approval': '결재를 요청했습니다.',
-  'document.approve': '문서를 승인했습니다.',
-  'document.reject': '문서를 반려했습니다.',
-  'template.create': '템플릿을 생성했습니다.',
-  'search': '검색을 수행했습니다.',
-};
+// 공통 상수 사용: FILE_TYPE_BADGE, FILE_STATUS_COLOR, ACTION_LABELS, CHART_COLORS (from @/lib/constants/ui)
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -80,18 +58,8 @@ function getGreeting() {
   return '좋은 저녁이에요';
 }
 
-function formatTimeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return '방금 전';
-  if (mins < 60) return `${mins}분 전`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}시간 전`;
-  const days = Math.floor(hours / 24);
-  return `${days}일 전`;
-}
-
-const PIE_COLORS = ['#1d1d1f', '#6e6e73', '#0071e3', '#a1a1a6', '#d2d2d7'];
+// formatTimeAgo → @/lib/utils/format 에서 import
+// CHART_COLORS → CHART_COLORS from @/lib/constants/ui
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
@@ -236,13 +204,13 @@ export default function DashboardPage() {
                 <tr key={f.id} className="hover:bg-page-bg/50 transition-colors border-b border-border last:border-b-0">
                   <td className="px-6 py-4 text-[14px] font-medium text-foreground">{f.name}</td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex px-2.5 py-0.5 rounded-md text-[11px] font-bold ${typeColors[f.type] || 'bg-gray-100 text-gray-600'}`}>
+                    <span className={`inline-flex px-2.5 py-0.5 rounded-md text-[11px] font-bold ${FILE_TYPE_BADGE[f.type] || 'bg-gray-100 text-gray-600'}`}>
                       {f.type}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-[14px] text-muted">{f.department}</td>
                   <td className="px-6 py-4 text-[13px] text-muted font-num">{f.uploadDate}</td>
-                  <td className={`px-6 py-4 text-[13px] font-semibold ${statusColors[f.status] || ''}`}>{f.status}</td>
+                  <td className={`px-6 py-4 text-[13px] font-semibold ${FILE_STATUS_COLOR[f.status] || ''}`}>{f.status}</td>
                 </tr>
               ))}
             </tbody>
@@ -301,7 +269,7 @@ export default function DashboardPage() {
                       <circle
                         key={label}
                         cx="50" cy="50" r="40" fill="none"
-                        stroke={PIE_COLORS[i % PIE_COLORS.length]}
+                        stroke={CHART_COLORS[i % CHART_COLORS.length]}
                         strokeWidth="20"
                         strokeDasharray={`${dash} ${251.3 - dash}`}
                         strokeDashoffset={-offset}
@@ -323,7 +291,7 @@ export default function DashboardPage() {
                 const pct = totalFileCount > 0 ? Math.round((count / totalFileCount) * 100) : 0;
                 return (
                   <div key={label} className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
                     <span className="text-[12px] text-foreground w-12 font-medium uppercase">{label}</span>
                     <span className="text-[12px] text-muted font-num">{pct}%</span>
                   </div>
@@ -459,7 +427,7 @@ export default function DashboardPage() {
                     <div className="flex-1 bg-[#f5f5f7] rounded-full h-2 overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${(count / maxVal) * 100}%`, backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }}
+                        style={{ width: `${(count / maxVal) * 100}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
                       />
                     </div>
                     <span className="text-[12px] font-semibold font-num text-foreground w-6 text-right shrink-0">{count}</span>
