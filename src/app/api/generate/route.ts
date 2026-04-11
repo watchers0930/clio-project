@@ -76,27 +76,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { templateId, sourceFileIds, instructions, outputFormat = 'docx', font, customStructure, contractFormData, parentId } = body;
 
-    // 버전 정보 계산 (parentId가 있는 경우)
-    let versionFields: { parent_id?: string; version_number?: number } = {};
-    if (parentId) {
-      const { data: parentDoc } = await supabase
-        .from('documents')
-        .select('parent_id, version_number')
-        .eq('id', parentId)
-        .single();
-      const rootId: string = parentDoc?.parent_id ?? parentId;
-      const { data: siblings } = await supabase
-        .from('documents')
-        .select('version_number')
-        .or(`id.eq.${rootId},parent_id.eq.${rootId}`)
-        .order('version_number', { ascending: false })
-        .limit(1);
-      versionFields = {
-        parent_id: rootId,
-        version_number: (siblings?.[0]?.version_number ?? 1) + 1,
-      };
-    }
-
     // 폰트 테마 생성
     const fontParam = typeof font === 'string' ? font : '맑은 고딕';
     const theme: CorporateTheme = {
@@ -122,6 +101,27 @@ export async function POST(request: NextRequest) {
     const authUserId = await getAuthUserId(supabase);
     if (!authUserId) {
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
+    }
+
+    // 버전 정보 계산 (parentId가 있는 경우) — supabase 초기화 이후에 실행
+    let versionFields: { parent_id?: string; version_number?: number } = {};
+    if (parentId) {
+      const { data: parentDoc } = await supabase
+        .from('documents')
+        .select('parent_id, version_number')
+        .eq('id', parentId)
+        .single();
+      const rootId: string = parentDoc?.parent_id ?? parentId;
+      const { data: siblings } = await supabase
+        .from('documents')
+        .select('version_number')
+        .or(`id.eq.${rootId},parent_id.eq.${rootId}`)
+        .order('version_number', { ascending: false })
+        .limit(1);
+      versionFields = {
+        parent_id: rootId,
+        version_number: (siblings?.[0]?.version_number ?? 1) + 1,
+      };
     }
 
     // 사용자 정보 조회 (이름, 부서, 직급)
