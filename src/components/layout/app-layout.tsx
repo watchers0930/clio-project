@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { Sidebar } from './sidebar';
 import { Header } from './header';
 import { Footer } from './footer';
+import { ToastRenderer } from '@/components/ui/toast';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -46,6 +47,7 @@ function AppLayout({ children }: AppLayoutProps) {
           <Footer />
         </main>
       </div>
+      <ToastRenderer />
     </div>
   );
 }

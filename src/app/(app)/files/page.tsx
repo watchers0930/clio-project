@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useToast } from '@/components/ui/toast';
 
 /* ────────────────────────── types ────────────────────────── */
 interface FileItem {
@@ -75,6 +76,7 @@ export default function FilesPageWrapper() {
 function FilesPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const toast = useToast();
 
   const [files, setFiles] = useState<FileItem[]>([]);
   const [departments, setDepartments] = useState<string[]>(['전체']);
@@ -246,14 +248,20 @@ function FilesPage() {
   const confirmDelete = async () => {
     if (!deleteConfirm) return;
     try {
-      await fetch(`/api/files/${deleteConfirm.id}`, { method: 'DELETE' });
-      setFiles((prev) => prev.filter((f) => f.id !== deleteConfirm.id));
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        next.delete(deleteConfirm.id);
-        return next;
-      });
-    } catch { /* ignore */ }
+      const res = await fetch(`/api/files/${deleteConfirm.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setFiles((prev) => prev.filter((f) => f.id !== deleteConfirm.id));
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(deleteConfirm.id);
+          return next;
+        });
+      } else {
+        toast.error('파일 삭제에 실패했습니다.');
+      }
+    } catch {
+      toast.error('파일 삭제 중 오류가 발생했습니다.');
+    }
     setDeleteConfirm(null);
   };
 
@@ -280,8 +288,12 @@ function FilesPage() {
           a.click();
           document.body.removeChild(a);
         }
+      } else {
+        toast.error('파일 다운로드에 실패했습니다.');
       }
-    } catch { /* ignore */ }
+    } catch {
+      toast.error('다운로드 중 오류가 발생했습니다.');
+    }
     setTimeout(() => setDownloadToast(null), 2000);
   };
 

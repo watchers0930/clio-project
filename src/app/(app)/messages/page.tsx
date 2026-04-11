@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/store/auth-store';
+import { useToast } from '@/components/ui/toast';
 import { Plus, Search, MessageCircle, Send, Paperclip, ChevronRight, ChevronDown, Building2, User, Trash2, FileText, X, Clock, Eye, FolderOpen, Loader2 } from 'lucide-react';
 
 /* ── types ── */
@@ -29,6 +30,7 @@ export default function MessagesPage() {
   }, []);
 
   const currentUser = useAuthStore((s) => s.user);
+  const toast = useToast();
 
   // 부서 트리
   const [deptTree, setDeptTree] = useState<DeptTree[]>([]);
@@ -226,7 +228,10 @@ export default function MessagesPage() {
     };
     setMessagesMap(prev => ({ ...prev, [activeChannel]: [...(prev[activeChannel] ?? []), tempMsg] }));
     setChannels(prev => prev.map(c => (c.id === activeChannel ? { ...c, lastMessage: content } : c)));
-    try { await fetch('/api/messages/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ channelId: activeChannel, content }) }); } catch {}
+    try {
+      const res = await fetch('/api/messages/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ channelId: activeChannel, content }) });
+      if (!res.ok) toast.error('메시지 전송에 실패했습니다.');
+    } catch { toast.error('메시지 전송 중 오류가 발생했습니다.'); }
   };
 
   // 내 파일 목록 로드
@@ -264,8 +269,12 @@ export default function MessagesPage() {
       if (res.ok) {
         setShowFileModal(false);
         await fetchMessages(activeChannel);
+      } else {
+        toast.error('파일 공유에 실패했습니다.');
       }
-    } catch {} finally { setSharing(false); }
+    } catch {
+      toast.error('파일 공유 중 오류가 발생했습니다.');
+    } finally { setSharing(false); }
   };
 
   // 첨부파일 다운로드

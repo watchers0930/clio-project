@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useToast } from '@/components/ui/toast';
 
 /* ────────────────────────── types ────────────────────────── */
 interface TemplateFile {
@@ -31,6 +32,7 @@ const ICON_OPTIONS = ['📊', '📝', '💡', '📋', '📈', '✉️', '👥', 
 
 /* ────────────────────────── page ─────────────────────────── */
 export default function TemplatesPage() {
+  const toast = useToast();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [deptList, setDeptList] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -315,9 +317,14 @@ export default function TemplatesPage() {
         }),
       });
       if (res.ok) {
-        loadTemplates(); // DB 응답 기반으로 목록 새로고침
+        toast.success('템플릿이 복사되었습니다.');
+        loadTemplates();
+      } else {
+        toast.error('템플릿 복사에 실패했습니다.');
       }
-    } catch { /* ignore */ }
+    } catch {
+      toast.error('템플릿 복사 중 오류가 발생했습니다.');
+    }
   };
 
   if (loading) {

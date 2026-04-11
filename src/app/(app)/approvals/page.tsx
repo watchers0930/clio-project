@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { ClipboardCheck, Clock, CheckCircle, XCircle, Send, Loader2, MessageSquare } from 'lucide-react';
+import { useToast } from '@/components/ui/toast';
 
 /* ────────────────────────── types ────────────────────────── */
 interface PendingApproval {
@@ -48,7 +49,7 @@ export default function ApprovalsPage() {
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
   const [actionComment, setActionComment] = useState('');
   const [processing, setProcessing] = useState(false);
-  const [toast, setToast] = useState('');
+  const toast = useToast();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -89,11 +90,6 @@ export default function ApprovalsPage() {
     setViewLoading(false);
   };
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(''), 2500);
-  };
-
   const handleAction = async () => {
     if (!actionTarget || !actionType) return;
     if (actionType === 'reject' && !actionComment.trim()) return;
@@ -108,16 +104,16 @@ export default function ApprovalsPage() {
       });
       const d = await res.json();
       if (d.success) {
-        showToast(actionType === 'approve' ? '승인되었습니다.' : '반려되었습니다.');
+        toast.success(actionType === 'approve' ? '승인되었습니다.' : '반려되었습니다.');
         setActionTarget(null);
         setActionType(null);
         setActionComment('');
         fetchData();
       } else {
-        showToast(d.error ?? '처리 실패');
+        toast.error(d.error ?? '처리에 실패했습니다.');
       }
     } catch {
-      showToast('서버 오류');
+      toast.error('서버 오류가 발생했습니다.');
     }
     setProcessing(false);
   };
@@ -381,13 +377,6 @@ export default function ApprovalsPage() {
         </div>
       )}
 
-      {/* 토스트 */}
-      {toast && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-5 py-3 bg-[#1B1F2B] text-white text-[13px] font-medium rounded-xl shadow-lg flex items-center gap-2">
-          <CheckCircle size={16} className="text-[#30d158]" />
-          {toast}
-        </div>
-      )}
     </div>
   );
 }
