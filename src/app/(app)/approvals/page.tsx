@@ -42,6 +42,8 @@ export default function ApprovalsPage() {
   // 문서 내용 보기 모달
   const [viewDoc, setViewDoc] = useState<{ id: string; title: string; content: string; status: string; createdAt: string; templateName: string } | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
+  // 결재 대기 탭에서 열었을 때의 결재 항목 (헤더에 승인/보류/반려 버튼 표시용)
+  const [viewPendingItem, setViewPendingItem] = useState<PendingApproval | null>(null);
 
   // 승인/반려 모달 상태
   const [actionTarget, setActionTarget] = useState<PendingApproval | null>(null);
@@ -65,9 +67,10 @@ export default function ApprovalsPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const openDocView = async (docId: string) => {
+  const openDocView = async (docId: string, pendingItem?: PendingApproval) => {
     setViewLoading(true);
     setViewDoc(null);
+    setViewPendingItem(pendingItem ?? null);
     try {
       const res = await fetch(`/api/documents/${docId}`);
       const d = await res.json();
@@ -167,7 +170,7 @@ export default function ApprovalsPage() {
                 {pendingList.map((item) => (
                   <tr key={item.id} className="border-b border-[#E2E5EA] last:border-0 hover:bg-[#f9fafb] transition-colors">
                     <td className="py-3.5 px-5 text-[13px] text-[#1B1F2B] font-medium">
-                      <button onClick={() => openDocView(item.documentId)} className="text-[#2E6FF2] hover:underline text-left">
+                      <button onClick={() => openDocView(item.documentId, item)} className="text-[#2E6FF2] hover:underline text-left">
                         {item.documentTitle}
                       </button>
                     </td>
@@ -308,7 +311,7 @@ export default function ApprovalsPage() {
 
       {/* ────── 문서 내용 보기 모달 ────── */}
       {(viewDoc || viewLoading) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => { if (!viewLoading) setViewDoc(null); }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => { if (!viewLoading) { setViewDoc(null); setViewPendingItem(null); } }}>
           <div className="bg-white rounded-xl shadow-2xl flex flex-col" style={{ width: 'calc(100vw - 80px)', height: 'calc(100vh - 80px)' }} onClick={(e) => e.stopPropagation()}>
             {viewLoading ? (
               <div className="flex items-center justify-center py-20">
@@ -323,11 +326,50 @@ export default function ApprovalsPage() {
                     <div className="flex gap-3 mt-1 text-[12px] text-[#7C8494]">
                       {viewDoc.templateName && <span>템플릿: {viewDoc.templateName}</span>}
                       <span>{viewDoc.createdAt}</span>
+                      {viewPendingItem?.requester && (
+                        <span>요청자: {viewPendingItem.requester.name} ({viewPendingItem.requester.department || '부서 없음'})</span>
+                      )}
                     </div>
                   </div>
-                  <button onClick={() => setViewDoc(null)} className="text-[#7C8494] hover:text-[#1B1F2B] transition-colors">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
+                  {/* 결재 대기 탭에서 열었을 때: 승인/보류/반려 버튼 / 그 외: X 버튼 */}
+                  {viewPendingItem ? (
+                    <div className="flex items-center gap-2 shrink-0 ml-4">
+                      <button
+                        onClick={() => {
+                          setViewDoc(null);
+                          setViewPendingItem(null);
+                          setActionTarget(viewPendingItem);
+                          setActionType('approve');
+                          setActionComment('');
+                        }}
+                        className="px-4 py-2 text-[13px] font-medium text-white bg-[#30d158] rounded-lg hover:bg-[#28b84d] transition-colors"
+                      >
+                        승인
+                      </button>
+                      <button
+                        onClick={() => { setViewDoc(null); setViewPendingItem(null); }}
+                        className="px-4 py-2 text-[13px] font-medium text-white bg-[#ff9f0a] rounded-lg hover:bg-[#e88e00] transition-colors"
+                      >
+                        보류
+                      </button>
+                      <button
+                        onClick={() => {
+                          setViewDoc(null);
+                          setViewPendingItem(null);
+                          setActionTarget(viewPendingItem);
+                          setActionType('reject');
+                          setActionComment('');
+                        }}
+                        className="px-4 py-2 text-[13px] font-medium text-white bg-[#ff3b30] rounded-lg hover:bg-[#e0342b] transition-colors"
+                      >
+                        반려
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setViewDoc(null)} className="text-[#7C8494] hover:text-[#1B1F2B] transition-colors shrink-0 ml-4">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  )}
                 </div>
                 {/* 본문 — 무조건 PDF로 변환하여 표시 */}
                 <div className="flex-1 overflow-hidden bg-[#525659]">
@@ -345,7 +387,7 @@ export default function ApprovalsPage() {
                   >
                     DOCX 다운로드
                   </a>
-                  <button onClick={() => setViewDoc(null)} className="px-5 py-2 text-[13px] text-[#7C8494] hover:text-[#1B1F2B] transition-colors">
+                  <button onClick={() => { setViewDoc(null); setViewPendingItem(null); }} className="px-5 py-2 text-[13px] text-[#7C8494] hover:text-[#1B1F2B] transition-colors">
                     닫기
                   </button>
                 </div>
