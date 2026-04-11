@@ -333,6 +333,143 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* ── 차트 섹션 ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: 20 }}>
+
+        {/* 차트 1: 파일 업로드 추이 (8주 바 차트) */}
+        <div className="lg:col-span-2 bg-card rounded-2xl border border-border overflow-hidden">
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e5e7' }}>
+            <h2 className="text-[16px] font-semibold text-foreground">파일 업로드 추이</h2>
+            <p className="text-[12px] text-muted mt-0.5">최근 8주</p>
+          </div>
+          <div style={{ padding: '24px' }}>
+            {loading ? (
+              <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-muted" /></div>
+            ) : (() => {
+              const trend = data?.upload_trend ?? [];
+              const maxCount = Math.max(...trend.map(t => t.count), 1);
+              const chartH = 120;
+              const barW = 28;
+              const gap = 8;
+              const totalW = trend.length * (barW + gap) - gap;
+              return (
+                <div style={{ overflowX: 'auto' }}>
+                  <svg width={totalW} height={chartH + 32} style={{ display: 'block', minWidth: '100%' }}>
+                    {trend.map((t, i) => {
+                      const barH = maxCount > 0 ? Math.max((t.count / maxCount) * chartH, t.count > 0 ? 4 : 0) : 0;
+                      const x = i * (barW + gap);
+                      const y = chartH - barH;
+                      return (
+                        <g key={t.week}>
+                          <rect x={x} y={y} width={barW} height={barH}
+                            rx={4} fill={t.count > 0 ? '#0071e3' : '#e5e5e7'} />
+                          {t.count > 0 && (
+                            <text x={x + barW / 2} y={y - 4} textAnchor="middle" fontSize={10} fill="#1d1d1f" fontWeight="600">{t.count}</text>
+                          )}
+                          <text x={x + barW / 2} y={chartH + 18} textAnchor="middle" fontSize={10} fill="#a1a1a6">{t.label}</text>
+                        </g>
+                      );
+                    })}
+                  </svg>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+
+        {/* 차트 2: 결재 처리 현황 (도넛) */}
+        <div className="bg-card rounded-2xl border border-border overflow-hidden">
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e5e7' }}>
+            <h2 className="text-[16px] font-semibold text-foreground">결재 처리 현황</h2>
+            <p className="text-[12px] text-muted mt-0.5">전체 결재 건수</p>
+          </div>
+          <div className="flex flex-col items-center" style={{ padding: '24px', gap: 16 }}>
+            {loading ? (
+              <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-muted" /></div>
+            ) : (() => {
+              const ap = data?.approval_stats ?? { pending: 0, approved: 0, rejected: 0, total: 0 };
+              const items = [
+                { label: '승인', count: ap.approved, color: '#0071e3' },
+                { label: '대기', count: ap.pending, color: '#ff9f0a' },
+                { label: '반려', count: ap.rejected, color: '#ff3b30' },
+              ];
+              const total = ap.total || 1;
+              const r = 40; const circ = 2 * Math.PI * r;
+              let offset = 0;
+              return (
+                <>
+                  <div className="relative" style={{ width: 140, height: 140 }}>
+                    <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                      <circle cx="50" cy="50" r={r} fill="none" stroke="#e5e5e7" strokeWidth="18" />
+                      {ap.total === 0 ? null : items.map((item) => {
+                        const dash = (item.count / total) * circ;
+                        const el = (
+                          <circle key={item.label} cx="50" cy="50" r={r} fill="none"
+                            stroke={item.color} strokeWidth="18"
+                            strokeDasharray={`${dash} ${circ - dash}`}
+                            strokeDashoffset={-offset} strokeLinecap="round" />
+                        );
+                        offset += dash;
+                        return el;
+                      })}
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-[20px] font-bold text-foreground font-num">{ap.total}</span>
+                      <span className="text-[10px] text-muted">전체</span>
+                    </div>
+                  </div>
+                  <div className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {items.map(item => (
+                      <div key={item.label} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                          <span className="text-[12px] text-foreground">{item.label}</span>
+                        </div>
+                        <span className="text-[12px] font-semibold font-num text-foreground">{item.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      </div>
+
+      {/* 차트 3: 부서별 문서 생성량 */}
+      <div className="bg-card rounded-2xl border border-border overflow-hidden">
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e5e7' }}>
+          <h2 className="text-[16px] font-semibold text-foreground">부서별 문서 생성량</h2>
+          <p className="text-[12px] text-muted mt-0.5">전체 생성 문서 기준</p>
+        </div>
+        <div style={{ padding: '24px' }}>
+          {loading ? (
+            <div className="flex justify-center py-6"><Loader2 size={20} className="animate-spin text-muted" /></div>
+          ) : (() => {
+            const breakdown = data?.doc_dept_breakdown ?? {};
+            const entries = Object.entries(breakdown).sort(([, a], [, b]) => b - a).slice(0, 6);
+            const maxVal = Math.max(...entries.map(([, v]) => v), 1);
+            if (entries.length === 0) return <p className="text-sm text-muted text-center py-4">데이터가 없습니다.</p>;
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {entries.map(([dept, count], i) => (
+                  <div key={dept} className="flex items-center gap-3">
+                    <span className="text-[12px] text-muted w-20 truncate text-right shrink-0">{dept}</span>
+                    <div className="flex-1 bg-[#f5f5f7] rounded-full h-2 overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{ width: `${(count / maxVal) * 100}%`, backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }}
+                      />
+                    </div>
+                    <span className="text-[12px] font-semibold font-num text-foreground w-6 text-right shrink-0">{count}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
+      </div>
     </div>
   );
 }

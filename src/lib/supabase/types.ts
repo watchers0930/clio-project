@@ -496,6 +496,9 @@ export interface DashboardStats {
   recent_activity: AuditLog[];
   file_type_breakdown: Record<string, number>;
   department_breakdown: Record<string, number>;
+  upload_trend?: Array<{ week: string; label: string; count: number }>;
+  approval_stats?: { pending: number; approved: number; rejected: number; total: number };
+  doc_dept_breakdown?: Record<string, number>;
 }
 
 /** 로그인 요청 */
