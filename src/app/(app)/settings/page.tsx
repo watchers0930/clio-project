@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Building2, Users, Plus, Pencil, Trash2, Loader2, Check, Save, PenLine, Upload, X } from 'lucide-react';
-import { Spinner, Tabs } from '@/components/ui';
+import { Building2, Users, Plus, Pencil, Trash2, Check, Save, PenLine, Upload, X } from 'lucide-react';
+import { Spinner, Tabs, ConfirmDialog } from '@/components/ui';
 
 /* ── types ── */
 interface Department {
@@ -49,6 +49,11 @@ export default function SettingsPage() {
   const [pendingChanges, setPendingChanges] = useState<Record<string, { department_id?: string | null; role?: string }>>({});
   const [savingUserId, setSavingUserId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+
+  // 확인 다이얼로그
+  const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; description?: string; onConfirm: () => void }>({ open: false, title: '', onConfirm: () => {} });
+  const openConfirm = (title: string, description: string | undefined, onConfirm: () => void) => setConfirmState({ open: true, title, description, onConfirm });
+  const closeConfirm = () => setConfirmState((s) => ({ ...s, open: false }));
 
   // 사용자 추가/수정 모달
   const [showUserModal, setShowUserModal] = useState(false);
@@ -123,13 +128,15 @@ export default function SettingsPage() {
     setSigUploading(false);
   };
 
-  const deleteSignature = async () => {
-    if (!confirm('서명을 삭제하시겠습니까?')) return;
-    try {
-      await fetch('/api/auth/signature', { method: 'DELETE' });
-      setSigUrl(null);
-      showToast('서명이 삭제되었습니다.');
-    } catch { showToast('삭제 중 오류가 발생했습니다.'); }
+  const deleteSignature = () => {
+    openConfirm('서명을 삭제하시겠습니까?', '삭제된 서명은 복구할 수 없습니다.', async () => {
+      try {
+        await fetch('/api/auth/signature', { method: 'DELETE' });
+        setSigUrl(null);
+        showToast('서명이 삭제되었습니다.');
+      } catch { showToast('삭제 중 오류가 발생했습니다.'); }
+      closeConfirm();
+    });
   };
 
   /* ── 부서 CRUD ── */
@@ -155,22 +162,24 @@ export default function SettingsPage() {
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        alert(json.error ?? '부서 저장에 실패했습니다.');
+        showToast(json.error ?? '부서 저장에 실패했습니다.');
         return;
       }
       await loadDepartments();
       setShowDeptModal(false);
     } catch {
-      alert('부서 저장 중 오류가 발생했습니다.');
+      showToast('부서 저장 중 오류가 발생했습니다.');
     } finally {
       setSaving(false);
     }
   };
 
-  const deleteDept = async (id: string) => {
-    if (!confirm('이 부서를 삭제하시겠습니까? (직원이 있으면 삭제 불가)')) return;
-    await fetch(`/api/departments?id=${id}`, { method: 'DELETE' });
-    await loadDepartments();
+  const deleteDept = (id: string) => {
+    openConfirm('이 부서를 삭제하시겠습니까?', '직원이 있는 부서는 삭제할 수 없습니다.', async () => {
+      await fetch(`/api/departments?id=${id}`, { method: 'DELETE' });
+      await loadDepartments();
+      closeConfirm();
+    });
   };
 
   /* ── 사용자 추가/수정 ── */
@@ -204,13 +213,13 @@ export default function SettingsPage() {
         });
         const json = await res.json();
         if (!res.ok || !json.success) {
-          alert(json.error ?? '사용자 수정에 실패했습니다.');
+          showToast(json.error ?? '사용자 수정에 실패했습니다.');
           return;
         }
         await loadUsers();
         setShowUserModal(false);
       } catch {
-        alert('사용자 수정 중 오류가 발생했습니다.');
+        showToast('사용자 수정 중 오류가 발생했습니다.');
       } finally {
         setUserSaving(false);
       }
@@ -232,32 +241,32 @@ export default function SettingsPage() {
         });
         const json = await res.json();
         if (!res.ok || !json.success) {
-          alert(json.error ?? '사용자 추가에 실패했습니다.');
+          showToast(json.error ?? '사용자 추가에 실패했습니다.');
           return;
         }
         await loadUsers();
         setShowUserModal(false);
       } catch {
-        alert('사용자 추가 중 오류가 발생했습니다.');
+        showToast('사용자 추가 중 오류가 발생했습니다.');
       } finally {
         setUserSaving(false);
       }
     }
   };
 
-  const deleteUser = async (id: string, name: string) => {
-    if (!confirm(`"${name}" 사용자를 비활성화하시겠습니까?`)) return;
-    try {
-      const res = await fetch(`/api/users?id=${id}`, { method: 'DELETE' });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        alert(json.error ?? '사용자 비활성화에 실패했습니다.');
-        return;
-      }
-      await loadUsers();
-    } catch {
-      alert('사용자 삭제 중 오류가 발생했습니다.');
-    }
+  const deleteUser = (id: string, name: string) => {
+    openConfirm(`"${name}" 사용자를 비활성화하시겠습니까?`, '비활성화된 사용자는 로그인할 수 없습니다.', async () => {
+      try {
+        const res = await fetch(`/api/users?id=${id}`, { method: 'DELETE' });
+        const json = await res.json();
+        if (!res.ok || !json.success) {
+          showToast(json.error ?? '사용자 비활성화에 실패했습니다.');
+          closeConfirm(); return;
+        }
+        await loadUsers();
+      } catch { showToast('사용자 삭제 중 오류가 발생했습니다.'); }
+      closeConfirm();
+    });
   };
 
   /* ── 사용자 인라인 수정 (로컬 → 저장) ── */
@@ -295,7 +304,7 @@ export default function SettingsPage() {
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        alert(json.error ?? '저장에 실패했습니다.');
+        showToast(json.error ?? '저장에 실패했습니다.');
         return;
       }
       setPendingChanges((prev) => {
@@ -306,7 +315,7 @@ export default function SettingsPage() {
       await loadUsers();
       showToast('저장되었습니다');
     } catch {
-      alert('저장 중 오류가 발생했습니다.');
+      showToast('저장 중 오류가 발생했습니다.');
     } finally {
       setSavingUserId(null);
     }
@@ -440,7 +449,7 @@ export default function SettingsPage() {
                           disabled={savingUserId === u.id}
                           className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#0071e3] text-white text-xs font-medium hover:bg-[#0077ED] transition-colors disabled:opacity-50"
                         >
-                          {savingUserId === u.id ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                          {savingUserId === u.id ? <Spinner size="sm" /> : <Save size={12} />}
                           저장
                         </button>
                       )}
@@ -463,7 +472,7 @@ export default function SettingsPage() {
 
           {sigLoading ? (
             <div className="flex items-center justify-center h-32">
-              <Loader2 size={20} className="animate-spin text-muted" />
+              <Spinner size="lg" />
             </div>
           ) : sigUrl ? (
             <div className="flex flex-col gap-4">
@@ -477,7 +486,7 @@ export default function SettingsPage() {
                   disabled={sigUploading}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40"
                 >
-                  {sigUploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                  {sigUploading ? <Spinner size="sm" /> : <Upload size={14} />}
                   서명 교체
                 </button>
                 <button
@@ -495,7 +504,7 @@ export default function SettingsPage() {
               style={{ height: 160 }}
             >
               {sigUploading ? (
-                <Loader2 size={24} className="animate-spin text-muted" />
+                <Spinner size="lg" />
               ) : (
                 <>
                   <PenLine size={28} className="text-muted" />
@@ -662,6 +671,17 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+      {/* 확인 다이얼로그 */}
+      <ConfirmDialog
+        open={confirmState.open}
+        title={confirmState.title}
+        description={confirmState.description}
+        confirmLabel="삭제"
+        variant="danger"
+        onConfirm={confirmState.onConfirm}
+        onCancel={closeConfirm}
+      />
+
       {/* 토스트 */}
       {toast && (
         <div style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', zIndex: 100, display: 'flex', alignItems: 'center', gap: 8, padding: '12px 24px', backgroundColor: '#1d1d1f', color: '#fff', borderRadius: 12, fontSize: 14, fontWeight: 500, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>

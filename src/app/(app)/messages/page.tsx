@@ -290,9 +290,9 @@ export default function MessagesPage() {
         if (json.url) window.open(json.url, '_blank');
       } else {
         const json = await res.json().catch(() => ({ error: '다운로드 실패' }));
-        alert(json.error ?? '다운로드에 실패했습니다.');
+        toast.error(json.error ?? '다운로드에 실패했습니다.');
       }
-    } catch { alert('다운로드 중 오류가 발생했습니다.'); }
+    } catch { toast.error('다운로드 중 오류가 발생했습니다.'); }
   };
 
   // 공유 파일 열람
@@ -323,7 +323,7 @@ export default function MessagesPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
 
     if (file.size > 50 * 1024 * 1024) {
-      alert('파일 크기는 50MB 이하여야 합니다.');
+      toast.error('파일 크기는 50MB 이하여야 합니다.');
       return;
     }
 
@@ -357,14 +357,14 @@ export default function MessagesPage() {
           ...prev,
           [activeChannel]: (prev[activeChannel] ?? []).filter(m => m.id !== tempId),
         }));
-        alert(errMsg);
+        toast.error(errMsg);
       }
     } catch {
       setMessagesMap(prev => ({
         ...prev,
         [activeChannel]: (prev[activeChannel] ?? []).filter(m => m.id !== tempId),
       }));
-      alert('파일 업로드 중 오류가 발생했습니다.');
+      toast.error('파일 업로드 중 오류가 발생했습니다.');
     } finally {
       setUploading(false);
     }

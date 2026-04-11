@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { FILE_TYPE_BADGE } from '@/lib/constants/ui';
 import { SearchInput, EmptyState, Spinner } from '@/components/ui';
+import { useToast } from '@/components/ui/toast';
 
 /* ────────────────────────── types ────────────────────────── */
 interface SearchResult {
@@ -29,6 +30,7 @@ const SORT_OPTIONS = ['관련도순', '최신순', '오래된순', '이름순'];
 
 /* ────────────────────────── page ─────────────────────────── */
 export default function SearchPage() {
+  const toast = useToast();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searched, setSearched] = useState(false);
@@ -324,7 +326,7 @@ export default function SearchPage() {
                       onClick={async () => {
                         try {
                           const res = await fetch(`/api/files/${r.id}/download`);
-                          if (!res.ok) { alert('다운로드 실패'); return; }
+                          if (!res.ok) { toast.error('다운로드 실패'); return; }
                           const data = await res.json();
                           if (data.url) {
                             const dlRes = await fetch(data.url);
@@ -334,7 +336,7 @@ export default function SearchPage() {
                             a.href = url; a.download = r.name; a.click();
                             URL.revokeObjectURL(url);
                           }
-                        } catch { alert('다운로드 실패'); }
+                        } catch { toast.error('다운로드 실패'); }
                       }}
                       className="flex items-center gap-1.5 text-sm text-[#6e6e73] hover:text-[#1d1d1f] font-medium transition-colors"
                     >

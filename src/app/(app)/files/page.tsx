@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
 import { FILE_TYPE_BADGE, FILE_STATUS_COLOR } from '@/lib/constants/ui';
 import { formatSize, getFileType } from '@/lib/utils/format';
-import { Spinner, EmptyState } from '@/components/ui';
+import { Spinner, EmptyState, ConfirmDialog } from '@/components/ui';
 
 /* ────────────────────────── types ────────────────────────── */
 interface FileItem {
@@ -65,6 +65,7 @@ function FilesPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [detailFile, setDetailFile] = useState<FileItem | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<FileItem | null>(null);
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
   const [downloadToast, setDownloadToast] = useState<string | null>(null);
   const [showScrape, setShowScrape] = useState(false);
   const [scrapeUrl, setScrapeUrl] = useState('');
@@ -200,7 +201,7 @@ function FilesPage() {
     }
 
     if (failed.length > 0) {
-      alert(`${total - failed.length}/${total}개 업로드 완료\n\n실패:\n${failed.join('\n')}`);
+      toast.error(`${total - failed.length}/${total}개 업로드 완료 (실패: ${failed.join(', ')})`);
     }
 
     setTimeout(() => {
@@ -236,13 +237,17 @@ function FilesPage() {
     setDeleteConfirm(null);
   };
 
-  const bulkDelete = async () => {
+  const bulkDelete = () => {
     if (selectedIds.size === 0) return;
-    if (!confirm(`${selectedIds.size}개 파일을 삭제하시겠습니까?`)) return;
+    setBulkConfirmOpen(true);
+  };
+
+  const _doBulkDelete = async () => {
     const ids = Array.from(selectedIds);
     await Promise.allSettled(ids.map((id) => fetch(`/api/files/${id}`, { method: 'DELETE' })));
     setFiles((prev) => prev.filter((f) => !selectedIds.has(f.id)));
     setSelectedIds(new Set());
+    setBulkConfirmOpen(false);
   };
 
   const handleDownload = async (file: FileItem) => {
@@ -754,6 +759,17 @@ function FilesPage() {
           </div>
         </div>
       )}
+
+      {/* 일괄 삭제 확인 다이얼로그 */}
+      <ConfirmDialog
+        open={bulkConfirmOpen}
+        title={`${selectedIds.size}개 파일을 삭제하시겠습니까?`}
+        description="삭제된 파일은 복구할 수 없습니다."
+        confirmLabel="삭제"
+        variant="danger"
+        onConfirm={_doBulkDelete}
+        onCancel={() => setBulkConfirmOpen(false)}
+      />
 
       {/* ── Download Toast ── */}
       {downloadToast && (

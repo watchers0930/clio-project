@@ -1,5 +1,7 @@
 'use client';
 
+import { Spinner, EmptyState } from '@/components/ui';
+
 export interface VersionItem {
   id: string;
   title: string;
@@ -61,13 +63,10 @@ export function VersionPanel({
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <svg className="w-6 h-6 animate-spin text-[#0071e3]" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
+              <Spinner size="lg" />
             </div>
           ) : items.length === 0 ? (
-            <p className="text-sm text-[#6e6e73] text-center py-12">버전 정보가 없습니다.</p>
+            <EmptyState iconType="file" title="버전 정보가 없습니다" className="py-12" />
           ) : (
             <div className="relative">
               <div className="absolute left-[11px] top-2 bottom-2 w-px bg-[#e5e5e7]" />

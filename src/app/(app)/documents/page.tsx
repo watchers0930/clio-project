@@ -8,6 +8,7 @@ import { VersionPanel } from '@/components/documents/VersionPanel';
 import { ApprovalModal } from '@/components/documents/ApprovalModal';
 import { DOCUMENT_STATUS_BADGE } from '@/lib/constants/ui';
 import { ConfirmDialog, EmptyState, Spinner } from '@/components/ui';
+import { useToast } from '@/components/ui/toast';
 
 /* ────────────────────────── types ────────────────────────── */
 interface Document {
@@ -82,6 +83,7 @@ const TEMPLATE_ICONS: Record<string, string> = {
 
 /* ────────────────────────── page ─────────────────────────── */
 export default function DocumentsPage() {
+  const toast = useToast();
   const storeUser = useAuthStore((s) => s.user);
   const [docs, setDocs] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -318,10 +320,10 @@ export default function DocumentsPage() {
         }
       } else {
         const errData = await res.json().catch(() => null);
-        alert(errData?.error ?? '문서 생성에 실패했습니다. 다시 시도해 주세요.');
+        toast.error(errData?.error ?? '문서 생성에 실패했습니다. 다시 시도해 주세요.');
       }
     } catch {
-      alert('네트워크 오류가 발생했습니다. 다시 시도해 주세요.');
+      toast.error('네트워크 오류가 발생했습니다. 다시 시도해 주세요.');
     } finally {
       setGenerating(false);
     }
@@ -412,7 +414,7 @@ export default function DocumentsPage() {
       setViewDoc(updated);
       setDocs((prev) => prev.map((d) => d.id === viewDoc.id ? updated : d));
     } catch {
-      alert('저장에 실패했습니다.');
+      toast.error('저장에 실패했습니다.');
     } finally {
       setSaving(false);
     }
@@ -444,7 +446,7 @@ export default function DocumentsPage() {
       setViewDoc(updated);
       setDocs((prev) => prev.map((d) => d.id === viewDoc.id ? updated : d));
     } catch {
-      alert('상태 변경에 실패했습니다.');
+      toast.error('상태 변경에 실패했습니다.');
     } finally {
       setSaving(false);
     }
@@ -471,7 +473,7 @@ export default function DocumentsPage() {
       setViewDoc(updated);
       setDocs((prev) => prev.map((d) => d.id === viewDoc.id ? updated : d));
     } catch {
-      alert('상태 변경에 실패했습니다.');
+      toast.error('상태 변경에 실패했습니다.');
     } finally {
       setSaving(false);
     }
@@ -506,10 +508,10 @@ export default function DocumentsPage() {
         setDocs((prev) => prev.map((doc) => doc.id === viewDoc.id ? updated : doc));
         setShowApprovalModal(false);
       } else {
-        alert(d.error ?? '결재 요청 실패');
+        toast.error(d.error ?? '결재 요청 실패');
       }
     } catch {
-      alert('서버 오류');
+      toast.error('서버 오류');
     }
     setSubmittingApproval(false);
   };
@@ -548,10 +550,10 @@ export default function DocumentsPage() {
         setDesignPrompt(data.prompt);
       } else {
         const err = await res.json().catch(() => null);
-        alert(err?.error ?? '프롬프트 생성 실패');
+        toast.error(err?.error ?? '프롬프트 생성 실패');
       }
     } catch {
-      alert('네트워크 오류');
+      toast.error('네트워크 오류');
     } finally {
       setLoadingDesignPrompt(false);
     }
@@ -593,7 +595,7 @@ export default function DocumentsPage() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch {
-      alert('다운로드에 실패했습니다.');
+      toast.error('다운로드에 실패했습니다.');
     }
   };
 
@@ -902,14 +904,14 @@ export default function DocumentsPage() {
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ lang: 'ko' }),
                         });
-                        if (!res.ok) { alert('생성 실패'); return; }
+                        if (!res.ok) { toast.error('생성 실패'); return; }
                         const { context, fileName } = await res.json();
                         const blob = new Blob([context], { type: 'text/plain;charset=utf-8' });
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url; a.download = fileName; a.click();
                         URL.revokeObjectURL(url);
-                      } catch { alert('다운로드 실패'); }
+                      } catch { toast.error('다운로드 실패'); }
                     }}
                     className="px-4 py-2 rounded-lg text-sm font-medium border border-[#34c759] text-[#34c759] hover:bg-[#f0faf2] transition-colors flex items-center gap-2"
                   >
@@ -924,14 +926,14 @@ export default function DocumentsPage() {
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ lang: 'en' }),
                         });
-                        if (!res.ok) { alert('Failed'); return; }
+                        if (!res.ok) { toast.error('Failed'); return; }
                         const { context, fileName } = await res.json();
                         const blob = new Blob([context], { type: 'text/plain;charset=utf-8' });
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url; a.download = fileName; a.click();
                         URL.revokeObjectURL(url);
-                      } catch { alert('Download failed'); }
+                      } catch { toast.error('Download failed'); }
                     }}
                     className="px-4 py-2 rounded-lg text-sm font-medium border border-[#30d158] text-[#30d158] hover:bg-[#f0faf2] transition-colors flex items-center gap-2"
                   >
@@ -1480,7 +1482,7 @@ export default function DocumentsPage() {
                           a.click();
                           document.body.removeChild(a);
                           URL.revokeObjectURL(url);
-                        } catch { alert('다운로드에 실패했습니다.'); }
+                        } catch { toast.error('다운로드에 실패했습니다.'); }
                       }}
                       className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#0071e3] text-white text-sm font-medium hover:bg-[#005bb5] transition-colors"
                     >
@@ -1505,13 +1507,13 @@ export default function DocumentsPage() {
                                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ lang: 'ko' }),
                               });
-                              if (!res.ok) { alert('생성 실패'); return; }
+                              if (!res.ok) { toast.error('생성 실패'); return; }
                               const { context, fileName } = await res.json();
                               const blob = new Blob([context], { type: 'text/plain;charset=utf-8' });
                               const url = URL.createObjectURL(blob);
                               const a = document.createElement('a'); a.href = url; a.download = fileName; a.click();
                               URL.revokeObjectURL(url);
-                            } catch { alert('다운로드 실패'); }
+                            } catch { toast.error('다운로드 실패'); }
                           }}
                           className="px-3 py-1.5 rounded-lg text-xs font-medium border border-[#34c759] text-[#34c759] hover:bg-white transition-colors flex items-center gap-1.5"
                         >
@@ -1525,13 +1527,13 @@ export default function DocumentsPage() {
                                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ lang: 'en' }),
                               });
-                              if (!res.ok) { alert('Failed'); return; }
+                              if (!res.ok) { toast.error('Failed'); return; }
                               const { context, fileName } = await res.json();
                               const blob = new Blob([context], { type: 'text/plain;charset=utf-8' });
                               const url = URL.createObjectURL(blob);
                               const a = document.createElement('a'); a.href = url; a.download = fileName; a.click();
                               URL.revokeObjectURL(url);
-                            } catch { alert('Download failed'); }
+                            } catch { toast.error('Download failed'); }
                           }}
                           className="px-3 py-1.5 rounded-lg text-xs font-medium border border-[#30d158] text-[#30d158] hover:bg-white transition-colors flex items-center gap-1.5"
                         >

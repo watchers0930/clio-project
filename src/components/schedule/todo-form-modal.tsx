@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { X } from 'lucide-react';
+import { Spinner } from '@/components/ui';
 import type { TodoItem, TodoPriority } from '@/lib/supabase/types';
 import { getPriorityLabel } from '@/lib/schedule-utils';
 
@@ -136,7 +137,7 @@ export default function TodoFormModal({ open, onClose, onSubmit, todo }: TodoFor
             disabled={loading || !title.trim()}
             className="px-5 py-2 text-[13px] font-medium text-white bg-[#2E6FF2] rounded-lg hover:bg-[#1A5AD9] transition-colors disabled:opacity-40"
           >
-            {loading ? <Loader2 className="animate-spin" size={14} /> : isEdit ? '수정' : '추가'}
+            {loading ? <Spinner size="sm" variant="white" /> : isEdit ? '수정' : '추가'}
           </button>
         </div>
       </div>

@@ -199,10 +199,11 @@ export default function ApprovalsPage() {
       ) : (
         /* ────── 내 요청 탭 ────── */
         myRequests.length === 0 ? (
-          <div className="text-center py-20 text-[#7C8494] text-[14px]">
-            <Send size={40} className="mx-auto mb-3 opacity-30" />
-            결재 요청 내역이 없습니다.
-          </div>
+          <EmptyState
+            iconType="check"
+            title="결재 요청 내역이 없습니다"
+            description="문서를 생성하고 결재를 요청해 보세요"
+          />
         ) : (
           <div className="bg-white rounded-xl border border-[#E2E5EA] overflow-hidden">
             <table className="w-full">
@@ -298,7 +299,7 @@ export default function ApprovalsPage() {
                     : 'bg-[#ff3b30] hover:bg-[#e0342b]'
                 }`}
               >
-                {processing ? <Loader2 className="animate-spin" size={14} /> : actionType === 'approve' ? '승인' : '반려'}
+                {processing ? <Spinner size="sm" variant="white" /> : actionType === 'approve' ? '승인' : '반려'}
               </button>
             </div>
           </div>
@@ -311,7 +312,7 @@ export default function ApprovalsPage() {
           <div className="bg-white rounded-xl shadow-2xl flex flex-col" style={{ width: 'calc(100vw - 80px)', height: 'calc(100vh - 80px)' }} onClick={(e) => e.stopPropagation()}>
             {viewLoading ? (
               <div className="flex items-center justify-center py-20">
-                <Loader2 className="animate-spin text-[#7C8494]" size={24} />
+                <Spinner size="lg" />
               </div>
             ) : viewDoc && (
               <>

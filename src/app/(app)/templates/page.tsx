@@ -206,7 +206,7 @@ export default function TemplatesPage() {
           );
         } else {
           const errData = await res.json().catch(() => ({}));
-          alert(errData.error || '템플릿 수정에 실패했습니다.');
+          toast.error(errData.error || '템플릿 수정에 실패했습니다.');
           setSaving(false);
           return;
         }
@@ -244,7 +244,7 @@ export default function TemplatesPage() {
           ]);
         } else {
           const errData = await res.json().catch(() => ({}));
-          alert(errData.error || '템플릿 생성에 실패했습니다.');
+          toast.error(errData.error || '템플릿 생성에 실패했습니다.');
           setSaving(false);
           return;
         }
@@ -252,7 +252,7 @@ export default function TemplatesPage() {
       resetForm();
       loadTemplates();
     } catch (e) {
-      alert('저장 중 오류가 발생했습니다.');
+      toast.error('저장 중 오류가 발생했습니다.');
     } finally {
       setSaving(false);
     }
@@ -750,9 +750,9 @@ export default function TemplatesPage() {
                           );
                           setAutoRegStep(2);
                         } else {
-                          alert(d.error ?? '분석 실패');
+                          toast.error(d.error ?? '분석 실패');
                         }
-                      } catch { alert('서버 오류'); }
+                      } catch { toast.error('서버 오류'); }
                       setAnalyzing(false);
                     }}
                     disabled={!autoRegFile || analyzing}
@@ -874,7 +874,7 @@ export default function TemplatesPage() {
                   <button onClick={() => setAutoRegStep(2)} className="px-4 py-2 text-[13px] text-[#7C8494]">이전</button>
                   <button
                     onClick={async () => {
-                      if (!autoRegName.trim()) { alert('이름을 입력해주세요.'); return; }
+                      if (!autoRegName.trim()) { toast.error('이름을 입력해주세요.'); return; }
                       setAutoRegSaving(true);
                       try {
                         const selectedPhs = detectedPlaceholders.filter(p => p.selected).map(({ key, label, type, location, context }) => ({ key, label, type, location, context }));
@@ -896,9 +896,9 @@ export default function TemplatesPage() {
                           setShowAutoReg(false);
                           loadTemplates();
                         } else {
-                          alert(d.error ?? '등록 실패');
+                          toast.error(d.error ?? '등록 실패');
                         }
-                      } catch { alert('서버 오류'); }
+                      } catch { toast.error('서버 오류'); }
                       setAutoRegSaving(false);
                     }}
                     disabled={autoRegSaving || !autoRegName.trim()}

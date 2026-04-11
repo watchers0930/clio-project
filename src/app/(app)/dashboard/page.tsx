@@ -6,8 +6,9 @@ import Link from 'next/link';
 import {
   FolderOpen, FileText, Users, Search,
   Upload, Sparkles, FilePlus, LayoutTemplate,
-  ArrowUpRight, Clock, Loader2, ClipboardCheck
+  ArrowUpRight, Clock, ClipboardCheck
 } from 'lucide-react';
+import { Spinner } from '@/components/ui';
 import { FILE_TYPE_BADGE, FILE_STATUS_COLOR, ACTION_LABELS, CHART_COLORS } from '@/lib/constants/ui';
 import { formatTimeAgo } from '@/lib/utils/format';
 
@@ -145,7 +146,7 @@ export default function DashboardPage() {
               </div>
               {loading ? (
                 <div className="flex items-center gap-2">
-                  <Loader2 size={16} className="animate-spin text-muted" />
+                  <Spinner size="sm" />
                 </div>
               ) : (
                 <>
@@ -197,7 +198,7 @@ export default function DashboardPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="px-6 py-8 text-center text-muted"><Loader2 size={20} className="animate-spin mx-auto" /></td></tr>
+                <tr><td colSpan={5} className="px-6 py-8 text-center text-muted"><Spinner size="sm" /></td></tr>
               ) : recentFiles.length === 0 ? (
                 <tr><td colSpan={5} className="px-6 py-8 text-center text-[14px] text-muted">등록된 파일이 없습니다.</td></tr>
               ) : recentFiles.map((f) => (
@@ -227,7 +228,7 @@ export default function DashboardPage() {
           </div>
           <div style={{ padding: '8px 0' }}>
             {loading ? (
-              <div className="flex justify-center py-6"><Loader2 size={20} className="animate-spin text-muted" /></div>
+              <div className="flex justify-center py-6"><Spinner size="sm" /></div>
             ) : activities.length === 0 ? (
               <p className="text-[13px] text-muted text-center py-6">활동 기록이 없습니다.</p>
             ) : activities.map((a) => {
@@ -313,7 +314,7 @@ export default function DashboardPage() {
           </div>
           <div style={{ padding: '24px' }}>
             {loading ? (
-              <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-muted" /></div>
+              <div className="flex justify-center py-8"><Spinner size="sm" /></div>
             ) : (() => {
               const trend = data?.upload_trend ?? [];
               const maxCount = Math.max(...trend.map(t => t.count), 1);
@@ -354,7 +355,7 @@ export default function DashboardPage() {
           </div>
           <div className="flex flex-col items-center" style={{ padding: '24px', gap: 16 }}>
             {loading ? (
-              <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-muted" /></div>
+              <div className="flex justify-center py-8"><Spinner size="sm" /></div>
             ) : (() => {
               const ap = data?.approval_stats ?? { pending: 0, approved: 0, rejected: 0, total: 0 };
               const items = [
@@ -413,7 +414,7 @@ export default function DashboardPage() {
         </div>
         <div style={{ padding: '24px' }}>
           {loading ? (
-            <div className="flex justify-center py-6"><Loader2 size={20} className="animate-spin text-muted" /></div>
+            <div className="flex justify-center py-6"><Spinner size="sm" /></div>
           ) : (() => {
             const breakdown = data?.doc_dept_breakdown ?? {};
             const entries = Object.entries(breakdown).sort(([, a], [, b]) => b - a).slice(0, 6);
