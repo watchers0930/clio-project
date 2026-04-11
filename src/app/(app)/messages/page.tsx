@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/components/ui/toast';
+import { createClient } from '@/lib/supabase/client';
 import { Plus, Search, MessageCircle, Send, Paperclip, ChevronRight, ChevronDown, Building2, User, Trash2, FileText, X, Clock, Eye, FolderOpen, Loader2 } from 'lucide-react';
 
 /* ── types ── */
@@ -184,38 +185,37 @@ export default function MessagesPage() {
     await fetchMessages(channelId);
   };
 
-  // 5초마다 활성 채널 메시지 새로고침 + unread 체크
+  // 브라우저 알림 권한 요청
   useEffect(() => {
     if (!currentUser) return;
-    // 브라우저 알림 권한 요청
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
       Notification.requestPermission();
     }
+  }, [currentUser]);
 
-    const iv = setInterval(async () => {
-      // 활성 채널 메시지 갱신
-      if (activeChannel) await fetchMessages(activeChannel);
+  // 활성 채널 변경 시 Supabase Realtime 구독
+  useEffect(() => {
+    if (!activeChannel) return;
 
-      // unread 체크
-      try {
-        const res = await fetch('/api/messages/unread');
-        if (res.ok) {
-          const json = await res.json();
-          const unreadMap = (json.channels ?? {}) as Record<string, number>;
-          setChannels(prev => prev.map(c => ({
-            ...c, unread: c.id === activeChannel ? 0 : (unreadMap[c.id] ?? 0),
-          })));
+    const supabase = createClient();
+    if (!supabase) return;
 
-          // 새 unread가 있고 현재 채널이 아니면 알림
-          if (json.total > 0 && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-            // 채널별로 알림 (너무 자주 안 울리도록 총합만)
-          }
+    const channel = supabase
+      .channel(`messages:${activeChannel}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `channel_id=eq.${activeChannel}` },
+        () => {
+          // 새 메시지 삽입 감지 → 채널 메시지 새로고침
+          fetchMessages(activeChannel);
         }
-      } catch {}
-    }, 5000);
+      )
+      .subscribe();
 
-    return () => clearInterval(iv);
-  }, [currentUser, activeChannel, fetchMessages]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeChannel, fetchMessages]);
 
   const sendMessage = async () => {
     if (!input.trim() || !activeChannel) return;
