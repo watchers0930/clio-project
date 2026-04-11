@@ -77,7 +77,7 @@ export function ConfirmDialog({
             className={cn(
               'flex-1 py-2.5 rounded-xl text-sm font-medium text-white transition-colors disabled:opacity-40 flex items-center justify-center gap-2',
               variant === 'danger'
-                ? 'bg-red-500 hover:bg-red-600'
+                ? 'bg-[#1d1d1f] hover:bg-[#2d2d2f]'
                 : 'bg-[#0071e3] hover:bg-[#005bbf]'
             )}
           >

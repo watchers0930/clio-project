@@ -76,7 +76,7 @@ export default function TodoItemRow({ todo, onToggle, onEdit, onDelete }: TodoIt
         <button onClick={() => onEdit(todo)} className="p-1 rounded hover:bg-[#f5f5f7]">
           <Pencil size={13} className="text-[#7C8494]" />
         </button>
-        <button onClick={() => onDelete(todo.id)} className="p-1 rounded hover:bg-[#ff3b30]/5">
+        <button onClick={() => onDelete(todo.id)} className="p-1 rounded hover:bg-[#1d1d1f]/5">
           <Trash2 size={13} className="text-[#ff3b30]/60" />
         </button>
       </div>

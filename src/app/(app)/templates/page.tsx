@@ -355,7 +355,7 @@ export default function TemplatesPage() {
               <button
                 onClick={handleBulkDelete}
                 disabled={selectedIds.size === 0}
-                className="px-4 py-2.5 rounded-xl bg-[#ff3b30] text-white text-sm font-medium hover:bg-[#ff453a] transition-colors disabled:opacity-40"
+                className="px-4 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#2d2d2f] transition-colors disabled:opacity-40"
               >
                 {selectedIds.size}개 삭제
               </button>
@@ -493,7 +493,7 @@ export default function TemplatesPage() {
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }}
-                    className="flex-1 py-2.5 text-[12px] font-medium text-[#ff3b30]/70 hover:bg-[#ff3b30]/5 hover:text-[#ff3b30] transition-colors"
+                    className="flex-1 py-2.5 text-[12px] font-medium text-[#1d1d1f]/70 hover:bg-[#1d1d1f]/5 hover:text-[#1d1d1f] transition-colors"
                   >
                     삭제
                   </button>

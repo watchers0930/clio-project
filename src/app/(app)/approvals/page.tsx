@@ -181,13 +181,13 @@ export default function ApprovalsPage() {
                       <div className="flex gap-2 justify-end">
                         <button
                           onClick={() => { setActionTarget(item); setActionType('approve'); setActionComment(''); }}
-                          className="px-3 py-1.5 text-[12px] font-medium text-white bg-[#30d158] rounded-lg hover:bg-[#28b84d] transition-colors"
+                          className="px-3 py-1.5 text-[12px] font-medium text-white bg-[#0071e3] rounded-lg hover:bg-[#0066cc] transition-colors"
                         >
                           승인
                         </button>
                         <button
                           onClick={() => { setActionTarget(item); setActionType('reject'); setActionComment(''); }}
-                          className="px-3 py-1.5 text-[12px] font-medium text-white bg-[#ff3b30] rounded-lg hover:bg-[#e0342b] transition-colors"
+                          className="px-3 py-1.5 text-[12px] font-medium text-white bg-[#1d1d1f] rounded-lg hover:bg-[#2d2d2f] transition-colors"
                         >
                           반려
                         </button>
@@ -298,8 +298,8 @@ export default function ApprovalsPage() {
                 disabled={processing || (actionType === 'reject' && !actionComment.trim())}
                 className={`px-5 py-2 text-[13px] font-medium text-white rounded-lg transition-colors disabled:opacity-40 ${
                   actionType === 'approve'
-                    ? 'bg-[#30d158] hover:bg-[#28b84d]'
-                    : 'bg-[#ff3b30] hover:bg-[#e0342b]'
+                    ? 'bg-[#0071e3] hover:bg-[#0066cc]'
+                    : 'bg-[#1d1d1f] hover:bg-[#2d2d2f]'
                 }`}
               >
                 {processing ? <Spinner size="sm" variant="white" /> : actionType === 'approve' ? '승인' : '반려'}
@@ -342,13 +342,13 @@ export default function ApprovalsPage() {
                           setActionType('approve');
                           setActionComment('');
                         }}
-                        className="px-4 py-2 text-[13px] font-medium text-white bg-[#30d158] rounded-lg hover:bg-[#28b84d] transition-colors"
+                        className="px-4 py-2 text-[13px] font-medium text-white bg-[#0071e3] rounded-lg hover:bg-[#0066cc] transition-colors"
                       >
                         승인
                       </button>
                       <button
                         onClick={() => { setViewDoc(null); setViewPendingItem(null); }}
-                        className="px-4 py-2 text-[13px] font-medium text-white bg-[#ff9f0a] rounded-lg hover:bg-[#e88e00] transition-colors"
+                        className="px-4 py-2 text-[13px] font-medium text-white bg-[#2E6FF2] rounded-lg hover:bg-[#1a5ad9] transition-colors"
                       >
                         보류
                       </button>
@@ -360,7 +360,7 @@ export default function ApprovalsPage() {
                           setActionType('reject');
                           setActionComment('');
                         }}
-                        className="px-4 py-2 text-[13px] font-medium text-white bg-[#ff3b30] rounded-lg hover:bg-[#e0342b] transition-colors"
+                        className="px-4 py-2 text-[13px] font-medium text-white bg-[#1d1d1f] rounded-lg hover:bg-[#2d2d2f] transition-colors"
                       >
                         반려
                       </button>

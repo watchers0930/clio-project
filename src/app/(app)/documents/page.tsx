@@ -771,7 +771,7 @@ export default function DocumentsPage() {
                     </button>
                     <button
                       onClick={() => handleDelete(d.id)}
-                      className="flex-1 py-2.5 text-[12px] font-medium text-[#ff3b30]/70 hover:bg-[#ff3b30]/5 hover:text-[#ff3b30] transition-colors"
+                      className="flex-1 py-2.5 text-[12px] font-medium text-[#1d1d1f]/70 hover:bg-[#1d1d1f]/5 hover:text-[#1d1d1f] transition-colors"
                     >
                       삭제
                     </button>
@@ -948,7 +948,7 @@ export default function DocumentsPage() {
             <div className="px-8 py-5 border-t border-[#e5e5e7] flex items-center justify-between shrink-0">
               <div className="flex gap-2">
                 {isDraft && (
-                  <button onClick={handleComplete} disabled={saving} className="px-5 py-2.5 rounded-xl bg-[#30d158] text-white text-sm font-medium hover:bg-[#28b94c] disabled:opacity-50 transition-colors">
+                  <button onClick={handleComplete} disabled={saving} className="px-5 py-2.5 rounded-xl bg-[#0071e3] text-white text-sm font-medium hover:bg-[#0066cc] disabled:opacity-50 transition-colors">
                     {saving ? '처리 중...' : '완료'}
                   </button>
                 )}

@@ -231,7 +231,7 @@ export default function EventFormModal({
             {isEdit && onDelete && (
               <button
                 onClick={async () => { await onDelete(); onClose(); }}
-                className="px-4 py-2 text-[13px] text-[#ff3b30] hover:bg-[#ff3b30]/5 rounded-lg transition-colors"
+                className="px-4 py-2 text-[13px] text-[#1d1d1f] hover:bg-[#1d1d1f]/5 rounded-lg transition-colors"
               >
                 삭제
               </button>
