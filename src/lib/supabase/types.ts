@@ -53,6 +53,7 @@ export interface DbUser {
   id: string;
   email: string;
   name: string;
+  position: string;
   department_id: string | null;
   role: string;
   avatar_url: string | null;
