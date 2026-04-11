@@ -54,10 +54,72 @@ const SYSTEM_CONTRACT_FIELDS: ContractField[] = [
   { key: 'supplierCeo', label: '대표자 성명', type: 'text', placeholder: '김철수', required: true, group: '공급자' },
 ];
 
+/** 유지보수계약서 필드 */
+const MAINTENANCE_CONTRACT_FIELDS: ContractField[] = [
+  // 기본정보
+  { key: 'contractName', label: '계약명', type: 'text', placeholder: 'OO시스템 유지보수 사업', required: true, group: '기본정보' },
+  { key: 'systemName', label: '유지보수 대상 시스템', type: 'text', placeholder: 'OO정보시스템', required: true, group: '기본정보' },
+  { key: 'startDate', label: '유지보수 시작일', type: 'text', placeholder: 'yyyy/mm/dd', required: true, group: '기본정보', half: true },
+  { key: 'endDate', label: '유지보수 종료일', type: 'text', placeholder: 'yyyy/mm/dd', required: true, group: '기본정보', half: true },
+  { key: 'signDate', label: '계약 체결일', type: 'text', placeholder: 'yyyy/mm/dd', required: true, group: '기본정보' },
+  // 금액
+  { key: 'totalAmount', label: '연간 유지보수 금액 (원)', type: 'number', placeholder: '120000000', required: true, group: '금액' },
+  { key: 'supplyAmount', label: '공급가액 (원) — 자동계산', type: 'number', placeholder: '자동 계산됨', group: '금액', half: true },
+  { key: 'vatAmount', label: '부가가치세 (원) — 자동계산', type: 'number', placeholder: '자동 계산됨', group: '금액', half: true },
+  // 대금 지급
+  { key: 'paymentCycle', label: '대금 지급 주기', type: 'select', options: ['월별', '분기별', '반기별', '연간 일시'], group: '대금지급' },
+  { key: 'paymentDay', label: '지급일 (매월/분기 N일)', type: 'text', placeholder: '25', group: '대금지급' },
+  // 발주자
+  { key: 'clientName', label: '상호 또는 명칭', type: 'text', placeholder: '(주)OO기업', required: true, group: '발주자', half: true },
+  { key: 'clientPhone', label: '전화번호', type: 'text', placeholder: '02-1234-5678', group: '발주자', half: true },
+  { key: 'clientAddress', label: '주소', type: 'address', placeholder: '클릭하여 주소 검색', group: '발주자' },
+  { key: 'clientCeo', label: '대표자 성명', type: 'text', placeholder: '홍길동', required: true, group: '발주자' },
+  // 공급자
+  { key: 'supplierName', label: '상호 또는 명칭', type: 'text', placeholder: '(주)OO소프트', required: true, group: '공급자', half: true },
+  { key: 'supplierPhone', label: '전화번호', type: 'text', placeholder: '02-9876-5432', group: '공급자', half: true },
+  { key: 'supplierAddress', label: '주소', type: 'address', placeholder: '클릭하여 주소 검색', group: '공급자' },
+  { key: 'supplierCeo', label: '대표자 성명', type: 'text', placeholder: '김철수', required: true, group: '공급자' },
+];
+
+/** 소프트웨어구축계약서 필드 */
+const SOFTWARE_CONTRACT_FIELDS: ContractField[] = [
+  // 기본정보
+  { key: 'contractName', label: '계약명', type: 'text', placeholder: 'OO소프트웨어 개발 사업', required: true, group: '기본정보' },
+  { key: 'softwareName', label: '소프트웨어명', type: 'text', placeholder: 'OO관리시스템', required: true, group: '기본정보' },
+  { key: 'startDate', label: '개발 시작일', type: 'text', placeholder: 'yyyy/mm/dd', required: true, group: '기본정보', half: true },
+  { key: 'endDate', label: '납품 기한일', type: 'text', placeholder: 'yyyy/mm/dd', required: true, group: '기본정보', half: true },
+  { key: 'signDate', label: '계약 체결일', type: 'text', placeholder: 'yyyy/mm/dd', required: true, group: '기본정보' },
+  // 금액
+  { key: 'totalAmount', label: '계약금액 (원)', type: 'number', placeholder: '300000000', required: true, group: '금액' },
+  { key: 'supplyAmount', label: '공급가액 (원) — 자동계산', type: 'number', placeholder: '자동 계산됨', group: '금액', half: true },
+  { key: 'vatAmount', label: '부가가치세 (원) — 자동계산', type: 'number', placeholder: '자동 계산됨', group: '금액', half: true },
+  // 대금 지급
+  { key: 'advanceRate', label: '선급금 비율 (%)', type: 'number', placeholder: '30', group: '대금지급', half: true },
+  { key: 'progressRate', label: '중도금 총 비율 (%)', type: 'number', placeholder: '50', group: '대금지급', half: true },
+  { key: 'progressCount', label: '중도금 지급회수', type: 'number', placeholder: '2', group: '대금지급', half: true },
+  { key: 'finalRate', label: '잔금 비율 (%)', type: 'number', placeholder: '20', group: '대금지급', half: true },
+  { key: 'advancePayDate', label: '선급금 지급기일', type: 'text', placeholder: 'yyyy/mm/dd', group: '대금지급', half: true },
+  { key: 'finalPayDate', label: '잔금 지급기일 (납품 후)', type: 'text', placeholder: 'yyyy/mm/dd', group: '대금지급', half: true },
+  // 납품물
+  { key: 'deliverables', label: '납품물 목록', type: 'text', placeholder: '소스코드, 설치파일, 매뉴얼, 교육 1회', group: '납품물' },
+  { key: 'warrantyPeriod', label: '하자보증 기간', type: 'select', options: ['3개월', '6개월', '1년', '2년', '3년'], group: '납품물' },
+  // 발주자
+  { key: 'clientName', label: '상호 또는 명칭', type: 'text', placeholder: '(주)OO기업', required: true, group: '발주자', half: true },
+  { key: 'clientPhone', label: '전화번호', type: 'text', placeholder: '02-1234-5678', group: '발주자', half: true },
+  { key: 'clientAddress', label: '주소', type: 'address', placeholder: '클릭하여 주소 검색', group: '발주자' },
+  { key: 'clientCeo', label: '대표자 성명', type: 'text', placeholder: '홍길동', required: true, group: '발주자' },
+  // 공급자
+  { key: 'supplierName', label: '상호 또는 명칭', type: 'text', placeholder: '(주)OO소프트', required: true, group: '공급자', half: true },
+  { key: 'supplierPhone', label: '전화번호', type: 'text', placeholder: '02-9876-5432', group: '공급자', half: true },
+  { key: 'supplierAddress', label: '주소', type: 'address', placeholder: '클릭하여 주소 검색', group: '공급자' },
+  { key: 'supplierCeo', label: '대표자 성명', type: 'text', placeholder: '김철수', required: true, group: '공급자' },
+];
+
 /** 모든 계약서 스키마 */
 const CONTRACT_SCHEMAS: ContractSchema[] = [
   { templateName: '시스템구축계약서', fields: SYSTEM_CONTRACT_FIELDS },
-  // 추후 다른 계약서도 여기에 추가
+  { templateName: '유지보수계약서', fields: MAINTENANCE_CONTRACT_FIELDS },
+  { templateName: '소프트웨어구축계약서', fields: SOFTWARE_CONTRACT_FIELDS },
 ];
 
 /** 템플릿명으로 계약서 스키마 조회 */

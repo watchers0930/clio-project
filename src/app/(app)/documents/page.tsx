@@ -1144,6 +1144,17 @@ export default function DocumentsPage() {
                                         </span>
                                       )}
                                     </div>
+                                  ) : field.type === 'select' ? (
+                                    <select
+                                      value={contractFormData[field.key] ?? ''}
+                                      onChange={(e) => setContractFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
+                                      className="w-full px-4 py-2.5 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3] transition-shadow cursor-pointer"
+                                    >
+                                      <option value="">선택하세요</option>
+                                      {field.options?.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                      ))}
+                                    </select>
                                   ) : field.placeholder === 'yyyy/mm/dd' ? (
                                     <>
                                       <input
