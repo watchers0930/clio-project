@@ -74,7 +74,28 @@ const VALID_FORMATS: OutputFormat[] = ['docx', 'pdf', 'hwpx', 'xlsx', 'pptx'];
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { templateId, sourceFileIds, instructions, outputFormat = 'docx', font, customStructure, contractFormData } = body;
+    const { templateId, sourceFileIds, instructions, outputFormat = 'docx', font, customStructure, contractFormData, parentId } = body;
+
+    // 버전 정보 계산 (parentId가 있는 경우)
+    let versionFields: { parent_id?: string; version_number?: number } = {};
+    if (parentId) {
+      const { data: parentDoc } = await supabase
+        .from('documents')
+        .select('parent_id, version_number')
+        .eq('id', parentId)
+        .single();
+      const rootId: string = parentDoc?.parent_id ?? parentId;
+      const { data: siblings } = await supabase
+        .from('documents')
+        .select('version_number')
+        .or(`id.eq.${rootId},parent_id.eq.${rootId}`)
+        .order('version_number', { ascending: false })
+        .limit(1);
+      versionFields = {
+        parent_id: rootId,
+        version_number: (siblings?.[0]?.version_number ?? 1) + 1,
+      };
+    }
 
     // 폰트 테마 생성
     const fontParam = typeof font === 'string' ? font : '맑은 고딕';
@@ -242,6 +263,7 @@ export async function POST(request: NextRequest) {
           status: 'completed',
           storage_path: storagePath,
           created_by: authUserId,
+          ...versionFields,
         }).select().single();
 
         await supabase.from('audit_logs').insert({
@@ -342,6 +364,7 @@ export async function POST(request: NextRequest) {
         status: 'completed',
         storage_path: storagePath,
         created_by: authUserId,
+        ...versionFields,
       }).select().single();
 
       await supabase.from('audit_logs').insert({
@@ -424,6 +447,7 @@ export async function POST(request: NextRequest) {
         status: 'completed',
         storage_path: storagePath,
         created_by: authUserId,
+        ...versionFields,
       }).select().single();
 
       await supabase.from('audit_logs').insert({
@@ -479,6 +503,7 @@ export async function POST(request: NextRequest) {
         status: 'completed',
         storage_path: storagePath,
         created_by: authUserId,
+        ...versionFields,
       }).select().single();
 
       await supabase.from('audit_logs').insert({
@@ -514,6 +539,7 @@ export async function POST(request: NextRequest) {
         instructions: instructions ?? null,
         status: 'draft',
         created_by: authUserId,
+        ...versionFields,
       }).select().single();
 
       if (error) {
@@ -628,6 +654,7 @@ export async function POST(request: NextRequest) {
       status: 'completed',
       storage_path: storagePath,
       created_by: authUserId,
+      ...versionFields,
     }).select().single();
 
     await supabase.from('audit_logs').insert({

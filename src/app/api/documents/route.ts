@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('documents')
-      .select('*, templates:template_id(name)')
+      .select('*, templates:template_id(name), version_number, parent_id')
       .order('created_at', { ascending: false });
 
     if (status) {
@@ -46,6 +46,8 @@ export async function GET(request: NextRequest) {
         status: ({ completed: '완료', draft: '초안', submitted: '결재중', approved: '승인됨', rejected: '반려됨' } as Record<string, string>)[d.status] ?? d.status,
         sourceCount: d.source_file_ids?.length ?? 0,
         content: d.content,
+        versionNumber: (d as Record<string, unknown>).version_number ?? 1,
+        parentId: (d as Record<string, unknown>).parent_id ?? null,
       };
     });
 
@@ -58,7 +60,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { templateId, sourceFileIds, instructions, content: providedContent } = body;
+    const { templateId, sourceFileIds, instructions, content: providedContent, parentId } = body;
 
     if (!templateId) {
       return NextResponse.json({ error: '템플릿을 선택해주세요.' }, { status: 400 });
@@ -150,6 +152,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 버전 번호 결정 (parentId가 있으면 기존 버전 + 1)
+    let versionNumber = 1;
+    let resolvedParentId: string | null = null;
+    if (parentId) {
+      // rootId 계산: parentId 문서의 parent_id가 null이면 parentId 자체가 root
+      const { data: parentDoc } = await supabase
+        .from('documents')
+        .select('parent_id, version_number')
+        .eq('id', parentId)
+        .single();
+      resolvedParentId = parentDoc?.parent_id ?? parentId;
+      // 같은 루트의 최대 버전 조회
+      const { data: siblings } = await supabase
+        .from('documents')
+        .select('version_number')
+        .or(`id.eq.${resolvedParentId},parent_id.eq.${resolvedParentId}`)
+        .order('version_number', { ascending: false })
+        .limit(1);
+      versionNumber = (siblings?.[0]?.version_number ?? 1) + 1;
+    }
+
     const { data: newDoc, error } = await supabase.from('documents').insert({
       title,
       content: docContent,
@@ -158,6 +181,8 @@ export async function POST(request: NextRequest) {
       instructions: instructions ?? null,
       status: 'draft',
       created_by: authUserId,
+      parent_id: resolvedParentId,
+      version_number: versionNumber,
     }).select().single();
 
     if (error) {
