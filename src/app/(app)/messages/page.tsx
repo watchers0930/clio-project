@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/components/ui/toast';
 import { createClient } from '@/lib/supabase/client';
-import { Plus, Search, MessageCircle, Send, Paperclip, ChevronRight, ChevronDown, Building2, User, Trash2, FileText, X, Clock, Eye, FolderOpen, Loader2 } from 'lucide-react';
+import { Plus, Search, MessageCircle, Send, Paperclip, ChevronRight, ChevronDown, Building2, User, Trash2, FileText, X, Clock, Eye, FolderOpen } from 'lucide-react';
+import { Spinner, ConfirmDialog } from '@/components/ui';
 
 /* ── types ── */
 interface Channel { id: string; name: string; type: 'department' | 'dm' | 'group'; unread: number; lastMessage?: string; avatar?: string }
@@ -52,6 +53,9 @@ export default function MessagesPage() {
 
   // 첨부파일 업로드 상태
   const [uploading, setUploading] = useState(false);
+
+  // 채널 삭제 확인
+  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; channelId: string | null }>({ open: false, channelId: null });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -556,7 +560,7 @@ export default function MessagesPage() {
                       {c.lastMessage && <p className="text-xs text-[#6e6e73] truncate">{c.lastMessage}</p>}
                     </div>
                   </button>
-                  <button onClick={async (e) => { e.stopPropagation(); if (!confirm('이 대화를 삭제하시겠습니까?')) return; try { const admin = await fetch('/api/messages/channels?id=' + c.id, { method: 'DELETE' }); if (admin.ok) { if (activeChannel === c.id) setActiveChannel(null); await loadData(); } } catch (e) { console.warn("[ui]", e); } }}
+                  <button onClick={(e) => { e.stopPropagation(); setConfirmDelete({ open: true, channelId: c.id }); }}
                     className="p-1 rounded-lg text-transparent group-hover:text-[#a1a1a6] hover:!text-[#ff3b30] hover:bg-red-50 transition-all shrink-0">
                     <Trash2 size={14} />
                   </button>
@@ -640,7 +644,7 @@ export default function MessagesPage() {
             <div className="px-4 py-3 border-t border-[#e5e5e7]">
               <div className="flex items-center gap-2">
                 <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="p-2 rounded-xl hover:bg-[#f5f5f7] text-[#6e6e73] transition-colors shrink-0 disabled:opacity-40" title="파일 첨부">
-                  {uploading ? <Loader2 size={20} className="animate-spin" /> : <Paperclip size={20} />}
+                  {uploading ? <Spinner size="sm" /> : <Paperclip size={20} />}
                 </button>
                 <button onClick={openFileModal} className="p-2 rounded-xl hover:bg-[#f5f5f7] text-[#6e6e73] transition-colors shrink-0" title="파일함에서 공유"><FolderOpen size={20} /></button>
                 <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); sendMessage(); } }}
@@ -663,6 +667,27 @@ export default function MessagesPage() {
           <User size={22} />
         </button>
       )}
+
+      {/* 대화 삭제 확인 다이얼로그 */}
+      <ConfirmDialog
+        open={confirmDelete.open}
+        title="이 대화를 삭제하시겠습니까?"
+        description="삭제된 대화는 복구할 수 없습니다."
+        confirmLabel="삭제"
+        variant="danger"
+        onConfirm={async () => {
+          if (!confirmDelete.channelId) return;
+          try {
+            const res = await fetch('/api/messages/channels?id=' + confirmDelete.channelId, { method: 'DELETE' });
+            if (res.ok) {
+              if (activeChannel === confirmDelete.channelId) setActiveChannel(null);
+              await loadData();
+            }
+          } catch (e) { console.warn('[ui]', e); }
+          setConfirmDelete({ open: false, channelId: null });
+        }}
+        onCancel={() => setConfirmDelete({ open: false, channelId: null })}
+      />
     </div>
   );
 }

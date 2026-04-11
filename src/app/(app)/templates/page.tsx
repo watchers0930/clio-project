@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/toast';
+import { SkeletonCard, EmptyState, Tabs, ConfirmDialog } from '@/components/ui';
 
 /* ────────────────────────── types ────────────────────────── */
 interface TemplateFile {
@@ -53,6 +54,11 @@ export default function TemplatesPage() {
   const [formExistingFile, setFormExistingFile] = useState<TemplateFile | null>(null);
   const [formRemoveFile, setFormRemoveFile] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // 확인 다이얼로그
+  const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; description?: string; onConfirm: () => void }>({ open: false, title: '', onConfirm: () => {} });
+  const openConfirm = (title: string, description: string | undefined, onConfirm: () => void) => setConfirmState({ open: true, title, description, onConfirm });
+  const closeConfirm = () => setConfirmState((s) => ({ ...s, open: false }));
 
   // 자가등록 모달 상태
   const [showAutoReg, setShowAutoReg] = useState(false);
@@ -252,20 +258,20 @@ export default function TemplatesPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('이 템플릿을 삭제하시겠습니까?')) return;
-    try {
-      const res = await fetch(`/api/templates?id=${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setTemplates((prev) => prev.filter((t) => t.id !== id));
-      } else {
-        const data = await res.json().catch(() => ({}));
-        alert(data.error || '삭제에 실패했습니다.');
-      }
-      await loadTemplates();
-    } catch {
-      alert('삭제 중 오류가 발생했습니다.');
-    }
+  const handleDelete = (id: string) => {
+    openConfirm('템플릿을 삭제하시겠습니까?', '삭제된 템플릿은 복구할 수 없습니다.', async () => {
+      try {
+        const res = await fetch(`/api/templates?id=${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          setTemplates((prev) => prev.filter((t) => t.id !== id));
+        } else {
+          const data = await res.json().catch(() => ({}));
+          toast.error(data.error || '삭제에 실패했습니다.');
+        }
+        await loadTemplates();
+      } catch { toast.error('삭제 중 오류가 발생했습니다.'); }
+      closeConfirm();
+    });
   };
 
   const toggleSelect = (id: string) => {
@@ -284,23 +290,23 @@ export default function TemplatesPage() {
     }
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedIds.size === 0) return;
-    if (!confirm(`선택한 ${selectedIds.size}개 템플릿을 삭제하시겠습니까?`)) return;
-    try {
-      const results = await Promise.all(
-        Array.from(selectedIds).map((id) =>
-          fetch(`/api/templates?id=${id}`, { method: 'DELETE' }).then((r) => r.ok)
-        )
-      );
-      const failCount = results.filter((ok) => !ok).length;
-      if (failCount > 0) alert(`${failCount}개 삭제 실패`);
-      setSelectedIds(new Set());
-      setSelectMode(false);
-      await loadTemplates();
-    } catch {
-      alert('삭제 중 오류가 발생했습니다.');
-    }
+    openConfirm(`선택한 ${selectedIds.size}개 템플릿을 삭제하시겠습니까?`, '삭제된 템플릿은 복구할 수 없습니다.', async () => {
+      try {
+        const results = await Promise.all(
+          Array.from(selectedIds).map((id) =>
+            fetch(`/api/templates?id=${id}`, { method: 'DELETE' }).then((r) => r.ok)
+          )
+        );
+        const failCount = results.filter((ok) => !ok).length;
+        if (failCount > 0) toast.error(`${failCount}개 삭제 실패`);
+        setSelectedIds(new Set());
+        setSelectMode(false);
+        await loadTemplates();
+      } catch { toast.error('삭제 중 오류가 발생했습니다.'); }
+      closeConfirm();
+    });
   };
 
   const handleDuplicate = async (t: Template) => {
@@ -327,18 +333,7 @@ export default function TemplatesPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-8 w-48 bg-[#e5e5e7] rounded-lg" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-48 bg-white rounded-2xl border border-[#e5e5e7]" />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <SkeletonCard count={6} />;
 
   return (
     <div className="space-y-6 pb-10">
@@ -400,32 +395,26 @@ export default function TemplatesPage() {
       </div>
 
       {/* tabs */}
-      <div className="flex gap-6" style={{ marginBottom: 20 }}>
-        {(['전사 공용', '부서 전용'] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-1 pb-3 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === t ? 'border-[#0071e3] text-[#0071e3]' : 'border-transparent text-[#6e6e73] hover:text-[#1d1d1f]'}`}
-          >
-            {t} ({templates.filter((tmpl) => tmpl.scope === t).length})
-          </button>
-        ))}
+      <div style={{ marginBottom: 20 }}>
+        <Tabs
+          variant="underline"
+          tabs={[
+            { id: '전사 공용', label: `전사 공용 (${templates.filter((tmpl) => tmpl.scope === '전사 공용').length})` },
+            { id: '부서 전용', label: `부서 전용 (${templates.filter((tmpl) => tmpl.scope === '부서 전용').length})` },
+          ]}
+          activeTab={tab}
+          onChange={(id) => setTab(id as '전사 공용' | '부서 전용')}
+        />
       </div>
 
       {/* grid */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-24 h-24 rounded-full bg-[#f5f5f7] flex items-center justify-center" style={{ marginBottom: 20 }}>
-            <svg className="w-10 h-10 text-[#0071e3]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-semibold text-[#1d1d1f]" style={{ marginBottom: 20 }}>{tab} 템플릿이 없습니다</h3>
-          <p className="text-[#6e6e73] text-sm" style={{ marginBottom: 20 }}>새 템플릿을 만들어 보세요</p>
-          <button onClick={openCreate} className="px-6 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors">
-            새 템플릿
-          </button>
-        </div>
+        <EmptyState
+          iconType="template"
+          title={`${tab} 템플릿이 없습니다`}
+          description="새 템플릿을 만들어 보세요"
+          action={{ label: '새 템플릿', onClick: openCreate }}
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {filtered.map((t) => {
@@ -923,6 +912,17 @@ export default function TemplatesPage() {
           </div>
         </div>
       )}
+
+      {/* 삭제 확인 다이얼로그 */}
+      <ConfirmDialog
+        open={confirmState.open}
+        title={confirmState.title}
+        description={confirmState.description}
+        confirmLabel="삭제"
+        variant="danger"
+        onConfirm={confirmState.onConfirm}
+        onCancel={closeConfirm}
+      />
     </div>
   );
 }

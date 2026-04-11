@@ -7,6 +7,7 @@ import { ShareLinkModal } from '@/components/documents/ShareLinkModal';
 import { VersionPanel } from '@/components/documents/VersionPanel';
 import { ApprovalModal } from '@/components/documents/ApprovalModal';
 import { DOCUMENT_STATUS_BADGE } from '@/lib/constants/ui';
+import { ConfirmDialog, EmptyState, Spinner } from '@/components/ui';
 
 /* ────────────────────────── types ────────────────────────── */
 interface Document {
@@ -155,6 +156,19 @@ export default function DocumentsPage() {
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [approvalUsers, setApprovalUsers] = useState<Array<{ id: string; name: string; email: string; department?: string }>>([]);
   const [submittingApproval, setSubmittingApproval] = useState(false);
+
+  // ConfirmDialog 상태
+  const [confirmState, setConfirmState] = useState<{
+    open: boolean;
+    title: string;
+    description?: string;
+    onConfirm: () => void;
+  }>({ open: false, title: '', onConfirm: () => {} });
+
+  const openConfirm = (title: string, description: string | undefined, onConfirm: () => void) => {
+    setConfirmState({ open: true, title, description, onConfirm });
+  };
+  const closeConfirm = () => setConfirmState((s) => ({ ...s, open: false }));
 
   // Templates and source files from API
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -313,35 +327,39 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('이 문서를 삭제하시겠습니까?')) return;
-    try {
-      const res = await fetch(`/api/documents?id=${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setDocs((prev) => prev.filter((d) => d.id !== id));
-        setSelectedDocIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
-      }
-    } catch {
-      // silent
-    }
+  const handleDelete = (id: string) => {
+    openConfirm('문서 삭제', '이 문서를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.', async () => {
+      closeConfirm();
+      try {
+        const res = await fetch(`/api/documents?id=${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          setDocs((prev) => prev.filter((d) => d.id !== id));
+          setSelectedDocIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+        }
+      } catch (e) { console.warn('[docs] delete failed', e); }
+    });
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     const count = selectedDocIds.size;
     if (count === 0) return;
-    if (!confirm(`선택된 ${count}개 문서를 삭제하시겠습니까?`)) return;
-    const ids = Array.from(selectedDocIds);
-    await Promise.all(ids.map((id) => fetch(`/api/documents?id=${id}`, { method: 'DELETE' })));
-    setDocs((prev) => prev.filter((d) => !selectedDocIds.has(d.id)));
-    setSelectedDocIds(new Set());
+    openConfirm(`${count}개 문서 삭제`, '선택된 문서를 모두 삭제합니다. 이 작업은 되돌릴 수 없습니다.', async () => {
+      closeConfirm();
+      const ids = Array.from(selectedDocIds);
+      await Promise.all(ids.map((id) => fetch(`/api/documents?id=${id}`, { method: 'DELETE' })));
+      setDocs((prev) => prev.filter((d) => !selectedDocIds.has(d.id)));
+      setSelectedDocIds(new Set());
+    });
   };
 
-  const handleDeleteAll = async () => {
+  const handleDeleteAll = () => {
     if (docs.length === 0) return;
-    if (!confirm(`전체 ${docs.length}개 문서를 모두 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
-    await Promise.all(docs.map((d) => fetch(`/api/documents?id=${d.id}`, { method: 'DELETE' })));
-    setDocs([]);
-    setSelectedDocIds(new Set());
+    openConfirm(`전체 ${docs.length}개 문서 삭제`, '모든 문서를 삭제합니다. 이 작업은 되돌릴 수 없습니다.', async () => {
+      closeConfirm();
+      await Promise.all(docs.map((d) => fetch(`/api/documents?id=${d.id}`, { method: 'DELETE' })));
+      setDocs([]);
+      setSelectedDocIds(new Set());
+    });
   };
 
   const toggleDocSelect = (id: string) => {
@@ -400,8 +418,15 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleComplete = async () => {
-    if (!viewDoc || !confirm('문서를 최종 완료하시겠습니까?\n완료 후에도 초안으로 되돌릴 수 있습니다.')) return;
+  const handleComplete = () => {
+    if (!viewDoc) return;
+    openConfirm('문서 완료', '문서를 최종 완료 상태로 변경합니다. 완료 후에도 초안으로 되돌릴 수 있습니다.', async () => {
+      closeConfirm();
+      await _doComplete();
+    });
+  };
+  const _doComplete = async () => {
+    if (!viewDoc) return;
     setSaving(true);
     try {
       // 편집 내용이 있으면 함께 저장
@@ -425,8 +450,15 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleRevertToDraft = async () => {
-    if (!viewDoc || !confirm('초안 상태로 되돌리시겠습니까?')) return;
+  const handleRevertToDraft = () => {
+    if (!viewDoc) return;
+    openConfirm('초안으로 되돌리기', '문서를 초안 상태로 되돌립니다.', async () => {
+      closeConfirm();
+      await _doRevert();
+    });
+  };
+  const _doRevert = async () => {
+    if (!viewDoc) return;
     setSaving(true);
     try {
       const res = await fetch(`/api/documents/${viewDoc.id}`, {
@@ -599,18 +631,19 @@ export default function DocumentsPage() {
 
       {/* document list */}
       {docs.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-24 h-24 rounded-full bg-[#f5f5f7] flex items-center justify-center" style={{ marginBottom: 20 }}>
-            <svg className="w-10 h-10 text-[#0071e3]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-semibold text-[#1d1d1f]" style={{ marginBottom: 20 }}>생성된 문서가 없습니다</h3>
-          <p className="text-[#6e6e73] text-sm" style={{ marginBottom: 20 }}>새 문서 생성 버튼을 눌러 첫 문서를 만들어 보세요</p>
-          <button onClick={() => { const n = new Date(); setContractFormData({ signDate: `${n.getFullYear()}/${String(n.getMonth()+1).padStart(2,'0')}/${String(n.getDate()).padStart(2,'0')}` }); setShowModal(true); }} className="px-6 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors">
-            새 문서 생성
-          </button>
-        </div>
+        <EmptyState
+          iconType="file"
+          title="생성된 문서가 없습니다"
+          description="새 문서 생성 버튼을 눌러 첫 문서를 만들어 보세요"
+          action={{
+            label: '새 문서 생성',
+            onClick: () => {
+              const n = new Date();
+              setContractFormData({ signDate: `${n.getFullYear()}/${String(n.getMonth()+1).padStart(2,'0')}/${String(n.getDate()).padStart(2,'0')}` });
+              setShowModal(true);
+            },
+          }}
+        />
       ) : (
         <>
           {/* Bulk actions */}
@@ -770,7 +803,11 @@ export default function DocumentsPage() {
                   {isEdited && <span className="text-xs text-[#ff9f0a] font-medium">수정됨</span>}
                 </div>
               </div>
-              <button onClick={() => { if (isEdited && !confirm('수정 내용이 저장되지 않았습니다. 닫으시겠습니까?')) return; setViewDoc(null); }} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73] ml-3">
+              <button onClick={() => {
+                if (isEdited) {
+                  openConfirm('저장하지 않고 닫기', '수정 내용이 저장되지 않았습니다. 닫으시겠습니까?', () => { closeConfirm(); setViewDoc(null); });
+                } else { setViewDoc(null); }
+              }} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73] ml-3">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
@@ -1366,7 +1403,7 @@ export default function DocumentsPage() {
                   </div>
                   {generating && (
                     <div className="flex flex-col items-center py-6 gap-3">
-                      <div className="w-8 h-8 border-3 border-[#e5e5e7] border-t-[#0071e3] rounded-full animate-spin" />
+                      <Spinner size="lg" />
                       <p className="text-sm text-[#6e6e73]">AI가 문서를 생성하고 있습니다...</p>
                     </div>
                   )}
@@ -1594,6 +1631,16 @@ export default function DocumentsPage() {
           }}
         />
       )}
+
+      {/* ── 삭제/상태변경 확인 다이얼로그 ── */}
+      <ConfirmDialog
+        open={confirmState.open}
+        title={confirmState.title}
+        description={confirmState.description}
+        confirmLabel="확인"
+        onConfirm={confirmState.onConfirm}
+        onCancel={closeConfirm}
+      />
     </div>
   );
 }
