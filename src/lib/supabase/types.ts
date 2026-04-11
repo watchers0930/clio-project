@@ -312,6 +312,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  position: string;
   department_id?: string | null;
   department?: string;
   role: UserRole;

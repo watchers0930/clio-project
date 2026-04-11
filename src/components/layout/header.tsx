@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { Search, Bell, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/store/auth-store';
 
 interface BreadcrumbItem {
   label: string;
@@ -21,14 +22,8 @@ function Header({
   onMenuClick,
 }: HeaderProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('clio_user');
-      if (stored) setUser(JSON.parse(stored));
-    } catch {}
-  }, []);
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
 
   return (
     <header className="h-[64px] bg-white border-b border-border flex-shrink-0">
@@ -112,9 +107,9 @@ function Header({
                   <hr className="my-1 border-border" />
                   <button
                     className="block w-full text-left px-4 py-2.5 text-[14px] text-danger hover:bg-danger/5 transition-colors cursor-pointer"
-                    onClick={() => {
-                      localStorage.removeItem('clio_token');
-                      localStorage.removeItem('clio_user');
+                    onClick={async () => {
+                      setUserMenuOpen(false);
+                      await logout();
                       window.location.href = '/login';
                     }}
                   >

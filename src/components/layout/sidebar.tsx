@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuthStore } from '@/store/auth-store';
 import {
   LayoutDashboard,
   Search,
@@ -42,14 +43,8 @@ interface SidebarProps {
 
 function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const pathname = usePathname();
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const user = useAuthStore((s) => s.user);
   const [unreadTotal, setUnreadTotal] = useState(0);
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('clio_user');
-      if (stored) setUser(JSON.parse(stored));
-    } catch {}
-  }, []);
 
   // 안 읽은 메시지 수 폴링 (10초)
   useEffect(() => {

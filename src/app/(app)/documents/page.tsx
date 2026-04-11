@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { isContractTemplate, getContractSchema, type ContractField } from '@/lib/contract-fields';
+import { useAuthStore } from '@/store/auth-store';
 
 /* ────────────────────────── types ────────────────────────── */
 interface Document {
@@ -64,6 +65,7 @@ const TEMPLATE_ICONS: Record<string, string> = {
 
 /* ────────────────────────── page ─────────────────────────── */
 export default function DocumentsPage() {
+  const storeUser = useAuthStore((s) => s.user);
   const [docs, setDocs] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -413,8 +415,7 @@ export default function DocumentsPage() {
       const res = await fetch('/api/users');
       const d = await res.json();
       if (d.success) {
-        const currentUser = JSON.parse(localStorage.getItem('clio_user') ?? '{}');
-        setApprovalUsers((d.data ?? []).filter((u: { id: string }) => u.id !== currentUser.id));
+        setApprovalUsers((d.data ?? []).filter((u: { id: string }) => u.id !== storeUser?.id));
       }
     } catch {}
   };

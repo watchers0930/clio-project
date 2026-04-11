@@ -35,8 +35,6 @@ export const useAuthStore = create<AuthState>()(
           const { token, user } = res.data;
           apiClient.setToken(token);
           set({ user, token, isLoading: false });
-          // clio_user에 사용자 정보 저장 (다른 컴포넌트에서 참조)
-          try { localStorage.setItem('clio_user', JSON.stringify(user)); } catch {}
           return true;
         }
 
@@ -59,7 +57,6 @@ export const useAuthStore = create<AuthState>()(
             const { token, user } = data.data;
             apiClient.setToken(token);
             set({ user, token, isLoading: false });
-            try { localStorage.setItem('clio_user', JSON.stringify(user)); } catch {}
             return true;
           }
 
@@ -86,7 +83,6 @@ export const useAuthStore = create<AuthState>()(
 
         apiClient.setToken(null);
         set({ user: null, token: null, error: null });
-        try { localStorage.removeItem('clio_user'); } catch {}
       },
 
       fetchMe: async () => {
@@ -100,11 +96,9 @@ export const useAuthStore = create<AuthState>()(
 
         if (res.success && res.data) {
           set({ user: res.data, isLoading: false });
-          try { localStorage.setItem('clio_user', JSON.stringify(res.data)); } catch {}
         } else {
           // Token expired or invalid
           set({ user: null, token: null, isLoading: false });
-          try { localStorage.removeItem('clio_user'); } catch {}
         }
       },
 

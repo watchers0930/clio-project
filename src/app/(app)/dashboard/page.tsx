@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useAuthStore } from '@/store/auth-store';
 import Link from 'next/link';
 import {
   FolderOpen, FileText, Users, Search,
@@ -93,7 +94,7 @@ function formatTimeAgo(dateStr: string): string {
 const PIE_COLORS = ['#1d1d1f', '#6e6e73', '#0071e3', '#a1a1a6', '#d2d2d7'];
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<UserInfo | null>(null);
+  const user = useAuthStore((s) => s.user);
   const [data, setData] = useState<DashboardData | null>(null);
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,10 +127,6 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('clio_user');
-      if (stored) setUser(JSON.parse(stored));
-    } catch { /* ignore */ }
     fetchData();
   }, [fetchData]);
 

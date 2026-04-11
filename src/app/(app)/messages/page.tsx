@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useAuthStore } from '@/store/auth-store';
 import { Plus, Search, MessageCircle, Send, Paperclip, ChevronRight, ChevronDown, Building2, User, Trash2, FileText, X, Clock, Eye, FolderOpen, Loader2 } from 'lucide-react';
 
 /* ── types ── */
@@ -27,7 +28,7 @@ export default function MessagesPage() {
     return () => { if (main) main.style.overflow = ''; };
   }, []);
 
-  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string } | null>(null);
+  const currentUser = useAuthStore((s) => s.user);
 
   // 부서 트리
   const [deptTree, setDeptTree] = useState<DeptTree[]>([]);
@@ -52,9 +53,6 @@ export default function MessagesPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    try { const s = localStorage.getItem('clio_user'); if (s) setCurrentUser(JSON.parse(s)); } catch {}
-  }, []);
 
   // 채널 + 부서/사용자 트리 로드
   const loadData = useCallback(async () => {
