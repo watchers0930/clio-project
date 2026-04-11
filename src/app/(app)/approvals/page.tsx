@@ -30,13 +30,25 @@ interface MyRequest {
   decidedAt: string | null;
 }
 
+interface CompletedApproval {
+  id: string;
+  documentId: string;
+  documentTitle: string;
+  requester: { id: string; name: string; email: string; department: string } | null;
+  status: 'approved' | 'rejected';
+  comment: string | null;
+  requestedAt: string;
+  decidedAt: string | null;
+}
+
 // STATUS_BADGE → APPROVAL_STATUS_BADGE from @/lib/constants/ui
 
 /* ────────────────────────── page ─────────────────────────── */
 export default function ApprovalsPage() {
-  const [tab, setTab] = useState<'pending' | 'my-requests'>('pending');
+  const [tab, setTab] = useState<'pending' | 'completed' | 'my-requests'>('pending');
   const [pendingList, setPendingList] = useState<PendingApproval[]>([]);
   const [myRequests, setMyRequests] = useState<MyRequest[]>([]);
+  const [completedList, setCompletedList] = useState<CompletedApproval[]>([]);
   const [loading, setLoading] = useState(true);
 
   // 문서 내용 보기 모달
@@ -59,6 +71,7 @@ export default function ApprovalsPage() {
       const d = await res.json();
       if (d.success) {
         if (tab === 'pending') setPendingList(d.data);
+        else if (tab === 'completed') setCompletedList(d.data);
         else setMyRequests(d.data);
       }
     } catch (e) { console.warn("[ui]", e); }
@@ -135,10 +148,11 @@ export default function ApprovalsPage() {
         className="mb-6"
         tabs={[
           { id: 'pending', label: '결재 대기', count: pendingList.length || undefined },
+          { id: 'completed', label: '결재 완료' },
           { id: 'my-requests', label: '내 요청' },
         ]}
         activeTab={tab}
-        onChange={(id) => setTab(id as 'pending' | 'my-requests')}
+        onChange={(id) => setTab(id as 'pending' | 'completed' | 'my-requests')}
       />
 
       {/* 로딩 */}
@@ -192,6 +206,56 @@ export default function ApprovalsPage() {
                           반려
                         </button>
                       </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+      ) : tab === 'completed' ? (
+        /* ────── 결재 완료 탭 ────── */
+        completedList.length === 0 ? (
+          <EmptyState
+            iconType="check"
+            title="처리한 결재가 없습니다"
+            description="승인 또는 반려 처리한 결재가 여기에 표시됩니다."
+          />
+        ) : (
+          <div className="bg-white rounded-xl border border-[#E2E5EA] overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-[#E2E5EA] bg-[#f9fafb]">
+                  <th className="text-left text-[12px] font-medium text-[#7C8494] py-3 px-5">문서명</th>
+                  <th className="text-left text-[12px] font-medium text-[#7C8494] py-3 px-5">요청자</th>
+                  <th className="text-left text-[12px] font-medium text-[#7C8494] py-3 px-5">결과</th>
+                  <th className="text-left text-[12px] font-medium text-[#7C8494] py-3 px-5">처리일</th>
+                  <th className="text-left text-[12px] font-medium text-[#7C8494] py-3 px-5">코멘트</th>
+                </tr>
+              </thead>
+              <tbody>
+                {completedList.map((item) => (
+                  <tr key={item.id} className="border-b border-[#E2E5EA] last:border-0 hover:bg-[#f9fafb] transition-colors">
+                    <td className="py-3.5 px-5 text-[13px] text-[#1B1F2B] font-medium">
+                      <button onClick={() => openDocView(item.documentId)} className="text-[#2E6FF2] hover:underline text-left">
+                        {item.documentTitle}
+                      </button>
+                    </td>
+                    <td className="py-3.5 px-5 text-[13px] text-[#7C8494]">
+                      {item.requester?.name ?? '-'}
+                      {item.requester?.department ? <span className="text-[11px] ml-1 text-[#a1a1a6]">({item.requester.department})</span> : ''}
+                    </td>
+                    <td className="py-3.5 px-5">
+                      <StatusBadge type="approval" value={item.status} />
+                    </td>
+                    <td className="py-3.5 px-5 text-[13px] text-[#7C8494]">{item.decidedAt ? formatDate(item.decidedAt) : '-'}</td>
+                    <td className="py-3.5 px-5 text-[13px] text-[#7C8494]">
+                      {item.comment ? (
+                        <span className="flex items-center gap-1">
+                          <MessageSquare size={12} />
+                          <span className="truncate max-w-[200px]">{item.comment}</span>
+                        </span>
+                      ) : '-'}
                     </td>
                   </tr>
                 ))}

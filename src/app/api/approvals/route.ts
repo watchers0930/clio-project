@@ -16,9 +16,65 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const tab = searchParams.get('tab') ?? 'pending'; // pending | my-requests
+    const tab = searchParams.get('tab') ?? 'pending'; // pending | my-requests | completed
 
     const admin = createAdminSupabaseClient();
+
+    if (tab === 'completed') {
+      // 내가 처리한 결재 완료 목록 (approved | rejected)
+      const { data: rows, error } = await admin
+        .from('approvals')
+        .select('*')
+        .eq('approver_id', authUserId)
+        .in('status', ['approved', 'rejected'])
+        .order('decided_at', { ascending: false });
+
+      if (error) {
+        console.error('[approvals/GET completed]', error.message);
+        return NextResponse.json({ success: false, error: '조회 실패' }, { status: 500 });
+      }
+
+      const docIds = [...new Set((rows ?? []).map(r => r.document_id))];
+      const requesterIds = [...new Set((rows ?? []).map(r => r.requester_id))];
+
+      const [docRes, userRes] = await Promise.all([
+        docIds.length > 0
+          ? admin.from('documents').select('id, title, status, created_at').in('id', docIds)
+          : Promise.resolve({ data: [] }),
+        requesterIds.length > 0
+          ? admin.from('users').select('id, name, email, department_id').in('id', requesterIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      const deptIds = [...new Set((userRes.data ?? []).filter(u => u.department_id).map(u => u.department_id!))];
+      const deptRes = deptIds.length > 0
+        ? await admin.from('departments').select('id, name').in('id', deptIds)
+        : { data: [] };
+      const deptMap = new Map((deptRes.data ?? []).map(d => [d.id, d.name]));
+      const docMap = new Map((docRes.data ?? []).map(d => [d.id, d]));
+      const userMap = new Map((userRes.data ?? []).map(u => [u.id, u]));
+
+      const approvals = (rows ?? []).map(r => {
+        const requester = userMap.get(r.requester_id);
+        return {
+          id: r.id,
+          documentId: r.document_id,
+          documentTitle: docMap.get(r.document_id)?.title ?? '(삭제됨)',
+          requester: requester ? {
+            id: requester.id,
+            name: requester.name,
+            email: requester.email,
+            department: deptMap.get(requester.department_id ?? '') ?? '',
+          } : null,
+          status: r.status,
+          comment: r.comment,
+          requestedAt: r.requested_at,
+          decidedAt: r.decided_at,
+        };
+      });
+
+      return NextResponse.json({ success: true, data: approvals, count: approvals.length });
+    }
 
     if (tab === 'my-requests') {
       // 내가 올린 결재 요청
