@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Building2, Users, Plus, Pencil, Trash2, Loader2, Check, Save } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Building2, Users, Plus, Pencil, Trash2, Loader2, Check, Save, PenLine, Upload, X } from 'lucide-react';
 
 /* ── types ── */
 interface Department {
@@ -31,7 +31,7 @@ const ROLES = [
 ];
 
 export default function SettingsPage() {
-  const [tab, setTab] = useState<'departments' | 'users'>('departments');
+  const [tab, setTab] = useState<'departments' | 'users' | 'signature'>('departments');
   const [departments, setDepartments] = useState<Department[]>([]);
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,6 +58,12 @@ export default function SettingsPage() {
   const [userDeptId, setUserDeptId] = useState('');
   const [userRole, setUserRole] = useState('user');
   const [userSaving, setUserSaving] = useState(false);
+
+  // 서명 탭
+  const [sigUrl, setSigUrl] = useState<string | null>(null);
+  const [sigLoading, setSigLoading] = useState(false);
+  const [sigUploading, setSigUploading] = useState(false);
+  const sigFileRef = useRef<HTMLInputElement>(null);
 
   const loadDepartments = useCallback(async () => {
     try {
@@ -86,6 +92,44 @@ export default function SettingsPage() {
   useEffect(() => {
     Promise.all([loadDepartments(), loadUsers()]).finally(() => setLoading(false));
   }, [loadDepartments, loadUsers]);
+
+  // 서명 탭 진입 시 로드
+  useEffect(() => {
+    if (tab !== 'signature') return;
+    setSigLoading(true);
+    fetch('/api/auth/signature')
+      .then(r => r.json())
+      .then(d => { if (d.success) setSigUrl(d.data?.url ?? null); })
+      .catch(() => {})
+      .finally(() => setSigLoading(false));
+  }, [tab]);
+
+  const uploadSignature = async (file: File) => {
+    if (sigUploading) return;
+    setSigUploading(true);
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await fetch('/api/auth/signature', { method: 'POST', body: fd });
+      const d = await res.json();
+      if (d.success) {
+        setSigUrl(d.data?.url ?? null);
+        showToast('서명이 등록되었습니다.');
+      } else {
+        showToast(d.error ?? '업로드 실패');
+      }
+    } catch { showToast('업로드 중 오류가 발생했습니다.'); }
+    setSigUploading(false);
+  };
+
+  const deleteSignature = async () => {
+    if (!confirm('서명을 삭제하시겠습니까?')) return;
+    try {
+      await fetch('/api/auth/signature', { method: 'DELETE' });
+      setSigUrl(null);
+      showToast('서명이 삭제되었습니다.');
+    } catch { showToast('삭제 중 오류가 발생했습니다.'); }
+  };
 
   /* ── 부서 CRUD ── */
   const openDeptModal = (dept?: Department) => {
@@ -296,6 +340,12 @@ export default function SettingsPage() {
         >
           <Users size={16} /> 사용자 관리
         </button>
+        <button
+          onClick={() => setTab('signature')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${tab === 'signature' ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-[#6e6e73] hover:text-[#1d1d1f]'}`}
+        >
+          <PenLine size={16} /> 내 서명
+        </button>
       </div>
 
       {/* 부서 관리 */}
@@ -412,6 +462,71 @@ export default function SettingsPage() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* 내 서명 */}
+      {tab === 'signature' && (
+        <div className="bg-card rounded-2xl border border-border p-8 max-w-lg">
+          <h2 className="text-[16px] font-semibold mb-1">전자 서명 관리</h2>
+          <p className="text-sm text-muted mb-6">문서 다운로드 시 서명란에 자동으로 삽입됩니다. PNG, JPEG, WebP (최대 2MB)</p>
+
+          {sigLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <Loader2 size={20} className="animate-spin text-muted" />
+            </div>
+          ) : sigUrl ? (
+            <div className="flex flex-col gap-4">
+              <div className="relative border border-border rounded-xl overflow-hidden bg-[#f5f5f7] flex items-center justify-center" style={{ height: 140 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={sigUrl} alt="내 서명" style={{ maxHeight: 120, maxWidth: '100%', objectFit: 'contain' }} />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => sigFileRef.current?.click()}
+                  disabled={sigUploading}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40"
+                >
+                  {sigUploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                  서명 교체
+                </button>
+                <button
+                  onClick={deleteSignature}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors"
+                >
+                  <X size={14} /> 삭제
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
+              onClick={() => sigFileRef.current?.click()}
+              className="border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-[#0071e3] hover:bg-blue-50/30 transition-colors"
+              style={{ height: 160 }}
+            >
+              {sigUploading ? (
+                <Loader2 size={24} className="animate-spin text-muted" />
+              ) : (
+                <>
+                  <PenLine size={28} className="text-muted" />
+                  <p className="text-sm text-muted font-medium">클릭하여 서명 이미지 등록</p>
+                  <p className="text-xs text-muted">PNG · JPEG · WebP, 최대 2MB</p>
+                </>
+              )}
+            </div>
+          )}
+
+          <input
+            ref={sigFileRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) uploadSignature(file);
+              e.target.value = '';
+            }}
+          />
         </div>
       )}
 

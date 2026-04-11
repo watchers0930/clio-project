@@ -7,6 +7,7 @@ import { renderHwpx } from '@/lib/renderers/hwpx-renderer';
 import { renderPdf } from '@/lib/renderers/pdf-renderer';
 import type { CorporateTheme } from '@/lib/renderers/types';
 import { DEFAULT_THEME } from '@/lib/renderers/types';
+import { injectSignatureDocx, injectSignatureHwpx } from '@/lib/utils/inject-signature';
 
 /**
  * GET /api/documents/[id]/download?font=맑은고딕&format=docx
@@ -79,6 +80,23 @@ export async function GET(
 
     const inline = url.searchParams.get('inline') === 'true';
 
+    // 서명 이미지 가져오기 (없으면 null)
+    let signatureBuffer: Buffer | null = null;
+    let signerName = '';
+    try {
+      const adminClient = createAdminSupabaseClient();
+      const { data: userData } = await adminClient
+        .from('users')
+        .select('name, signature_path')
+        .eq('id', authUserId)
+        .single();
+      signerName = userData?.name ?? '';
+      if (userData?.signature_path) {
+        const { data: sigBlob } = await adminClient.storage.from('files').download(userData.signature_path);
+        if (sigBlob) signatureBuffer = Buffer.from(await sigBlob.arrayBuffer());
+      }
+    } catch { /* 서명 없으면 그냥 진행 */ }
+
     // storage_path가 있고 inline(미리보기) 요청이면 실제 파일을 PDF로 서빙
     // storage_path가 있고 다운로드 요청이면 실제 파일을 원본 포맷으로 서빙
     if (doc.storage_path) {
@@ -123,13 +141,18 @@ export async function GET(
           });
         }
 
-        // 다운로드: 원본 파일 서빙
+        // 다운로드: 서명 주입 후 파일 서빙
+        let finalBuffer = fileBuffer;
+        if (!inline && signatureBuffer) {
+          if (ext === 'docx') finalBuffer = injectSignatureDocx(fileBuffer, signatureBuffer);
+          else if (ext === 'hwpx') finalBuffer = injectSignatureHwpx(fileBuffer, signatureBuffer, signerName);
+        }
         const fileName = encodeURIComponent(`${doc.title}.${ext}`);
-        return new NextResponse(fileBuffer, {
+        return new NextResponse(finalBuffer, {
           headers: {
             'Content-Type': mimeMap[ext] ?? 'application/octet-stream',
             'Content-Disposition': `attachment; filename*=UTF-8''${fileName}`,
-            'Content-Length': String(fileBuffer.length),
+            'Content-Length': String(finalBuffer.length),
           },
         });
       }
