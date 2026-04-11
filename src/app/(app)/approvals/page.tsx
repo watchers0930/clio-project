@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ClipboardCheck, Clock, CheckCircle, XCircle, Send, Loader2, MessageSquare } from 'lucide-react';
+import { ClipboardCheck, Clock, CheckCircle, XCircle, Send, MessageSquare } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
+import { Spinner, EmptyState, Tabs, StatusBadge } from '@/components/ui';
 import { APPROVAL_STATUS_BADGE } from '@/lib/constants/ui';
 import { formatDate } from '@/lib/utils/format';
 
@@ -127,37 +128,29 @@ export default function ApprovalsPage() {
       </div>
 
       {/* 탭 */}
-      <div className="flex gap-1 mb-6 bg-[#f5f5f7] rounded-lg p-1 w-fit">
-        <button
-          onClick={() => setTab('pending')}
-          className={`px-4 py-2 text-[13px] font-medium rounded-md transition-all ${
-            tab === 'pending' ? 'bg-white text-[#1B1F2B] shadow-sm' : 'text-[#7C8494] hover:text-[#1B1F2B]'
-          }`}
-        >
-          결재 대기
-        </button>
-        <button
-          onClick={() => setTab('my-requests')}
-          className={`px-4 py-2 text-[13px] font-medium rounded-md transition-all ${
-            tab === 'my-requests' ? 'bg-white text-[#1B1F2B] shadow-sm' : 'text-[#7C8494] hover:text-[#1B1F2B]'
-          }`}
-        >
-          내 요청
-        </button>
-      </div>
+      <Tabs
+        className="mb-6"
+        tabs={[
+          { id: 'pending', label: '결재 대기', count: pendingList.length || undefined },
+          { id: 'my-requests', label: '내 요청' },
+        ]}
+        activeTab={tab}
+        onChange={(id) => setTab(id as 'pending' | 'my-requests')}
+      />
 
       {/* 로딩 */}
       {loading ? (
         <div className="flex justify-center py-20">
-          <Loader2 className="animate-spin text-[#7C8494]" size={24} />
+          <Spinner size="lg" />
         </div>
       ) : tab === 'pending' ? (
         /* ────── 결재 대기 탭 ────── */
         pendingList.length === 0 ? (
-          <div className="text-center py-20 text-[#7C8494] text-[14px]">
-            <ClipboardCheck size={40} className="mx-auto mb-3 opacity-30" />
-            결재 대기 건이 없습니다.
-          </div>
+          <EmptyState
+            iconType="check"
+            title="결재 대기 건이 없습니다"
+            description="새로운 결재 요청이 들어오면 여기에 표시됩니다."
+          />
         ) : (
           <div className="bg-white rounded-xl border border-[#E2E5EA] overflow-hidden">
             <table className="w-full">
@@ -224,34 +217,29 @@ export default function ApprovalsPage() {
                 </tr>
               </thead>
               <tbody>
-                {myRequests.map((item) => {
-                  const badge = APPROVAL_STATUS_BADGE[item.status] ?? APPROVAL_STATUS_BADGE.pending;
-                  return (
-                    <tr key={item.id} className="border-b border-[#E2E5EA] last:border-0 hover:bg-[#f9fafb] transition-colors">
-                      <td className="py-3.5 px-5 text-[13px] text-[#1B1F2B] font-medium">
-                        <button onClick={() => openDocView(item.documentId)} className="text-[#2E6FF2] hover:underline text-left">
-                          {item.documentTitle}
-                        </button>
-                      </td>
-                      <td className="py-3.5 px-5 text-[13px] text-[#7C8494]">{item.approver?.name ?? '-'}</td>
-                      <td className="py-3.5 px-5">
-                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium ${badge.color}`}>
-                          {badge.label}
+                {myRequests.map((item) => (
+                  <tr key={item.id} className="border-b border-[#E2E5EA] last:border-0 hover:bg-[#f9fafb] transition-colors">
+                    <td className="py-3.5 px-5 text-[13px] text-[#1B1F2B] font-medium">
+                      <button onClick={() => openDocView(item.documentId)} className="text-[#2E6FF2] hover:underline text-left">
+                        {item.documentTitle}
+                      </button>
+                    </td>
+                    <td className="py-3.5 px-5 text-[13px] text-[#7C8494]">{item.approver?.name ?? '-'}</td>
+                    <td className="py-3.5 px-5">
+                      <StatusBadge type="approval" value={item.status} />
+                    </td>
+                    <td className="py-3.5 px-5 text-[13px] text-[#7C8494]">{formatDate(item.requestedAt)}</td>
+                    <td className="py-3.5 px-5 text-[13px] text-[#7C8494]">{item.decidedAt ? formatDate(item.decidedAt) : '-'}</td>
+                    <td className="py-3.5 px-5 text-[13px] text-[#7C8494]">
+                      {item.comment ? (
+                        <span className="flex items-center gap-1">
+                          <MessageSquare size={12} />
+                          <span className="truncate max-w-[200px]">{item.comment}</span>
                         </span>
-                      </td>
-                      <td className="py-3.5 px-5 text-[13px] text-[#7C8494]">{formatDate(item.requestedAt)}</td>
-                      <td className="py-3.5 px-5 text-[13px] text-[#7C8494]">{item.decidedAt ? formatDate(item.decidedAt) : '-'}</td>
-                      <td className="py-3.5 px-5 text-[13px] text-[#7C8494]">
-                        {item.comment ? (
-                          <span className="flex items-center gap-1">
-                            <MessageSquare size={12} />
-                            <span className="truncate max-w-[200px]">{item.comment}</span>
-                          </span>
-                        ) : '-'}
-                      </td>
-                    </tr>
-                  );
-                })}
+                      ) : '-'}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

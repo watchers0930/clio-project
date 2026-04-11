@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { FILE_TYPE_BADGE } from '@/lib/constants/ui';
+import { SearchInput, EmptyState, Spinner } from '@/components/ui';
 
 /* ────────────────────────── types ────────────────────────── */
 interface SearchResult {
@@ -171,29 +172,18 @@ export default function SearchPage() {
       </section>
 
       {/* ── search bar ── */}
-      <div className="bg-white rounded-2xl border border-[#e5e5e7] overflow-hidden" style={{ padding: '28px' }}>
-        <div className="relative">
-          <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6e6e73]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-          </svg>
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && doSearch(query)}
-            placeholder="자연어로 문서를 검색하세요..."
-            className="w-full rounded-xl border border-[#e5e5e7] bg-[#f5f5f7] text-[#1d1d1f] text-[14px] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] focus:border-transparent"
-            style={{ padding: '12px 96px 12px 48px' }}
-          />
-          <button
-            onClick={() => doSearch(query)}
-            disabled={loading || !query.trim()}
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl bg-[#1d1d1f] text-white text-[14px] font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ padding: '10px 22px' }}
-          >
-            {loading ? '검색 중...' : '검색'}
-          </button>
-        </div>
+      <div className="bg-white rounded-2xl border border-[#e5e5e7]" style={{ padding: '28px' }}>
+        <SearchInput
+          value={query}
+          onChange={setQuery}
+          onSearch={() => doSearch(query)}
+          placeholder="자연어로 문서를 검색하세요..."
+          showButton
+          buttonLabel={loading ? '검색 중...' : '검색'}
+          loading={loading}
+          disabled={loading || !query.trim()}
+          size="lg"
+        />
       </div>
 
       {/* ── filters ── */}
@@ -242,7 +232,7 @@ export default function SearchPage() {
       {/* ── loading ── */}
       {loading && (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <div className="w-10 h-10 border-3 border-[#e5e5e7] border-t-[#0071e3] rounded-full animate-spin" />
+          <Spinner size="lg" />
           <p className="text-[#6e6e73] text-sm">AI가 문서를 분석하고 있습니다...</p>
         </div>
       )}
@@ -266,15 +256,11 @@ export default function SearchPage() {
           </div>
 
           {sortedResults.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="w-24 h-24 rounded-full bg-[#f5f5f7] flex items-center justify-center" style={{ marginBottom: 20 }}>
-                <svg className="w-10 h-10 text-[#e5e5e7]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-[#1d1d1f]" style={{ marginBottom: 20 }}>검색 결과가 없습니다</h3>
-              <p className="text-[#6e6e73] text-sm">다른 키워드로 다시 검색해 보세요</p>
-            </div>
+            <EmptyState
+              iconType="search"
+              title="검색 결과가 없습니다"
+              description="다른 키워드로 다시 검색해 보세요"
+            />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {sortedResults.map((r) => (

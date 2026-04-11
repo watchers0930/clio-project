@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
 import { FILE_TYPE_BADGE, FILE_STATUS_COLOR } from '@/lib/constants/ui';
 import { formatSize, getFileType } from '@/lib/utils/format';
+import { Spinner, EmptyState } from '@/components/ui';
 
 /* ────────────────────────── types ────────────────────────── */
 interface FileItem {
@@ -715,7 +716,7 @@ function FilesPage() {
             {/* Loading */}
             {scrapeLoading && (
               <div className="flex items-center gap-3 mt-4 p-4 rounded-xl bg-[#f5f5f7]">
-                <div className="w-5 h-5 border-2 border-[#0071e3] border-t-transparent rounded-full animate-spin" />
+                <Spinner size="sm" />
                 <span className="text-sm text-[#6e6e73]">상품 링크를 수집하고 있습니다...</span>
               </div>
             )}

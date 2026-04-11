@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Building2, Users, Plus, Pencil, Trash2, Loader2, Check, Save, PenLine, Upload, X } from 'lucide-react';
+import { Spinner, Tabs } from '@/components/ui';
 
 /* ── types ── */
 interface Department {
@@ -314,7 +315,7 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 size={24} className="animate-spin text-muted" />
+        <Spinner size="lg" />
       </div>
     );
   }
@@ -327,26 +328,15 @@ export default function SettingsPage() {
       </div>
 
       {/* 탭 */}
-      <div className="flex gap-1 bg-[#f5f5f7] rounded-xl p-1 w-fit">
-        <button
-          onClick={() => setTab('departments')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${tab === 'departments' ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-[#6e6e73] hover:text-[#1d1d1f]'}`}
-        >
-          <Building2 size={16} /> 부서 관리
-        </button>
-        <button
-          onClick={() => setTab('users')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${tab === 'users' ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-[#6e6e73] hover:text-[#1d1d1f]'}`}
-        >
-          <Users size={16} /> 사용자 관리
-        </button>
-        <button
-          onClick={() => setTab('signature')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${tab === 'signature' ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-[#6e6e73] hover:text-[#1d1d1f]'}`}
-        >
-          <PenLine size={16} /> 내 서명
-        </button>
-      </div>
+      <Tabs
+        tabs={[
+          { id: 'departments', label: '부서 관리', icon: <Building2 size={15} /> },
+          { id: 'users',       label: '사용자 관리', icon: <Users size={15} /> },
+          { id: 'signature',   label: '내 서명',   icon: <PenLine size={15} /> },
+        ]}
+        activeTab={tab}
+        onChange={(id) => setTab(id as 'departments' | 'users' | 'signature')}
+      />
 
       {/* 부서 관리 */}
       {tab === 'departments' && (

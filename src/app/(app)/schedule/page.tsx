@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { CalendarDays, CheckSquare, Loader2 } from 'lucide-react';
+import { CalendarDays, CheckSquare } from 'lucide-react';
+import { Spinner, Tabs } from '@/components/ui';
 import { startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import CalendarHeader from '@/components/schedule/calendar-header';
 import CalendarGrid from '@/components/schedule/calendar-grid';
@@ -123,37 +124,21 @@ export default function SchedulePage() {
       </div>
 
       {/* 탭 */}
-      <div className="flex gap-1 bg-[#f5f5f7] rounded-lg p-1 w-fit" style={{ marginBottom: 10 }}>
-        <button
-          onClick={() => setActiveTab('calendar')}
-          className={`flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded-md transition-all ${
-            activeTab === 'calendar' ? 'bg-white text-[#1B1F2B] shadow-sm' : 'text-[#7C8494] hover:text-[#1B1F2B]'
-          }`}
-        >
-          <CalendarDays size={15} />
-          캘린더
-        </button>
-        <button
-          onClick={() => setActiveTab('todo')}
-          className={`flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded-md transition-all ${
-            activeTab === 'todo' ? 'bg-white text-[#1B1F2B] shadow-sm' : 'text-[#7C8494] hover:text-[#1B1F2B]'
-          }`}
-        >
-          <CheckSquare size={15} />
-          할일
-          {activeTodoCount > 0 && (
-            <span className="ml-0.5 px-1.5 py-0.5 text-[10px] font-semibold bg-[#2E6FF2] text-white rounded-full font-num">
-              {activeTodoCount}
-            </span>
-          )}
-        </button>
-      </div>
+      <Tabs
+        style={{ marginBottom: 10 }}
+        tabs={[
+          { id: 'calendar', label: '캘린더', icon: <CalendarDays size={14} /> },
+          { id: 'todo', label: '할일', icon: <CheckSquare size={14} />, count: activeTodoCount || undefined },
+        ]}
+        activeTab={activeTab}
+        onChange={(id) => setActiveTab(id as Tab)}
+      />
 
       {/* 콘텐츠 */}
       {activeTab === 'calendar' ? (
         loading ? (
           <div className="flex justify-center py-20">
-            <Loader2 className="animate-spin text-[#7C8494]" size={24} />
+            <Spinner size="lg" />
           </div>
         ) : (
           <>
