@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { Sidebar } from './sidebar';
 import { Header } from './header';
 import { Footer } from './footer';
 import { ToastRenderer } from '@/components/ui/toast';
+import { useAuthStore } from '@/store/auth-store';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -13,6 +14,21 @@ interface AppLayoutProps {
 function AppLayout({ children }: AppLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const initAuthListener = useAuthStore((s) => s.initAuthListener);
+  const fetchMe = useAuthStore((s) => s.fetchMe);
+  const token = useAuthStore((s) => s.token);
+
+  // 앱 마운트 시 Supabase auth 구독 시작
+  useEffect(() => {
+    const unsubscribe = initAuthListener();
+    return unsubscribe;
+  }, [initAuthListener]);
+
+  // token은 있으나 user가 null인 경우(새로고침 등) → 프로필 복원
+  useEffect(() => {
+    if (token) fetchMe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden bg-page-bg">
