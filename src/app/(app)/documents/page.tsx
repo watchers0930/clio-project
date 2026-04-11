@@ -128,6 +128,15 @@ export default function DocumentsPage() {
   const [fileDeptFilter, setFileDeptFilter] = useState('전체');
   const [fileTypeFilter, setFileTypeFilter] = useState('전체');
 
+  // 공유 링크 모달
+  const [shareDocId, setShareDocId] = useState<string | null>(null);
+  const [shareDocTitle, setShareDocTitle] = useState('');
+  const [shareExpiresInDays, setShareExpiresInDays] = useState('7');
+  const [sharePassword, setSharePassword] = useState('');
+  const [shareCreating, setShareCreating] = useState(false);
+  const [shareResult, setShareResult] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
+
   // Bulk select
   const [selectedDocIds, setSelectedDocIds] = useState<Set<string>>(new Set());
 
@@ -352,6 +361,38 @@ export default function DocumentsPage() {
     } else {
       setSelectedDocIds(new Set(docs.map((d) => d.id)));
     }
+  };
+
+  const createShareLink = async () => {
+    if (!shareDocId || shareCreating) return;
+    setShareCreating(true);
+    try {
+      const res = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resourceType: 'document',
+          resourceId: shareDocId,
+          title: shareDocTitle,
+          expiresInDays: shareExpiresInDays ? parseInt(shareExpiresInDays) : undefined,
+          password: sharePassword || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShareResult(`${window.location.origin}${data.url}`);
+      } else {
+        alert(data.error ?? '링크 생성 실패');
+      }
+    } catch { alert('링크 생성 중 오류가 발생했습니다.'); }
+    setShareCreating(false);
+  };
+
+  const copyShareLink = async () => {
+    if (!shareResult) return;
+    await navigator.clipboard.writeText(shareResult);
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2000);
   };
 
   const openVersionPanel = async (docId: string) => {
@@ -713,6 +754,13 @@ export default function DocumentsPage() {
                       className="flex-1 py-2.5 text-[12px] font-medium text-[#1B1F2B] hover:bg-[#f5f5f7] transition-colors border-r border-[#E2E5EA]/60"
                     >
                       다운로드
+                    </button>
+                    <button
+                      onClick={() => { setShareDocId(d.id); setShareDocTitle(d.title); setShareResult(null); setSharePassword(''); setShareExpiresInDays('7'); }}
+                      className="flex-1 py-2.5 text-[12px] font-medium text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors border-r border-[#E2E5EA]/60"
+                      title="공유 링크 생성"
+                    >
+                      공유
                     </button>
                     <button
                       onClick={() => openVersionPanel(d.id)}
@@ -1602,6 +1650,69 @@ export default function DocumentsPage() {
                 {submittingApproval ? '요청 중...' : '결재 요청'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 공유 링크 생성 모달 ── */}
+      {shareDocId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setShareDocId(null); setShareResult(null); } }}>
+          <div className="bg-white rounded-2xl border border-[#e5e5e7] shadow-xl w-full max-w-md p-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-base font-semibold text-[#1d1d1f]">외부 공유 링크 생성</h2>
+                <p className="text-xs text-[#6e6e73] mt-0.5 truncate max-w-xs">{shareDocTitle}</p>
+              </div>
+              <button onClick={() => { setShareDocId(null); setShareResult(null); }} className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            {!shareResult ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div>
+                  <label className="block text-sm font-medium text-[#6e6e73] mb-2">만료 기간</label>
+                  <select value={shareExpiresInDays} onChange={(e) => setShareExpiresInDays(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-[#e5e5e7] bg-[#f5f5f7] text-sm text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3]">
+                    <option value="1">1일</option>
+                    <option value="7">7일</option>
+                    <option value="30">30일</option>
+                    <option value="90">90일</option>
+                    <option value="">만료 없음</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#6e6e73] mb-2">비밀번호 <span className="text-xs text-[#a1a1a6]">(선택)</span></label>
+                  <input type="password" value={sharePassword} onChange={(e) => setSharePassword(e.target.value)}
+                    placeholder="설정하지 않으면 공개 링크"
+                    className="w-full px-3 py-2.5 rounded-xl border border-[#e5e5e7] bg-[#f5f5f7] text-sm text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3]" />
+                </div>
+                <button onClick={createShareLink} disabled={shareCreating}
+                  className="w-full py-3 rounded-xl bg-[#0071e3] text-white text-sm font-medium hover:bg-[#005bbf] transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
+                  {shareCreating ? (
+                    <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>생성 중...</>
+                  ) : '링크 생성'}
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-[#f5f5f7] border border-[#e5e5e7]">
+                  <p className="text-sm text-[#1d1d1f] flex-1 truncate font-mono text-xs">{shareResult}</p>
+                  <button onClick={copyShareLink} className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${shareCopied ? 'bg-[#34c759] text-white' : 'bg-[#0071e3] text-white hover:bg-[#005bbf]'}`}>
+                    {shareCopied ? '복사됨!' : '복사'}
+                  </button>
+                </div>
+                <div className="flex gap-2 text-xs text-[#6e6e73]">
+                  {shareExpiresInDays && <span>⏱ {shareExpiresInDays}일 후 만료</span>}
+                  {sharePassword && <span>🔒 비밀번호 설정됨</span>}
+                </div>
+                <button onClick={() => { setShareResult(null); setSharePassword(''); }}
+                  className="w-full py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">
+                  새 링크 생성
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
