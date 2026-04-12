@@ -57,6 +57,8 @@ export interface DbUser {
   department_id: string | null;
   role: string;
   avatar_url: string | null;
+  is_active: boolean;
+  signature_path: string | null;
   created_at: string;
 }
 
@@ -212,8 +214,8 @@ export interface Database {
       };
       users: {
         Row: DbUser;
-        Insert: { id: string; email: string; name: string; department_id?: string | null; role?: string; avatar_url?: string | null; created_at?: string };
-        Update: { email?: string; name?: string; department_id?: string | null; role?: string; avatar_url?: string | null };
+        Insert: { id: string; email: string; name: string; position?: string; department_id?: string | null; role?: string; avatar_url?: string | null; is_active?: boolean; signature_path?: string | null; created_at?: string };
+        Update: { email?: string; name?: string; position?: string; department_id?: string | null; role?: string; avatar_url?: string | null; is_active?: boolean; signature_path?: string | null };
         Relationships: [];
       };
       files: {
@@ -317,6 +319,8 @@ export interface User {
   department?: string;
   role: UserRole;
   avatar_url: string | null;
+  is_active?: boolean;
+  signature_path?: string | null;
   created_at: string;
 }
 
