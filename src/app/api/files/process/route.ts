@@ -108,6 +108,21 @@ export async function POST(request: NextRequest) {
     const newStatus = errors === 0 ? 'indexed' : (stored > 0 ? 'indexed' : 'error');
     await supabase.from('files').update({ status: newStatus }).eq('id', fileId);
 
+    // 7. [만료일 추출 후처리] 비동기, 실패해도 전체 업로드 성공에 영향 없음
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+      const secret = process.env.INTERNAL_API_SECRET;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (secret) headers['X-Internal-Secret'] = secret;
+      // fire-and-forget: await 없이 호출 (응답 대기 안 함)
+      fetch(`${baseUrl}/api/files/${fileId}/extract-expiry`, {
+        method: 'POST',
+        headers,
+      }).catch((e) => console.warn('[process] expiry extract fire-and-forget failed:', e));
+    } catch (e) {
+      console.warn('[process] expiry extract setup failed:', e);
+    }
+
     return NextResponse.json({
       success: true,
       data: { fileId, chunks: stored, errors, textLength: text.length },

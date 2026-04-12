@@ -11,6 +11,7 @@ import {
 import { Spinner } from '@/components/ui';
 import { FILE_TYPE_BADGE, FILE_STATUS_COLOR, ACTION_LABELS, CHART_COLORS } from '@/lib/constants/ui';
 import { formatTimeAgo } from '@/lib/utils/format';
+import { ExpiryDashboardWidget } from '@/components/expiry/ExpiryDashboardWidget';
 
 interface UserInfo {
   name: string;
@@ -405,6 +406,9 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* 만료 임박 문서 위젯 */}
+      <ExpiryDashboardWidget />
 
       {/* 차트 3: 부서별 문서 생성량 */}
       <div className="bg-card rounded-2xl border border-border overflow-hidden">

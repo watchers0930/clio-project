@@ -6,6 +6,7 @@ import { Header } from './header';
 import { Footer } from './footer';
 import { ToastRenderer } from '@/components/ui/toast';
 import { useAuthStore } from '@/store/auth-store';
+import { ExpiryAlertProvider } from '@/components/expiry/ExpiryAlertProvider';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -31,6 +32,7 @@ function AppLayout({ children }: AppLayoutProps) {
   }, []);
 
   return (
+    <ExpiryAlertProvider>
     <div className="flex h-screen overflow-hidden bg-page-bg">
       {/* Desktop sidebar */}
       <div className="hidden lg:flex flex-shrink-0">
@@ -65,6 +67,7 @@ function AppLayout({ children }: AppLayoutProps) {
       </div>
       <ToastRenderer />
     </div>
+    </ExpiryAlertProvider>
   );
 }
 
