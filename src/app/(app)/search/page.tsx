@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { FILE_TYPE_BADGE } from '@/lib/constants/ui';
 import { SearchInput, EmptyState, Spinner } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
+import { VoiceInputButton } from '@/components/common/VoiceInputButton';
 
 /* ────────────────────────── types ────────────────────────── */
 interface SearchResult {
@@ -179,17 +180,29 @@ export default function SearchPage() {
 
       {/* ── search bar ── */}
       <div className="bg-white rounded-2xl border border-[#e5e5e7]" style={{ padding: '28px' }}>
-        <SearchInput
-          value={query}
-          onChange={setQuery}
-          onSearch={() => doSearch(query)}
-          placeholder="자연어로 문서를 검색하세요..."
-          showButton
-          buttonLabel={loading ? '검색 중...' : '검색'}
-          loading={loading}
-          disabled={loading || !query.trim()}
-          size="lg"
-        />
+        <div className="relative flex items-center gap-2">
+          <div className="flex-1">
+            <SearchInput
+              value={query}
+              onChange={setQuery}
+              onSearch={() => doSearch(query)}
+              placeholder="자연어로 문서를 검색하세요..."
+              showButton
+              buttonLabel={loading ? '검색 중...' : '검색'}
+              loading={loading}
+              disabled={loading || !query.trim()}
+              size="lg"
+            />
+          </div>
+          <VoiceInputButton
+            onTranscript={(text) => {
+              setQuery(text);
+              doSearch(text);
+            }}
+            disabled={loading}
+            className="shrink-0"
+          />
+        </div>
       </div>
 
       {/* ── filters ── */}

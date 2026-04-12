@@ -7,6 +7,9 @@ import { ShareLinkModal } from '@/components/documents/ShareLinkModal';
 import { VersionPanel } from '@/components/documents/VersionPanel';
 import { ApprovalModal } from '@/components/documents/ApprovalModal';
 import { QualityCheckPanel } from '@/components/documents/QualityCheckPanel';
+import { TodoExtractModal } from '@/components/meetings/TodoExtractModal';
+import { SttModal } from '@/components/meetings/SttModal';
+import type { ExtractedTodo } from '@/lib/ai/extract-todos';
 import { DOCUMENT_STATUS_BADGE } from '@/lib/constants/ui';
 import { ConfirmDialog, EmptyState, Spinner } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
@@ -151,6 +154,13 @@ export default function DocumentsPage() {
 
   // AI 품질 검수 패널
   const [qualityCheckDocId, setQualityCheckDocId] = useState<string | null>(null);
+
+  // 할일 자동 추출 모달
+  const [todoExtractOpen, setTodoExtractOpen] = useState(false);
+  const [todoExtractInitial, setTodoExtractInitial] = useState<ExtractedTodo[]>([]);
+
+  // 음성 STT 모달
+  const [sttModalOpen, setSttModalOpen] = useState(false);
 
   // 버전 히스토리 패널
   const [versionPanelDocId, setVersionPanelDocId] = useState<string | null>(null);
@@ -624,15 +634,26 @@ export default function DocumentsPage() {
           <h1 className="text-2xl font-bold text-[#1d1d1f]">문서 생성</h1>
           <p className="text-[#6e6e73] mt-1" style={{ marginBottom: 10 }}>AI를 활용하여 문서를 자동으로 생성하세요</p>
         </div>
-        <button
-          onClick={() => { const n = new Date(); setContractFormData({ signDate: `${n.getFullYear()}/${String(n.getMonth()+1).padStart(2,'0')}/${String(n.getDate()).padStart(2,'0')}` }); setShowModal(true); }}
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors shadow-sm"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          새 문서 생성
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setSttModalOpen(true)}
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-[#e5e5e7] bg-white text-[#1d1d1f] text-sm font-medium hover:border-[#2E6FF2] hover:text-[#2E6FF2] transition-colors shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+            </svg>
+            음성으로 회의록
+          </button>
+          <button
+            onClick={() => { const n = new Date(); setContractFormData({ signDate: `${n.getFullYear()}/${String(n.getMonth()+1).padStart(2,'0')}/${String(n.getDate()).padStart(2,'0')}` }); setShowModal(true); }}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors shadow-sm"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            새 문서 생성
+          </button>
+        </div>
       </div>
 
       {/* document list */}
@@ -1001,6 +1022,17 @@ export default function DocumentsPage() {
                   </svg>
                   AI 검수
                 </button>
+                {viewDoc && (viewDoc.title.includes('회의록') || viewDoc.title.includes('회의')) && (
+                  <button
+                    onClick={() => { setTodoExtractInitial([]); setTodoExtractOpen(true); }}
+                    className="px-5 py-2.5 rounded-xl border border-[#7B61FF] text-sm text-[#7B61FF] font-medium hover:bg-[#F3F0FF] transition-colors flex items-center gap-1.5"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                    할일 추출
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -1643,6 +1675,32 @@ export default function DocumentsPage() {
             else {
               handleDownload({ id, title, template: '', createdAt, status: status as Document['status'], sourceCount: 0 });
             }
+          }}
+        />
+      )}
+
+      {/* ── 음성 STT 모달 ── */}
+      <SttModal
+        isOpen={sttModalOpen}
+        onClose={() => setSttModalOpen(false)}
+        onDocumentCreated={() => {
+          setSttModalOpen(false);
+          loadDocs();
+          toast.success('회의록이 생성되었습니다.');
+        }}
+      />
+
+      {/* ── 할일 자동 추출 모달 ── */}
+      {todoExtractOpen && viewDoc && (
+        <TodoExtractModal
+          isOpen={todoExtractOpen}
+          onClose={() => setTodoExtractOpen(false)}
+          documentId={viewDoc.id}
+          documentTitle={viewDoc.title}
+          initialTodos={todoExtractInitial}
+          onSuccess={(count) => {
+            toast.success(`${count}개의 할일이 등록되었습니다.`);
+            setTodoExtractOpen(false);
           }}
         />
       )}
