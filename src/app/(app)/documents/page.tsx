@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { ShareLinkModal } from '@/components/documents/ShareLinkModal';
 import { VersionPanel } from '@/components/documents/VersionPanel';
 import { ApprovalModal } from '@/components/documents/ApprovalModal';
+import { QualityCheckPanel } from '@/components/documents/QualityCheckPanel';
 import { DOCUMENT_STATUS_BADGE } from '@/lib/constants/ui';
 import { ConfirmDialog, EmptyState, Spinner } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
@@ -147,6 +148,9 @@ export default function DocumentsPage() {
   const [editContent, setEditContent] = useState('');
   const [editTitle, setEditTitle] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // AI 품질 검수 패널
+  const [qualityCheckDocId, setQualityCheckDocId] = useState<string | null>(null);
 
   // 버전 히스토리 패널
   const [versionPanelDocId, setVersionPanelDocId] = useState<string | null>(null);
@@ -988,6 +992,15 @@ export default function DocumentsPage() {
                 <button onClick={() => handleDownload(viewDoc)} className="px-5 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">
                   다운로드
                 </button>
+                <button
+                  onClick={() => setQualityCheckDocId(viewDoc ? viewDoc.id : null)}
+                  className="px-5 py-2.5 rounded-xl border border-[#0071e3] text-sm text-[#0071e3] font-medium hover:bg-[#f0f5ff] transition-colors flex items-center gap-1.5"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  AI 검수
+                </button>
               </div>
             </div>
           </div>
@@ -1632,6 +1645,17 @@ export default function DocumentsPage() {
             }
           }}
         />
+      )}
+
+      {/* ── AI 품질 검수 패널 ── */}
+      {qualityCheckDocId && (
+        <div className="fixed inset-y-0 right-0 z-50 w-96 shadow-2xl">
+          <QualityCheckPanel
+            documentId={qualityCheckDocId}
+            onClose={() => setQualityCheckDocId(null)}
+            autoRequest
+          />
+        </div>
       )}
 
       {/* ── 삭제/상태변경 확인 다이얼로그 ── */}

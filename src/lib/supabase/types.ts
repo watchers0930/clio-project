@@ -505,6 +505,53 @@ export interface DashboardStats {
   doc_dept_breakdown?: Record<string, number>;
 }
 
+// ---------------------------------------------------------------------------
+// AI 문서 품질 검수 타입 (doc-quality)
+// ---------------------------------------------------------------------------
+
+/** 검수 항목 카테고리 */
+export type QualityCategory = 'spelling' | 'format' | 'logic' | 'missing';
+
+/** 검수 항목 심각도 */
+export type QualitySeverity = 'error' | 'warning' | 'suggestion';
+
+/** 검수 항목 단건 */
+export interface QualityCheckItem {
+  category: QualityCategory;
+  severity: QualitySeverity;
+  original: string;
+  suggestion: string;
+  description: string;
+}
+
+/** GPT-4o 전체 응답 구조 */
+export interface QualityCheckResult {
+  overall_score: number;
+  items: QualityCheckItem[];
+  summary: string;
+}
+
+/** document_quality_checks DB Row */
+export interface DbDocumentQualityCheck {
+  id: string;
+  document_id: string;
+  checked_by: string;
+  overall_score: number;
+  result_json: QualityCheckResult;
+  created_at: string;
+}
+
+/** API 응답: 품질 검수 결과 */
+export interface QualityCheckResponse {
+  check_id: string | null;
+  document_id: string;
+  overall_score: number;
+  items: QualityCheckItem[];
+  summary: string;
+  checked_at: string;
+  from_cache: boolean;
+}
+
 /** 로그인 요청 */
 export interface LoginRequest {
   email: string;
