@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "compiled_at": "2026-04-12T00:00:00.000Z",
+  "project_version": "5.4.0",
+  "mode": "codebase",
+  "sources_read": [
+    "README.md",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "docs/01-plan/features/clio-next-phase.plan.md",
+    "package.json",
+    "supabase/schema.sql",
+    "supabase/migrations/004_approval_workflow.sql",
+    "supabase/migrations/007_users_signature.sql",
+    "src/lib/supabase/types.ts",
+    "src/store/auth-store.ts"
+  ],
+  "articles": [
+    {
+      "file": "topics/platform-overview.md",
+      "title": "CLIO 플랫폼 전체 개요",
+      "coverage": "high",
+      "sources": 4
+    },
+    {
+      "file": "topics/authentication.md",
+      "title": "인증 및 권한 시스템",
+      "coverage": "high",
+      "sources": 3
+    },
+    {
+      "file": "topics/document-management.md",
+      "title": "문서 관리",
+      "coverage": "high",
+      "sources": 3
+    },
+    {
+      "file": "topics/approval-workflow.md",
+      "title": "결재 워크플로우",
+      "coverage": "high",
+      "sources": 2
+    },
+    {
+      "file": "topics/database.md",
+      "title": "데이터베이스 스키마 및 RLS 정책",
+      "coverage": "high",
+      "sources": 3
+    },
+    {
+      "file": "topics/ai-features.md",
+      "title": "AI 기능",
+      "coverage": "high",
+      "sources": 2
+    },
+    {
+      "file": "topics/messaging.md",
+      "title": "메시징 및 채널",
+      "coverage": "medium",
+      "sources": 2
+    },
+    {
+      "file": "topics/deployment.md",
+      "title": "배포 구성",
+      "coverage": "medium",
+      "sources": 2
+    }
+  ],
+  "meta": {
+    "index": "INDEX.md",
+    "schema": "schema.md",
+    "context": "CONTEXT.md",
+    "log": "log.md"
+  }
+}

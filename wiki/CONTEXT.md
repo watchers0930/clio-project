@@ -1,0 +1,115 @@
+# CLIO 컨텍스트 요약
+
+> AI 에이전트가 이 프로젝트에서 작업 시 먼저 읽어야 할 핵심 맥락 문서
+
+**생성일:** 2026-04-12 | **최종 갱신:** 2026-04-12 | **버전:** v5.5.0 | **배포:** https://clioai.vercel.app
+
+---
+
+## 이 프로젝트가 무엇인가
+
+CLIO는 **기업 내부용 RAG 기반 AI 문서관리 + 결재 + 협업 시스템**이다.
+
+- 파일 업로드 → 텍스트 추출 → pgvector 임베딩 → GPT-4o 문서 생성 파이프라인
+- 결재 워크플로우 (요청/승인/반려)
+- 사내 메시지/채팅 (채널 + DM)
+- 일정/할일 (캘린더)
+- 5가지 포맷 문서 다운로드 (DOCX/HWPX/XLSX/PPTX/PDF)
+
+---
+
+## 핵심 기술 스택
+
+```
+Next.js 16 (App Router) + React 19 + Tailwind CSS v4
+Supabase (PostgreSQL + pgvector + Storage + Auth)
+OpenAI GPT-4o + Whisper-1
+Zustand 5 (전역 상태관리)
+Vercel (배포)
+```
+
+---
+
+## 파일 수정 시 반드시 알아야 할 것
+
+### 1. Next.js 버전 주의
+AGENTS.md: "This is NOT the Next.js you know" — Next.js 16에는 브레이킹 체인지가 있다.  
+코드 작성 전 `node_modules/next/dist/docs/` 확인 필수.
+
+### 2. RLS 정책 충돌 주의
+API Route에서 Supabase를 호출할 때, 사용하는 클라이언트에 따라 RLS 적용 여부가 다르다:
+- `createClient()` (client.ts): RLS 적용 (anon key)
+- `createServerClient()` (server.ts): RLS 적용 (쿠키 세션)
+- `createAdminClient()` (admin.ts): RLS 우회 (service role key)
+→ API 수정 시 RLS 정책 충돌 반드시 사전 확인
+
+### 3. 인증 상태 관리
+- Zustand `useAuthStore` 사용 (persist: token만 영속화)
+- `localStorage.getItem('clio_user')` 직접 호출 금지 (일부 레거시 코드 존재, P1-1에서 제거 예정)
+
+### 4. 환경 변수
+```
+NEXT_PUBLIC_SUPABASE_URL        (필수)
+NEXT_PUBLIC_SUPABASE_ANON_KEY   (필수)
+SUPABASE_SERVICE_ROLE_KEY        (필수, admin 작업)
+OPENAI_API_KEY                   (필수, AI 기능)
+INTERNAL_API_SECRET              (필수, 내부 API 보안)
+JWT_SECRET                       (필수, 인증)
+```
+
+### 5. 배포
+```bash
+deploy clio   # ~/scripts/deploy.sh 사용 (npx vercel 직접 실행 금지)
+```
+
+---
+
+## 현재 알려진 기술부채 (즉시 참고)
+
+| 심각도 | 항목 | 영향 | 상태 |
+|--------|------|------|------|
+| P0 | .env.local.example에 OPENAI_API_KEY 누락 | 신규 환경 AI 기능 불가 | 미해결 |
+| P1 | localStorage.getItem('clio_user') 직접 호출 | 상태 이중 관리 위험 | ✅ v5.4.1 해결 |
+| P1 | 에러 토스트 미구현 (일부 페이지 로컬 구현) | 사용자 에러 피드백 없음 | ✅ v5.4.2 해결 |
+| P2 | 메시지 폴링 방식 (setInterval) | 서버 부하, 지연 발생 | ✅ v5.5.0 Realtime 전환 |
+| P2 | 전자서명 삽입 미구현 | 계약서 완결성 부족 | ✅ v5.5.0 구현 완료 |
+
+---
+
+## 디렉토리 구조 요약
+
+```
+src/
+├── app/
+│   ├── (auth)/          # 로그인, 회원가입
+│   ├── (app)/           # 메인 앱 (인증 필요)
+│   │   ├── dashboard, files, documents, templates
+│   │   ├── approvals, messages, search, schedule, settings
+│   ├── api/             # API Route Handlers
+│   └── share/           # 외부 공유
+├── lib/
+│   ├── ai/              # AI 파이프라인 모듈
+│   ├── supabase/        # DB 클라이언트 + 타입
+│   ├── renderers/       # 문서 포맷 렌더러
+│   ├── contract-fields.ts
+│   └── permissions.ts
+├── store/
+│   └── auth-store.ts    # Zustand 인증 스토어
+supabase/
+├── schema.sql
+├── migrations/          # 008개 마이그레이션
+└── seed.sql
+```
+
+---
+
+## Wiki 전체 토픽 목록
+
+- [platform-overview.md](topics/platform-overview.md) — 전체 개요
+- [authentication.md](topics/authentication.md) — 인증/권한
+- [document-management.md](topics/document-management.md) — 문서/파일 관리
+- [approval-workflow.md](topics/approval-workflow.md) — 결재 워크플로우
+- [database.md](topics/database.md) — DB 스키마 + RLS
+- [ai-features.md](topics/ai-features.md) — AI 파이프라인
+- [messaging.md](topics/messaging.md) — 메시지/채널
+- [deployment.md](topics/deployment.md) — 배포 구성
