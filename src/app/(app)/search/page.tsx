@@ -101,7 +101,11 @@ export default function SearchPage() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: msg, history: chatMessages }),
+        body: JSON.stringify({
+          message: msg,
+          history: chatMessages,
+          fileIds: results.length > 0 ? results.map((r) => r.id) : undefined,
+        }),
       });
       const data = await res.json();
       const assistantMsg: ChatMessage = {

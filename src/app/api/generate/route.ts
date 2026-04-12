@@ -11,12 +11,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { extractText, extractXlsxStructured } from '@/lib/ai/extract-text';
 import { generateForFormat } from '@/lib/ai/generate-document';
 import { renderDocument } from '@/lib/renderers';
 import type { OutputFormat, CorporateTheme } from '@/lib/renderers/types';
 import { DEFAULT_THEME } from '@/lib/renderers/types';
+import { injectSignatureDocx, injectSignatureHwpx } from '@/lib/utils/inject-signature';
 
 const FONT_MAP: Record<string, string> = {
   '맑은 고딕': 'Malgun Gothic',
@@ -124,15 +126,29 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    // 사용자 정보 조회 (이름, 부서, 직급)
+    // 사용자 정보 조회 (이름, 부서, 직급, 서명 경로)
     const { data: userData } = await supabase
       .from('users')
-      .select('name, position, departments:department_id(name)')
+      .select('name, position, signature_path, departments:department_id(name)')
       .eq('id', authUserId)
       .single();
     const userName = (userData as Record<string, unknown>)?.name as string ?? '';
     const userPosition = (userData as Record<string, unknown>)?.position as string ?? '';
     const userDept = ((userData as Record<string, unknown>)?.departments as { name: string } | null)?.name ?? '';
+    const signaturePath = (userData as Record<string, unknown>)?.signature_path as string | null ?? null;
+
+    // 서명 이미지 버퍼 다운로드 (없으면 null — 이후 단계 스킵)
+    let signatureBuffer: Buffer | null = null;
+    if (signaturePath) {
+      try {
+        const adminClient = createAdminSupabaseClient();
+        const { data: sigBlob } = await adminClient.storage.from('files').download(signaturePath);
+        if (sigBlob) signatureBuffer = Buffer.from(await sigBlob.arrayBuffer());
+      } catch (e) {
+        console.error('[generate] signature download error:', e);
+        // 실패해도 계속 진행 (서명 없이 생성)
+      }
+    }
 
     // 템플릿 조회 (직접 작성 모드에서는 건너뜀)
     let tmpl: { name: string; content: string | null; description: string | null; placeholders: string[] | null; template_file_id: string | null } | null = null;
@@ -336,7 +352,9 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const rendered = await renderDocument(generationResult, theme);
+      let rendered = await renderDocument(generationResult, theme);
+      // P2-2: 서명 주입 (DOCX 폼 기반)
+      if (signatureBuffer) rendered = { ...rendered, buffer: injectSignatureDocx(rendered.buffer, signatureBuffer) };
       const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
 
       const { error: uploadErr } = await supabase.storage
@@ -419,7 +437,9 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const rendered = await renderDocument(generationResult, theme);
+      let rendered = await renderDocument(generationResult, theme);
+      // P2-2: 서명 주입 (HWPX 폼 기반)
+      if (signatureBuffer) rendered = { ...rendered, buffer: injectSignatureHwpx(rendered.buffer, signatureBuffer, userName) };
       const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
 
       const { error: uploadErr } = await supabase.storage
@@ -475,7 +495,9 @@ export async function POST(request: NextRequest) {
 
     // DOCX 템플릿 기반: 파일 렌더링 → Storage 업로드 (XLSX/PPTX와 동일 흐름)
     if (generationResult.docxReplacements && generationResult.templateBuffer) {
-      const rendered = await renderDocument(generationResult, theme);
+      let rendered = await renderDocument(generationResult, theme);
+      // P2-2: 서명 주입 (DOCX 템플릿 기반)
+      if (signatureBuffer) rendered = { ...rendered, buffer: injectSignatureDocx(rendered.buffer, signatureBuffer) };
       const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
 
       const { error: uploadErr } = await supabase.storage
@@ -576,7 +598,12 @@ export async function POST(request: NextRequest) {
 
       // DOCX/HWPX 마크다운 → 파일 렌더링 → Storage 업로드
       if (format === 'hwpx' || format === 'docx') {
-        const rendered = await renderDocument(generationResult, theme);
+        let rendered = await renderDocument(generationResult, theme);
+        // P2-2: 서명 주입 (마크다운 기반 새 문서)
+        if (signatureBuffer) {
+          if (rendered.extension === 'docx') rendered = { ...rendered, buffer: injectSignatureDocx(rendered.buffer, signatureBuffer) };
+          else if (rendered.extension === 'hwpx') rendered = { ...rendered, buffer: injectSignatureHwpx(rendered.buffer, signatureBuffer, userName) };
+        }
         const filePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
         const { error: upErr } = await supabase.storage
           .from('files')

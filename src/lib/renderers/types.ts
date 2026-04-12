@@ -82,6 +82,10 @@ export interface GenerationResult {
   hwpxTableStructure?: DocxTableStructure;
   /** 템플릿 바이너리 (렌더러에 전달) */
   templateBuffer?: Buffer;
+  /** 서명 이미지 바이너리 (없으면 삽입 스킵) */
+  signatureBuffer?: Buffer;
+  /** 서명 이미지 확장자 ('png' | 'jpg' | 'webp') */
+  signatureExt?: string;
   /** 문서 제목 */
   title: string;
 }
