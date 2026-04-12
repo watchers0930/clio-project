@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Building2, Users, Plus, Pencil, Trash2, Check, Save, PenLine, Upload, X } from 'lucide-react';
+import { Building2, Users, Plus, Pencil, Trash2, Save, PenLine, Upload, X } from 'lucide-react';
 import { Spinner, Tabs, ConfirmDialog } from '@/components/ui';
+import { useToast } from '@/components/ui/toast';
 
 /* ── types ── */
 interface Department {
@@ -48,7 +49,7 @@ export default function SettingsPage() {
   // 사용자 인라인 편집 (부서/역할 변경 → 저장 버튼)
   const [pendingChanges, setPendingChanges] = useState<Record<string, { department_id?: string | null; role?: string }>>({});
   const [savingUserId, setSavingUserId] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const toast = useToast();
 
   // 확인 다이얼로그
   const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; description?: string; onConfirm: () => void }>({ open: false, title: '', onConfirm: () => {} });
@@ -120,11 +121,11 @@ export default function SettingsPage() {
       const d = await res.json();
       if (d.success) {
         setSigUrl(d.data?.url ?? null);
-        showToast('서명이 등록되었습니다.');
+        toast.success('서명이 등록되었습니다.');
       } else {
-        showToast(d.error ?? '업로드 실패');
+        toast.error(d.error ?? '업로드 실패');
       }
-    } catch { showToast('업로드 중 오류가 발생했습니다.'); }
+    } catch { toast.error('업로드 중 오류가 발생했습니다.'); }
     setSigUploading(false);
   };
 
@@ -133,8 +134,8 @@ export default function SettingsPage() {
       try {
         await fetch('/api/auth/signature', { method: 'DELETE' });
         setSigUrl(null);
-        showToast('서명이 삭제되었습니다.');
-      } catch { showToast('삭제 중 오류가 발생했습니다.'); }
+        toast.success('서명이 삭제되었습니다.');
+      } catch { toast.error('삭제 중 오류가 발생했습니다.'); }
       closeConfirm();
     });
   };
@@ -162,13 +163,13 @@ export default function SettingsPage() {
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        showToast(json.error ?? '부서 저장에 실패했습니다.');
+        toast.error(json.error ?? '부서 저장에 실패했습니다.');
         return;
       }
       await loadDepartments();
       setShowDeptModal(false);
     } catch {
-      showToast('부서 저장 중 오류가 발생했습니다.');
+      toast.error('부서 저장 중 오류가 발생했습니다.');
     } finally {
       setSaving(false);
     }
@@ -213,13 +214,13 @@ export default function SettingsPage() {
         });
         const json = await res.json();
         if (!res.ok || !json.success) {
-          showToast(json.error ?? '사용자 수정에 실패했습니다.');
+          toast.error(json.error ?? '사용자 수정에 실패했습니다.');
           return;
         }
         await loadUsers();
         setShowUserModal(false);
       } catch {
-        showToast('사용자 수정 중 오류가 발생했습니다.');
+        toast.error('사용자 수정 중 오류가 발생했습니다.');
       } finally {
         setUserSaving(false);
       }
@@ -241,13 +242,13 @@ export default function SettingsPage() {
         });
         const json = await res.json();
         if (!res.ok || !json.success) {
-          showToast(json.error ?? '사용자 추가에 실패했습니다.');
+          toast.error(json.error ?? '사용자 추가에 실패했습니다.');
           return;
         }
         await loadUsers();
         setShowUserModal(false);
       } catch {
-        showToast('사용자 추가 중 오류가 발생했습니다.');
+        toast.error('사용자 추가 중 오류가 발생했습니다.');
       } finally {
         setUserSaving(false);
       }
@@ -260,11 +261,11 @@ export default function SettingsPage() {
         const res = await fetch(`/api/users?id=${id}`, { method: 'DELETE' });
         const json = await res.json();
         if (!res.ok || !json.success) {
-          showToast(json.error ?? '사용자 비활성화에 실패했습니다.');
+          toast.error(json.error ?? '사용자 비활성화에 실패했습니다.');
           closeConfirm(); return;
         }
         await loadUsers();
-      } catch { showToast('사용자 삭제 중 오류가 발생했습니다.'); }
+      } catch { toast.error('사용자 삭제 중 오류가 발생했습니다.'); }
       closeConfirm();
     });
   };
@@ -284,11 +285,6 @@ export default function SettingsPage() {
     }));
   };
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2000);
-  };
-
   const saveUserChanges = async (userId: string) => {
     const changes = pendingChanges[userId];
     if (!changes) return;
@@ -304,7 +300,7 @@ export default function SettingsPage() {
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        showToast(json.error ?? '저장에 실패했습니다.');
+        toast.error(json.error ?? '저장에 실패했습니다.');
         return;
       }
       setPendingChanges((prev) => {
@@ -313,9 +309,9 @@ export default function SettingsPage() {
         return next;
       });
       await loadUsers();
-      showToast('저장되었습니다');
+      toast.success('저장되었습니다.');
     } catch {
-      showToast('저장 중 오류가 발생했습니다.');
+      toast.error('저장 중 오류가 발생했습니다.');
     } finally {
       setSavingUserId(null);
     }
@@ -682,13 +678,6 @@ export default function SettingsPage() {
         onCancel={closeConfirm}
       />
 
-      {/* 토스트 */}
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', zIndex: 100, display: 'flex', alignItems: 'center', gap: 8, padding: '12px 24px', backgroundColor: '#1d1d1f', color: '#fff', borderRadius: 12, fontSize: 14, fontWeight: 500, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
-          <Check size={16} style={{ color: '#34c759' }} />
-          {toast}
-        </div>
-      )}
     </div>
   );
 }
