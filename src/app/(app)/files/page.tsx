@@ -596,8 +596,8 @@ function FilesPage() {
       {showUpload && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) { setShowUpload(false); setUploadProgress(null); setSelectedFiles([]); } }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 p-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-[#1d1d1f]">파일 업로드</h2>
+            <div className="flex items-center justify-between mb-[10px]">
+              <h2 className="text-[15px] font-semibold text-[#1B1F2B]">파일 업로드</h2>
               <button onClick={() => { setShowUpload(false); setUploadProgress(null); setSelectedFiles([]); }} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
@@ -635,17 +635,17 @@ function FilesPage() {
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-2xl py-8 px-6 text-center transition-colors ${dragOver ? 'border-[#0071e3] bg-[#f5f5f7]' : 'border-[#e5e5e7] bg-[#f5f5f7]'}`}
+              className={`border-2 border-dashed rounded-2xl py-8 px-6 text-center transition-colors mt-[5px] ${dragOver ? 'border-[#0071e3] bg-[#f5f5f7]' : 'border-[#e5e5e7] bg-[#f5f5f7]'}`}
             >
-              <svg className="w-12 h-12 mx-auto text-[#6e6e73] mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+              <svg className="w-12 h-12 mx-auto text-[#6e6e73] mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
               </svg>
               <p className="text-[#1d1d1f] font-medium mb-1">파일을 여기에 끌어다 놓으세요</p>
-              <p className="text-sm text-[#6e6e73] mb-4">또는</p>
-              <button onClick={handleFilePicker} className="px-5 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors">
+              <p className="text-sm text-[#6e6e73] mb-0">또는</p>
+              <button onClick={handleFilePicker} className="px-5 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors mt-[10px] mb-[10px]">
                 파일 선택
               </button>
-              <p className="text-xs text-[#6e6e73] mt-3">PDF, DOCX, PPTX, XLSX, MD (최대 50MB)</p>
+              <p className="text-xs text-[#6e6e73] mt-[5px]">PDF, DOCX, PPTX, XLSX, MD (최대 50MB)</p>
             </div>
 
             {/* selected files list */}
