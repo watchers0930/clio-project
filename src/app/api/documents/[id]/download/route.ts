@@ -337,12 +337,13 @@ export async function GET(
                 sectionHtmlParts.push(parseHwpxSection(xml));
               }
               extractedHtml = sectionHtmlParts.join('');
-              // 댓글 반영으로 추가된 마크다운 섹션을 테이블 형식으로 주입
-              if (appendedMarkdown) {
-                extractedHtml += renderAppendedSections(appendedMarkdown);
-              }
             }
-          } catch { /* 추출 실패 시 빈 문자열 */ }
+          } catch (e) { console.error('[download] file parse error:', e); }
+
+          // appendedMarkdown은 파싱 성공 여부와 무관하게 항상 추가
+          if (appendedMarkdown) {
+            extractedHtml += renderAppendedSections(appendedMarkdown);
+          }
 
           const bodyContent = extractedHtml
             ? extractedHtml
