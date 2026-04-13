@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { ApiResponse } from '@/lib/supabase/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 
 export async function GET(
@@ -21,36 +20,12 @@ export async function GET(
       return NextResponse.json<ApiResponse>({ success: false, error: '인증이 필요합니다.' }, { status: 401 });
     }
 
-    // 본인 문서 먼저 조회, 없으면 결재자인지 확인 후 admin으로 조회
-    let data: Record<string, unknown> | null = null;
-    const { data: ownDoc } = await supabase
+    // 문서 조회
+    const { data } = await supabase
       .from('documents')
       .select('*, templates:template_id(name)')
       .eq('id', id)
       .single();
-
-    if (ownDoc) {
-      data = ownDoc;
-    } else {
-      // 결재자인지 확인
-      const admin = createAdminSupabaseClient();
-      const { data: approval } = await admin
-        .from('approvals')
-        .select('id')
-        .eq('document_id', id)
-        .eq('approver_id', authUserId)
-        .limit(1)
-        .maybeSingle();
-
-      if (approval) {
-        const { data: adminDoc } = await admin
-          .from('documents')
-          .select('*, templates:template_id(name)')
-          .eq('id', id)
-          .single();
-        data = adminDoc;
-      }
-    }
 
     if (!data) {
       return NextResponse.json<ApiResponse>(
@@ -62,38 +37,9 @@ export async function GET(
     const { templates: tmplJoin, ...docData } = data as Record<string, unknown>;
     const tmpl = tmplJoin as { name: string } | null;
 
-    // 최신 결재 정보 조회
-    let approval = null;
-    try {
-      const admin = createAdminSupabaseClient();
-      const { data: approvalRow } = await admin
-        .from('approvals')
-        .select('*')
-        .eq('document_id', id)
-        .order('requested_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (approvalRow) {
-        const [approverRes, requesterRes] = await Promise.all([
-          admin.from('users').select('id, name, email').eq('id', approvalRow.approver_id).single(),
-          admin.from('users').select('id, name, email').eq('id', approvalRow.requester_id).single(),
-        ]);
-        approval = {
-          id: approvalRow.id,
-          status: approvalRow.status,
-          comment: approvalRow.comment,
-          requestedAt: approvalRow.requested_at,
-          decidedAt: approvalRow.decided_at,
-          approver: approverRes.data,
-          requester: requesterRes.data,
-        };
-      }
-    } catch (e) { console.warn("[api]", e); }
-
     return NextResponse.json<ApiResponse>({
       success: true,
-      data: { ...docData, template_name: tmpl?.name, approval },
+      data: { ...docData, template_name: tmpl?.name },
     });
   } catch {
     return NextResponse.json<ApiResponse>(

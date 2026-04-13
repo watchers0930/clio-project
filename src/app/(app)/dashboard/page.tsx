@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   FolderOpen, FileText, Users, Search,
   Upload, Sparkles, FilePlus, LayoutTemplate,
-  ArrowUpRight, Clock, ClipboardCheck
+  ArrowUpRight, Clock
 } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import { FILE_TYPE_BADGE, FILE_STATUS_COLOR, ACTION_LABELS, CHART_COLORS } from '@/lib/constants/ui';
@@ -23,7 +23,6 @@ interface DashboardData {
   total_documents: number;
   total_users: number;
   total_templates: number;
-  pending_approvals: number;
   recent_activity: Array<{
     id: string;
     user_id: string;
@@ -100,14 +99,11 @@ export default function DashboardPage() {
     fetchData();
   }, [fetchData]);
 
-  const pendingApprovals = data?.pending_approvals ?? 0;
   const stats = [
     { label: '전체 파일', value: data?.total_files ?? 0, icon: FolderOpen },
     { label: '생성 문서', value: data?.total_documents ?? 0, icon: FileText },
     { label: '활성 사용자', value: data?.total_users ?? 0, icon: Users },
-    ...(pendingApprovals > 0
-      ? [{ label: '결재 대기', value: pendingApprovals, icon: ClipboardCheck, href: '/approvals' }]
-      : [{ label: '검색 횟수', value: data?.recent_activity?.filter(a => a.action === 'search').length ?? 0, icon: Search }]),
+    { label: '검색 횟수', value: data?.recent_activity?.filter(a => a.action === 'search').length ?? 0, icon: Search },
   ];
 
   // 파일 유형 분포 계산
@@ -348,23 +344,20 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* 차트 2: 결재 처리 현황 (도넛) */}
+        {/* 차트 2: 부서별 파일 현황 (도넛) */}
         <div className="bg-card rounded-2xl border border-border overflow-hidden">
           <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e5e7' }}>
-            <h2 className="text-[16px] font-semibold text-foreground">결재 처리 현황</h2>
-            <p className="text-[12px] text-muted mt-0.5">전체 결재 건수</p>
+            <h2 className="text-[16px] font-semibold text-foreground">부서별 파일 현황</h2>
+            <p className="text-[12px] text-muted mt-0.5">전체 파일 부서 분포</p>
           </div>
           <div className="flex flex-col items-center" style={{ padding: '24px', gap: 16 }}>
             {loading ? (
               <div className="flex justify-center py-8"><Spinner size="sm" /></div>
             ) : (() => {
-              const ap = data?.approval_stats ?? { pending: 0, approved: 0, rejected: 0, total: 0 };
-              const items = [
-                { label: '승인', count: ap.approved, color: '#0071e3' },
-                { label: '대기', count: ap.pending, color: '#ff9f0a' },
-                { label: '반려', count: ap.rejected, color: '#ff3b30' },
-              ];
-              const total = ap.total || 1;
+              const dept = data?.department_breakdown ?? {};
+              const entries = Object.entries(dept).sort(([, a], [, b]) => b - a).slice(0, 4);
+              const total = entries.reduce((a, [, v]) => a + v, 0) || 1;
+              const colors = ['#0071e3', '#34c759', '#ff9f0a', '#ff3b30'];
               const r = 40; const circ = 2 * Math.PI * r;
               let offset = 0;
               return (
@@ -372,11 +365,11 @@ export default function DashboardPage() {
                   <div className="relative" style={{ width: 140, height: 140 }}>
                     <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
                       <circle cx="50" cy="50" r={r} fill="none" stroke="#e5e5e7" strokeWidth="18" />
-                      {ap.total === 0 ? null : items.map((item) => {
-                        const dash = (item.count / total) * circ;
+                      {entries.map(([label, count], i) => {
+                        const dash = (count / total) * circ;
                         const el = (
-                          <circle key={item.label} cx="50" cy="50" r={r} fill="none"
-                            stroke={item.color} strokeWidth="18"
+                          <circle key={label} cx="50" cy="50" r={r} fill="none"
+                            stroke={colors[i % colors.length]} strokeWidth="18"
                             strokeDasharray={`${dash} ${circ - dash}`}
                             strokeDashoffset={-offset} strokeLinecap="round" />
                         );
@@ -385,18 +378,18 @@ export default function DashboardPage() {
                       })}
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-[20px] font-bold text-foreground font-num">{ap.total}</span>
+                      <span className="text-[20px] font-bold text-foreground font-num">{entries.reduce((a, [, v]) => a + v, 0)}</span>
                       <span className="text-[10px] text-muted">전체</span>
                     </div>
                   </div>
                   <div className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {items.map(item => (
-                      <div key={item.label} className="flex items-center justify-between">
+                    {entries.map(([label, count], i) => (
+                      <div key={label} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                          <span className="text-[12px] text-foreground">{item.label}</span>
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: colors[i % colors.length] }} />
+                          <span className="text-[12px] text-foreground">{label}</span>
                         </div>
-                        <span className="text-[12px] font-semibold font-num text-foreground">{item.count}</span>
+                        <span className="text-[12px] font-semibold font-num text-foreground">{count}</span>
                       </div>
                     ))}
                   </div>

@@ -1,0 +1,47 @@
+{
+  "version": 2,
+  "mode": "codebase",
+  "name": "CLIO",
+  "sources": [
+    {
+      "path": "./",
+      "exclude": [
+        "node_modules/",
+        "dist/",
+        ".git/",
+        "wiki/",
+        ".next/",
+        "coverage/"
+      ]
+    }
+  ],
+  "output": "wiki/",
+  "service_discovery": "auto",
+  "knowledge_files": [
+    "README.md",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "docs/**/*.md",
+    ".env.example",
+    ".env.local.example"
+  ],
+  "deep_scan": false,
+  "auto_update": "prompt",
+  "article_sections": [
+    "Purpose",
+    "Architecture",
+    "Authentication & Authorization",
+    "Document Flow",
+    "Approval Workflow",
+    "Messaging & Channels",
+    "AI Pipeline",
+    "File Management",
+    "API Surface",
+    "Data Schema",
+    "RLS Policies",
+    "Key Decisions",
+    "Tech Debt",
+    "Gotchas",
+    "Sources"
+  ]
+}

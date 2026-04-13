@@ -5,8 +5,8 @@ import { isContractTemplate, getContractSchema, type ContractField } from '@/lib
 import { useAuthStore } from '@/store/auth-store';
 import { ShareLinkModal } from '@/components/documents/ShareLinkModal';
 import { VersionPanel } from '@/components/documents/VersionPanel';
-import { ApprovalModal } from '@/components/documents/ApprovalModal';
 import { QualityCheckPanel } from '@/components/documents/QualityCheckPanel';
+import { DocumentCommentPanel } from '@/components/documents/DocumentCommentPanel';
 import { TodoExtractModal } from '@/components/meetings/TodoExtractModal';
 import { SttModal } from '@/components/meetings/SttModal';
 import type { ExtractedTodo } from '@/lib/ai/extract-todos';
@@ -20,7 +20,7 @@ interface Document {
   title: string;
   template: string;
   createdAt: string;
-  status: '초안' | '완료' | '결재중' | '승인됨' | '반려됨';
+  status: '초안' | '완료';
   sourceCount: number;
   content?: string;
   versionNumber?: number;
@@ -64,17 +64,11 @@ interface SourceFile {
 const statusColor: Record<string, string> = {
   '초안': 'bg-[#2E6FF2]/8 text-[#2E6FF2]',
   '완료': 'bg-[#1A5AD9]/8 text-[#1A5AD9]',
-  '결재중': 'bg-[#5B8FF7]/8 text-[#5B8FF7]',
-  '승인됨': 'bg-[#0D47A1]/8 text-[#0D47A1]',
-  '반려됨': 'bg-[#7C8494]/8 text-[#7C8494]',
 };
 
 const statusDot: Record<string, string> = {
   '초안': '#2E6FF2',
   '완료': '#1A5AD9',
-  '결재중': '#5B8FF7',
-  '승인됨': '#0D47A1',
-  '반려됨': '#7C8494',
 };
 
 const TEMPLATE_ICONS: Record<string, string> = {
@@ -162,16 +156,14 @@ export default function DocumentsPage() {
   // 음성 STT 모달
   const [sttModalOpen, setSttModalOpen] = useState(false);
 
+  // 댓글 패널
+  const [commentPanelDocId, setCommentPanelDocId] = useState<string | null>(null);
+
   // 버전 히스토리 패널
   const [versionPanelDocId, setVersionPanelDocId] = useState<string | null>(null);
   const [versionItems, setVersionItems] = useState<VersionItem[]>([]);
   const [versionLoading, setVersionLoading] = useState(false);
   const [newVersionDocId, setNewVersionDocId] = useState<string | null>(null);
-
-  // 결재 요청 모달 (ApprovalModal 컴포넌트로 이동)
-  const [showApprovalModal, setShowApprovalModal] = useState(false);
-  const [approvalUsers, setApprovalUsers] = useState<Array<{ id: string; name: string; email: string; department?: string }>>([]);
-  const [submittingApproval, setSubmittingApproval] = useState(false);
 
   // ConfirmDialog 상태
   const [confirmState, setConfirmState] = useState<{
@@ -493,46 +485,8 @@ export default function DocumentsPage() {
     }
   };
 
-  const openApprovalModal = async () => {
-    setShowApprovalModal(true);
-    try {
-      const res = await fetch('/api/users');
-      const d = await res.json();
-      if (d.success) {
-        setApprovalUsers((d.data ?? []).filter((u: { id: string }) => u.id !== storeUser?.id));
-      }
-    } catch {
-      console.error('[결재 모달] 사용자 목록 로드 실패');
-    }
-  };
-
-  const handleSubmitApproval = async (approverId: string) => {
-    if (!viewDoc) return;
-    setSubmittingApproval(true);
-    try {
-      const res = await fetch(`/api/documents/${viewDoc.id}/submit-approval`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approverId }),
-      });
-      const d = await res.json();
-      if (d.success) {
-        const updated = { ...viewDoc, status: '결재중' as const };
-        setViewDoc(updated);
-        setDocs((prev) => prev.map((doc) => doc.id === viewDoc.id ? updated : doc));
-        setShowApprovalModal(false);
-      } else {
-        toast.error(d.error ?? '결재 요청 실패');
-      }
-    } catch {
-      toast.error('서버 오류');
-    }
-    setSubmittingApproval(false);
-  };
-
   const isEdited = viewDoc ? (editContent !== (viewDoc.content ?? '') || editTitle !== viewDoc.title) : false;
   const isDraft = viewDoc?.status === '초안';
-  const isRejected = viewDoc?.status === '반려됨';
 
   const FONT_OPTIONS = ['맑은 고딕', '나눔고딕', '바탕', '돋움', '굴림', '나눔명조', 'Arial', 'Times New Roman'];
   const DOWNLOAD_FORMAT_OPTIONS = ['docx', 'hwpx', 'pdf'] as const;
@@ -760,14 +714,6 @@ export default function DocumentsPage() {
                     className="flex items-center border-t border-[#E2E5EA]/60"
                     style={{ padding: '0' }}
                   >
-                    {d.status === '완료' && (
-                      <button
-                        onClick={() => { openDocModal(d); setTimeout(() => openApprovalModal(), 100); }}
-                        className="flex-1 py-2.5 text-[12px] font-medium text-[#2E6FF2] hover:bg-[#2E6FF2]/5 transition-colors border-r border-[#E2E5EA]/60"
-                      >
-                        결재 요청
-                      </button>
-                    )}
                     <button
                       onClick={() => openDocModal(d)}
                       className="flex-1 py-2.5 text-[12px] font-medium text-[#1B1F2B] hover:bg-[#f5f5f7] transition-colors border-r border-[#E2E5EA]/60"
@@ -793,6 +739,13 @@ export default function DocumentsPage() {
                       title="버전 이력"
                     >
                       버전
+                    </button>
+                    <button
+                      onClick={() => setCommentPanelDocId(d.id)}
+                      className="flex-1 py-2.5 text-[12px] font-medium text-[#2E6FF2] hover:bg-[#2E6FF2]/5 transition-colors border-r border-[#E2E5EA]/60"
+                      title="댓글"
+                    >
+                      댓글
                     </button>
                     <button
                       onClick={() => handleDelete(d.id)}
@@ -978,24 +931,9 @@ export default function DocumentsPage() {
                   </button>
                 )}
                 {viewDoc?.status === '완료' && (
-                  <>
-                    <button onClick={openApprovalModal} className="px-5 py-2.5 rounded-xl bg-[#2E6FF2] text-white text-sm font-medium hover:bg-[#1a5ad9] transition-colors">
-                      결재 요청
-                    </button>
-                    <button onClick={handleRevertToDraft} disabled={saving} className="px-5 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] disabled:opacity-50 transition-colors">
-                      초안으로 되돌리기
-                    </button>
-                  </>
-                )}
-                {viewDoc?.status === '결재중' && (
-                  <span className="px-5 py-2.5 rounded-xl bg-[#2E6FF2]/10 text-[#2E6FF2] text-sm font-medium">
-                    결재 진행 중
-                  </span>
-                )}
-                {viewDoc?.status === '승인됨' && (
-                  <span className="px-5 py-2.5 rounded-xl bg-[#30d158]/10 text-[#30d158] text-sm font-medium">
-                    승인 완료
-                  </span>
+                  <button onClick={handleRevertToDraft} disabled={saving} className="px-5 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] disabled:opacity-50 transition-colors">
+                    초안으로 되돌리기
+                  </button>
                 )}
               </div>
               <div className="flex gap-3">
@@ -1636,16 +1574,6 @@ export default function DocumentsPage() {
           </div>
         </div>
       )}
-      {/* ────── 결재 요청 모달 ────── */}
-      {showApprovalModal && (
-        <ApprovalModal
-          users={approvalUsers}
-          submitting={submittingApproval}
-          onClose={() => setShowApprovalModal(false)}
-          onSubmit={handleSubmitApproval}
-        />
-      )}
-
       {/* ── 공유 링크 생성 모달 ── */}
       {shareDocId && (
         <ShareLinkModal
@@ -1714,6 +1642,18 @@ export default function DocumentsPage() {
             autoRequest
           />
         </div>
+      )}
+
+      {/* ── 댓글 패널 ── */}
+      {commentPanelDocId && (
+        <DocumentCommentPanel
+          documentId={commentPanelDocId}
+          onClose={() => setCommentPanelDocId(null)}
+          onReflected={() => {
+            setCommentPanelDocId(null);
+            loadDocs();
+          }}
+        />
       )}
 
       {/* ── 삭제/상태변경 확인 다이얼로그 ── */}

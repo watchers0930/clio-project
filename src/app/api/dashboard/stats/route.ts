@@ -39,7 +39,7 @@ export async function GET() {
     const admin = createAdminSupabaseClient();
 
     // 병렬 조회
-    const [r1, r2, r3, r4, r5, r6, r7, r8, r9] = await Promise.all([
+    const [r1, r2, r3, r4, r5, r6, r7, r8] = await Promise.all([
       supabase.from('files').select('*', { count: 'exact', head: true }),
       supabase.from('documents').select('*', { count: 'exact', head: true }),
       supabase.from('users').select('*', { count: 'exact', head: true }),
@@ -47,8 +47,6 @@ export async function GET() {
       supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(10),
       supabase.from('files').select('id, name, department_id, created_at'),
       supabase.from('departments').select('id, name'),
-      // 결재 전체 현황 (admin으로 조회)
-      admin.from('approvals').select('status'),
       // 문서 + 작성자 부서 (created_by → users.department_id)
       admin.from('documents').select('id, created_by, users:created_by(department_id)'),
     ]);
@@ -83,17 +81,8 @@ export async function GET() {
       count: uploadWeekMap[wk] ?? 0,
     }));
 
-    // 결재 현황
-    const approvalList = (r8.data ?? []) as Array<{ status: string }>;
-    const approvalStats = {
-      pending: approvalList.filter((a) => a.status === 'pending').length,
-      approved: approvalList.filter((a) => a.status === 'approved').length,
-      rejected: approvalList.filter((a) => a.status === 'rejected').length,
-      total: approvalList.length,
-    };
-
     // 부서별 문서 생성량
-    const docList = (r9.data ?? []) as Array<{ id: string; created_by: string; users: { department_id: string } | null }>;
+    const docList = (r8.data ?? []) as Array<{ id: string; created_by: string; users: { department_id: string } | null }>;
     const docDeptBreakdown: Record<string, number> = {};
     for (const doc of docList) {
       const deptId = (doc.users as { department_id: string } | null)?.department_id;
@@ -101,28 +90,15 @@ export async function GET() {
       docDeptBreakdown[deptName] = (docDeptBreakdown[deptName] ?? 0) + 1;
     }
 
-    // 결재 대기 건수 (내 건)
-    let pendingApprovals = 0;
-    try {
-      const { count } = await admin
-        .from('approvals')
-        .select('*', { count: 'exact', head: true })
-        .eq('approver_id', authUserId)
-        .eq('status', 'pending');
-      pendingApprovals = count ?? 0;
-    } catch (e) { console.warn("[api]", e); }
-
     const stats: DashboardStats = {
       total_files: r1.count ?? 0,
       total_documents: r2.count ?? 0,
       total_users: r3.count ?? 0,
       total_templates: r4.count ?? 0,
-      pending_approvals: pendingApprovals,
       recent_activity: r5.data ?? [],
       file_type_breakdown: fileTypeBreakdown,
       department_breakdown: departmentBreakdown,
       upload_trend: uploadTrend,
-      approval_stats: approvalStats,
       doc_dept_breakdown: docDeptBreakdown,
     };
 

@@ -19,10 +19,7 @@ export type TemplateScope = 'department' | 'company';
 export type TemplateType = TemplateScope;
 
 /** 문서 작성 상태 */
-export type DocumentStatus = 'draft' | 'completed' | 'submitted' | 'approved' | 'rejected';
-
-/** 결재 상태 */
-export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+export type DocumentStatus = 'draft' | 'completed';
 
 /** 채널 유형 */
 export type ChannelType = 'department' | 'direct' | 'group';
@@ -131,18 +128,6 @@ export interface DbMessage {
   attachment_size: string | null;
   document_id: string | null;
   created_at: string;
-}
-
-/** 결재 (DB Row) */
-export interface DbApproval {
-  id: string;
-  document_id: string;
-  requester_id: string;
-  approver_id: string;
-  status: string;
-  comment: string | null;
-  requested_at: string;
-  decided_at: string | null;
 }
 
 /** 감사 로그 (DB Row) */
@@ -258,12 +243,6 @@ export interface Database {
         Row: DbMessage;
         Insert: { id?: string; channel_id: string; sender_id?: string | null; content: string; attachment_name?: string | null; attachment_size?: string | null; document_id?: string | null; created_at?: string };
         Update: { content?: string; attachment_name?: string | null; attachment_size?: string | null; document_id?: string | null };
-        Relationships: [];
-      };
-      approvals: {
-        Row: DbApproval;
-        Insert: { id?: string; document_id: string; requester_id: string; approver_id: string; status?: string; comment?: string | null; requested_at?: string; decided_at?: string | null };
-        Update: { status?: string; comment?: string | null; decided_at?: string | null };
         Relationships: [];
       };
       events: {
@@ -496,12 +475,10 @@ export interface DashboardStats {
   total_documents: number;
   total_users: number;
   total_templates: number;
-  pending_approvals: number;
   recent_activity: AuditLog[];
   file_type_breakdown: Record<string, number>;
   department_breakdown: Record<string, number>;
   upload_trend?: Array<{ week: string; label: string; count: number }>;
-  approval_stats?: { pending: number; approved: number; rejected: number; total: number };
   doc_dept_breakdown?: Record<string, number>;
 }
 

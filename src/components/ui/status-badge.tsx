@@ -1,9 +1,9 @@
 import { cn } from '@/lib/utils';
-import { FILE_STATUS_COLOR, APPROVAL_STATUS_BADGE, DOCUMENT_STATUS_BADGE, FILE_TYPE_BADGE } from '@/lib/constants/ui';
+import { FILE_STATUS_COLOR, DOCUMENT_STATUS_BADGE, FILE_TYPE_BADGE } from '@/lib/constants/ui';
 
 interface StatusBadgeProps {
   /** 뱃지 타입 */
-  type: 'file-status' | 'approval' | 'document' | 'file-type';
+  type: 'file-status' | 'document' | 'file-type';
   /** 상태/타입 값 */
   value: string;
   className?: string;
@@ -16,11 +16,6 @@ export function StatusBadge({ type, value, className }: StatusBadgeProps) {
   switch (type) {
     case 'file-status': {
       colorClass = FILE_STATUS_COLOR[value] ?? colorClass;
-      break;
-    }
-    case 'approval': {
-      const badge = APPROVAL_STATUS_BADGE[value];
-      if (badge) { label = badge.label; colorClass = badge.color; }
       break;
     }
     case 'document': {
