@@ -328,9 +328,12 @@ export async function GET(
             } else if (ext === 'hwpx') {
               const PizZip = (await import('pizzip')).default;
               const zip = new PizZip(fileBuffer);
-              const sectionFiles = Object.keys(zip.files)
+              const allFiles = Object.keys(zip.files);
+              console.log('[download] hwpx zip files:', allFiles);
+              const sectionFiles = allFiles
                 .filter(name => /^Contents\/section\d+\.xml$/i.test(name))
                 .sort();
+              console.log('[download] hwpx section files:', sectionFiles);
               const sectionHtmlParts: string[] = [];
               for (const name of sectionFiles) {
                 const xml = zip.file(name)?.asText() ?? '';
