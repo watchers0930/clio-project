@@ -56,11 +56,11 @@ export function ShareLinkModal({ docId, docTitle, onClose }: ShareLinkModalProps
       style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white rounded-2xl border border-[#e5e5e7] shadow-xl w-full max-w-md p-8">
+      <div className="bg-white rounded-2xl border border-[#e5e5e7] shadow-xl w-full max-w-md">
         {/* 헤더 */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between">
           <div>
-            <h2 className="text-base font-semibold text-[#1d1d1f]">외부 공유 링크 생성</h2>
+            <h2 className="text-[15px] font-semibold text-[#1B1F2B]">외부 공유 링크 생성</h2>
             <p className="text-xs text-[#6e6e73] mt-0.5 truncate max-w-xs">{docTitle}</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
@@ -71,7 +71,7 @@ export function ShareLinkModal({ docId, docTitle, onClose }: ShareLinkModalProps
         </div>
 
         {!result ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="px-6 py-5 flex flex-col gap-4">
             <div>
               <label className="block text-sm font-medium text-[#6e6e73] mb-2">만료 기간</label>
               <select
@@ -101,7 +101,7 @@ export function ShareLinkModal({ docId, docTitle, onClose }: ShareLinkModalProps
             <button
               onClick={createLink}
               disabled={creating}
-              className="w-full py-3 rounded-xl bg-[#0071e3] text-white text-sm font-medium hover:bg-[#005bbf] transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+              className="w-full py-2 rounded-xl bg-[#0071e3] text-white text-[13px] font-medium hover:bg-[#005bbf] transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
             >
               {creating ? (
                 <>
@@ -112,7 +112,7 @@ export function ShareLinkModal({ docId, docTitle, onClose }: ShareLinkModalProps
             </button>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="px-6 py-5 flex flex-col gap-3">
             <div className="flex items-center gap-2 p-3 rounded-xl bg-[#f5f5f7] border border-[#e5e5e7]">
               <p className="text-sm text-[#1d1d1f] flex-1 truncate font-mono text-xs">{result}</p>
               <button
@@ -130,7 +130,7 @@ export function ShareLinkModal({ docId, docTitle, onClose }: ShareLinkModalProps
             </div>
             <button
               onClick={() => { setResult(null); setPassword(''); }}
-              className="w-full py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
+              className="w-full py-2 rounded-xl border border-[#e5e5e7] text-[13px] text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
             >
               새 링크 생성
             </button>

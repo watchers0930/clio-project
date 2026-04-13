@@ -151,9 +151,9 @@ export function SttModal({ isOpen, onClose, onDocumentCreated }: SttModalProps) 
     >
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4">
         {/* 헤더 */}
-        <div className="px-8 py-6 border-b border-[#e5e5e7] flex items-center justify-between">
+        <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between">
           <div>
-            <h2 className="text-base font-semibold text-[#1d1d1f]">음성으로 회의록 생성</h2>
+            <h2 className="text-[15px] font-semibold text-[#1B1F2B]">음성으로 회의록 생성</h2>
             <p className="text-xs text-[#6e6e73] mt-0.5">음성을 텍스트로 변환하여 회의록을 자동 생성합니다</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
@@ -162,7 +162,7 @@ export function SttModal({ isOpen, onClose, onDocumentCreated }: SttModalProps) 
         </div>
 
         {/* 탭 */}
-        <div className="px-8 pt-5">
+        <div className="px-6 pt-5">
           <div className="flex gap-1 p-1 bg-[#f5f5f7] rounded-xl">
             <button
               onClick={() => setInputMode('record')}
@@ -190,7 +190,7 @@ export function SttModal({ isOpen, onClose, onDocumentCreated }: SttModalProps) 
         </div>
 
         {/* 탭 콘텐츠 */}
-        <div className="px-8 pb-6">
+        <div className="px-6 pb-5">
           {/* 에러 */}
           {transcribeError && (
             <div className="mt-4 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-600 flex items-start gap-2">
@@ -252,7 +252,7 @@ export function SttModal({ isOpen, onClose, onDocumentCreated }: SttModalProps) 
               <button
                 onClick={handleUploadSubmit}
                 disabled={!selectedFile}
-                className="w-full py-3 rounded-xl bg-[#2E6FF2] text-white text-sm font-medium hover:bg-[#1a5ad9] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-2 rounded-xl bg-[#2E6FF2] text-white text-[13px] font-medium hover:bg-[#1a5ad9] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />

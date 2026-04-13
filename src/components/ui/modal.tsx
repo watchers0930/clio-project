@@ -83,15 +83,15 @@ function Modal({
       >
         {/* Header */}
         {(title || description) && (
-          <div className="flex items-start justify-between px-6 pt-5 pb-0">
+          <div className="flex items-start justify-between px-6 py-5 border-b border-clio-border">
             <div>
               {title && (
-                <h2 className="text-lg font-semibold text-clio-text">
+                <h2 className="text-[15px] font-semibold text-clio-text">
                   {title}
                 </h2>
               )}
               {description && (
-                <p className="mt-1 text-sm text-clio-text-secondary">
+                <p className="mt-0.5 text-xs text-clio-text-secondary">
                   {description}
                 </p>
               )}
@@ -116,7 +116,7 @@ function Modal({
         )}
 
         {/* Content */}
-        <div className="px-6 py-5">{children}</div>
+        <div className="px-6 py-5 pb-6">{children}</div>
       </div>
     </dialog>
   );

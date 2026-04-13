@@ -33,13 +33,10 @@ export function ExpiryAlertModal({ items, onDismissToday, onClose }: ExpiryAlert
         style={{ maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
       >
         {/* 헤더 */}
-        <div
-          className="flex items-center justify-between border-b border-border"
-          style={{ padding: '20px 24px' }}
-        >
+        <div className="px-6 py-5 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertTriangle size={18} className="text-orange-500" strokeWidth={2} />
-            <h2 className="text-[16px] font-semibold text-foreground">만료 임박 문서 알림</h2>
+            <h2 className="text-[15px] font-semibold text-foreground">만료 임박 문서 알림</h2>
           </div>
           <button
             onClick={onClose}
@@ -50,7 +47,7 @@ export function ExpiryAlertModal({ items, onDismissToday, onClose }: ExpiryAlert
         </div>
 
         {/* 본문 */}
-        <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
+        <div className="px-6 py-5" style={{ overflowY: 'auto', flex: 1 }}>
           <p className="text-[14px] text-muted mb-4">
             D-30 이내 만료 예정인 문서가 있습니다.
           </p>
@@ -90,10 +87,7 @@ export function ExpiryAlertModal({ items, onDismissToday, onClose }: ExpiryAlert
         </div>
 
         {/* 푸터 */}
-        <div
-          className="flex items-center justify-between border-t border-border"
-          style={{ padding: '16px 24px', gap: 12 }}
-        >
+        <div className="px-6 py-4 border-t border-border flex items-center justify-between gap-3">
           <button
             onClick={onDismissToday}
             className="text-[13px] text-muted hover:text-foreground transition-colors"

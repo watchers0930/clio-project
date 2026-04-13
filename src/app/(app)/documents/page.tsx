@@ -762,7 +762,7 @@ export default function DocumentsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="view-doc-title" onKeyDown={(e) => { if (e.key === 'Escape' && !isEdited) { setViewDoc(null); setShowViewerComments(false); } }}>
           <div className={`bg-white rounded-2xl shadow-xl w-full mx-4 max-h-[90vh] flex flex-col transition-all duration-300 ${showViewerComments ? 'max-w-6xl' : 'max-w-4xl'}`}>
             {/* Header */}
-            <div className="px-8 py-5 border-b border-[#e5e5e7] flex items-center justify-between shrink-0">
+            <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between shrink-0">
               <div className="flex-1 min-w-0">
                 {isDraft ? (
                   <input
@@ -810,7 +810,7 @@ export default function DocumentsPage() {
               {/* 문서 영역 */}
               <div className="flex-1 flex flex-col min-w-0">
             {/* Content */}
-            <div className="flex-1 overflow-y-auto px-8 py-6">
+            <div className="flex-1 overflow-y-auto px-6 py-5">
               {isDraft ? (
                 <textarea
                   value={editContent}
@@ -835,7 +835,7 @@ export default function DocumentsPage() {
 
             {/* 제안서 디자인 프롬프트 */}
             {isProposal && (
-              <div className="px-8 py-5 border-t border-[#e5e5e7] shrink-0">
+              <div className="px-6 py-5 border-t border-[#e5e5e7] shrink-0">
                 <div className="flex items-center gap-3 mb-3">
                   <span className="text-sm font-medium text-[#1d1d1f]">AI 디자인 프롬프트</span>
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-gradient-to-r from-[#0071e3] to-[#5856d6] text-white font-medium">GenSpark / Gamma / Canva</span>
@@ -884,7 +884,7 @@ export default function DocumentsPage() {
 
             {/* 제안서 AI 컨텍스트 다운로드 */}
             {isProposal && (
-              <div className="px-8 py-5 border-t border-[#e5e5e7] shrink-0">
+              <div className="px-6 py-5 border-t border-[#e5e5e7] shrink-0">
                 <div className="flex items-center gap-3 mb-3">
                   <span className="text-sm font-medium text-[#1d1d1f]">AI 컨텍스트 다운로드</span>
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-gradient-to-r from-[#34c759] to-[#30d158] text-white font-medium">ChatGPT / Gemini / Claude</span>
@@ -1016,8 +1016,8 @@ export default function DocumentsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="new-doc-title" onKeyDown={(e) => { if (e.key === 'Escape') resetModal(); }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
             {/* modal header */}
-            <div className="px-8 py-6 border-b border-[#e5e5e7] flex items-center justify-between sticky top-0 bg-white rounded-t-2xl z-10">
-              <h2 id="new-doc-title" className="text-lg font-semibold text-[#1d1d1f]">새 문서 생성</h2>
+            <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between sticky top-0 bg-white rounded-t-2xl z-10">
+              <h2 id="new-doc-title" className="text-[15px] font-semibold text-[#1B1F2B]">새 문서 생성</h2>
               <button onClick={resetModal} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
@@ -1025,7 +1025,7 @@ export default function DocumentsPage() {
 
             {/* steps indicator */}
             {step <= 4 && (
-              <div className="px-8 py-6">
+              <div className="px-6 py-5">
                 <div className="flex items-center gap-2">
                   {[1, 2, 3, 4].map((s) => (
                     <div key={s} className="flex items-center gap-2 flex-1">
@@ -1565,13 +1565,13 @@ export default function DocumentsPage() {
             </div>
 
             {/* modal footer */}
-            <div className="px-8 py-5 border-t border-[#e5e5e7] flex items-center justify-between sticky bottom-0 bg-white rounded-b-2xl">
+            <div className="px-6 py-4 border-t border-[#e5e5e7] flex items-center justify-between sticky bottom-0 bg-white rounded-b-2xl">
               <button
                 onClick={() => {
                   if (step === 1 || step === 5) resetModal();
                   else setStep(step - 1);
                 }}
-                className="px-6 py-3 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
+                className="px-5 py-2 rounded-xl border border-[#e5e5e7] text-[13px] text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
               >
                 {step === 1 || step === 5 ? '닫기' : '이전'}
               </button>
@@ -1579,7 +1579,7 @@ export default function DocumentsPage() {
                 <button
                   disabled={!canNext()}
                   onClick={() => setStep(step + 1)}
-                  className="px-7 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-5 py-2 rounded-xl bg-[#1d1d1f] text-white text-[13px] font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   다음
                 </button>
@@ -1588,7 +1588,7 @@ export default function DocumentsPage() {
                 <button
                   disabled={generating}
                   onClick={handleGenerate}
-                  className="px-7 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-5 py-2 rounded-xl bg-[#1d1d1f] text-white text-[13px] font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {generating ? '생성 중...' : '문서 생성'}
                 </button>
@@ -1599,7 +1599,7 @@ export default function DocumentsPage() {
                     if (generatedDoc) openDocModal(generatedDoc);
                     resetModal();
                   }}
-                  className="px-7 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors"
+                  className="px-5 py-2 rounded-xl bg-[#1d1d1f] text-white text-[13px] font-medium hover:bg-[#0071e3] transition-colors"
                 >
                   문서 편집
                 </button>

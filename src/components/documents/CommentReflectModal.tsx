@@ -1,0 +1,200 @@
+'use client';
+
+import { useState } from 'react';
+import { Spinner } from '@/components/ui';
+import { parseSections } from '@/lib/utils/parse-sections';
+import { useToast } from '@/components/ui/toast';
+import { ArrowLeft, Layers, PlusCircle } from 'lucide-react';
+
+interface CommentReflectModalProps {
+  documentId: string;
+  selectedComments: { id: string; content: string; userName: string }[];
+  documentContent: string;
+  onClose: () => void;
+  onReflected: () => void;
+}
+
+type Step = 'select' | 'insert' | 'append';
+
+export function CommentReflectModal({
+  documentId,
+  selectedComments,
+  documentContent,
+  onClose,
+  onReflected,
+}: CommentReflectModalProps) {
+  const toast = useToast();
+  const [step, setStep] = useState<Step>('select');
+  const [targetSection, setTargetSection] = useState('');
+  const [newSectionTitle, setNewSectionTitle] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const markdownSections = parseSections(documentContent);
+  // 파일 기반 문서(HWPX/DOCX): 첫 줄이 라벨이면 보고서 고정 섹션 제공
+  const isFileBased = documentContent.split('\n')[0].startsWith('[');
+  const HWPX_SECTIONS = ['정보(자료) 출처', '보고 내용과 의견', '문제점'];
+  // 이미 추가된 마크다운 섹션도 포함
+  const sections = isFileBased
+    ? [...HWPX_SECTIONS, ...markdownSections.filter(s => !HWPX_SECTIONS.includes(s))]
+    : markdownSections;
+
+  const handleApply = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const body =
+        step === 'insert'
+          ? { mode: 'insert', selectedCommentIds: selectedComments.map((c) => c.id), targetSection }
+          : { mode: 'append', selectedCommentIds: selectedComments.map((c) => c.id), newSectionTitle };
+
+      const res = await fetch(`/api/documents/${documentId}/apply-comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('댓글이 문서에 반영되었습니다.');
+        onReflected();
+        onClose();
+      } else {
+        toast.error(data.error ?? '반영 실패');
+      }
+    } catch {
+      toast.error('서버 오류');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/30 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-xl w-[420px] overflow-hidden">
+
+        {/* 헤더 */}
+        <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center gap-3">
+          {step !== 'select' && (
+            <button
+              onClick={() => setStep('select')}
+              className="p-1 rounded-lg hover:bg-[#f5f5f7] transition-colors"
+            >
+              <ArrowLeft size={16} className="text-[#6e6e73]" />
+            </button>
+          )}
+          <div>
+            <h3 className="text-[15px] font-semibold text-[#1B1F2B]">댓글 반영</h3>
+            <p className="text-[11px] text-[#6e6e73] mt-0.5">선택된 댓글 {selectedComments.length}개</p>
+          </div>
+        </div>
+
+        {/* 본문 */}
+        <div className="px-6 py-5">
+
+          {/* Step 1: 모드 선택 */}
+          {step === 'select' && (
+            <div className="space-y-3">
+              <p className="text-[13px] text-[#3a3a3c] mb-4">어떻게 반영할까요?</p>
+              <button
+                onClick={() => setStep('insert')}
+                className="w-full flex items-start gap-4 p-4 rounded-xl border border-[#e5e5e7] hover:border-[#2E6FF2] hover:bg-[#f0f5ff] transition-all text-left"
+              >
+                <div className="w-9 h-9 rounded-xl bg-[#2E6FF2]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Layers size={17} className="text-[#2E6FF2]" />
+                </div>
+                <div>
+                  <p className="text-[13px] font-semibold text-[#1B1F2B]">기존 섹션에 추가</p>
+                  <p className="text-[11px] text-[#6e6e73] mt-0.5 leading-relaxed">원문의 특정 섹션에 댓글 내용을 자연스럽게 통합합니다.</p>
+                </div>
+              </button>
+              <button
+                onClick={() => setStep('append')}
+                className="w-full flex items-start gap-4 p-4 rounded-xl border border-[#e5e5e7] hover:border-[#2E6FF2] hover:bg-[#f0f5ff] transition-all text-left"
+              >
+                <div className="w-9 h-9 rounded-xl bg-[#30d158]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <PlusCircle size={17} className="text-[#30d158]" />
+                </div>
+                <div>
+                  <p className="text-[13px] font-semibold text-[#1B1F2B]">새 단락 만들기</p>
+                  <p className="text-[11px] text-[#6e6e73] mt-0.5 leading-relaxed">AI가 댓글을 정리해 새로운 단락을 원문 하단에 추가합니다.</p>
+                </div>
+              </button>
+            </div>
+          )}
+
+          {/* Step 2a: 섹션 선택 */}
+          {step === 'insert' && (
+            <div>
+              <p className="text-[13px] text-[#3a3a3c] mb-4">어느 섹션에 추가할까요?</p>
+              {sections.length === 0 ? (
+                <p className="text-[12px] text-[#a1a1a6]">원문에서 섹션을 찾을 수 없습니다.</p>
+              ) : (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {sections.map((section) => (
+                    <button
+                      key={section}
+                      onClick={() => setTargetSection(section)}
+                      className={`w-full text-left px-4 py-2.5 rounded-xl border text-[13px] transition-all ${
+                        targetSection === section
+                          ? 'border-[#2E6FF2] bg-[#2E6FF2]/6 text-[#2E6FF2] font-medium'
+                          : 'border-[#e5e5e7] text-[#1B1F2B] hover:border-[#2E6FF2]/40 hover:bg-[#f5f5f7]'
+                      }`}
+                    >
+                      {section}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 2b: 새 단락 이름 입력 */}
+          {step === 'append' && (
+            <div>
+              <p className="text-[13px] text-[#3a3a3c] mb-4">새 단락 이름을 입력하세요.</p>
+              <input
+                type="text"
+                value={newSectionTitle}
+                onChange={(e) => setNewSectionTitle(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && newSectionTitle.trim()) handleApply(); }}
+                placeholder="예: 해결방안, 조치사항, 의견 종합"
+                className="w-full rounded-xl border border-[#e5e5e7] px-4 py-2.5 text-[13px] text-[#1B1F2B] placeholder:text-[#a1a1a6] focus:outline-none focus:border-[#2E6FF2] transition-colors"
+                autoFocus
+              />
+            </div>
+          )}
+        </div>
+
+        {/* 버튼 */}
+        <div className="px-6 py-4 border-t border-[#e5e5e7] flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="px-5 py-2 rounded-xl border border-[#e5e5e7] text-[13px] text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors disabled:opacity-40"
+          >
+            취소
+          </button>
+          {step === 'insert' && (
+            <button
+              onClick={handleApply}
+              disabled={!targetSection || loading}
+              className="px-5 py-2 rounded-xl bg-[#2E6FF2] text-white text-[13px] font-medium hover:bg-[#1a5ad9] transition-colors disabled:opacity-40 flex items-center gap-2"
+            >
+              {loading && <Spinner size="sm" variant="white" />}
+              적용하기
+            </button>
+          )}
+          {step === 'append' && (
+            <button
+              onClick={handleApply}
+              disabled={!newSectionTitle.trim() || loading}
+              className="px-5 py-2 rounded-xl bg-[#2E6FF2] text-white text-[13px] font-medium hover:bg-[#1a5ad9] transition-colors disabled:opacity-40 flex items-center gap-2"
+            >
+              {loading && <Spinner size="sm" variant="white" />}
+              AI로 생성하기
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
