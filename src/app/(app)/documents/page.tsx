@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { isContractTemplate, getContractSchema, type ContractField } from '@/lib/contract-fields';
 import { useAuthStore } from '@/store/auth-store';
 import { ShareLinkModal } from '@/components/documents/ShareLinkModal';
@@ -82,6 +83,7 @@ const TEMPLATE_ICONS: Record<string, string> = {
 /* ────────────────────────── page ─────────────────────────── */
 export default function DocumentsPage() {
   const toast = useToast();
+  const router = useRouter();
   const storeUser = useAuthStore((s) => s.user);
   const [docs, setDocs] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -336,7 +338,7 @@ export default function DocumentsPage() {
   };
 
   const handleDelete = (id: string) => {
-    openConfirm('문서 삭제', '이 문서를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.', async () => {
+    openConfirm('이 문서를 삭제하시겠습니까?', '이 작업은 되돌릴 수 없습니다.', async () => {
       closeConfirm();
       try {
         const res = await fetch(`/api/documents?id=${id}`, { method: 'DELETE' });
@@ -716,7 +718,7 @@ export default function DocumentsPage() {
                     style={{ padding: '0' }}
                   >
                     <button
-                      onClick={() => openDocModal(d)}
+                      onClick={() => d.status === '초안' ? openDocModal(d) : router.push(`/documents/${d.id}`)}
                       className="flex-1 py-2.5 text-[12px] font-medium text-[#1B1F2B] hover:bg-[#f5f5f7] transition-colors border-r border-[#E2E5EA]/60"
                     >
                       {d.status === '초안' ? '편집' : '보기'}
@@ -938,37 +940,37 @@ export default function DocumentsPage() {
             )}
 
             {/* Footer */}
-            <div className="px-8 py-5 border-t border-[#e5e5e7] flex items-center justify-between shrink-0">
-              <div className="flex gap-2">
+            <div className="px-6 py-4 border-t border-[#e5e5e7] flex items-center justify-between shrink-0 gap-2 min-w-0">
+              <div className="flex gap-2 shrink-0">
                 {isDraft && (
-                  <button onClick={handleComplete} disabled={saving} className="px-5 py-2.5 rounded-xl bg-[#0071e3] text-white text-sm font-medium hover:bg-[#0066cc] disabled:opacity-50 transition-colors">
+                  <button onClick={handleComplete} disabled={saving} className="px-4 py-2 rounded-xl bg-[#0071e3] text-white text-sm font-medium hover:bg-[#0066cc] disabled:opacity-50 transition-colors whitespace-nowrap">
                     {saving ? '처리 중...' : '완료'}
                   </button>
                 )}
                 {viewDoc?.status === '완료' && (
-                  <button onClick={handleRevertToDraft} disabled={saving} className="px-5 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] disabled:opacity-50 transition-colors">
+                  <button onClick={handleRevertToDraft} disabled={saving} className="px-4 py-2 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] disabled:opacity-50 transition-colors whitespace-nowrap">
                     초안으로 되돌리기
                   </button>
                 )}
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-2 items-center min-w-0 flex-wrap justify-end">
                 {isDraft && (
-                  <button onClick={handleSave} disabled={saving || !isEdited} className="px-5 py-2.5 rounded-xl border border-[#0071e3] text-sm text-[#0071e3] font-medium hover:bg-[#f5f5f7] disabled:opacity-40 transition-colors">
+                  <button onClick={handleSave} disabled={saving || !isEdited} className="px-4 py-2 rounded-xl border border-[#0071e3] text-sm text-[#0071e3] font-medium hover:bg-[#f5f5f7] disabled:opacity-40 transition-colors whitespace-nowrap">
                     {saving ? '저장 중...' : '저장'}
                   </button>
                 )}
-                <select value={downloadFormat} onChange={(e) => setDownloadFormat(e.target.value)} className="px-3 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] bg-white">
+                <select value={downloadFormat} onChange={(e) => setDownloadFormat(e.target.value)} className="px-2 py-2 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] bg-white">
                   {DOWNLOAD_FORMAT_OPTIONS.map((f) => <option key={f} value={f}>{f.toUpperCase()}</option>)}
                 </select>
-                <select value={selectedFont} onChange={(e) => setSelectedFont(e.target.value)} className="px-3 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] bg-white">
+                <select value={selectedFont} onChange={(e) => setSelectedFont(e.target.value)} className="px-2 py-2 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] bg-white max-w-[110px]">
                   {FONT_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
                 </select>
-                <button onClick={() => handleDownload(viewDoc)} className="px-5 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">
+                <button onClick={() => handleDownload(viewDoc)} className="px-4 py-2 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors whitespace-nowrap">
                   다운로드
                 </button>
                 <button
                   onClick={() => setQualityCheckDocId(viewDoc ? viewDoc.id : null)}
-                  className="px-5 py-2.5 rounded-xl border border-[#0071e3] text-sm text-[#0071e3] font-medium hover:bg-[#f0f5ff] transition-colors flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl border border-[#0071e3] text-sm text-[#0071e3] font-medium hover:bg-[#f0f5ff] transition-colors flex items-center gap-1.5 whitespace-nowrap"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -978,7 +980,7 @@ export default function DocumentsPage() {
                 {viewDoc && (viewDoc.title.includes('회의록') || viewDoc.title.includes('회의')) && (
                   <button
                     onClick={() => { setTodoExtractInitial([]); setTodoExtractOpen(true); }}
-                    className="px-5 py-2.5 rounded-xl border border-[#7B61FF] text-sm text-[#7B61FF] font-medium hover:bg-[#F3F0FF] transition-colors flex items-center gap-1.5"
+                    className="px-4 py-2 rounded-xl border border-[#7B61FF] text-sm text-[#7B61FF] font-medium hover:bg-[#F3F0FF] transition-colors flex items-center gap-1.5 whitespace-nowrap"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
