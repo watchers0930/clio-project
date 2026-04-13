@@ -156,8 +156,8 @@ export default function DocumentsPage() {
   // 음성 STT 모달
   const [sttModalOpen, setSttModalOpen] = useState(false);
 
-  // 댓글 패널
-  const [commentPanelDocId, setCommentPanelDocId] = useState<string | null>(null);
+  // 뷰어 댓글 패널 (인라인)
+  const [showViewerComments, setShowViewerComments] = useState(false);
 
   // 버전 히스토리 패널
   const [versionPanelDocId, setVersionPanelDocId] = useState<string | null>(null);
@@ -402,6 +402,7 @@ export default function DocumentsPage() {
     setViewDoc(doc);
     setEditContent(doc.content ?? '');
     setEditTitle(doc.title);
+    setShowViewerComments(false);
     setDesignPrompt(null);
     setCopiedDesignPrompt(false);
   };
@@ -741,13 +742,6 @@ export default function DocumentsPage() {
                       버전
                     </button>
                     <button
-                      onClick={() => setCommentPanelDocId(d.id)}
-                      className="flex-1 py-2.5 text-[12px] font-medium text-[#2E6FF2] hover:bg-[#2E6FF2]/5 transition-colors border-r border-[#E2E5EA]/60"
-                      title="댓글"
-                    >
-                      댓글
-                    </button>
-                    <button
                       onClick={() => handleDelete(d.id)}
                       className="flex-1 py-2.5 text-[12px] font-medium text-[#1d1d1f]/70 hover:bg-[#1d1d1f]/5 hover:text-[#1d1d1f] transition-colors"
                     >
@@ -763,10 +757,10 @@ export default function DocumentsPage() {
 
       {/* ── View/Edit Document Modal ── */}
       {viewDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="view-doc-title" onKeyDown={(e) => { if (e.key === 'Escape' && !isEdited) setViewDoc(null); }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="view-doc-title" onKeyDown={(e) => { if (e.key === 'Escape' && !isEdited) { setViewDoc(null); setShowViewerComments(false); } }}>
+          <div className={`bg-white rounded-2xl shadow-xl w-full mx-4 max-h-[90vh] flex flex-col transition-all duration-300 ${showViewerComments ? 'max-w-6xl' : 'max-w-4xl'}`}>
             {/* Header */}
-            <div className="px-8 py-6 border-b border-[#e5e5e7] flex items-center justify-between shrink-0">
+            <div className="px-8 py-5 border-b border-[#e5e5e7] flex items-center justify-between shrink-0">
               <div className="flex-1 min-w-0">
                 {isDraft ? (
                   <input
@@ -783,15 +777,36 @@ export default function DocumentsPage() {
                   {isEdited && <span className="text-xs text-[#ff9f0a] font-medium">수정됨</span>}
                 </div>
               </div>
-              <button onClick={() => {
-                if (isEdited) {
-                  openConfirm('저장하지 않고 닫기', '수정 내용이 저장되지 않았습니다. 닫으시겠습니까?', () => { closeConfirm(); setViewDoc(null); });
-                } else { setViewDoc(null); }
-              }} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73] ml-3">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
+              <div className="flex items-center gap-2 ml-3">
+                {/* 댓글 토글 버튼 */}
+                <button
+                  onClick={() => setShowViewerComments((v) => !v)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-medium transition-colors ${
+                    showViewerComments
+                      ? 'bg-[#2E6FF2] text-white'
+                      : 'border border-[#e5e5e7] text-[#6e6e73] hover:bg-[#f5f5f7]'
+                  }`}
+                  title="댓글"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                  댓글
+                </button>
+                <button onClick={() => {
+                  if (isEdited) {
+                    openConfirm('저장하지 않고 닫기', '수정 내용이 저장되지 않았습니다. 닫으시겠습니까?', () => { closeConfirm(); setViewDoc(null); setShowViewerComments(false); });
+                  } else { setViewDoc(null); setShowViewerComments(false); }
+                }} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
             </div>
 
+            {/* Body: 문서 + 댓글 분할 */}
+            <div className="flex flex-1 min-h-0">
+              {/* 문서 영역 */}
+              <div className="flex-1 flex flex-col min-w-0">
             {/* Content */}
             <div className="flex-1 overflow-y-auto px-8 py-6">
               {isDraft ? (
@@ -973,6 +988,23 @@ export default function DocumentsPage() {
                 )}
               </div>
             </div>
+              </div>{/* 문서 영역 끝 */}
+
+              {/* 댓글 사이드패널 (인라인) */}
+              {showViewerComments && (
+                <div className="w-[320px] flex-shrink-0 overflow-hidden rounded-br-2xl">
+                  <DocumentCommentPanel
+                    documentId={viewDoc.id}
+                    inline
+                    onClose={() => setShowViewerComments(false)}
+                    onReflected={() => {
+                      setShowViewerComments(false);
+                      loadDocs();
+                    }}
+                  />
+                </div>
+              )}
+            </div>{/* Body 끝 */}
           </div>
         </div>
       )}
@@ -1642,18 +1674,6 @@ export default function DocumentsPage() {
             autoRequest
           />
         </div>
-      )}
-
-      {/* ── 댓글 패널 ── */}
-      {commentPanelDocId && (
-        <DocumentCommentPanel
-          documentId={commentPanelDocId}
-          onClose={() => setCommentPanelDocId(null)}
-          onReflected={() => {
-            setCommentPanelDocId(null);
-            loadDocs();
-          }}
-        />
       )}
 
       {/* ── 삭제/상태변경 확인 다이얼로그 ── */}
