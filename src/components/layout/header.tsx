@@ -59,15 +59,6 @@ function Header({
             />
           </div>
 
-          {/* Notification */}
-          <button className="relative p-2.5 rounded-xl text-muted hover:bg-page-bg transition-colors cursor-pointer">
-            <Bell size={20} strokeWidth={1.5} />
-            {notificationCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-danger text-white text-[10px] font-bold font-num" style={{ padding: '0 4px' }}>
-                {notificationCount > 99 ? '99+' : notificationCount}
-              </span>
-            )}
-          </button>
 
           {/* User */}
           <div className="relative">
