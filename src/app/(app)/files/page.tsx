@@ -595,108 +595,115 @@ function FilesPage() {
       {/* ── Upload Modal ── */}
       {showUpload && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) { setShowUpload(false); setUploadProgress(null); setSelectedFiles([]); } }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 p-8">
-            <div className="flex items-center justify-between mb-[10px]">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4">
+            {/* 헤더 */}
+            <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between">
               <h2 className="text-[15px] font-semibold text-[#1B1F2B]">파일 업로드</h2>
-              <button onClick={() => { setShowUpload(false); setUploadProgress(null); setSelectedFiles([]); }} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
+              <button onClick={() => { setShowUpload(false); setUploadProgress(null); setSelectedFiles([]); }} className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.docx,.pptx,.xlsx,.md,.txt,.csv"
-              multiple
-              className="hidden"
-              onChange={handleFileInputChange}
-            />
+            {/* 바디 */}
+            <div className="px-6 py-5 flex flex-col gap-4">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.docx,.pptx,.xlsx,.md,.txt,.csv"
+                multiple
+                className="hidden"
+                onChange={handleFileInputChange}
+              />
 
-            {/* 공개 범위 선택 */}
-            <div className="flex gap-3 mb-5">
-              <button
-                onClick={() => setUploadScope('department')}
-                className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors ${uploadScope === 'department' ? 'border-[#1d1d1f] bg-[#1d1d1f] text-white' : 'border-[#e5e5e7] text-[#6e6e73] hover:bg-[#f5f5f7]'}`}
-              >
-                부서 공유
-              </button>
-              <button
-                onClick={() => setUploadScope('company')}
-                className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors ${uploadScope === 'company' ? 'border-[#0071e3] bg-[#0071e3] text-white' : 'border-[#e5e5e7] text-[#6e6e73] hover:bg-[#f5f5f7]'}`}
-              >
-                전사 공개
-              </button>
-            </div>
-            <p className="text-xs text-[#6e6e73] -mt-3 mb-4">
-              {uploadScope === 'company' ? '모든 임직원이 이 파일을 볼 수 있습니다.' : '같은 부서 구성원만 이 파일을 볼 수 있습니다.'}
-            </p>
-
-            <div
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-2xl py-8 px-6 text-center transition-colors mt-[5px] ${dragOver ? 'border-[#0071e3] bg-[#f5f5f7]' : 'border-[#e5e5e7] bg-[#f5f5f7]'}`}
-            >
-              <svg className="w-12 h-12 block text-[#6e6e73] mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
-              </svg>
-              <p className="text-[#1d1d1f] font-medium mb-1">파일을 여기에 끌어다 놓으세요</p>
-              <p className="text-sm text-[#6e6e73] mb-0">또는</p>
-              <button onClick={handleFilePicker} className="px-5 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors mt-[10px] mb-[10px]">
-                파일 선택
-              </button>
-              <p className="text-xs text-[#6e6e73] mt-[5px]">PDF, DOCX, PPTX, XLSX, MD (최대 50MB)</p>
-            </div>
-
-            {/* selected files list */}
-            {selectedFiles.length > 0 && uploadProgress === null && (
-              <div className="mt-4 p-4 bg-[#f5f5f7] rounded-xl border border-[#e5e5e7]">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-medium text-[#1d1d1f]">
-                    {selectedFiles.length}개 파일 · {formatSize(selectedFiles.reduce((s, f) => s + f.size, 0))}
-                  </p>
-                  <button onClick={() => { setSelectedFiles([]); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="text-xs text-[#6e6e73] hover:text-[#1d1d1f]">
-                    전체 삭제
+              {/* 공개 범위 선택 */}
+              <div>
+                <div className="flex gap-3 mb-2">
+                  <button
+                    onClick={() => setUploadScope('department')}
+                    className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors ${uploadScope === 'department' ? 'border-[#1d1d1f] bg-[#1d1d1f] text-white' : 'border-[#e5e5e7] text-[#6e6e73] hover:bg-[#f5f5f7]'}`}
+                  >
+                    부서 공유
+                  </button>
+                  <button
+                    onClick={() => setUploadScope('company')}
+                    className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors ${uploadScope === 'company' ? 'border-[#0071e3] bg-[#0071e3] text-white' : 'border-[#e5e5e7] text-[#6e6e73] hover:bg-[#f5f5f7]'}`}
+                  >
+                    전사 공개
                   </button>
                 </div>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {selectedFiles.map((file, idx) => (
-                    <div key={`${file.name}-${idx}`} className="flex items-center gap-3 bg-white rounded-lg px-3 py-2 border border-[#e5e5e7]">
-                      <div className={`w-8 h-8 rounded-lg bg-[#f5f5f7] flex items-center justify-center shrink-0 ${FILE_TYPE_BADGE[getFileType(file.name)] ?? 'text-gray-400'}`}>
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                        </svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-[#1d1d1f] truncate">{file.name}</p>
-                        <p className="text-xs text-[#6e6e73]">{formatSize(file.size)}</p>
-                      </div>
-                      <button onClick={() => setSelectedFiles((prev) => prev.filter((_, i) => i !== idx))} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73] shrink-0">
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  onClick={handleUpload}
-                  className="mt-3 w-full py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors"
-                >
-                  {selectedFiles.length}개 파일 업로드
-                </button>
+                <p className="text-xs text-[#6e6e73]">
+                  {uploadScope === 'company' ? '모든 임직원이 이 파일을 볼 수 있습니다.' : '같은 부서 구성원만 이 파일을 볼 수 있습니다.'}
+                </p>
               </div>
-            )}
 
-            {uploadProgress !== null && (
-              <div className="mt-4">
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-[#1d1d1f]">{uploadProgress.percent >= 100 ? '업로드 완료!' : `업로드 중... (${uploadProgress.current}/${uploadProgress.total})`}</span>
-                  <span className="text-[#0071e3] font-medium font-num">{uploadProgress.percent}%</span>
-                </div>
-                <div className="h-2 bg-[#f5f5f7] rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full transition-all duration-300 ${uploadProgress.percent >= 100 ? 'bg-[#30d158]' : 'bg-[#0071e3]'}`} style={{ width: `${uploadProgress.percent}%` }} />
-                </div>
+              {/* 드롭존 */}
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleDrop}
+                className={`border-2 border-dashed rounded-2xl p-6 transition-colors ${dragOver ? 'border-[#0071e3] bg-[#eef4ff]' : 'border-[#e5e5e7] bg-[#f5f5f7]'}`}
+              >
+                <svg className="w-10 h-10 text-[#6e6e73] mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                </svg>
+                <p className="text-sm font-medium text-[#1d1d1f] mb-1">파일을 여기에 끌어다 놓으세요</p>
+                <p className="text-xs text-[#6e6e73] mb-3">또는</p>
+                <button onClick={handleFilePicker} className="px-4 py-2 rounded-xl bg-[#1d1d1f] text-white text-[13px] font-medium hover:bg-[#0071e3] transition-colors">
+                  파일 선택
+                </button>
+                <p className="text-xs text-[#6e6e73] mt-3">PDF, DOCX, PPTX, XLSX, MD (최대 50MB)</p>
               </div>
-            )}
+
+              {/* 선택된 파일 목록 */}
+              {selectedFiles.length > 0 && uploadProgress === null && (
+                <div className="p-4 bg-[#f5f5f7] rounded-xl border border-[#e5e5e7]">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-medium text-[#1d1d1f]">
+                      {selectedFiles.length}개 파일 · {formatSize(selectedFiles.reduce((s, f) => s + f.size, 0))}
+                    </p>
+                    <button onClick={() => { setSelectedFiles([]); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="text-xs text-[#6e6e73] hover:text-[#1d1d1f]">
+                      전체 삭제
+                    </button>
+                  </div>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {selectedFiles.map((file, idx) => (
+                      <div key={`${file.name}-${idx}`} className="flex items-center gap-3 bg-white rounded-lg px-3 py-2 border border-[#e5e5e7]">
+                        <div className={`w-8 h-8 rounded-lg bg-[#f5f5f7] flex items-center justify-center shrink-0 ${FILE_TYPE_BADGE[getFileType(file.name)] ?? 'text-gray-400'}`}>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-[#1d1d1f] truncate">{file.name}</p>
+                          <p className="text-xs text-[#6e6e73]">{formatSize(file.size)}</p>
+                        </div>
+                        <button onClick={() => setSelectedFiles((prev) => prev.filter((_, i) => i !== idx))} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73] shrink-0">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={handleUpload}
+                    className="mt-3 w-full py-2 rounded-xl bg-[#1d1d1f] text-white text-[13px] font-medium hover:bg-[#0071e3] transition-colors"
+                  >
+                    {selectedFiles.length}개 파일 업로드
+                  </button>
+                </div>
+              )}
+
+              {uploadProgress !== null && (
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-[#1d1d1f]">{uploadProgress.percent >= 100 ? '업로드 완료!' : `업로드 중... (${uploadProgress.current}/${uploadProgress.total})`}</span>
+                    <span className="text-[#0071e3] font-medium font-num">{uploadProgress.percent}%</span>
+                  </div>
+                  <div className="h-2 bg-[#f5f5f7] rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all duration-300 ${uploadProgress.percent >= 100 ? 'bg-[#30d158]' : 'bg-[#0071e3]'}`} style={{ width: `${uploadProgress.percent}%` }} />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -704,14 +711,15 @@ function FilesPage() {
       {/* ── Detail Modal ── */}
       {detailFile && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) setDetailFile(null); }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-[#1d1d1f]">파일 상세</h2>
-              <button onClick={() => setDetailFile(null)} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4">
+            <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between">
+              <h2 className="text-[15px] font-semibold text-[#1B1F2B]">파일 상세</h2>
+              <button onClick={() => setDetailFile(null)} className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            <div className="flex items-center gap-4 mb-6">
+            <div className="px-6 py-5">
+            <div className="flex items-center gap-4 mb-5">
               <div className={`w-14 h-14 rounded-2xl bg-[#f5f5f7] flex items-center justify-center ${FILE_TYPE_BADGE[detailFile.type] ?? 'text-gray-400'}`}>
                 <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -725,7 +733,7 @@ function FilesPage() {
                 </div>
               </div>
             </div>
-            <dl className="text-sm" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <dl className="text-sm mb-5" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div className="flex justify-between"><dt className="text-[#6e6e73]">부서</dt><dd className="text-[#1d1d1f] font-medium">{detailFile.department}</dd></div>
               <div className="flex justify-between items-center">
                 <dt className="text-[#6e6e73]">공개 범위</dt>
@@ -761,13 +769,14 @@ function FilesPage() {
               <div className="flex justify-between"><dt className="text-[#6e6e73]">업로드일</dt><dd className="text-[#1d1d1f] font-medium">{detailFile.uploadDate}</dd></div>
               <div className="flex justify-between"><dt className="text-[#6e6e73]">상태</dt><dd className="text-[#1d1d1f] font-medium">{detailFile.status}</dd></div>
             </dl>
-            <div className="flex gap-3" style={{ marginTop: 28 }}>
-              <button onClick={() => { handleDownload(detailFile); setDetailFile(null); }} className="flex-1 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors">
+            <div className="flex gap-3">
+              <button onClick={() => { handleDownload(detailFile); setDetailFile(null); }} className="flex-1 py-2 rounded-xl bg-[#1d1d1f] text-white text-[13px] font-medium hover:bg-[#0071e3] transition-colors">
                 다운로드
               </button>
-              <button onClick={() => setDetailFile(null)} className="flex-1 py-3 rounded-xl border border-[#e5e5e7] text-sm font-medium text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">
+              <button onClick={() => setDetailFile(null)} className="flex-1 py-2 rounded-xl border border-[#e5e5e7] text-[13px] font-medium text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">
                 닫기
               </button>
+            </div>
             </div>
           </div>
         </div>
@@ -776,21 +785,21 @@ function FilesPage() {
       {/* ── Delete Confirm Modal ── */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) setDeleteConfirm(null); }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-8 text-center">
-            <div className="w-14 h-14 rounded-full bg-[#f5f5f7] flex items-center justify-center mx-auto mb-5">
-              <svg className="w-7 h-7 text-[#ff3b30]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 px-6 py-6 text-center">
+            <div className="w-12 h-12 rounded-full bg-[#fff1f0] flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-[#ff3b30]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-[#1d1d1f] mb-2">파일 삭제</h3>
-            <p className="text-sm text-[#6e6e73] mb-6">
+            <h3 className="text-[15px] font-semibold text-[#1B1F2B] mb-1.5">파일 삭제</h3>
+            <p className="text-sm text-[#6e6e73] mb-5">
               &quot;{deleteConfirm.name}&quot;을(를) 삭제하시겠습니까?<br />이 작업은 되돌릴 수 없습니다.
             </p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-2.5 rounded-xl border border-[#e5e5e7] text-sm font-medium text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">
+              <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-2 rounded-xl border border-[#e5e5e7] text-[13px] font-medium text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">
                 취소
               </button>
-              <button onClick={confirmDelete} className="flex-1 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors">
+              <button onClick={confirmDelete} className="flex-1 py-2 rounded-xl bg-[#1d1d1f] text-white text-[13px] font-medium hover:bg-[#0071e3] transition-colors">
                 삭제
               </button>
             </div>
@@ -801,17 +810,18 @@ function FilesPage() {
       {/* ── Scrape Modal ── */}
       {showScrape && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget && !scrapeLoading) setShowScrape(false); }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 p-8">
-            <div className="flex items-center justify-between" style={{ marginBottom: 20 }}>
-              <h2 className="text-lg font-semibold text-[#1d1d1f]">URL 상품 링크 수집</h2>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4">
+            <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between">
+              <h2 className="text-[15px] font-semibold text-[#1B1F2B]">URL 상품 링크 수집</h2>
               {!scrapeLoading && (
-                <button onClick={() => setShowScrape(false)} className="p-1 rounded-lg hover:bg-[#f5f5f7]">
+                <button onClick={() => setShowScrape(false)} className="p-1.5 rounded-lg hover:bg-[#f5f5f7]">
                   <svg className="w-5 h-5 text-[#6e6e73]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               )}
             </div>
 
-            <p className="text-sm text-[#6e6e73]" style={{ marginBottom: 16 }}>
+            <div className="px-6 py-5 flex flex-col gap-4">
+            <p className="text-sm text-[#6e6e73]">
               쇼핑몰 카테고리 페이지 URL을 입력하면 상품 링크를 자동으로 수집합니다.
             </p>
 
@@ -847,11 +857,11 @@ function FilesPage() {
               </div>
             )}
 
-            <div className="flex gap-3" style={{ marginTop: 20 }}>
+            <div className="flex gap-3">
               <button
                 onClick={() => setShowScrape(false)}
                 disabled={scrapeLoading}
-                className="flex-1 py-2.5 rounded-xl border border-[#e5e5e7] text-sm font-medium text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors disabled:opacity-50"
+                className="flex-1 py-2 rounded-xl border border-[#e5e5e7] text-[13px] font-medium text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors disabled:opacity-50"
               >
                 {scrapeResult?.success && scrapeResult.linkCount ? '닫기' : '취소'}
               </button>
@@ -859,11 +869,12 @@ function FilesPage() {
                 <button
                   onClick={handleScrape}
                   disabled={!scrapeUrl.trim() || scrapeLoading}
-                  className="flex-1 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-50"
+                  className="flex-1 py-2 rounded-xl bg-[#1d1d1f] text-white text-[13px] font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-50"
                 >
                   수집 시작
                 </button>
               )}
+            </div>
             </div>
           </div>
         </div>
