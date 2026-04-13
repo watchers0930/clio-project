@@ -80,17 +80,18 @@ function hwpxRenderTable(tblXml: string, signerName?: string): string {
     if (trEnd < 0) continue;
     const trXml = tblXml.slice(trStart, trEnd + `</${trNs}:tr>`.length);
 
-    // 타이틀 행 감지: 첫 번째 셀이 colSpan >= 4 AND rowSpan >= 2인 경우 (제목+결재 헤더)
-    const firstTcIdx = trXml.search(/<(?:hp|hh):tc[\s>]/);
-    if (firstTcIdx >= 0) {
-      const firstTcEnd = trXml.indexOf('>', firstTcIdx);
-      const firstTcTag = trXml.slice(firstTcIdx, firstTcEnd + 1);
-      const firstColSpan = parseInt(firstTcTag.match(/colSpan="(\d+)"/)?.[1] ?? '1');
-      const firstRowSpan = parseInt(firstTcTag.match(/rowSpan="(\d+)"/)?.[1] ?? '1');
-      if (firstColSpan >= 4 && firstRowSpan >= 2) {
-        skipRows = firstRowSpan - 1; // 이후 결재 서명란 행 스킵
-        continue; // 타이틀 행 자체도 건너뜀
-      }
+    // 타이틀 행 감지: 작성/검토/승인 결재 헤더 셀이 있는 행 → 제목+결재 행
+    const rowTexts = hwpxExtractTexts(trXml);
+    const approvalLabels = ['작성', '검토', '승인', '결재'];
+    const hasApprovalCols = approvalLabels.filter(l => rowTexts.includes(l)).length >= 2;
+    if (hasApprovalCols) {
+      // 첫 번째 셀 전체 XML에서 rowSpan 추출
+      const firstTcStart = trXml.search(/<(?:hp|hh):tc[\s>]/);
+      const firstTcEnd = firstTcStart >= 0 ? trXml.indexOf('</hp:tc>', firstTcStart) : -1;
+      const firstTcXml = firstTcEnd > 0 ? trXml.slice(firstTcStart, firstTcEnd + 8) : '';
+      const firstRowSpan = parseInt(firstTcXml.match(/rowSpan="(\d+)"/)?.[1] ?? '1');
+      skipRows = Math.max(0, firstRowSpan - 1);
+      continue;
     }
     if (skipRows > 0) { skipRows--; continue; }
 
