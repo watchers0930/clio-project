@@ -62,11 +62,9 @@ function hwpxExtractTexts(xml: string): string[] {
 function hwpxRenderTable(tblXml: string): string {
   // 서명·헤더 테이블 전체 제거
   const allTexts = hwpxExtractTexts(tblXml);
-  const allStr = allTexts.join('');
-  // (서명)/(인) 포함 테이블 또는 '담당' 단독 셀이 있는 헤더 테이블
+  // (서명)/(인)이 셀 단독 텍스트인 서명 전용 테이블만 제거 (내용 테이블 안에 서명자 이름이 포함된 경우 제외)
   if (
-    allStr.includes('(서명)') ||
-    allStr.includes('(인)') ||
+    allTexts.some(t => t.trim() === '(서명)' || t.trim() === '(인)') ||
     allTexts.some(t => t.trim() === '담당')
   ) return '';
 
