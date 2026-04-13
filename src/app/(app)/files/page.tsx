@@ -17,6 +17,8 @@ interface FileItem {
   sizeBytes?: number;
   uploadDate: string;
   status: '완료' | '처리중' | '오류';
+  scope: 'company' | 'department';
+  isOwner: boolean;
 }
 
 /* ────────────────────────── constants ────────────────────── */
@@ -67,6 +69,8 @@ function FilesPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<FileItem | null>(null);
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
   const [downloadToast, setDownloadToast] = useState<string | null>(null);
+  const [uploadScope, setUploadScope] = useState<'company' | 'department'>('department');
+  const [scopeFilter, setScopeFilter] = useState<'전체' | 'company' | 'department'>('전체');
   const [showScrape, setShowScrape] = useState(false);
   const [scrapeUrl, setScrapeUrl] = useState('');
   const [scrapeLoading, setScrapeLoading] = useState(false);
@@ -113,6 +117,7 @@ function FilesPage() {
     if (deptFilter !== '전체' && f.department !== deptFilter) return false;
     if (typeFilter !== '전체' && f.type !== typeFilter) return false;
     if (statusFilter !== '전체' && f.status !== statusFilter) return false;
+    if (scopeFilter !== '전체' && f.scope !== scopeFilter) return false;
     return true;
   });
 
@@ -178,6 +183,7 @@ function FilesPage() {
       try {
         const formData = new FormData();
         formData.append('file', selectedFiles[i]);
+        formData.append('scope', uploadScope);
 
         const res = await fetch('/api/files', { method: 'POST', body: formData });
         if (!res.ok) {
@@ -208,6 +214,7 @@ function FilesPage() {
       setUploadProgress(null);
       setShowUpload(false);
       setSelectedFiles([]);
+      setUploadScope('department');
       setPage(1);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }, failed.length > 0 ? 0 : 600);
@@ -248,6 +255,33 @@ function FilesPage() {
     setFiles((prev) => prev.filter((f) => !selectedIds.has(f.id)));
     setSelectedIds(new Set());
     setBulkConfirmOpen(false);
+  };
+
+  const bulkChangeScope = async (newScope: 'company' | 'department') => {
+    const ids = Array.from(selectedIds);
+    const results = await Promise.allSettled(
+      ids.map((id) =>
+        fetch(`/api/files/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scope: newScope }),
+        }).then((r) => ({ id, ok: r.ok }))
+      )
+    );
+    const succeeded = results
+      .filter((r) => r.status === 'fulfilled' && r.value.ok)
+      .map((r) => (r as PromiseFulfilledResult<{ id: string; ok: boolean }>).value.id);
+    const failed = ids.length - succeeded.length;
+
+    setFiles((prev) =>
+      prev.map((f) => succeeded.includes(f.id) ? { ...f, scope: newScope } : f)
+    );
+
+    if (failed > 0) {
+      toast.error(`${succeeded.length}개 변경 완료, ${failed}개 실패 (본인 파일만 변경 가능)`);
+    } else {
+      toast.success(`${succeeded.length}개 파일을 ${newScope === 'company' ? '전사' : '부서'}로 변경했습니다.`);
+    }
   };
 
   const handleDownload = async (file: FileItem) => {
@@ -349,10 +383,22 @@ function FilesPage() {
 
       {/* bulk actions bar */}
       {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 px-4 py-3 bg-[#f5f5f7] border border-[#0071e3]/30 rounded-xl">
+        <div className="flex items-center flex-wrap gap-3 px-4 py-3 bg-[#f5f5f7] border border-[#0071e3]/30 rounded-xl">
           <span className="text-sm font-medium text-[#1d1d1f]">
             <span className="font-num">{selectedIds.size}</span>개 선택됨
           </span>
+          <button
+            onClick={() => bulkChangeScope('company')}
+            className="px-4 py-2 rounded-lg border border-[#0071e3] text-[#0071e3] text-sm font-medium hover:bg-[#e0f0ff] transition-colors"
+          >
+            전사로 변경
+          </button>
+          <button
+            onClick={() => bulkChangeScope('department')}
+            className="px-4 py-2 rounded-lg border border-[#e5e5e7] bg-white text-sm font-medium text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
+          >
+            부서로 변경
+          </button>
           <button
             onClick={bulkDelete}
             className="ml-auto px-5 py-2 rounded-lg bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors"
@@ -369,7 +415,7 @@ function FilesPage() {
       )}
 
       {/* filter bar */}
-      <div className="flex flex-wrap gap-4 items-center">
+      <div className="flex flex-wrap gap-4 items-center" style={{ marginTop: 10 }}>
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6e6e73]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -389,6 +435,11 @@ function FilesPage() {
         </select>
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3]">
           {STATUSES.map((s) => <option key={s}>{s}</option>)}
+        </select>
+        <select value={scopeFilter} onChange={(e) => { setScopeFilter(e.target.value as typeof scopeFilter); setPage(1); }} className="px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3]">
+          <option value="전체">전체 범위</option>
+          <option value="company">전사</option>
+          <option value="department">부서</option>
         </select>
 
         {/* view toggle */}
@@ -417,6 +468,7 @@ function FilesPage() {
                   </th>
                   <th className="px-4 py-4 font-medium">파일명</th>
                   <th className="px-4 py-4 font-medium hidden sm:table-cell">부서</th>
+                  <th className="px-4 py-4 font-medium hidden md:table-cell">공개 범위</th>
                   <th className="px-4 py-4 font-medium hidden md:table-cell">크기</th>
                   <th className="px-4 py-4 font-medium hidden md:table-cell">업로드일</th>
                   <th className="px-4 py-4 font-medium">상태</th>
@@ -444,6 +496,11 @@ function FilesPage() {
                       </button>
                     </td>
                     <td className="px-4 py-3 hidden sm:table-cell text-[#6e6e73]">{f.department}</td>
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${f.scope === 'company' ? 'bg-[#e0f0ff] text-[#0071e3]' : 'bg-[#f5f5f7] text-[#6e6e73]'}`}>
+                        {f.scope === 'company' ? '전사' : '부서'}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 hidden md:table-cell text-[#6e6e73]">{f.size}</td>
                     <td className="px-4 py-3 hidden md:table-cell text-[#6e6e73]">{f.uploadDate}</td>
                     <td className="px-4 py-3">
@@ -506,9 +563,12 @@ function FilesPage() {
                 <span>·</span>
                 <span>{f.uploadDate}</span>
               </div>
-              <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${FILE_TYPE_BADGE[f.type] ?? 'bg-gray-100 text-gray-600'}`}>{f.type}</span>
                 <span className="text-xs text-[#6e6e73]">{f.department}</span>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${f.scope === 'company' ? 'bg-[#e0f0ff] text-[#0071e3]' : 'bg-[#f5f5f7] text-[#6e6e73]'}`}>
+                  {f.scope === 'company' ? '전사' : '부서'}
+                </span>
               </div>
             </div>
           ))}
@@ -551,6 +611,25 @@ function FilesPage() {
               className="hidden"
               onChange={handleFileInputChange}
             />
+
+            {/* 공개 범위 선택 */}
+            <div className="flex gap-3 mb-5">
+              <button
+                onClick={() => setUploadScope('department')}
+                className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors ${uploadScope === 'department' ? 'border-[#1d1d1f] bg-[#1d1d1f] text-white' : 'border-[#e5e5e7] text-[#6e6e73] hover:bg-[#f5f5f7]'}`}
+              >
+                부서 공유
+              </button>
+              <button
+                onClick={() => setUploadScope('company')}
+                className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors ${uploadScope === 'company' ? 'border-[#0071e3] bg-[#0071e3] text-white' : 'border-[#e5e5e7] text-[#6e6e73] hover:bg-[#f5f5f7]'}`}
+              >
+                전사 공개
+              </button>
+            </div>
+            <p className="text-xs text-[#6e6e73] -mt-3 mb-4">
+              {uploadScope === 'company' ? '모든 임직원이 이 파일을 볼 수 있습니다.' : '같은 부서 구성원만 이 파일을 볼 수 있습니다.'}
+            </p>
 
             <div
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -648,6 +727,36 @@ function FilesPage() {
             </div>
             <dl className="text-sm" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div className="flex justify-between"><dt className="text-[#6e6e73]">부서</dt><dd className="text-[#1d1d1f] font-medium">{detailFile.department}</dd></div>
+              <div className="flex justify-between items-center">
+                <dt className="text-[#6e6e73]">공개 범위</dt>
+                <dd className="flex items-center gap-2">
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${detailFile.scope === 'company' ? 'bg-[#e0f0ff] text-[#0071e3]' : 'bg-[#f5f5f7] text-[#6e6e73]'}`}>
+                    {detailFile.scope === 'company' ? '전사' : '부서'}
+                  </span>
+                  {detailFile.isOwner && (
+                    <button
+                      onClick={async () => {
+                        const newScope = detailFile.scope === 'company' ? 'department' : 'company';
+                        const res = await fetch(`/api/files/${detailFile.id}`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ scope: newScope }),
+                        });
+                        if (res.ok) {
+                          setFiles((prev) => prev.map((f) => f.id === detailFile.id ? { ...f, scope: newScope } : f));
+                          setDetailFile((prev) => prev ? { ...prev, scope: newScope } : null);
+                          toast.success(`공개 범위를 ${newScope === 'company' ? '전사' : '부서'}로 변경했습니다.`);
+                        } else {
+                          toast.error('공개 범위 변경에 실패했습니다.');
+                        }
+                      }}
+                      className="text-xs text-[#0071e3] hover:underline"
+                    >
+                      {detailFile.scope === 'company' ? '부서로 변경' : '전사로 변경'}
+                    </button>
+                  )}
+                </dd>
+              </div>
               <div className="flex justify-between"><dt className="text-[#6e6e73]">크기</dt><dd className="text-[#1d1d1f] font-medium">{detailFile.size}</dd></div>
               <div className="flex justify-between"><dt className="text-[#6e6e73]">업로드일</dt><dd className="text-[#1d1d1f] font-medium">{detailFile.uploadDate}</dd></div>
               <div className="flex justify-between"><dt className="text-[#6e6e73]">상태</dt><dd className="text-[#1d1d1f] font-medium">{detailFile.status}</dd></div>

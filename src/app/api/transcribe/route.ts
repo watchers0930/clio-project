@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { transcribeAudio } from '@/lib/ai/transcribe';
 import { summarizeTranscript } from '@/lib/ai/summarize';
+import { extractTodosFromText } from '@/lib/ai/extract-todos';
 
 /**
  * POST /api/transcribe
@@ -100,6 +101,12 @@ ${transcript}`;
       console.error('[transcribe] doc insert error:', docErr.message);
     }
 
+    // 5. 할일 자동 추출 (실패해도 회의록 생성 중단 없음)
+    let extractedTodos: import('@/lib/ai/extract-todos').ExtractedTodo[] = [];
+    if (newDoc && process.env.OPENAI_API_KEY) {
+      extractedTodos = await extractTodosFromText(transcript);
+    }
+
     // audit_logs
     await supabase.from('audit_logs').insert({
       user_id: authUserId,
@@ -119,6 +126,7 @@ ${transcript}`;
           title: newDoc.title,
           content: newDoc.content,
         } : null,
+        extractedTodos,
       },
     });
   } catch (err) {

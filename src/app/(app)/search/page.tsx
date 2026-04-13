@@ -190,7 +190,7 @@ export default function SearchPage() {
               showButton
               buttonLabel={loading ? '검색 중...' : '검색'}
               loading={loading}
-              disabled={loading || !query.trim()}
+              buttonDisabled={loading || !query.trim()}
               size="lg"
             />
           </div>

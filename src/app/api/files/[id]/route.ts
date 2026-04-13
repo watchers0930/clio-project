@@ -94,6 +94,52 @@ export async function GET(
   }
 }
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id } = await params;
+
+    const supabase = await createServerSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json<ApiResponse>({ success: false, error: '데이터베이스가 설정되지 않았습니다.' }, { status: 503 });
+    }
+
+    const authUserId = await getAuthUserId(supabase);
+    if (!authUserId) {
+      return NextResponse.json<ApiResponse>({ success: false, error: '인증이 필요합니다.' }, { status: 401 });
+    }
+
+    const body = await request.json().catch(() => null);
+    const newScope = body?.scope;
+    if (newScope !== 'company' && newScope !== 'department') {
+      return NextResponse.json<ApiResponse>({ success: false, error: 'scope는 company 또는 department여야 합니다.' }, { status: 400 });
+    }
+
+    // 본인 파일인지 확인
+    const { data: file } = await supabase.from('files').select('uploaded_by').eq('id', id).single();
+    if (!file) {
+      return NextResponse.json<ApiResponse>({ success: false, error: '파일을 찾을 수 없습니다.' }, { status: 404 });
+    }
+    if (file.uploaded_by !== authUserId) {
+      return NextResponse.json<ApiResponse>({ success: false, error: '본인이 업로드한 파일만 수정할 수 있습니다.' }, { status: 403 });
+    }
+
+    const { error } = await supabase.from('files').update({ scope: newScope }).eq('id', id);
+    if (error) {
+      return NextResponse.json<ApiResponse>({ success: false, error: '공개 범위 수정에 실패했습니다.' }, { status: 500 });
+    }
+
+    return NextResponse.json<ApiResponse>({ success: true, data: { id, scope: newScope } });
+  } catch {
+    return NextResponse.json<ApiResponse>(
+      { success: false, error: '공개 범위 수정 중 오류가 발생했습니다.' },
+      { status: 500 },
+    );
+  }
+}
+
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },

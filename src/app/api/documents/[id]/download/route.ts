@@ -80,20 +80,29 @@ export async function GET(
 
     const inline = url.searchParams.get('inline') === 'true';
 
-    // 서명 이미지 가져오기 (없으면 null)
+    // 서명 이미지 가져오기 — 문서 작성자(요청자) 기준으로 로드
     let signatureBuffer: Buffer | null = null;
     let signerName = '';
     try {
       const adminClient = createAdminSupabaseClient();
-      const { data: userData } = await adminClient
+      // 문서 작성자(요청자) created_by를 별도 조회
+      const { data: docMeta } = await adminClient
+        .from('documents')
+        .select('created_by')
+        .eq('id', id)
+        .maybeSingle();
+      const signatureOwnerId = docMeta?.created_by ?? authUserId;
+      const { data: userData, error: userErr } = await adminClient
         .from('users')
         .select('name, signature_path')
-        .eq('id', authUserId)
-        .single();
-      signerName = userData?.name ?? '';
-      if (userData?.signature_path) {
-        const { data: sigBlob } = await adminClient.storage.from('files').download(userData.signature_path);
-        if (sigBlob) signatureBuffer = Buffer.from(await sigBlob.arrayBuffer());
+        .eq('id', signatureOwnerId)
+        .maybeSingle();
+      if (!userErr && userData) {
+        signerName = userData.name ?? '';
+        if (userData.signature_path) {
+          const { data: sigBlob } = await adminClient.storage.from('files').download(userData.signature_path);
+          if (sigBlob) signatureBuffer = Buffer.from(await sigBlob.arrayBuffer());
+        }
       }
     } catch { /* 서명 없으면 그냥 진행 */ }
 
@@ -120,23 +129,58 @@ export async function GET(
           if (!isLabel && content.length > 50) {
             // 마크다운 content → PDF 렌더
             const theme: CorporateTheme = { ...DEFAULT_THEME, fontFamily: fontParam, fontFamilyEn: fontFamily };
-            const rendered = await renderPdf(content, doc.title, theme);
+            let rendered = await renderPdf(content, doc.title, theme);
+            if (signatureBuffer) {
+              const sigBase64 = signatureBuffer.toString('base64');
+              const sigImg = `<div style="text-align:right;margin-top:32px;padding-right:40px;"><img src="data:image/png;base64,${sigBase64}" style="width:120px;height:60px;object-fit:contain;" alt="서명" /></div>`;
+              const htmlStr = rendered.buffer.toString('utf-8');
+              rendered = { ...rendered, buffer: Buffer.from(htmlStr.replace('</body>', `${sigImg}</body>`), 'utf-8') };
+            }
             const fileName = encodeURIComponent(rendered.fileName);
             return new NextResponse(rendered.buffer, {
               headers: {
-                'Content-Type': 'application/pdf',
+                'Content-Type': 'text/html; charset=utf-8',
                 'Content-Disposition': `inline; filename*=UTF-8''${fileName}`,
                 'Content-Length': String(rendered.buffer.length),
               },
             });
           }
-          // 파일 기반 문서 → 원본 파일 그대로 inline 서빙
-          const fileName = encodeURIComponent(`${doc.title}.${ext}`);
-          return new NextResponse(fileBuffer, {
+          // 파일 기반 문서 → 파일에서 텍스트 추출 후 HTML 렌더
+          let extractedHtml = '';
+          try {
+            if (ext === 'docx') {
+              const mammoth = await import('mammoth');
+              const result = await mammoth.convertToHtml({ buffer: fileBuffer.buffer as ArrayBuffer });
+              extractedHtml = result.value;
+            } else if (ext === 'hwpx') {
+              const PizZip = (await import('pizzip')).default;
+              const zip = new PizZip(fileBuffer);
+              const sectionFiles = Object.keys(zip.files)
+                .filter(name => /^Contents\/section\d+\.xml$/i.test(name))
+                .sort();
+              const lines: string[] = [];
+              for (const name of sectionFiles) {
+                const xml = zip.file(name)?.asText() ?? '';
+                const matches = xml.match(/<(?:hp:)?t[^>]*>([^<]*)<\/(?:hp:)?t>/g) ?? [];
+                matches.map(m => m.replace(/<[^>]+>/g, '').trim()).filter(Boolean).forEach(t => lines.push(t));
+              }
+              extractedHtml = lines.map(l => `<p>${l}</p>`).join('');
+            }
+          } catch { /* 추출 실패 시 빈 문자열 */ }
+
+          const bodyContent = extractedHtml
+            ? extractedHtml
+            : `<p style="color:#6e6e73;">이 파일(${ext.toUpperCase()})은 미리보기를 지원하지 않습니다.</p>`;
+
+          const signatureBlock = signatureBuffer
+            ? `<div style="text-align:right;margin-top:32px;padding-right:40px;"><img src="data:image/png;base64,${signatureBuffer.toString('base64')}" style="width:120px;height:60px;object-fit:contain;" alt="서명" /></div>`
+            : '';
+
+          const fileHtml = Buffer.from(`<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><style>body{font-family:'맑은 고딕',sans-serif;max-width:800px;margin:40px auto;padding:0 40px;font-size:13px;line-height:1.8;color:#1d1d1f;}h1{font-size:18px;font-weight:700;margin-bottom:24px;border-bottom:1px solid #e5e5e7;padding-bottom:12px;}p{margin:4px 0;}table{border-collapse:collapse;width:100%;margin:12px 0;}td,th{border:1px solid #ccc;padding:6px 10px;}</style></head><body><h1>${doc.title}</h1>${bodyContent}${signatureBlock}</body></html>`, 'utf-8');
+          return new NextResponse(fileHtml, {
             headers: {
-              'Content-Type': mimeMap[ext] ?? 'application/octet-stream',
-              'Content-Disposition': `inline; filename*=UTF-8''${fileName}`,
-              'Content-Length': String(fileBuffer.length),
+              'Content-Type': 'text/html; charset=utf-8',
+              'Content-Length': String(fileHtml.length),
             },
           });
         }
@@ -171,13 +215,22 @@ export async function GET(
     switch (format) {
       case 'hwpx':
         rendered = await renderHwpx(content, doc.title, theme);
+        if (!inline && signatureBuffer) rendered = { ...rendered, buffer: injectSignatureHwpx(rendered.buffer, signatureBuffer, signerName) };
         break;
       case 'pdf':
         rendered = await renderPdf(content, doc.title, theme);
+        // inline HTML 미리보기에 서명 이미지 삽입 (base64)
+        if (signatureBuffer) {
+          const sigBase64 = signatureBuffer.toString('base64');
+          const sigImg = `<div style="text-align:right;margin-top:32px;padding-right:40px;"><img src="data:image/png;base64,${sigBase64}" style="width:120px;height:60px;object-fit:contain;" alt="서명" /></div>`;
+          const htmlStr = rendered.buffer.toString('utf-8');
+          rendered = { ...rendered, buffer: Buffer.from(htmlStr.replace('</body>', `${sigImg}</body>`), 'utf-8') };
+        }
         break;
       case 'docx':
       default:
         rendered = await renderDocx(content, doc.title, theme);
+        if (!inline && signatureBuffer) rendered = { ...rendered, buffer: injectSignatureDocx(rendered.buffer, signatureBuffer) };
         break;
     }
 

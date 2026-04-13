@@ -49,6 +49,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: '인증이 필요합니다.' }, { status: 401 });
     }
 
+    const scopeFilter = searchParams.get('scope'); // 'company' | 'department' | null
+
     // 부서명 매핑
     const { data: depts } = await supabase.from('departments').select('id, name');
     const deptMap = new Map((depts ?? []).map((d) => [d.id, d.name]));
@@ -59,6 +61,10 @@ export async function GET(request: NextRequest) {
     if (department && department !== '전체') {
       const deptId = deptIdByName.get(department);
       if (deptId) query = query.eq('department_id', deptId);
+    }
+
+    if (scopeFilter && scopeFilter !== '전체') {
+      query = query.eq('scope', scopeFilter);
     }
 
     if (status && status !== '전체') {
@@ -88,6 +94,8 @@ export async function GET(request: NextRequest) {
       size: formatSize(f.size),
       uploadDate: f.created_at?.split('T')[0] ?? '',
       status: STATUS_MAP[f.status] ?? f.status,
+      scope: (f.scope as string) ?? 'department',
+      isOwner: f.uploaded_by === authUserId,
     }));
 
     if (type && type !== '전체') {
@@ -128,6 +136,8 @@ export async function POST(request: NextRequest) {
       const formData = await request.formData();
       const file = formData.get('file') as File | null;
       const departmentId = formData.get('department_id') as string | null;
+      const scopeValue = (formData.get('scope') as string | null) ?? 'department';
+      const scope = scopeValue === 'company' ? 'company' : 'department';
 
       if (!file) {
         return NextResponse.json({ success: false, error: '파일이 필요합니다.' }, { status: 400 });
@@ -166,6 +176,7 @@ export async function POST(request: NextRequest) {
         uploaded_by: authUserId,
         status: 'processing',
         storage_path: storagePath,
+        scope,
       }).select().single();
 
       if (error) {

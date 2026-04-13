@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { Spinner, EmptyState } from '@/components/ui';
 
 export interface VersionItem {
@@ -29,6 +30,19 @@ export function VersionPanel({
   onCreateNewVersion,
   onDownload,
 }: VersionPanelProps) {
+  const router = useRouter();
+
+  const canCompare = items.length >= 2;
+
+  function handleCompare() {
+    // 가장 오래된 버전(v1)과 최신 버전 비교
+    const sorted = [...items].sort((a, b) => a.versionNumber - b.versionNumber);
+    const base = sorted[0];
+    const latest = sorted[sorted.length - 1];
+    router.push(`/documents/${base.id}/diff?compare=${latest.id}`);
+    onClose();
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-end"
@@ -49,14 +63,25 @@ export function VersionPanel({
           </button>
         </div>
 
-        {/* 새 버전 생성 버튼 */}
-        <div className="px-6 py-4 border-b border-[#e5e5e7]">
+        {/* 새 버전 생성 + 버전 비교 버튼 */}
+        <div className="px-6 py-4 border-b border-[#e5e5e7] flex flex-col gap-2">
           <button
             onClick={() => onCreateNewVersion(docId)}
             className="w-full py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors"
           >
             + 새 버전 생성
           </button>
+          {canCompare && (
+            <button
+              onClick={handleCompare}
+              className="w-full py-2.5 rounded-xl border border-[#d1d1d6] text-[#1d1d1f] text-sm font-medium hover:bg-[#f5f5f7] transition-colors flex items-center justify-center gap-1.5"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 3M21 7.5H7.5" />
+              </svg>
+              버전 비교
+            </button>
+          )}
         </div>
 
         {/* 버전 타임라인 */}
@@ -93,12 +118,25 @@ export function VersionPanel({
                         <span className="text-[11px] text-[#6e6e73]">{v.createdAt}</span>
                         {v.createdBy && <span className="text-[11px] text-[#6e6e73]">· {v.createdBy}</span>}
                       </div>
-                      <button
-                        onClick={() => onDownload(v.id, v.title, v.status, v.createdAt)}
-                        className="mt-2 text-[11px] text-[#0071e3] hover:underline"
-                      >
-                        다운로드
-                      </button>
+                      <div className="flex items-center gap-3 mt-2">
+                        <button
+                          onClick={() => onDownload(v.id, v.title, v.status, v.createdAt)}
+                          className="text-[11px] text-[#0071e3] hover:underline"
+                        >
+                          다운로드
+                        </button>
+                        {!v.isCurrent && (
+                          <button
+                            onClick={() => {
+                              router.push(`/documents/${v.id}/diff?compare=${docId}`);
+                              onClose();
+                            }}
+                            className="text-[11px] text-[#6e6e73] hover:text-[#0071e3] hover:underline"
+                          >
+                            현재와 비교
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}

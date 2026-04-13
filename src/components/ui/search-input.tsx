@@ -9,6 +9,8 @@ interface SearchInputProps {
   onSearch?: () => void;
   placeholder?: string;
   disabled?: boolean;
+  /** 검색 버튼만 비활성화 (input은 활성 유지) */
+  buttonDisabled?: boolean;
   /** 검색 버튼 표시 여부 */
   showButton?: boolean;
   buttonLabel?: string;
@@ -29,6 +31,7 @@ export function SearchInput({
   onSearch,
   placeholder = '검색...',
   disabled,
+  buttonDisabled,
   showButton,
   buttonLabel = '검색',
   loading,
@@ -74,7 +77,7 @@ export function SearchInput({
       {showButton && (
         <button
           onClick={onSearch}
-          disabled={disabled || loading}
+          disabled={buttonDisabled ?? disabled ?? loading}
           className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-[#1d1d1f] text-white text-xs font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40"
         >
           {loading ? (

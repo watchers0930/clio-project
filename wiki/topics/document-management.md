@@ -19,6 +19,14 @@ CLIO의 문서 관리는 두 축으로 구성된다:
 - 파일명 NFC 정규화 처리 (한글 파일명 호환성)
 - 멀티파트 업로드 지원
 
+### 공개 범위 (scope) — v5.13.0 추가
+- `scope: 'company' | 'department'` (기본값: `'department'`)
+- 전사(`company`): 로그인한 모든 사용자에게 표시
+- 부서(`department`): 같은 부서 사용자만 표시
+- 업로드 시 선택 가능, 이후 본인만 변경 가능 (PATCH `/api/files/[id]`)
+- 일괄 변경: 파일 목록에서 체크박스 선택 후 일괄 처리
+- RLS 정책: `scope = 'company' OR department_id = user.department_id` (migration 014)
+
 ### 지원 파일 형식 (텍스트 추출 가능)
 - PDF: `pdf-parse` 라이브러리
 - DOCX: `mammoth` 라이브러리
@@ -129,6 +137,15 @@ files 버킷 > signatures/{userId}/signature.{ext}
 - 적용 대상: DOCX FormData / HWPX FormData / DOCX Template / 마크다운 기반 새 문서
 
 ---
+
+## 결재 뷰어 서명 (v5.13.0 수정)
+
+- 결재자가 문서 뷰어 열 때: 서명은 **결재자가 아닌 문서 작성자(`created_by`) 기준**으로 로드
+- download route에서 별도 admin 쿼리로 `documents.created_by` 조회 → 해당 user의 `signature_path` 로드
+- storage_path 있는 DOCX/HWPX 파일을 inline 미리보기 요청 시:
+  - DOCX → `mammoth.convertToHtml` 로 HTML 변환
+  - HWPX → PizZip으로 텍스트 추출 후 HTML 렌더
+  - 서명 이미지 base64로 하단 삽입
 
 ## 알려진 문제
 
