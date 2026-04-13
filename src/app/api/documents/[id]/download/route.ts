@@ -59,7 +59,7 @@ function hwpxExtractTexts(xml: string): string[] {
   return texts;
 }
 
-function hwpxRenderTable(tblXml: string): string {
+function hwpxRenderTable(tblXml: string, signerName?: string): string {
   // 서명·헤더 테이블 전체 제거
   const allTexts = hwpxExtractTexts(tblXml);
   // (서명)/(인)이 셀 단독 텍스트인 서명 전용 테이블만 제거 (내용 테이블 안에 서명자 이름이 포함된 경우 제외)
@@ -71,6 +71,8 @@ function hwpxRenderTable(tblXml: string): string {
   const rows: string[] = [];
   const trRe = /<(?:hp|hh):tr[\s>]/g;
   let trM;
+  let skipRows = 0; // 타이틀 행 rowSpan으로 인해 건너뛸 행 수
+
   while ((trM = trRe.exec(tblXml)) !== null) {
     const trStart = trM.index;
     const trNs = tblXml.slice(trStart + 1, trStart + 3);
@@ -78,7 +80,18 @@ function hwpxRenderTable(tblXml: string): string {
     if (trEnd < 0) continue;
     const trXml = tblXml.slice(trStart, trEnd + `</${trNs}:tr>`.length);
 
-    const cells: string[] = [];
+    // 타이틀 행 감지: colSpan >= 4인 셀이 있으면 헤더(제목+결재) 행
+    const titleMatch = trXml.match(/colSpan="([4-9]\d*|\d{2,})"/);
+    if (titleMatch) {
+      // rowSpan만큼 이후 행도 건너뜀 (결재 서명란 행)
+      const rsMatch = trXml.match(/rowSpan="(\d+)"/);
+      skipRows = Math.max(0, parseInt(rsMatch?.[1] ?? '1') - 1);
+      continue; // 타이틀 행 자체도 건너뜀
+    }
+    if (skipRows > 0) { skipRows--; continue; }
+
+    // 셀 데이터 1차 수집
+    const cellData: Array<{ paragraphs: string[] }> = [];
     const tcRe = /<(?:hp|hh):tc[\s>]/g;
     let tcM;
     while ((tcM = tcRe.exec(trXml)) !== null) {
@@ -87,7 +100,6 @@ function hwpxRenderTable(tblXml: string): string {
       const tcEnd = trXml.indexOf(`</${tcNs}:tc>`, tcStart);
       if (tcEnd < 0) continue;
       const tcXml = trXml.slice(tcStart, tcEnd + `</${tcNs}:tc>`.length);
-      // 단락별로 텍스트 추출 → <br> 구분
       const pRe2 = /<(?:hp|hh):p[\s>][\s\S]*?<\/(?:hp|hh):p>/g;
       let pM2;
       const paragraphs: string[] = [];
@@ -95,6 +107,24 @@ function hwpxRenderTable(tblXml: string): string {
         const pTexts = hwpxExtractTexts(pM2[0]);
         if (pTexts.length > 0) paragraphs.push(pTexts.join(''));
       }
+      cellData.push({ paragraphs });
+    }
+
+    // 셀 렌더링: 이전 셀 레이블 기반으로 값 셀 보정
+    const cells: string[] = [];
+    for (let i = 0; i < cellData.length; i++) {
+      let { paragraphs } = cellData[i];
+      const prevLabel = i > 0 ? cellData[i - 1].paragraphs.join('').replace(/\s/g, '') : '';
+
+      // 작성일자 오른쪽 값 셀: 날짜만 (첫 단락만 표시)
+      if (prevLabel === '작성일자' && paragraphs.length > 1) {
+        paragraphs = [paragraphs[0]];
+      }
+      // 작성자 오른쪽 빈 셀: 로그인 사용자 이름 주입
+      if (prevLabel === '작성자' && paragraphs.join('') === '' && signerName) {
+        paragraphs = [signerName];
+      }
+
       const cellTextFlat = paragraphs.join('');
       const cellHtml = paragraphs.join('<br>');
       const boldLabels = ['보고처', '보고서명', '취급', '회의일자', '회의 일자', '장소', '참석자', '정보(자료) 출처', '정보출처', '보고 내용과 의견', '보고내용과 의견', '문제점'];
@@ -108,7 +138,7 @@ function hwpxRenderTable(tblXml: string): string {
   return `<table style="border-collapse:collapse;width:100%;margin:10px 0;">${rows.join('')}</table>`;
 }
 
-function parseHwpxSection(xml: string): string {
+function parseHwpxSection(xml: string, signerName?: string): string {
   const result: string[] = [];
 
   // 테이블 위치 먼저 수집 (최상위만)
@@ -147,7 +177,7 @@ function parseHwpxSection(xml: string): string {
 
   for (const range of tblRanges) {
     if (cursor < range.s) processText(xml.slice(cursor, range.s));
-    result.push(hwpxRenderTable(xml.slice(range.s, range.e)));
+    result.push(hwpxRenderTable(xml.slice(range.s, range.e), signerName));
     cursor = range.e;
   }
   if (cursor < xml.length) processText(xml.slice(cursor));
@@ -243,9 +273,18 @@ export async function GET(
 
     const inline = url.searchParams.get('inline') === 'true';
 
-    // 서명 이미지 가져오기 — 다운로드 전용 (inline 미리보기는 서명 제외)
+    // 서명 이미지 가져오기 — 다운로드 전용 (inline 미리보기는 서명 제외), 이름은 항상 가져옴
     let signatureBuffer: Buffer | null = null;
     let signerName = '';
+    try {
+      const adminClient = createAdminSupabaseClient();
+      const { data: docMeta } = await adminClient
+        .from('documents').select('created_by').eq('id', id).maybeSingle();
+      const signatureOwnerId = docMeta?.created_by ?? authUserId;
+      const { data: nameData } = await adminClient
+        .from('users').select('name').eq('id', signatureOwnerId).maybeSingle();
+      signerName = nameData?.name ?? '';
+    } catch { /* 이름 없으면 그냥 진행 */ }
     if (!inline) {
       try {
         const adminClient = createAdminSupabaseClient();
@@ -335,7 +374,7 @@ export async function GET(
               const sectionHtmlParts: string[] = [];
               for (const name of sectionFiles) {
                 const xml = zip.file(name)?.asText() ?? '';
-                sectionHtmlParts.push(parseHwpxSection(xml));
+                sectionHtmlParts.push(parseHwpxSection(xml, signerName || undefined));
               }
               extractedHtml = sectionHtmlParts.join('');
             }
