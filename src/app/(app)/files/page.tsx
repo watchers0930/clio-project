@@ -141,7 +141,7 @@ function FilesPage() {
     }
   };
 
-  const ALLOWED_EXTS = new Set(['pdf', 'docx', 'pptx', 'xlsx', 'md', 'txt', 'csv']);
+  const ALLOWED_EXTS = new Set(['pdf', 'docx', 'pptx', 'xlsx', 'hwp', 'hwpx', 'md', 'txt', 'csv']);
   const MAX_SIZE = 50 * 1024 * 1024;
 
   const addFiles = (incoming: File[]) => {
@@ -597,19 +597,19 @@ function FilesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) { setShowUpload(false); setUploadProgress(null); setSelectedFiles([]); } }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4">
             {/* 헤더 */}
-            <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between">
-              <h2 className="text-[15px] font-semibold text-[#1B1F2B]">파일 업로드</h2>
+            <div className="px-8 py-5 border-b border-[#e5e5e7] flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-[#1d1d1f]">파일 업로드</h2>
               <button onClick={() => { setShowUpload(false); setUploadProgress(null); setSelectedFiles([]); }} className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
 
             {/* 바디 */}
-            <div className="px-6 py-5 flex flex-col gap-4">
+            <div className="px-8 py-6 space-y-6">
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.docx,.pptx,.xlsx,.md,.txt,.csv"
+                accept=".pdf,.docx,.pptx,.xlsx,.hwp,.hwpx,.md,.txt,.csv"
                 multiple
                 className="hidden"
                 onChange={handleFileInputChange}
@@ -617,21 +617,22 @@ function FilesPage() {
 
               {/* 공개 범위 선택 */}
               <div>
-                <div className="flex gap-3 mb-2">
+                <label className="block text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: '5px' }}>공개 범위</label>
+                <div className="flex gap-3" style={{ marginBottom: '10px' }}>
                   <button
                     onClick={() => setUploadScope('department')}
-                    className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors ${uploadScope === 'department' ? 'border-[#1d1d1f] bg-[#1d1d1f] text-white' : 'border-[#e5e5e7] text-[#6e6e73] hover:bg-[#f5f5f7]'}`}
+                    className={`flex-1 py-3.5 rounded-xl border text-sm font-medium transition-colors ${uploadScope === 'department' ? 'border-[#1d1d1f] bg-[#1d1d1f] text-white' : 'border-[#e5e5e7] text-[#6e6e73] hover:bg-[#f5f5f7]'}`}
                   >
                     부서 공유
                   </button>
                   <button
                     onClick={() => setUploadScope('company')}
-                    className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors ${uploadScope === 'company' ? 'border-[#0071e3] bg-[#0071e3] text-white' : 'border-[#e5e5e7] text-[#6e6e73] hover:bg-[#f5f5f7]'}`}
+                    className={`flex-1 py-3.5 rounded-xl border text-sm font-medium transition-colors ${uploadScope === 'company' ? 'border-[#0071e3] bg-[#0071e3] text-white' : 'border-[#e5e5e7] text-[#6e6e73] hover:bg-[#f5f5f7]'}`}
                   >
                     전사 공개
                   </button>
                 </div>
-                <p className="text-xs text-[#6e6e73]">
+                <p className="text-xs text-[#6e6e73]" style={{ padding: '10px 0' }}>
                   {uploadScope === 'company' ? '모든 임직원이 이 파일을 볼 수 있습니다.' : '같은 부서 구성원만 이 파일을 볼 수 있습니다.'}
                 </p>
               </div>
@@ -641,17 +642,18 @@ function FilesPage() {
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-2xl p-6 transition-colors ${dragOver ? 'border-[#0071e3] bg-[#eef4ff]' : 'border-[#e5e5e7] bg-[#f5f5f7]'}`}
+                style={{ marginTop: '24px' }}
+                className={`border-2 border-dashed rounded-2xl py-8 px-6 flex flex-col items-center text-center transition-colors ${dragOver ? 'border-[#0071e3] bg-[#eef4ff]' : 'border-[#e5e5e7] bg-[#f5f5f7]'}`}
               >
-                <svg className="w-10 h-10 text-[#6e6e73] mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                <svg className="w-10 h-10 text-[#6e6e73] mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
                 </svg>
                 <p className="text-sm font-medium text-[#1d1d1f] mb-1">파일을 여기에 끌어다 놓으세요</p>
-                <p className="text-xs text-[#6e6e73] mb-3">또는</p>
-                <button onClick={handleFilePicker} className="px-4 py-2 rounded-xl bg-[#1d1d1f] text-white text-[13px] font-medium hover:bg-[#0071e3] transition-colors">
+                <p className="text-xs text-[#6e6e73] mb-4">또는</p>
+                <button onClick={handleFilePicker} style={{ margin: '10px 0' }} className="px-5 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-[13px] font-medium hover:bg-[#0071e3] transition-colors">
                   파일 선택
                 </button>
-                <p className="text-xs text-[#6e6e73] mt-3">PDF, DOCX, PPTX, XLSX, MD (최대 50MB)</p>
+                <p className="text-xs text-[#6e6e73] mt-4">PDF, DOCX, PPTX, XLSX, HWP, MD (최대 50MB)</p>
               </div>
 
               {/* 선택된 파일 목록 */}

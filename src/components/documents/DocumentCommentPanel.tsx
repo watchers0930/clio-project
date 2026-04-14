@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/toast';
 import { Spinner } from '@/components/ui';
 import { X, Trash2, Send, MessageSquare } from 'lucide-react';
 import { formatTimeAgo } from '@/lib/utils/format';
+import { CommentReflectModal } from './CommentReflectModal';
 
 interface Comment {
   id: string;
@@ -21,9 +22,11 @@ interface DocumentCommentPanelProps {
   onReflected?: () => void;
   /** true면 fixed 포지셔닝 없이 부모 컨테이너를 채움 (뷰어 내부 사이드패널용) */
   inline?: boolean;
+  /** 섹션 삽입 모드에서 섹션 목록 파싱에 사용 */
+  documentContent?: string;
 }
 
-export function DocumentCommentPanel({ documentId, onClose, onReflected, inline = false }: DocumentCommentPanelProps) {
+export function DocumentCommentPanel({ documentId, onClose, onReflected, inline = false, documentContent = '' }: DocumentCommentPanelProps) {
   const user = useAuthStore((s) => s.user);
   const toast = useToast();
 
@@ -32,8 +35,7 @@ export function DocumentCommentPanel({ documentId, onClose, onReflected, inline 
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [showReflectConfirm, setShowReflectConfirm] = useState(false);
-  const [reflecting, setReflecting] = useState(false);
+  const [showReflectModal, setShowReflectModal] = useState(false);
 
   const fetchComments = useCallback(async () => {
     setLoading(true);
@@ -99,30 +101,6 @@ export function DocumentCommentPanel({ documentId, onClose, onReflected, inline 
     });
   };
 
-  const handleReflect = async () => {
-    if (selected.size === 0 || reflecting) return;
-    setReflecting(true);
-    setShowReflectConfirm(false);
-    try {
-      const res = await fetch(`/api/documents/${documentId}/reflect`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ selectedCommentIds: Array.from(selected) }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success('댓글이 문서에 반영되었습니다. 이전 버전이 저장되었습니다.');
-        setSelected(new Set());
-        onReflected?.();
-      } else {
-        toast.error(data.error ?? '반영 실패');
-      }
-    } catch {
-      toast.error('서버 오류');
-    } finally {
-      setReflecting(false);
-    }
-  };
 
   const panelContent = (
     <div className={`bg-white flex flex-col h-full ${inline ? 'border-l border-[#e5e5e7]' : 'border-l border-[#e5e5e7]'}`}>
@@ -137,11 +115,9 @@ export function DocumentCommentPanel({ documentId, onClose, onReflected, inline 
         <div className="flex items-center gap-2">
           {selected.size > 0 && (
             <button
-              onClick={() => setShowReflectConfirm(true)}
-              disabled={reflecting}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#2E6FF2] text-white text-[11px] font-medium hover:bg-[#1a5ad9] disabled:opacity-50 transition-colors"
+              onClick={() => setShowReflectModal(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#2E6FF2] text-white text-[11px] font-medium hover:bg-[#1a5ad9] transition-colors"
             >
-              {reflecting && <Spinner size="sm" />}
               반영 ({selected.size})
             </button>
           )}
@@ -257,44 +233,20 @@ export function DocumentCommentPanel({ documentId, onClose, onReflected, inline 
         </div>
       )}
 
-      {/* 반영 확인 모달 (항상 fixed z-[70]) */}
-      {showReflectConfirm && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-[400px] overflow-hidden">
-            <div className="px-8 py-6 border-b border-[#e5e5e7]">
-              <h3 className="text-[17px] font-semibold text-[#1B1F2B]">댓글 반영 확인</h3>
-            </div>
-            <div className="px-8 py-6">
-              <p className="text-[14px] text-[#3a3a3c] leading-relaxed">
-                선택된 댓글 <strong>{selected.size}개</strong>를 반영하여 문서를 재생성합니다.
-              </p>
-              <ul className="mt-3 text-[13px] text-[#6e6e73] space-y-1.5">
-                <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#2E6FF2] flex-shrink-0" />
-                  현재 문서는 이전 버전으로 자동 저장됩니다.
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#2E6FF2] flex-shrink-0" />
-                  재생성에는 약 10~30초가 소요됩니다.
-                </li>
-              </ul>
-            </div>
-            <div className="px-8 py-4 border-t border-[#e5e5e7] flex justify-end gap-3">
-              <button
-                onClick={() => setShowReflectConfirm(false)}
-                className="px-5 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleReflect}
-                className="px-5 py-2.5 rounded-xl bg-[#2E6FF2] text-white text-sm font-medium hover:bg-[#1a5ad9] transition-colors"
-              >
-                반영하기
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* 반영 모달 */}
+      {showReflectModal && (
+        <CommentReflectModal
+          documentId={documentId}
+          selectedComments={comments
+            .filter((c) => selected.has(c.id))
+            .map((c) => ({ id: c.id, content: c.content, userName: c.user_name }))}
+          documentContent={documentContent}
+          onClose={() => setShowReflectModal(false)}
+          onReflected={() => {
+            setSelected(new Set());
+            onReflected?.();
+          }}
+        />
       )}
     </>
   );

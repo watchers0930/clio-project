@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('documents')
       .select('*, templates:template_id(name), version_number, parent_id')
+      .is('parent_id', null)
       .order('created_at', { ascending: false });
 
     if (status) {

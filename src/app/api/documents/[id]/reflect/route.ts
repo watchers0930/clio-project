@@ -35,7 +35,7 @@ export async function POST(
     // 1. 현재 문서 조회
     const { data: doc } = await admin
       .from('documents')
-      .select('id, title, content, status, parent_id, version_number, created_by')
+      .select('id, title, content, status, parent_id, version_number, created_by, storage_path')
       .eq('id', documentId)
       .single();
 
@@ -69,6 +69,7 @@ export async function POST(
         parent_id: rootId,
         version_number: currentVersionNumber,
         created_by: doc.created_by,
+        storage_path: doc.storage_path ?? null,
       })
       .select('id')
       .single();

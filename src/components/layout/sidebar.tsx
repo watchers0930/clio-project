@@ -13,6 +13,7 @@ import {
   CalendarDays,
   MessageSquare,
   ShieldAlert,
+  StickyNote,
   Settings,
   ChevronsLeft,
   ChevronsRight,
@@ -30,11 +31,12 @@ const navItems: NavItem[] = [
   { label: '대시보드', href: '/dashboard', icon: LayoutDashboard },
   { label: 'AI 검색', href: '/search', icon: Search },
   { label: '파일 관리', href: '/files', icon: FolderOpen },
-  { label: '템플릿', href: '/templates', icon: FileText },
   { label: '문서 생성', href: '/documents', icon: FilePlus },
   { label: '계약 리스크', href: '/contract-risk', icon: ShieldAlert },
+  { label: '템플릿', href: '/templates', icon: FileText },
   { label: '메시지', href: '/messages', icon: MessageSquare, badge: true },
   { label: '일정/할일', href: '/schedule', icon: CalendarDays },
+  { label: '메모', href: '/memos', icon: StickyNote },
   { label: '설정', href: '/settings', icon: Settings },
 ];
 

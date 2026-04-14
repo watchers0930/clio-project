@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, type ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import { Sidebar } from './sidebar';
 import { Header } from './header';
-import { Footer } from './footer';
 import { ToastRenderer } from '@/components/ui/toast';
 import { useAuthStore } from '@/store/auth-store';
 import { ExpiryAlertProvider } from '@/components/expiry/ExpiryAlertProvider';
@@ -18,6 +18,9 @@ function AppLayout({ children }: AppLayoutProps) {
   const initAuthListener = useAuthStore((s) => s.initAuthListener);
   const fetchMe = useAuthStore((s) => s.fetchMe);
   const token = useAuthStore((s) => s.token);
+  const pathname = usePathname();
+  // 전용 뷰어 페이지: 패딩·푸터 없이 풀스크린
+  const isViewer = /^\/documents\/[^/]+$/.test(pathname ?? '');
 
   // 앱 마운트 시 Supabase auth 구독 시작
   useEffect(() => {
@@ -56,14 +59,21 @@ function AppLayout({ children }: AppLayoutProps) {
       )}
 
       {/* Main */}
-      <div className="flex flex-col flex-1 min-w-0">
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Header onMenuClick={() => setMobileMenuOpen(!mobileMenuOpen)} />
-        <main className="flex-1 overflow-y-auto flex flex-col">
-          <div className="flex-1 w-[94%]" style={{ padding: '32px 0 32px 30px' }}>
+        {isViewer ? (
+          /* 문서 뷰어: 풀스크린, 패딩·푸터 없음 */
+          <main className="flex-1 overflow-hidden">
             {children}
-          </div>
-          <Footer />
-        </main>
+          </main>
+        ) : (
+          /* 일반 페이지: 스크롤 가능, 푸터는 콘텐츠 하단에 위치 */
+          <main className="flex-1 overflow-y-auto">
+            <div className="w-[94%]" style={{ padding: '32px 0 32px 30px' }}>
+              {children}
+            </div>
+          </main>
+        )}
       </div>
       <ToastRenderer />
     </div>

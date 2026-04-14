@@ -33,6 +33,9 @@ export type TodoPriority = 'high' | 'medium' | 'low';
 /** 할일 상태 */
 export type TodoStatus = 'active' | 'completed';
 
+/** 메모 색상 */
+export type MemoColor = 'default' | 'blue' | 'green' | 'yellow' | 'red' | 'purple';
+
 // ---------------------------------------------------------------------------
 // DB Row 타입 (Supabase 제네릭용 — optional 필드 없이 엄격하게 정의)
 // ---------------------------------------------------------------------------
@@ -171,6 +174,18 @@ export interface DbTodo {
   updated_at: string;
 }
 
+/** 메모 (DB Row) */
+export interface DbMemo {
+  id: string;
+  title: string;
+  content: string | null;
+  color: string;
+  is_pinned: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
 /** 파일 청크 (DB Row) */
 export interface DbFileChunk {
   id: string;
@@ -255,6 +270,12 @@ export interface Database {
         Row: DbTodo;
         Insert: { id?: string; title: string; description?: string | null; due_date?: string | null; priority?: string; status?: string; completed_at?: string | null; user_id: string; created_at?: string; updated_at?: string };
         Update: { title?: string; description?: string | null; due_date?: string | null; priority?: string; status?: string; completed_at?: string | null; updated_at?: string };
+        Relationships: [];
+      };
+      memos: {
+        Row: DbMemo;
+        Insert: { id?: string; title: string; content?: string | null; color?: string; is_pinned?: boolean; created_by: string; created_at?: string; updated_at?: string };
+        Update: { title?: string; content?: string | null; color?: string; is_pinned?: boolean; updated_at?: string };
         Relationships: [];
       };
       audit_logs: {
@@ -437,6 +458,18 @@ export interface TodoItem {
   status: TodoStatus;
   completed_at?: string | null;
   user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** 메모 항목 */
+export interface MemoItem {
+  id: string;
+  title: string;
+  content?: string | null;
+  color: MemoColor;
+  is_pinned: boolean;
+  created_by: string;
   created_at: string;
   updated_at: string;
 }
