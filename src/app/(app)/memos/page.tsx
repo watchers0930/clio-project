@@ -6,6 +6,7 @@ import { Spinner } from '@/components/ui';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import MemoList from '@/components/memos/memo-list';
 import MemoFormModal from '@/components/memos/memo-form-modal';
+import MemoViewModal from '@/components/memos/memo-view-modal';
 import type { MemoFormData } from '@/components/memos/memo-form-modal';
 import type { MemoItem } from '@/lib/supabase/types';
 
@@ -15,6 +16,7 @@ export default function MemosPage() {
   const [search, setSearch] = useState('');
 
   // 모달 상태
+  const [viewOpen, setViewOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedMemo, setSelectedMemo] = useState<MemoItem | null>(null);
 
@@ -102,10 +104,19 @@ export default function MemosPage() {
           onSearchChange={setSearch}
           onAdd={() => { setSelectedMemo(null); setModalOpen(true); }}
           onPin={handlePin}
+          onView={(memo) => { setSelectedMemo(memo); setViewOpen(true); }}
           onEdit={(memo) => { setSelectedMemo(memo); setModalOpen(true); }}
           onDelete={(id) => setDeleteId(id)}
         />
       )}
+
+      {/* 메모 뷰 모달 */}
+      <MemoViewModal
+        memo={selectedMemo}
+        open={viewOpen}
+        onClose={() => { setViewOpen(false); setSelectedMemo(null); }}
+        onEdit={(memo) => { setViewOpen(false); setSelectedMemo(memo); setModalOpen(true); }}
+      />
 
       {/* 메모 생성/수정 모달 */}
       <MemoFormModal

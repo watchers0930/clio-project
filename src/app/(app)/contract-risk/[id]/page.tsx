@@ -8,6 +8,7 @@ import { RiskFilter } from '@/components/contract-risk/RiskFilter';
 import { RiskCard } from '@/components/contract-risk/RiskCard';
 import { CONTRACT_TYPE_LABELS, PERSPECTIVE_LABELS, CONTRACT_RISK_ITEMS } from '@/lib/contract-risk-items';
 import type { ContractRiskAnalysis, RiskFilterState } from '@/lib/types/contract-risk';
+import { ClauseFixModal } from '@/components/contract-risk/ClauseFixModal';
 
 export default function ContractRiskResultPage() {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +18,7 @@ export default function ContractRiskResultPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [showClauseFix, setShowClauseFix] = useState(false);
   const [filter, setFilter] = useState<RiskFilterState>({ level: 'all', category: 'all' });
 
   useEffect(() => {
@@ -134,14 +136,22 @@ export default function ContractRiskResultPage() {
             <span className="text-[#E2E5EA]">/</span>
             <p className="text-[13px] font-medium text-[#1B1F2B] truncate">{analysis.file_name}</p>
           </div>
-          <button
-            onClick={handleDownload}
-            disabled={downloading}
-            className="flex items-center gap-2 px-4 py-2 bg-[#1B1F2B] text-white rounded-xl text-[12px] font-medium hover:bg-[#2E3340] transition-colors disabled:opacity-50 shrink-0"
-          >
-            <Download size={13} />
-            {downloading ? '다운로드 중...' : 'DOCX 리포트'}
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setShowClauseFix(true)}
+              className="flex items-center gap-2 px-4 py-2 border border-[#2E6FF2] text-[#2E6FF2] rounded-xl text-[12px] font-medium hover:bg-[#2E6FF2]/5 transition-colors"
+            >
+              ⚖️ 조항 수정 제안
+            </button>
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              className="flex items-center gap-2 px-4 py-2 bg-[#1B1F2B] text-white rounded-xl text-[12px] font-medium hover:bg-[#2E3340] transition-colors disabled:opacity-50"
+            >
+              <Download size={13} />
+              {downloading ? '다운로드 중...' : 'DOCX 리포트'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -195,6 +205,16 @@ export default function ContractRiskResultPage() {
               )}
             </div>
           </>
+        )}
+
+        {/* ── 조항 수정 모달 ─────────────────────────────────────────────── */}
+        {analysis && (
+          <ClauseFixModal
+            open={showClauseFix}
+            onClose={() => setShowClauseFix(false)}
+            analysisId={analysis.id}
+            riskItems={analysis.risk_result?.items ?? []}
+          />
         )}
 
         {/* ── 면책 ─────────────────────────────────────────────────────────── */}

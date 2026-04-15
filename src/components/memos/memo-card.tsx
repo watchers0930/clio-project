@@ -18,21 +18,22 @@ const COLOR_MAP: Record<string, string> = {
 interface MemoCardProps {
   memo: MemoItem;
   onPin: (id: string) => void;
+  onView: (memo: MemoItem) => void;
   onEdit: (memo: MemoItem) => void;
   onDelete: (id: string) => void;
 }
 
-export default function MemoCard({ memo, onPin, onEdit, onDelete }: MemoCardProps) {
+export default function MemoCard({ memo, onPin, onView, onEdit, onDelete }: MemoCardProps) {
   const [hovered, setHovered] = useState(false);
   const borderColor = COLOR_MAP[memo.color] ?? COLOR_MAP.default;
 
   return (
     <div
       className="relative bg-white rounded-xl border border-[#E2E5EA] shadow-sm hover:shadow-md transition-all cursor-pointer"
-      style={{ borderLeftWidth: 4, borderLeftColor: borderColor, padding: '16px 18px' }}
+      style={{ borderLeftWidth: 4, borderLeftColor: borderColor, padding: '20px 22px' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => onEdit(memo)}
+      onClick={() => onView(memo)}
     >
       {/* 핀 표시 */}
       {memo.is_pinned && (
@@ -44,11 +45,11 @@ export default function MemoCard({ memo, onPin, onEdit, onDelete }: MemoCardProp
 
       {/* 내용 미리보기 */}
       {memo.content && (
-        <p className="text-[12px] text-[#7C8494] mt-1.5 line-clamp-2 leading-[1.5]">{memo.content}</p>
+        <p className="text-[12px] text-[#7C8494] mt-2 line-clamp-2 leading-[1.6]">{memo.content}</p>
       )}
 
       {/* 날짜 */}
-      <p className="text-[11px] text-[#A0A7B5] mt-3">
+      <p className="text-[11px] text-[#A0A7B5] mt-4">
         {format(new Date(memo.updated_at), 'M월 d일 HH:mm', { locale: ko })}
       </p>
 

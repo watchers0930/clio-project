@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/toast';
 import { FILE_TYPE_BADGE, FILE_STATUS_COLOR } from '@/lib/constants/ui';
 import { formatSize, getFileType } from '@/lib/utils/format';
 import { Spinner, EmptyState, ConfirmDialog } from '@/components/ui';
+import { AutofillModal } from '@/components/common/AutofillModal';
 
 /* ────────────────────────── types ────────────────────────── */
 interface FileItem {
@@ -72,6 +73,8 @@ function FilesPage() {
   const [uploadScope, setUploadScope] = useState<'company' | 'department'>('department');
   const [scopeFilter, setScopeFilter] = useState<'전체' | 'company' | 'department'>('전체');
   const [showScrape, setShowScrape] = useState(false);
+  const [autofillFile, setAutofillFile] = useState<File | null>(null);
+  const [showAutofill, setShowAutofill] = useState(false);
   const [scrapeUrl, setScrapeUrl] = useState('');
   const [scrapeLoading, setScrapeLoading] = useState(false);
   const [scrapeResult, setScrapeResult] = useState<{ success: boolean; message: string; linkCount?: number } | null>(null);
@@ -779,6 +782,18 @@ function FilesPage() {
                 닫기
               </button>
             </div>
+            {['DOCX', 'HWPX', 'HWP'].includes((detailFile.type ?? '').toUpperCase()) && (
+              <button
+                onClick={() => {
+                  setAutofillFile(null);
+                  setShowAutofill(true);
+                  setDetailFile(null);
+                }}
+                className="w-full py-2 rounded-xl border border-[#2E6FF2] text-[#2E6FF2] text-[13px] font-medium hover:bg-[#2E6FF2]/5 transition-colors"
+              >
+                ✨ 자동채우기
+              </button>
+            )}
             </div>
           </div>
         </div>
@@ -894,6 +909,12 @@ function FilesPage() {
       />
 
       {/* ── Download Toast ── */}
+      <AutofillModal
+        open={showAutofill}
+        onClose={() => setShowAutofill(false)}
+        initialFile={autofillFile}
+      />
+
       {downloadToast && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3 bg-[#1d1d1f] text-white rounded-xl shadow-lg animate-[slideUp_0.3s_ease-out]">
           <svg className="w-5 h-5 text-[#30d158] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
