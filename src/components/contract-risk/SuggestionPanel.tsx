@@ -88,7 +88,7 @@ export function SuggestionPanel({ suggestion, onAccept, onSkip, isLoading }: Sug
       {/* 원문 조항 */}
       <div>
         <span className="text-[12px] font-semibold text-[#888] block mb-2">원문 조항</span>
-        <div className="rounded-2xl border border-[#E2E5EA] bg-[#F7F8FA] px-4 py-3.5">
+        <div className="rounded-2xl border border-[#E2E5EA] bg-[#F7F8FA] px-4 py-3.5 my-[10px]">
           <p className="text-[13px] text-[#1B1F2B] leading-relaxed whitespace-pre-wrap">
             {suggestion.original || '(해당 조항이 계약서에 존재하지 않아 신규 추가가 필요합니다.)'}
           </p>
@@ -104,7 +104,7 @@ export function SuggestionPanel({ suggestion, onAccept, onSkip, isLoading }: Sug
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl border border-[#E2E5EA] bg-[#F7F8FA] px-4 py-3.5 text-[12px] text-[#888]">
+        <div className="rounded-2xl border border-[#E2E5EA] bg-[#F7F8FA] px-4 py-3.5 text-[12px] text-[#888] my-[10px]">
           관련 법령을 찾지 못했습니다. 일반 계약 원칙에 따라 수정 제안이 작성되었습니다.
         </div>
       )}
