@@ -61,8 +61,6 @@ export function RiskFilter({ filter, onChange, counts }: RiskFilterProps) {
         ))}
       </div>
 
-      {/* 구분선 */}
-      <div className="border-t border-[#F0F2F5]" />
 
       {/* 유형 */}
       <div className="flex items-center gap-2 flex-wrap">
