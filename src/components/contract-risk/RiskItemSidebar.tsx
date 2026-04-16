@@ -72,7 +72,7 @@ export function RiskItemSidebar({
       </div>
 
       {/* 항목 목록 */}
-      <div className="flex-1 overflow-y-auto py-2">
+      <div className="flex-1 overflow-y-auto flex flex-col gap-[10px] p-[10px]">
         {foundItems.length === 0 && (
           <p className="px-5 py-4 text-[12px] text-[#888]">탐지된 리스크 항목이 없습니다.</p>
         )}
@@ -100,7 +100,7 @@ export function RiskItemSidebar({
               key={item.id}
               onClick={() => onActivate(item.id)}
               className={cn(
-                'flex items-start gap-2.5 mx-2 my-[10px] p-3 rounded-2xl border cursor-pointer transition-all',
+                'flex items-start gap-2.5 p-3 rounded-2xl border cursor-pointer transition-all',
                 rowBg,
               )}
             >
