@@ -16,7 +16,7 @@ export function LawReferenceCard({ law, index }: LawReferenceCardProps) {
   const similarityPct = Math.round((law.similarity ?? 0) * 100);
 
   return (
-    <div className="rounded-2xl border border-[#C7D9FB] bg-[#EEF3FE] px-4 py-3.5 my-[10px]">
+    <div className="rounded-2xl border border-[#C7D9FB] bg-[#EEF3FE] px-4 py-3.5 my-2.5">
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#2E6FF2] text-white text-[10px] font-bold flex-shrink-0">

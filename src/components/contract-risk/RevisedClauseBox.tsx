@@ -38,7 +38,7 @@ export function RevisedClauseBox({ revised, reason }: RevisedClauseBoxProps) {
             )}
           </button>
         </div>
-        <div className="rounded-2xl border border-[#C7D9FB] bg-[#F0F5FF] px-4 py-3.5 my-[10px]">
+        <div className="rounded-2xl border border-[#C7D9FB] bg-[#F0F5FF] px-4 py-3.5 my-2.5">
           <p className="text-[13px] text-[#1B1F2B] leading-relaxed whitespace-pre-wrap">
             {revised || '수정 제안을 생성 중입니다…'}
           </p>
