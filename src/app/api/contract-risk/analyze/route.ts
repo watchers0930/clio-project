@@ -129,14 +129,21 @@ export async function POST(request: NextRequest) {
   }
 
   // ── 원본 파일 Storage 업로드 (apply 라우트에서 조항 교체 시 필요) ─────────────
+  // 파일명 대신 recordId를 경로에 사용 → 한글/특수문자 인코딩 문제 방지
+  const uploadPath = `contract-risk/${userId}/${recordId}.${ext}`;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin as any)
+  const { error: uploadError } = await (admin as any)
     .storage
     .from('files')
-    .upload(`contract-risk/${userId}/${file.name}`, Buffer.from(buffer), {
+    .upload(uploadPath, Buffer.from(buffer), {
       contentType: file.type || 'application/octet-stream',
       upsert: true,
     });
+
+  if (uploadError) {
+    console.error('[contract-risk/analyze] Storage upload error:', uploadError);
+    // 업로드 실패 시에도 분석 결과는 저장 (apply 다운로드만 불가)
+  }
 
   // ── DB UPDATE: done ───────────────────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

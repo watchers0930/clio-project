@@ -64,8 +64,9 @@ export async function POST(
     return NextResponse.json({ error: 'NOT_FOUND', message: '분석 결과를 찾을 수 없습니다.' }, { status: 404 });
   }
 
-  // 원본 파일 다운로드 (analyze 라우트에서 contract-risk/{userId}/{fileName}으로 업로드됨)
-  const storagePath = `contract-risk/${userId}/${analysis.file_name}`;
+  // 원본 파일 다운로드 (analyze 라우트에서 contract-risk/{userId}/{id}.{ext}로 업로드됨)
+  const fileExt = analysis.file_type === 'hwpx' ? 'hwpx' : analysis.file_type; // docx|hwpx|pdf
+  const storagePath = `contract-risk/${userId}/${id}.${fileExt}`;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: fileData, error: storageError } = await (admin as any)
     .storage
