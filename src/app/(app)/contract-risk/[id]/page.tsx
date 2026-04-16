@@ -423,7 +423,7 @@ export default function ContractRiskResultPage() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 py-6 flex flex-col gap-[40px]">
+      <div className="max-w-4xl mx-auto px-6 py-6 flex flex-col gap-[10px]">
 
         {/* 요약 */}
         <RiskSummary
@@ -463,7 +463,7 @@ export default function ContractRiskResultPage() {
           <>
             <RiskFilter filter={filter} onChange={setFilter} counts={counts} />
 
-            <div className="flex flex-col gap-[16px]">
+            <div className="flex flex-col gap-[10px]">
               {sortedItems.length > 0 ? (
                 sortedItems.map(item => <RiskCard key={item.id} item={item} />)
               ) : (

@@ -35,7 +35,7 @@ export function RiskFilter({ filter, onChange, counts }: RiskFilterProps) {
   return (
     <div className="bg-white border border-[#E2E5EA] rounded-2xl p-4 space-y-3">
       {/* 리스크 수준 */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap mb-[5px]">
         {levels.map(btn => (
           <button
             key={btn.key}
