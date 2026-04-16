@@ -287,6 +287,28 @@ function FilesPage() {
     }
   };
 
+  const handleAutofill = async (file: FileItem) => {
+    // 파일을 Storage에서 다운로드해 File 객체로 변환 후 모달에 전달
+    try {
+      const res = await fetch(`/api/files/${file.id}/download`);
+      if (!res.ok) throw new Error('download api failed');
+      const data = await res.json();
+      if (!data.url) throw new Error('no url');
+
+      const fileRes = await fetch(data.url);
+      if (!fileRes.ok) throw new Error('fetch file failed');
+      const blob = await fileRes.blob();
+      const fileObj = new File([blob], file.name, { type: blob.type });
+
+      setAutofillFile(fileObj);
+    } catch {
+      // 다운로드 실패 시 파일 없이 모달 열기 (수동 업로드)
+      setAutofillFile(null);
+    }
+    setShowAutofill(true);
+    setDetailFile(null);
+  };
+
   const handleDownload = async (file: FileItem) => {
     setDownloadToast(file.name);
     try {
@@ -784,11 +806,7 @@ function FilesPage() {
             </div>
             {['DOCX', 'HWPX', 'HWP'].includes((detailFile.type ?? '').toUpperCase()) && (
               <button
-                onClick={() => {
-                  setAutofillFile(null);
-                  setShowAutofill(true);
-                  setDetailFile(null);
-                }}
+                onClick={() => handleAutofill(detailFile)}
                 className="w-full py-2 rounded-xl border border-[#2E6FF2] text-[#2E6FF2] text-[13px] font-medium hover:bg-[#2E6FF2]/5 transition-colors"
               >
                 ✨ 자동채우기

@@ -21,36 +21,153 @@ function esc(s: string): string {
 }
 
 /**
- * DOCX 빈 셀 채우기
- * location 형식: "table:N:row:R:col:C" 또는 "paragraph:N"
- * 단순 접근: 감지된 빈 셀 위치에 w:t 삽입
+ * XML 내에서 tagName 태그의 시작/끝 인덱스 배열 반환 (중첩 고려)
+ * 예: [[ 10, 50 ], [ 55, 90 ], ...]
+ */
+function findAllElementRanges(xml: string, tagName: string): Array<[number, number]> {
+  const ranges: Array<[number, number]> = [];
+  const openTag = `<${tagName}`;
+  const closeTag = `</${tagName}>`;
+  let pos = 0;
+
+  while (pos < xml.length) {
+    const start = xml.indexOf(openTag, pos);
+    if (start === -1) break;
+
+    // 태그명 뒤가 '>' 또는 ' '인지 확인 (부분 일치 방지)
+    const afterName = xml[start + openTag.length];
+    if (afterName !== '>' && afterName !== ' ' && afterName !== '\n' && afterName !== '\r' && afterName !== '/') {
+      pos = start + 1;
+      continue;
+    }
+
+    // 중첩 고려해 닫는 태그 찾기
+    let depth = 1;
+    let searchPos = start + openTag.length;
+
+    while (depth > 0 && searchPos < xml.length) {
+      const nextOpen = xml.indexOf(openTag, searchPos);
+      const nextClose = xml.indexOf(closeTag, searchPos);
+
+      if (nextClose === -1) break; // 닫는 태그 없음 → 포기
+
+      if (nextOpen !== -1 && nextOpen < nextClose) {
+        // 중첩 열기 태그 — 진짜 태그인지 확인
+        const ac = xml[nextOpen + openTag.length];
+        if (ac === '>' || ac === ' ' || ac === '\n' || ac === '\r' || ac === '/') {
+          depth++;
+          searchPos = nextOpen + 1;
+        } else {
+          searchPos = nextOpen + 1;
+        }
+      } else {
+        depth--;
+        searchPos = nextClose + closeTag.length;
+        if (depth === 0) {
+          ranges.push([start, searchPos]);
+        }
+      }
+    }
+
+    pos = start + 1;
+  }
+
+  return ranges;
+}
+
+/**
+ * 특정 table:N:row:R:col:C 위치에 값을 채운 XML 반환
+ * 위치를 정확히 찾아 해당 셀의 첫 번째 빈 텍스트 노드에만 값 삽입
+ */
+function fillCellAtLocation(
+  xml: string,
+  location: string,
+  value: string,
+  tableTag: string,
+  rowTag: string,
+  cellTag: string,
+  textTag: string,
+): string {
+  const m = location.match(/^table:(\d+):row:(\d+):col:(\d+)$/);
+  if (!m) return xml;
+
+  const tblIdx = parseInt(m[1]);
+  const rowIdx = parseInt(m[2]);
+  const colIdx = parseInt(m[3]);
+
+  const tableRanges = findAllElementRanges(xml, tableTag);
+  if (tblIdx >= tableRanges.length) return xml;
+
+  const [tblStart, tblEnd] = tableRanges[tblIdx];
+  const tableXml = xml.slice(tblStart, tblEnd);
+
+  const rowRanges = findAllElementRanges(tableXml, rowTag);
+  if (rowIdx >= rowRanges.length) return xml;
+
+  const [rowStart, rowEnd] = rowRanges[rowIdx];
+  const rowXml = tableXml.slice(rowStart, rowEnd);
+
+  const cellRanges = findAllElementRanges(rowXml, cellTag);
+  if (colIdx >= cellRanges.length) return xml;
+
+  const [cellStart, cellEnd] = cellRanges[colIdx];
+  const cellXml = rowXml.slice(cellStart, cellEnd);
+
+  // 셀 내부의 빈 텍스트 노드 교체 (첫 번째 매칭)
+  let filledCell = cellXml;
+  const emptyTextSelfClose = new RegExp(`<${textTag}\\s*/>`);
+  const emptyTextClose = new RegExp(`<${textTag}></${textTag}>`);
+
+  if (emptyTextSelfClose.test(filledCell)) {
+    filledCell = filledCell.replace(emptyTextSelfClose, `<${textTag}>${esc(value)}</${textTag}>`);
+  } else if (emptyTextClose.test(filledCell)) {
+    filledCell = filledCell.replace(emptyTextClose, `<${textTag}>${esc(value)}</${textTag}>`);
+  } else {
+    // 기존 텍스트가 있는 경우 (재분석 불일치) — 건드리지 않음
+    return xml;
+  }
+
+  // 내부에서 바깥쪽으로 재조합
+  const filledRow = rowXml.slice(0, cellStart) + filledCell + rowXml.slice(cellEnd);
+  const filledTable = tableXml.slice(0, rowStart) + filledRow + tableXml.slice(rowEnd);
+  return xml.slice(0, tblStart) + filledTable + xml.slice(tblEnd);
+}
+
+/**
+ * DOCX 빈 셀 채우기 — 위치 기반 정확한 치환
  */
 function fillDocx(buffer: Buffer, fields: DetectedField[], values: Record<string, string>): Buffer {
   const zip = new PizZip(buffer);
   let docXml = zip.file('word/document.xml')?.asText();
   if (!docXml) return buffer;
 
-  // placeholder/underline/bracket 패턴 치환
-  for (const field of fields) {
+  // blank 필드를 위치 역순(bottom-right → top-left)으로 정렬해 인덱스 shift 방지
+  const sortedFields = [...fields].sort((a, b) => {
+    const parsePos = (loc: string) => {
+      const m = loc.match(/table:(\d+):row:(\d+):col:(\d+)/);
+      return m ? [parseInt(m[1]), parseInt(m[2]), parseInt(m[3])] : [999, 999, 999];
+    };
+    const [ta, ra, ca] = parsePos(a.location);
+    const [tb, rb, cb] = parsePos(b.location);
+    if (ta !== tb) return tb - ta;
+    if (ra !== rb) return rb - ra;
+    return cb - ca;
+  });
+
+  for (const field of sortedFields) {
     const val = values[field.key];
     if (!val) continue;
 
     if (field.type === 'placeholder') {
-      // {{필드명}} → 값
       const pattern = field.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       docXml = docXml.replace(new RegExp(`\\{\\{${pattern}\\}\\}`, 'g'), esc(val));
     } else if (field.type === 'underline') {
-      // ___ → 값 (첫 번째 매칭)
       docXml = docXml.replace(/_{3,}/, esc(val));
     } else if (field.type === 'bracket') {
-      // [ ] 또는 ( ) → 값
       docXml = docXml.replace(/\[\s*\]/, `[${esc(val)}]`);
       docXml = docXml.replace(/\(\s*\)/, `(${esc(val)})`);
     } else if (field.type === 'blank' && field.location.startsWith('table:')) {
-      // 빈 테이블 셀: <w:tc>...<w:t></w:t>... 패턴에 값 삽입
-      // 위치 기반 정확한 치환은 복잡하므로, 빈 <w:t/> or <w:t></w:t> 첫 매칭에 삽입
-      docXml = docXml.replace(/<w:t\s*\/>/, `<w:t>${esc(val)}</w:t>`);
-      docXml = docXml.replace(/<w:t><\/w:t>/, `<w:t>${esc(val)}</w:t>`);
+      docXml = fillCellAtLocation(docXml, field.location, val, 'w:tbl', 'w:tr', 'w:tc', 'w:t');
     }
   }
 
@@ -62,7 +179,7 @@ function fillDocx(buffer: Buffer, fields: DetectedField[], values: Record<string
 }
 
 /**
- * HWPX 빈 셀 채우기
+ * HWPX 빈 셀 채우기 — 위치 기반 정확한 치환 + mimetype STORE 처리
  */
 function fillHwpx(buffer: Buffer, fields: DetectedField[], values: Record<string, string>): Buffer {
   const zip = new PizZip(buffer);
@@ -71,11 +188,24 @@ function fillHwpx(buffer: Buffer, fields: DetectedField[], values: Record<string
     n => n.startsWith('Contents/section') && n.endsWith('.xml')
   );
 
+  // blank 필드를 위치 역순으로 정렬
+  const sortedFields = [...fields].sort((a, b) => {
+    const parsePos = (loc: string) => {
+      const m = loc.match(/table:(\d+):row:(\d+):col:(\d+)/);
+      return m ? [parseInt(m[1]), parseInt(m[2]), parseInt(m[3])] : [999, 999, 999];
+    };
+    const [ta, ra, ca] = parsePos(a.location);
+    const [tb, rb, cb] = parsePos(b.location);
+    if (ta !== tb) return tb - ta;
+    if (ra !== rb) return rb - ra;
+    return cb - ca;
+  });
+
   for (const sectionFile of sectionFiles) {
     let xml = zip.file(sectionFile)?.asText();
     if (!xml) continue;
 
-    for (const field of fields) {
+    for (const field of sortedFields) {
       const val = values[field.key];
       if (!val) continue;
 
@@ -87,29 +217,36 @@ function fillHwpx(buffer: Buffer, fields: DetectedField[], values: Record<string
       } else if (field.type === 'bracket') {
         xml = xml.replace(/\[\s*\]/, `[${esc(val)}]`);
         xml = xml.replace(/\(\s*\)/, `(${esc(val)})`);
-      } else if (field.type === 'blank') {
-        // 빈 <hp:t></hp:t> 첫 매칭에 값 삽입
-        xml = xml.replace(/<hp:t><\/hp:t>/, `<hp:t>${esc(val)}</hp:t>`);
-        xml = xml.replace(/<hp:t\s*\/>/, `<hp:t>${esc(val)}</hp:t>`);
+      } else if (field.type === 'blank' && field.location.startsWith('table:')) {
+        xml = fillCellAtLocation(xml, field.location, val, 'hp:tbl', 'hp:tr', 'hp:tc', 'hp:t');
       }
     }
 
     zip.file(sectionFile, xml);
   }
 
-  // HWPX ZIP 규격: mimetype은 STORE, 나머지 DEFLATE
+  // HWPX ZIP 규격: mimetype은 반드시 STORE(비압축), 나머지 DEFLATE
+  // PizZip generate 후 mimetype 엔트리를 재작성
   const mimetypeContent = zip.file('mimetype')?.asText() ?? 'application/hwp+zip';
 
+  // 1차 DEFLATE 생성 (mimetype 포함)
+  const deflateBuf = zip.generate({
+    type: 'nodebuffer',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 6 },
+  });
+
+  // 2차: PizZip으로 다시 열어 mimetype만 STORE로 재저장
+  const zip2 = new PizZip(deflateBuf);
+  zip2.file('mimetype', mimetypeContent, { compression: 'STORE' });
+
   return Buffer.from(
-    zip.generate({
+    zip2.generate({
       type: 'nodebuffer',
       compression: 'DEFLATE',
       compressionOptions: { level: 6 },
     })
   );
-  // mimetype STORE 처리는 PizZip에서 직접 지원하지 않으므로,
-  // 생성 후 별도 패치가 필요하지만 실용적으로는 DEFLATE로도 대부분 동작함
-  void mimetypeContent;
 }
 
 interface DetectedField {
@@ -189,7 +326,7 @@ export async function POST(request: NextRequest) {
   const fileBuffer = Buffer.from(await fileData.arrayBuffer());
   const fields: DetectedField[] = session.detected_fields ?? [];
 
-  // 자동 매핑값 values에 병합 (사용자가 덮어쓰지 않은 것만)
+  // 자동 매핑값 병합 (사용자가 덮어쓰지 않은 것만)
   const mergedValues: Record<string, string> = {};
   for (const field of fields) {
     if (field.autoMapped && field.autoValue && !values[field.key]) {
@@ -238,7 +375,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Signed URL 생성에 실패했습니다.' }, { status: 500 });
   }
 
-  // 세션 완료 처리 + filled_values 저장
+  // 세션 완료 처리
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (admin as any)
     .from('autofill_sessions')
