@@ -463,7 +463,7 @@ export default function ContractRiskResultPage() {
           <>
             <RiskFilter filter={filter} onChange={setFilter} counts={counts} />
 
-            <div className="space-y-3">
+            <div>
               {sortedItems.length > 0 ? (
                 sortedItems.map(item => <RiskCard key={item.id} item={item} />)
               ) : (
