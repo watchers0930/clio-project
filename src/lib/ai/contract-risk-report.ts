@@ -57,7 +57,7 @@ export async function generateContractRiskReport(
   analysis: ContractRiskAnalysis,
 ): Promise<Buffer> {
   const { file_name, contract_type, perspective, risk_result, risk_count, created_at } = analysis;
-  const foundItems = risk_result.items.filter(i => i.found);
+  const foundItems = (risk_result?.items ?? []).filter(i => i.found);
   const dateStr = new Date(created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
 
   const children: (Paragraph | Table)[] = [];
@@ -121,7 +121,7 @@ export async function generateContractRiskReport(
   );
 
   // ── 전체 요약 ────────────────────────────────────────────────────────────
-  if (risk_result.summary) {
+  if (risk_result?.summary) {
     children.push(
       new Paragraph({
         spacing: { before: 300, after: 100 },

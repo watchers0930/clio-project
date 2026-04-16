@@ -1,25 +1,37 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Download, AlertCircle, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Download, AlertCircle, ShieldCheck, Scale, X } from 'lucide-react';
 import { RiskSummary } from '@/components/contract-risk/RiskSummary';
 import { RiskFilter } from '@/components/contract-risk/RiskFilter';
 import { RiskCard } from '@/components/contract-risk/RiskCard';
+import { RiskItemSidebar } from '@/components/contract-risk/RiskItemSidebar';
+import { SuggestionPanel } from '@/components/contract-risk/SuggestionPanel';
+import { BulkApplyBar } from '@/components/contract-risk/BulkApplyBar';
 import { CONTRACT_TYPE_LABELS, PERSPECTIVE_LABELS, CONTRACT_RISK_ITEMS } from '@/lib/contract-risk-items';
 import type { ContractRiskAnalysis, RiskFilterState } from '@/lib/types/contract-risk';
-import { ClauseFixModal } from '@/components/contract-risk/ClauseFixModal';
+import type { SuggestionItem, SuggestionState, DecisionStatus } from '@/lib/types/contract-suggest';
 
 export default function ContractRiskResultPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
+  // ── 기존 상태 ─────────────────────────────────────────────────────────
   const [analysis, setAnalysis] = useState<ContractRiskAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
-  const [showClauseFix, setShowClauseFix] = useState(false);
   const [filter, setFilter] = useState<RiskFilterState>({ level: 'all', category: 'all' });
+
+  // ── 수정 제안 상태 ────────────────────────────────────────────────────
+  const [suggestMode, setSuggestMode] = useState(false);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [suggestions, setSuggestions] = useState<SuggestionState[]>([]);
+  const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
+  const [outputFormat, setOutputFormat] = useState<'docx' | 'hwpx'>('docx');
 
   useEffect(() => {
     if (!id) return;
@@ -36,6 +48,7 @@ export default function ContractRiskResultPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  // ── 필터링 / 정렬 ─────────────────────────────────────────────────────
   const filteredItems = useMemo(() => {
     if (!analysis) return [];
     const found = analysis.risk_result.items.filter(i => i.found);
@@ -66,6 +79,9 @@ export default function ContractRiskResultPage() {
     return [...filteredItems].sort((a, b) => (order[a.risk_level] ?? 3) - (order[b.risk_level] ?? 3));
   }, [filteredItems]);
 
+  const foundItems = useMemo(() => analysis?.risk_result.items.filter(i => i.found) ?? [], [analysis]);
+
+  // ── DOCX 리포트 다운로드 ──────────────────────────────────────────────
   const handleDownload = async () => {
     setDownloading(true);
     try {
@@ -84,6 +100,136 @@ export default function ContractRiskResultPage() {
     }
   };
 
+  // ── 수정 제안 모드 진입 ───────────────────────────────────────────────
+  const handleEnterSuggestMode = () => {
+    // found 항목 전체 선택 상태로 진입
+    const keys = new Set(foundItems.map(i => i.id));
+    setSelectedKeys(keys);
+    setSuggestions([]);
+    setActiveKey(null);
+    setSuggestMode(true);
+  };
+
+  const handleExitSuggestMode = () => {
+    setSuggestMode(false);
+    setSuggestions([]);
+    setSelectedKeys(new Set());
+    setActiveKey(null);
+  };
+
+  // ── 항목 선택/해제 ────────────────────────────────────────────────────
+  const toggleSelect = useCallback((key: string) => {
+    setSelectedKeys(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
+  const selectAll = useCallback(() => {
+    setSelectedKeys(new Set(foundItems.map(i => i.id)));
+  }, [foundItems]);
+
+  const clearAll = useCallback(() => {
+    setSelectedKeys(new Set());
+  }, []);
+
+  // ── 수정 제안 생성 API 호출 ──────────────────────────────────────────
+  const handleSuggestStart = async () => {
+    if (selectedKeys.size === 0 || isSuggesting) return;
+    setIsSuggesting(true);
+    setSuggestions([]);
+
+    try {
+      const res = await fetch(`/api/contract-risk/${id}/suggest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_keys: Array.from(selectedKeys) }),
+      });
+
+      if (!res.ok) {
+        const j = await res.json();
+        alert(j.message ?? '수정 제안 생성에 실패했습니다.');
+        return;
+      }
+
+      const json = await res.json() as { suggestions: SuggestionItem[] };
+      const states: SuggestionState[] = json.suggestions.map(s => ({ ...s, decision: 'pending' as DecisionStatus }));
+      setSuggestions(states);
+      setActiveKey(states[0]?.item_key ?? null);
+    } catch {
+      alert('수정 제안 생성 중 오류가 발생했습니다.');
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
+
+  // ── 조항 수락/건너뜀 ─────────────────────────────────────────────────
+  const handleAccept = useCallback((key: string) => {
+    setSuggestions(prev =>
+      prev.map(s => s.item_key === key ? { ...s, decision: 'accepted' as DecisionStatus } : s),
+    );
+    // 다음 pending 항목으로 이동
+    setSuggestions(prev => {
+      const idx = prev.findIndex(s => s.item_key === key);
+      const next = prev.slice(idx + 1).find(s => s.decision === 'pending');
+      if (next) setActiveKey(next.item_key);
+      return prev;
+    });
+  }, []);
+
+  const handleSkip = useCallback((key: string) => {
+    setSuggestions(prev =>
+      prev.map(s => s.item_key === key ? { ...s, decision: 'skipped' as DecisionStatus } : s),
+    );
+    setSuggestions(prev => {
+      const idx = prev.findIndex(s => s.item_key === key);
+      const next = prev.slice(idx + 1).find(s => s.decision === 'pending');
+      if (next) setActiveKey(next.item_key);
+      return prev;
+    });
+  }, []);
+
+  // ── 파일 다운로드 (apply API) ─────────────────────────────────────────
+  const handleBulkDownload = async () => {
+    const accepted = suggestions.filter(s => s.decision === 'accepted');
+    if (accepted.length === 0) return;
+    setIsApplying(true);
+
+    try {
+      const res = await fetch(`/api/contract-risk/${id}/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          suggestions: accepted.map(s => ({ item_key: s.item_key, revised: s.revised })),
+          outputFormat,
+        }),
+      });
+
+      if (!res.ok) {
+        const j = await res.json();
+        alert(j.message ?? '파일 생성에 실패했습니다.');
+        return;
+      }
+
+      const json = await res.json() as { signedUrl: string; fileName: string };
+      const a = document.createElement('a');
+      a.href = json.signedUrl;
+      a.download = json.fileName;
+      a.target = '_blank';
+      a.click();
+    } catch {
+      alert('파일 다운로드 중 오류가 발생했습니다.');
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  const activeSuggestion = suggestions.find(s => s.item_key === activeKey) ?? null;
+  const acceptedCount = suggestions.filter(s => s.decision === 'accepted').length;
+
+  // ── 로딩 / 에러 화면 ─────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-full bg-[#F7F8FA] flex items-center justify-center">
@@ -120,10 +266,86 @@ export default function ContractRiskResultPage() {
 
   const total = analysis.risk_count.high + analysis.risk_count.medium + analysis.risk_count.low;
 
+  // ── 수정 제안 모드 (2컬럼) ────────────────────────────────────────────
+  if (suggestMode) {
+    return (
+      <div className="h-full flex flex-col bg-[#F7F8FA]">
+        {/* 헤더 */}
+        <div className="bg-white border-b border-[#E2E5EA] sticky top-0 z-20">
+          <div className="px-6 py-0 h-14 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                onClick={handleExitSuggestMode}
+                className="flex items-center gap-1.5 text-[12px] text-[#888] hover:text-[#1B1F2B] transition-colors shrink-0"
+              >
+                <ArrowLeft size={14} /> 분석 결과로
+              </button>
+              <span className="text-[#E2E5EA]">/</span>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-[#EEF3FE] rounded-lg flex items-center justify-center shrink-0">
+                  <Scale size={12} className="text-[#2E6FF2]" />
+                </div>
+                <span className="text-[13px] font-semibold text-[#1B1F2B]">
+                  법령 기반 조항 수정 제안
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={handleExitSuggestMode}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-[#888] hover:text-[#1B1F2B] hover:bg-[#F7F8FA] transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* 2컬럼 본문 */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* 좌: 항목 사이드바 (320px 고정) */}
+          <div className="w-80 flex-shrink-0 bg-white border-r border-[#E2E5EA] flex flex-col overflow-hidden">
+            <RiskItemSidebar
+              items={foundItems}
+              selectedKeys={selectedKeys}
+              onToggleSelect={toggleSelect}
+              onSelectAll={selectAll}
+              onClearAll={clearAll}
+              activeKey={activeKey}
+              onActivate={setActiveKey}
+              suggestions={suggestions}
+              isSuggesting={isSuggesting}
+              onSuggestStart={handleSuggestStart}
+            />
+          </div>
+
+          {/* 우: 수정 제안 패널 */}
+          <div className="flex-1 bg-white flex flex-col overflow-hidden">
+            <SuggestionPanel
+              suggestion={activeSuggestion}
+              onAccept={handleAccept}
+              onSkip={handleSkip}
+              isLoading={isSuggesting}
+            />
+          </div>
+        </div>
+
+        {/* 하단 BulkApplyBar */}
+        <BulkApplyBar
+          acceptedCount={acceptedCount}
+          totalCount={suggestions.length}
+          outputFormat={outputFormat}
+          onFormatChange={setOutputFormat}
+          onDownload={handleBulkDownload}
+          isApplying={isApplying}
+        />
+      </div>
+    );
+  }
+
+  // ── 기본 단일 컬럼 (기존 분석 결과 뷰) ───────────────────────────────
   return (
     <div className="min-h-full bg-[#F7F8FA]">
 
-      {/* ── 상단 헤더 바 ─────────────────────────────────────────────────── */}
+      {/* 상단 헤더 바 */}
       <div className="bg-white border-b border-[#E2E5EA] sticky top-0 z-20">
         <div className="max-w-4xl mx-auto px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
@@ -137,12 +359,14 @@ export default function ContractRiskResultPage() {
             <p className="text-[13px] font-medium text-[#1B1F2B] truncate">{analysis.file_name}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => setShowClauseFix(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-[#2E6FF2] text-[#2E6FF2] rounded-xl text-[12px] font-medium hover:bg-[#2E6FF2]/5 transition-colors"
-            >
-              ⚖️ 조항 수정 제안
-            </button>
+            {total > 0 && (
+              <button
+                onClick={handleEnterSuggestMode}
+                className="flex items-center gap-2 px-4 py-2 border border-[#2E6FF2] text-[#2E6FF2] rounded-xl text-[12px] font-medium hover:bg-[#2E6FF2]/5 transition-colors"
+              >
+                <Scale size={13} /> 조항 수정 제안
+              </button>
+            )}
             <button
               onClick={handleDownload}
               disabled={downloading}
@@ -157,7 +381,7 @@ export default function ContractRiskResultPage() {
 
       <div className="max-w-4xl mx-auto px-6 py-6 space-y-4">
 
-        {/* ── 요약 컴포넌트 ────────────────────────────────────────────────── */}
+        {/* 요약 */}
         <RiskSummary
           riskCount={analysis.risk_count}
           fileName={analysis.file_name}
@@ -166,7 +390,7 @@ export default function ContractRiskResultPage() {
           createdAt={analysis.created_at}
         />
 
-        {/* ── AI 종합 의견 ─────────────────────────────────────────────────── */}
+        {/* AI 종합 의견 */}
         {analysis.risk_result.summary && (
           <div className="bg-white border border-[#E2E5EA] rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-3">
@@ -179,7 +403,7 @@ export default function ContractRiskResultPage() {
           </div>
         )}
 
-        {/* ── 탐지 항목 없음 ───────────────────────────────────────────────── */}
+        {/* 탐지 항목 없음 */}
         {total === 0 && (
           <div className="bg-white border border-[#E2E5EA] rounded-2xl p-10 text-center">
             <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -190,7 +414,7 @@ export default function ContractRiskResultPage() {
           </div>
         )}
 
-        {/* ── 필터 + 항목 목록 ─────────────────────────────────────────────── */}
+        {/* 필터 + 항목 목록 */}
         {counts.all > 0 && (
           <>
             <RiskFilter filter={filter} onChange={setFilter} counts={counts} />
@@ -207,17 +431,7 @@ export default function ContractRiskResultPage() {
           </>
         )}
 
-        {/* ── 조항 수정 모달 ─────────────────────────────────────────────── */}
-        {analysis && (
-          <ClauseFixModal
-            open={showClauseFix}
-            onClose={() => setShowClauseFix(false)}
-            analysisId={analysis.id}
-            riskItems={analysis.risk_result?.items ?? []}
-          />
-        )}
-
-        {/* ── 면책 ─────────────────────────────────────────────────────────── */}
+        {/* 면책 */}
         <div className="border-t border-[#E2E5EA] pt-5 pb-2 text-center">
           <p className="text-[11px] text-[#c0c4cc] leading-relaxed">
             ⚠️ 이 분석은 AI가 생성한 참고 자료이며 법적 조언이 아닙니다.<br />

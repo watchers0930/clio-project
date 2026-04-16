@@ -128,6 +128,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // ── 원본 파일 Storage 업로드 (apply 라우트에서 조항 교체 시 필요) ─────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin as any)
+    .storage
+    .from('files')
+    .upload(`contract-risk/${userId}/${file.name}`, Buffer.from(buffer), {
+      contentType: file.type || 'application/octet-stream',
+      upsert: true,
+    });
+
   // ── DB UPDATE: done ───────────────────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (admin as any)

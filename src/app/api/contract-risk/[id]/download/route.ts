@@ -50,7 +50,13 @@ export async function GET(
     return NextResponse.json({ error: '분석이 완료되지 않았습니다.' }, { status: 422 });
   }
 
-  const buffer = await generateContractRiskReport(data);
+  let buffer: Buffer;
+  try {
+    buffer = await generateContractRiskReport(data);
+  } catch (err) {
+    console.error('[contract-risk/download] report generation error:', err);
+    return NextResponse.json({ error: '리포트 생성 중 오류가 발생했습니다.' }, { status: 500 });
+  }
 
   const safeFileName = encodeURIComponent(`리스크분석-${data.file_name.replace(/\.[^.]+$/, '')}.docx`);
 
