@@ -41,7 +41,7 @@ export function RiskFilter({ filter, onChange, counts }: RiskFilterProps) {
             key={btn.key}
             onClick={() => onChange({ ...filter, level: btn.key })}
             className={cn(
-              'inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-[12px] font-medium border transition-all',
+              'inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-[12px] font-medium border transition-all m-[5px]',
               filter.level === btn.key
                 ? 'bg-[#2E6FF2] text-white border-[#2E6FF2] shadow-sm'
                 : 'bg-white text-[#555] border-[#E2E5EA] hover:border-[#2E6FF2]/60',
@@ -71,7 +71,7 @@ export function RiskFilter({ filter, onChange, counts }: RiskFilterProps) {
             key={btn.key}
             onClick={() => onChange({ ...filter, category: btn.key })}
             className={cn(
-              'inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-[12px] font-medium border transition-all',
+              'inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-[12px] font-medium border transition-all m-[5px]',
               filter.category === btn.key
                 ? 'bg-[#1B1F2B] text-white border-[#1B1F2B] shadow-sm'
                 : 'bg-white text-[#555] border-[#E2E5EA] hover:border-[#1B1F2B]/40',
