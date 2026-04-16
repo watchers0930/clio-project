@@ -246,7 +246,7 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
 
           {/* Step 1: 조항 선택 */}
           {step === 1 && (
-            <div className="space-y-3">
+            <div className="flex flex-col gap-[10px]">
               <p className="text-[13px] text-[#6B7280] mb-4">
                 위험도 <span className="font-semibold text-red-600">고위험</span> /
                 <span className="font-semibold text-amber-600"> 중위험</span> 조항 {targetItems.length}개 — 수정할 조항을 선택하세요.
