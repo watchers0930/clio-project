@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Download, AlertCircle, ShieldCheck, Scale, X } from 'lucide-react';
+import { ArrowLeft, Download, AlertCircle, ShieldCheck, Scale, X, RefreshCw } from 'lucide-react';
 import { RiskSummary } from '@/components/contract-risk/RiskSummary';
 import { RiskFilter } from '@/components/contract-risk/RiskFilter';
 import { RiskCard } from '@/components/contract-risk/RiskCard';
@@ -32,6 +32,7 @@ export default function ContractRiskResultPage() {
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [outputFormat, setOutputFormat] = useState<'docx' | 'hwpx'>('docx');
+  const [applyError, setApplyError] = useState<{ type: 'file_not_found' | 'general'; message: string } | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -209,7 +210,11 @@ export default function ContractRiskResultPage() {
 
       if (!res.ok) {
         const j = await res.json();
-        alert(j.message ?? '파일 생성에 실패했습니다.');
+        if (j.error === 'NOT_FOUND' && j.message?.includes('원본 계약서')) {
+          setApplyError({ type: 'file_not_found', message: j.message });
+        } else {
+          setApplyError({ type: 'general', message: j.message ?? '파일 생성에 실패했습니다.' });
+        }
         return;
       }
 
@@ -220,7 +225,7 @@ export default function ContractRiskResultPage() {
       a.target = '_blank';
       a.click();
     } catch {
-      alert('파일 다운로드 중 오류가 발생했습니다.');
+      setApplyError({ type: 'general', message: '파일 다운로드 중 오류가 발생했습니다.' });
     } finally {
       setIsApplying(false);
     }
@@ -337,6 +342,45 @@ export default function ContractRiskResultPage() {
           onDownload={handleBulkDownload}
           isApplying={isApplying}
         />
+
+        {/* 에러 모달 */}
+        {applyError && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <AlertCircle size={18} className="text-red-500" />
+                </div>
+                <div>
+                  <p className="text-[14px] font-semibold text-[#1B1F2B] mb-1">
+                    {applyError.type === 'file_not_found' ? '원본 파일을 찾을 수 없습니다' : '파일 생성 실패'}
+                  </p>
+                  <p className="text-[12px] text-[#888] leading-relaxed">
+                    {applyError.type === 'file_not_found'
+                      ? '이 분석은 이전 버전에서 생성되어 원본 파일이 저장되지 않았습니다. 계약서 파일을 다시 업로드하여 새로 분석하면 다운로드가 가능합니다.'
+                      : applyError.message}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setApplyError(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-[#E2E5EA] text-[13px] text-[#888] hover:bg-[#F7F8FA] transition-colors"
+                >
+                  닫기
+                </button>
+                {applyError.type === 'file_not_found' && (
+                  <button
+                    onClick={() => router.push('/contract-risk')}
+                    className="flex-1 py-2.5 rounded-xl bg-[#2E6FF2] text-[13px] text-white font-medium hover:bg-[#245ED0] transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <RefreshCw size={13} /> 새로 분석하기
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

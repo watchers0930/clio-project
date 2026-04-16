@@ -1,7 +1,7 @@
 # CLIO Wiki Index
 
-**최종 컴파일:** 2026-04-13  
-**프로젝트 버전:** v6.4.0
+**최종 컴파일:** 2026-04-16  
+**프로젝트 버전:** v6.5.1
 
 ---
 
@@ -13,7 +13,7 @@
 | [authentication.md](topics/authentication.md) | 인증/권한 시스템 (Supabase Auth + JWT + Zustand) | high | active |
 | [document-management.md](topics/document-management.md) | 문서 생성, 뷰어, diff, AI 댓글 반영(insert/append), 품질검수 | high | active |
 | [approval-workflow.md](topics/approval-workflow.md) | 댓글 & AI 반영 시스템 (⚠️ 구 결재 시스템 v6.2.0 제거됨) | high | active |
-| [ai-features.md](topics/ai-features.md) | GPT-4o, 계약 리스크 분석, STT/Whisper, 할일 추출, 만료일 추출, 품질검수 | high | active |
+| [ai-features.md](topics/ai-features.md) | GPT-4o, 계약 리스크 분석, **법령 기반 수정 제안(v6.5.0)**, STT/Whisper, 할일 추출, 만료일 추출, 품질검수 | high | active |
 | [database.md](topics/database.md) | DB 스키마, RLS 정책, 마이그레이션 001~015 | high | active |
 | [file-management.md](topics/file-management.md) | 파일 업로드, scope 관리, 만료일 알림, 외부 공유 링크, 벡터화 파이프라인 | high | **new** |
 | [messaging.md](topics/messaging.md) | 채팅 채널/메시지 시스템 | medium | active |
@@ -37,6 +37,9 @@
 | 반영 모달 | `src/components/documents/CommentReflectModal.tsx` |
 | 댓글 반영 API | `src/app/api/documents/[id]/apply-comments/route.ts` |
 | 계약 리스크 분석 | `src/lib/ai/contract-risk-analyzer.ts` |
+| 법령 기반 수정 제안 | `src/lib/contract-suggest/`, `src/lib/laws/` |
+| 수정 제안 API | `src/app/api/contract-risk/[id]/suggest/route.ts` |
+| 수정 적용 API | `src/app/api/contract-risk/[id]/apply/route.ts` |
 | STT 변환 | `src/app/api/transcribe/route.ts` |
 | 파일 관리 | `src/app/(app)/files/page.tsx` |
 | 만료일 알림 | `src/components/expiry/ExpiryAlertProvider.tsx` |
@@ -63,6 +66,7 @@
 
 ## 최근 변경
 
+- **2026-04-16**: v6.5.1 갱신 — 법령 기반 수정 제안(v6.5.0), Storage 버그픽스(v6.5.1), ai-features 섹션 추가
 - **2026-04-13**: v6.4.0 전면 갱신 — 결재→댓글/AI반영, 계약리스크, STT, diff, 품질검수, 만료일, 파일scope 반영
 - **2026-04-13**: `file-management` 토픽 신규 생성
 - **2026-04-12**: 초기 컴파일 (v5.4.0)

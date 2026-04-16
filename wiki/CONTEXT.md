@@ -2,7 +2,7 @@
 
 > AI 에이전트가 이 프로젝트에서 작업 시 먼저 읽어야 할 핵심 맥락 문서
 
-**생성일:** 2026-04-12 | **최종 갱신:** 2026-04-13 | **버전:** v6.4.0 | **배포:** https://clioai.vercel.app
+**생성일:** 2026-04-12 | **최종 갱신:** 2026-04-16 | **버전:** v6.5.1 | **배포:** https://clioai.vercel.app
 
 ---
 
@@ -15,6 +15,10 @@ CLIO는 **기업 내부용 RAG 기반 AI 문서관리 + 협업 시스템**이다
   - `reflect` — 전체 재생성 + 스냅샷 저장 (version_number 증가)
   - `apply-comments` — 섹션 삽입 or 새 단락 추가 (부분 반영, **자동 스냅샷 + version_number 증가**)
 - 전용 문서 뷰어 페이지 (`/documents/[id]`): 좌측 문서 본문 + 우측 댓글 패널 항상 노출
+- **계약서 리스크 분석 + 법령 기반 수정 제안** (v6.5.0):
+  - 25개 항목 분석 → `suggest` API로 RAG 법령 검색 + GPT-4o 조항 수정 제안
+  - 2컬럼 UI: 좌측 항목 목록(체크박스) + 우측 수정 제안 패널
+  - 수정 적용 후 DOCX/HWPX 다운로드 (`apply` API)
 - 사내 메시지/채팅 (채널 + DM)
 - 일정/할일 (캘린더)
 - 5가지 포맷 문서 다운로드 (DOCX/HWPX/XLSX/PPTX/PDF)
@@ -87,23 +91,40 @@ src/
 │   ├── (app)/           # 메인 앱 (인증 필요)
 │   │   ├── dashboard, files, documents, documents/[id]
 │   │   ├── messages, search, schedule, settings
+│   │   └── contract-risk/[id]  ← v6.5.0 2컬럼 수정 제안 UI
 │   ├── api/             # API Route Handlers
-│   │   └── documents/[id]/
-│   │       ├── apply-comments/route.ts  ← v6.4.0 신규 (부분 반영)
-│   │       └── reflect/route.ts         ← 전체 재생성 + 스냅샷
+│   │   ├── documents/[id]/
+│   │   │   ├── apply-comments/route.ts  ← v6.4.0 신규 (부분 반영)
+│   │   │   └── reflect/route.ts         ← 전체 재생성 + 스냅샷
+│   │   └── contract-risk/
+│   │       ├── analyze/route.ts  ← v6.5.1 Supabase Storage 업로드 추가
+│   │       ├── [id]/suggest/route.ts  ← v6.5.0 신규 (RAG + 수정 제안)
+│   │       ├── [id]/apply/route.ts    ← v6.5.0/6.5.1 버킷 경로 수정
+│   │       └── [id]/download/route.ts ← v6.5.1 try/catch + 방어 코드 추가
 │   └── share/           # 외부 공유
 ├── lib/
 │   ├── ai/              # AI 파이프라인 모듈
 │   ├── supabase/        # DB 클라이언트 + 타입
 │   ├── renderers/       # 문서 포맷 렌더러
+│   ├── contract-suggest/          ← v6.5.0 신규
+│   │   ├── clause-extractor.ts    # 조항 추출
+│   │   └── clause-replacer.ts     # 조항 교체 + 파일 생성
+│   ├── laws/                      ← v6.5.0 신규
+│   │   ├── law-embedder.ts        # 법령 임베딩
+│   │   └── law-seed-data.ts       # 법령 시드 데이터
 │   ├── utils/
 │   │   └── parse-sections.ts  ← v6.4.0 신규 (섹션 파싱 유틸)
 │   ├── contract-fields.ts
 │   └── permissions.ts
 ├── components/
-│   └── documents/
-│       ├── CommentReflectModal.tsx  ← v6.4.0 신규 (반영 모드 선택 모달)
-│       └── DocumentCommentPanel.tsx ← documentContent prop 추가
+│   ├── documents/
+│   │   ├── CommentReflectModal.tsx  ← v6.4.0 신규 (반영 모드 선택 모달)
+│   │   └── DocumentCommentPanel.tsx ← documentContent prop 추가
+│   └── contract-risk/             ← v6.5.0 신규
+│       ├── RiskItemSidebar.tsx     # 좌측 항목 목록
+│       ├── SuggestionPanel.tsx     # 우측 수정 제안 패널
+│       ├── LawReferenceCard.tsx    # 관련 법령 카드
+│       └── RevisedClauseBox.tsx    # 수정 제안 조항 박스
 ├── store/
 │   └── auth-store.ts    # Zustand 인증 스토어
 supabase/
@@ -121,7 +142,7 @@ supabase/
 - [document-management.md](topics/document-management.md) — 문서 생성, diff, 품질검수, AI 댓글 반영
 - [approval-workflow.md](topics/approval-workflow.md) — 댓글 & AI 반영 시스템 (구 결재 대체)
 - [database.md](topics/database.md) — DB 스키마 + RLS (migration 001~015)
-- [ai-features.md](topics/ai-features.md) — GPT-4o, 계약리스크, STT, 할일추출, 만료일추출
+- [ai-features.md](topics/ai-features.md) — GPT-4o, 계약리스크, STT, 할일추출, 만료일추출, **법령 기반 수정 제안(v6.5.0)**
 - [file-management.md](topics/file-management.md) — 파일 업로드, scope, 만료일 알림, 공유 링크
 - [messaging.md](topics/messaging.md) — 메시지/채널
 - [deployment.md](topics/deployment.md) — 배포 구성

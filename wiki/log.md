@@ -1,5 +1,37 @@
 # Wiki Compile Log
 
+## 2026-04-16 — v6.5.1 갱신 (v7)
+
+**프로젝트 버전:** v6.5.1
+
+**업데이트된 토픽:**
+- ai-features — 법령 기반 수정 제안 섹션 신규 추가 (v6.5.0), Storage 버그픽스 반영 (v6.5.1)
+- CONTEXT.md — 버전 v6.5.1, 디렉토리 구조 신규 파일 추가 (contract-suggest, laws, contract-risk 컴포넌트)
+- INDEX.md — 버전 v6.5.1, 주요 경로 4개 추가, 최근 변경 갱신
+
+**주요 변경 요약 (v6.5.0~v6.5.1):**
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `src/app/api/contract-risk/analyze/route.ts` | 분석 후 Supabase Storage에 원본 파일 저장 (v6.5.1) |
+| `src/app/api/contract-risk/[id]/suggest/route.ts` | 신규 — RAG 법령 검색 + GPT-4o 수정 제안 |
+| `src/app/api/contract-risk/[id]/apply/route.ts` | 신규/수정 — `contract-files`→`files` 버킷, 경로 `contract-risk/` 프리픽스 (v6.5.1) |
+| `src/app/api/contract-risk/[id]/download/route.ts` | try/catch 추가, `risk_result.items ?? []` 방어 코드 (v6.5.1) |
+| `src/lib/contract-suggest/clause-extractor.ts` | 신규 — 조항 발췌 |
+| `src/lib/contract-suggest/clause-replacer.ts` | 신규 — 조항 교체 + DOCX/HWPX 생성 |
+| `src/lib/laws/law-embedder.ts` | 신규 — 법령 임베딩 |
+| `src/lib/laws/law-seed-data.ts` | 신규 — 법령 시드 데이터 |
+| `src/components/contract-risk/RiskItemSidebar.tsx` | 신규 — 좌측 항목 목록 컴포넌트 |
+| `src/components/contract-risk/SuggestionPanel.tsx` | 신규 — 우측 수정 제안 패널 |
+| `src/components/contract-risk/LawReferenceCard.tsx` | 신규 — 관련 법령 카드 |
+| `src/components/contract-risk/RevisedClauseBox.tsx` | 신규 — 수정 제안 조항 박스 |
+| `src/app/(app)/contract-risk/[id]/page.tsx` | 2컬럼 suggest 모드 UI 추가 |
+
+**스캔 파일:** 15개 신규/수정 파일
+**신규 DB 테이블:** `law_chunks` (pgvector, 법령 조문)
+
+---
+
 ## 2026-04-13 — v6.4.0 전면 갱신 (v6)
 
 **프로젝트 버전:** v6.4.0
