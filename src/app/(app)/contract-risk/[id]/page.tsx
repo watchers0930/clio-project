@@ -423,7 +423,7 @@ export default function ContractRiskResultPage() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 py-6 space-y-[40px]">
+      <div className="max-w-4xl mx-auto px-6 py-6 flex flex-col gap-[40px]">
 
         {/* 요약 */}
         <RiskSummary
