@@ -100,7 +100,7 @@ export function RiskItemSidebar({
               key={item.id}
               onClick={() => onActivate(item.id)}
               className={cn(
-                'flex items-start gap-2.5 mx-2 my-1 p-3 rounded-2xl border cursor-pointer transition-all',
+                'flex items-start gap-2.5 mx-2 my-[10px] p-3 rounded-2xl border cursor-pointer transition-all',
                 rowBg,
               )}
             >

@@ -69,7 +69,7 @@ export function RiskSummary({
       </div>
 
       {/* 리스크 카운트 그리드 */}
-      <div className="grid grid-cols-4 divide-x divide-[#F0F2F5]">
+      <div className="grid grid-cols-4 gap-[10px] p-[10px]">
         {STAT_CARDS.map(s => (
           <div key={s.key} className={`px-4 py-4 ${s.bg}`}>
             <p className={`text-[11px] font-semibold ${s.color} mb-1`}>{s.label}</p>

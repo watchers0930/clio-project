@@ -64,7 +64,7 @@ export function RiskCard({ item }: RiskCardProps) {
   };
 
   return (
-    <div className={cn('bg-white border border-[#E2E5EA] border-l-4 rounded-2xl overflow-hidden my-[5px]', cfg.borderCls)}>
+    <div className={cn('bg-white border border-[#E2E5EA] border-l-4 rounded-2xl overflow-hidden my-[10px]', cfg.borderCls)}>
 
       {/* 헤더 (클릭하여 토글) */}
       <button
