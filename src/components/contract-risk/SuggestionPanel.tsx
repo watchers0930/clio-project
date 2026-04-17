@@ -64,7 +64,7 @@ export function SuggestionPanel({ suggestion, onAccept, onSkip, isLoading }: Sug
   const isSkipped = suggestion.decision === 'skipped';
 
   return (
-    <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+    <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
       {/* 헤더 */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-[11px] font-mono text-[#888] bg-[#F7F8FA] border border-[#E2E5EA] px-1.5 py-0.5 rounded">
@@ -86,7 +86,7 @@ export function SuggestionPanel({ suggestion, onAccept, onSkip, isLoading }: Sug
       </div>
 
       {/* 원문 조항 */}
-      <div>
+      <div className="flex flex-col">
         <span className="text-[12px] font-semibold text-[#888] block mb-2">원문 조항</span>
         <div className="rounded-2xl border border-[#E2E5EA] bg-[#F7F8FA] px-4 py-3.5 my-2.5">
           <p className="text-[13px] text-[#1B1F2B] leading-relaxed whitespace-pre-wrap">
@@ -97,15 +97,17 @@ export function SuggestionPanel({ suggestion, onAccept, onSkip, isLoading }: Sug
 
       {/* 관련 법령 */}
       {suggestion.laws.length > 0 ? (
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           <span className="text-[12px] font-semibold text-[#888] block">관련 법령</span>
           {suggestion.laws.map((law, i) => (
             <LawReferenceCard key={law.id} law={law} index={i + 1} />
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl border border-[#E2E5EA] bg-[#F7F8FA] px-4 py-3.5 text-[12px] text-[#888] my-2.5">
-          관련 법령을 찾지 못했습니다. 일반 계약 원칙에 따라 수정 제안이 작성되었습니다.
+        <div className="flex flex-col">
+          <div className="rounded-2xl border border-[#E2E5EA] bg-[#F7F8FA] px-4 py-3.5 text-[12px] text-[#888] my-2.5">
+            관련 법령을 찾지 못했습니다. 일반 계약 원칙에 따라 수정 제안이 작성되었습니다.
+          </div>
         </div>
       )}
 

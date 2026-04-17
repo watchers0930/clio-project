@@ -22,9 +22,9 @@ export function RevisedClauseBox({ revised, reason }: RevisedClauseBoxProps) {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3">
       {/* 수정 제안 조항 */}
-      <div>
+      <div className="flex flex-col">
         <div className="flex items-center justify-between mb-2">
           <span className="text-[12px] font-semibold text-[#1B1F2B]">수정 제안 조항</span>
           <button
