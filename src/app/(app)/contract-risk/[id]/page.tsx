@@ -306,8 +306,8 @@ export default function ContractRiskResultPage() {
 
         {/* 2컬럼 본문 */}
         <div className="flex flex-1 overflow-hidden">
-          {/* 좌: 항목 사이드바 (320px 고정) */}
-          <div className="w-80 flex-shrink-0 bg-white border-r border-[#E2E5EA] flex flex-col overflow-hidden">
+          {/* 좌: 항목 사이드바 (380px 고정) */}
+          <div className="w-[380px] flex-shrink-0 bg-white border-r border-[#E2E5EA] flex flex-col overflow-hidden">
             <RiskItemSidebar
               items={foundItems}
               selectedKeys={selectedKeys}
