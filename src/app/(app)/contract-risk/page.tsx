@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Upload, FileText, AlertCircle, X, Mic,
@@ -56,7 +56,30 @@ export default function ContractRiskPage() {
   const [perspective, setPerspective] = useState<Perspective>('seller_side');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [progressMsg, setProgressMsg] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  const ANALYZE_STEPS = [
+    '파일을 읽고 있습니다...',
+    '계약 조항을 파악하고 있습니다...',
+    'GPT-4o가 25개 항목을 검토 중입니다...',
+    '리스크 수준을 평가하고 있습니다...',
+    '분석 결과를 정리하고 있습니다...',
+  ];
+
+  // 분석 중일 때 단계별 메시지 순환
+  useEffect(() => {
+    if (!isAnalyzing) { setProgressMsg(''); return; }
+    let idx = 0;
+    setProgressMsg(ANALYZE_STEPS[0]);
+    const timer = setInterval(() => {
+      idx = Math.min(idx + 1, ANALYZE_STEPS.length - 1);
+      setProgressMsg(ANALYZE_STEPS[idx]);
+      if (idx === ANALYZE_STEPS.length - 1) clearInterval(timer);
+    }, 8000);
+    return () => clearInterval(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAnalyzing]);
   const [dragOver, setDragOver] = useState(false);
 
   const onFileSelect = (f: File) => {
@@ -164,8 +187,8 @@ export default function ContractRiskPage() {
               <p className="text-[15px] font-semibold text-[#1B1F2B]">
                 {isTranscribing ? '음성 변환 중' : '리스크 분석 중'}
               </p>
-              <p className="text-[12px] text-[#888] mt-1">
-                {isTranscribing ? '음성을 텍스트로 변환하고 있습니다' : 'GPT-4o가 25개 항목을 검토 중입니다 (최대 60초)'}
+              <p className="text-[12px] text-[#888] mt-1 min-h-[18px] transition-all">
+                {isTranscribing ? '음성을 텍스트로 변환하고 있습니다' : (progressMsg || 'GPT-4o가 25개 항목을 검토 중입니다')}
               </p>
             </div>
           </div>

@@ -7,6 +7,7 @@ import { Header } from './header';
 import { ToastRenderer } from '@/components/ui/toast';
 import { useAuthStore } from '@/store/auth-store';
 import { ExpiryAlertProvider } from '@/components/expiry/ExpiryAlertProvider';
+import { OnboardingModal } from '@/components/common/OnboardingModal';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -76,6 +77,7 @@ function AppLayout({ children }: AppLayoutProps) {
         )}
       </div>
       <ToastRenderer />
+      <OnboardingModal />
     </div>
     </ExpiryAlertProvider>
   );

@@ -7,7 +7,7 @@
  * Step 3: 완성 문서 다운로드
  */
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { X, Upload, CheckCircle, AlertCircle, Wand2, Download, ChevronRight } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
@@ -45,6 +45,27 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [file, setFile] = useState<File | null>(initialFile ?? null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeMsg, setAnalyzeMsg] = useState('');
+
+  const ANALYZE_STEPS = [
+    '파일 구조를 파악하고 있습니다...',
+    '빈 필드를 감지하고 있습니다...',
+    'AI가 필드 이름을 추론하고 있습니다...',
+    '자동 매핑 항목을 확인하고 있습니다...',
+  ];
+
+  useEffect(() => {
+    if (!analyzing) { setAnalyzeMsg(''); return; }
+    let idx = 0;
+    setAnalyzeMsg(ANALYZE_STEPS[0]);
+    const timer = setInterval(() => {
+      idx = Math.min(idx + 1, ANALYZE_STEPS.length - 1);
+      setAnalyzeMsg(ANALYZE_STEPS[idx]);
+      if (idx === ANALYZE_STEPS.length - 1) clearInterval(timer);
+    }, 3000);
+    return () => clearInterval(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analyzing]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [fields, setFields] = useState<DetectedField[]>([]);
   const [values, setValues] = useState<Record<string, string>>({});
@@ -345,7 +366,7 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
               disabled={!file || analyzing}
               className="flex items-center gap-2 px-5 py-2.5 bg-[#2E6FF2] text-white rounded-xl text-[13px] font-medium hover:bg-[#2560d8] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              {analyzing ? <><Spinner size="sm" /> 분석 중...</> : <><Wand2 className="w-4 h-4" /> 분석 시작</>}
+              {analyzing ? <><Spinner size="sm" /> {analyzeMsg || '분석 중...'}</> : <><Wand2 className="w-4 h-4" /> 분석 시작</>}
             </button>
           )}
 

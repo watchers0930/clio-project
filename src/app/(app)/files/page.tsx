@@ -7,6 +7,7 @@ import { FILE_TYPE_BADGE, FILE_STATUS_COLOR } from '@/lib/constants/ui';
 import { formatSize, getFileType } from '@/lib/utils/format';
 import { Spinner, EmptyState, ConfirmDialog } from '@/components/ui';
 import { AutofillModal } from '@/components/common/AutofillModal';
+import { isContractTemplate } from '@/lib/contract-fields';
 
 /* ────────────────────────── types ────────────────────────── */
 interface FileItem {
@@ -804,14 +805,50 @@ function FilesPage() {
                 닫기
               </button>
             </div>
-            {['DOCX', 'HWPX', 'HWP'].includes((detailFile.type ?? '').toUpperCase()) && (
-              <button
-                onClick={() => handleAutofill(detailFile)}
-                className="w-full py-2 rounded-xl border border-[#2E6FF2] text-[#2E6FF2] text-[13px] font-medium hover:bg-[#2E6FF2]/5 transition-colors"
-              >
-                ✨ 자동채우기
-              </button>
-            )}
+            {/* 파일 타입별 상황별 액션 */}
+            {(() => {
+              const ext = (detailFile.type ?? '').toUpperCase();
+              const name = detailFile.name ?? '';
+              const isDocForm = ['DOCX', 'HWPX', 'HWP'].includes(ext);
+              const isContract = isContractTemplate(name);
+              const isMeeting = /회의|minutes|meeting/i.test(name);
+              if (!isDocForm && !['PDF'].includes(ext)) return null;
+              return (
+                <div className="space-y-2">
+                  <p className="text-[11px] text-[#9CA3AF] font-medium">다음 단계</p>
+                  {isDocForm && (
+                    <button
+                      onClick={() => handleAutofill(detailFile)}
+                      className="w-full py-2 rounded-xl border border-[#2E6FF2] text-[#2E6FF2] text-[13px] font-medium hover:bg-[#2E6FF2]/5 transition-colors"
+                    >
+                      ✨ 자동채우기
+                    </button>
+                  )}
+                  {(isContract || ['DOCX', 'HWPX', 'HWP', 'PDF'].includes(ext)) && (
+                    <button
+                      onClick={() => { router.push('/contract-risk'); setDetailFile(null); }}
+                      className="w-full py-2 rounded-xl border border-[#f59e0b] text-[#f59e0b] text-[13px] font-medium hover:bg-amber-50 transition-colors"
+                    >
+                      🛡 리스크 분석
+                    </button>
+                  )}
+                  {isMeeting && (
+                    <button
+                      onClick={() => { router.push('/documents'); setDetailFile(null); }}
+                      className="w-full py-2 rounded-xl border border-[#10b981] text-[#10b981] text-[13px] font-medium hover:bg-emerald-50 transition-colors"
+                    >
+                      ✅ 할일 추출
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { router.push('/documents'); setDetailFile(null); }}
+                    className="w-full py-2 rounded-xl border border-[#E2E5EA] text-[#6B7280] text-[13px] font-medium hover:bg-[#F7F8FA] transition-colors"
+                  >
+                    📄 문서 생성에 활용
+                  </button>
+                </div>
+              );
+            })()}
             </div>
           </div>
         </div>
