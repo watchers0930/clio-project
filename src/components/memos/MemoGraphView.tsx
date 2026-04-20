@@ -21,7 +21,7 @@ const COLOR_MAP: Record<string, { bg: string; border: string; text: string }> = 
   purple:  { bg: '#F3E8FF', border: '#A855F7', text: '#6B21A8' },
 };
 
-const NODE_R = 28;
+const NODE_R = 16;
 const DEFAULT_THRESHOLD = 0.80;
 
 interface MemoGraphViewProps {
