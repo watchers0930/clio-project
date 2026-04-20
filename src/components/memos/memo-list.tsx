@@ -1,12 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Plus, LayoutList, Layers } from 'lucide-react';
+import { Search, Plus, LayoutList, Layers, GitFork } from 'lucide-react';
 import MemoCard from './memo-card';
 import MemoGroupView from './MemoGroupView';
+import MemoGraphView from './MemoGraphView';
 import { useMemoGroups } from '@/hooks/useMemoGroups';
 import type { MemoItem } from '@/lib/supabase/types';
 import type { MemoGroup } from '@/hooks/useMemoGroups';
+
+type ViewMode = 'list' | 'group' | 'graph';
 
 interface MemoListProps {
   memos: MemoItem[];
@@ -31,13 +34,20 @@ export default function MemoList({
   onDelete,
   onSuggest,
 }: MemoListProps) {
-  const [isGroupView, setIsGroupView] = useState(false);
-  // isGroupView가 true일 때만 API 호출 (lazy)
-  const { groups, ungrouped, loading: groupLoading, error: groupError } = useMemoGroups(isGroupView);
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  // 그룹 뷰 진입 시점에만 API 호출 (lazy)
+  const { groups, ungrouped, loading: groupLoading, error: groupError } = useMemoGroups(viewMode === 'group');
 
   const handleSuggest = (group: MemoGroup) => {
     onSuggest?.(group);
   };
+
+  const tabClass = (mode: ViewMode) =>
+    `flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium transition-colors ${
+      viewMode === mode
+        ? 'bg-[#2E6FF2] text-white'
+        : 'bg-white text-[#7C8494] hover:bg-[#F7F8FA]'
+    }`;
 
   return (
     <div>
@@ -54,31 +64,19 @@ export default function MemoList({
           />
         </div>
 
-        {/* 뷰 토글 탭 */}
+        {/* 뷰 토글 탭 — 목록 / 그룹 / 그래프 */}
         <div className="flex items-center border border-[#E2E5EA] rounded-lg overflow-hidden flex-shrink-0">
-          <button
-            onClick={() => setIsGroupView(false)}
-            className={`flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium transition-colors ${
-              !isGroupView
-                ? 'bg-[#2E6FF2] text-white'
-                : 'bg-white text-[#7C8494] hover:bg-[#F7F8FA]'
-            }`}
-            title="목록 보기"
-          >
+          <button onClick={() => setViewMode('list')} className={tabClass('list')} title="목록 보기">
             <LayoutList size={13} />
             <span className="hidden sm:inline">목록</span>
           </button>
-          <button
-            onClick={() => setIsGroupView(true)}
-            className={`flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium transition-colors ${
-              isGroupView
-                ? 'bg-[#2E6FF2] text-white'
-                : 'bg-white text-[#7C8494] hover:bg-[#F7F8FA]'
-            }`}
-            title="그룹 보기"
-          >
+          <button onClick={() => setViewMode('group')} className={tabClass('group')} title="그룹 보기">
             <Layers size={13} />
             <span className="hidden sm:inline">그룹</span>
+          </button>
+          <button onClick={() => setViewMode('graph')} className={tabClass('graph')} title="그래프 보기">
+            <GitFork size={13} />
+            <span className="hidden sm:inline">그래프</span>
           </button>
         </div>
 
@@ -92,7 +90,7 @@ export default function MemoList({
       </div>
 
       {/* 그룹 뷰 */}
-      {isGroupView ? (
+      {viewMode === 'group' && (
         <>
           {groupError && (
             <p className="text-[12px] text-red-500 mb-3">{groupError}</p>
@@ -108,14 +106,19 @@ export default function MemoList({
             onSuggest={handleSuggest}
           />
         </>
-      ) : (
+      )}
+
+      {/* 그래프 뷰 */}
+      {viewMode === 'graph' && (
+        <MemoGraphView memos={memos} onView={onView} />
+      )}
+
+      {/* 목록 뷰 */}
+      {viewMode === 'list' && (
         <>
-          {/* 건수 */}
           <p className="text-[12px] text-[#A0A7B5] mb-4">
             총 {memos.length}건{search && ` (검색: "${search}")`}
           </p>
-
-          {/* 카드 그리드 */}
           {memos.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-[10px]">
               {memos.map((memo) => (

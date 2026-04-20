@@ -36,6 +36,7 @@
     "pptxgenjs": "^4.0.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-force-graph-2d": "^1.29.1",
     "tailwind-merge": "^3.5.0",
     "xlsx": "^0.18.5",
     "zustand": "^5.0.12"
