@@ -126,13 +126,15 @@ export default function MemoGraphView({ memos, onView }: MemoGraphViewProps) {
     [selectedId],
   );
 
-  // 링크 너비: 유사도 비례 (0.5 ~ 4)
+  // 링크 너비: semantic은 유사도 비례, keyword는 얇게
   const getLinkWidth = useCallback((link: ForceGraphLink) => {
+    if (link.type === 'keyword') return 1;
     return 0.5 + link.similarity * 3.5;
   }, []);
 
-  // 링크 색상: 유사도 기반 투명도
+  // 링크 색상: semantic=파란색, keyword=회색 점선 느낌
   const getLinkColor = useCallback((link: ForceGraphLink) => {
+    if (link.type === 'keyword') return '#A0A7B580';
     const alpha = Math.round((0.2 + link.similarity * 0.7) * 255).toString(16).padStart(2, '0');
     return `#2E6FF2${alpha}`;
   }, []);

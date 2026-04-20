@@ -19,6 +19,8 @@ export interface GraphLink {
   target: string;
   /** 0~1 사이 유사도 점수 */
   similarity: number;
+  /** semantic: 임베딩 유사도 / keyword: 제목+내용 공통 키워드 */
+  type?: 'semantic' | 'keyword';
 }
 
 /** GET /api/memos/graph 응답 */
@@ -42,4 +44,5 @@ export interface ForceGraphLink {
   source: string | ForceGraphNode;
   target: string | ForceGraphNode;
   similarity: number;
+  type?: 'semantic' | 'keyword';
 }
