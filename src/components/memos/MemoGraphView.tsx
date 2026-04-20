@@ -21,7 +21,7 @@ const COLOR_MAP: Record<string, { bg: string; border: string; text: string }> = 
   purple:  { bg: '#F3E8FF', border: '#A855F7', text: '#6B21A8' },
 };
 
-const NODE_R = 16;
+const NODE_R = 10;
 const DEFAULT_THRESHOLD = 0.80;
 
 interface MemoGraphViewProps {
@@ -137,19 +137,19 @@ export default function MemoGraphView({ memos, onView }: MemoGraphViewProps) {
   );
 
   const getLinkWidth = useCallback((link: ForceGraphLink) => {
-    if (link.type === 'keyword') return 1.5;
-    return 1 + link.similarity * 4;
+    if (link.type === 'keyword') return 2;
+    return 1.5 + link.similarity * 3;
   }, []);
 
   const getLinkColor = useCallback((link: ForceGraphLink) => {
-    if (link.type === 'keyword') return '#CBD5E1';
-    const alpha = Math.round((0.3 + link.similarity * 0.6) * 255).toString(16).padStart(2, '0');
+    if (link.type === 'keyword') return '#94A3B8';
+    const alpha = Math.round((0.5 + link.similarity * 0.5) * 255).toString(16).padStart(2, '0');
     return `#2E6FF2${alpha}`;
   }, []);
 
   const handleZoomIn = () => graphRef.current?.zoom(1.4, 300);
   const handleZoomOut = () => graphRef.current?.zoom(0.7, 300);
-  const handleFit = () => graphRef.current?.zoomToFit(400, 40);
+  const handleFit = () => graphRef.current?.zoomToFit(600, 30);
 
   if (loading) {
     return (
@@ -231,10 +231,12 @@ export default function MemoGraphView({ memos, onView }: MemoGraphViewProps) {
               nodeLabel={(node) => (node as ForceGraphNode).title}
               enableNodeDrag
               enableZoomInteraction
-              cooldownTicks={150}
+              cooldownTicks={200}
               onEngineStop={handleFit}
               backgroundColor="#FAFBFC"
               linkDirectionalParticles={0}
+              d3VelocityDecay={0.3}
+              d3AlphaDecay={0.02}
             />
           )}
         </div>
