@@ -40,8 +40,10 @@ export default function MemoGraphView({ memos, onView }: MemoGraphViewProps) {
 
   const { data, loading, error, refresh } = useMemoGraph(true);
 
-  // threshold 필터링된 links
-  const filteredLinks = data?.links.filter((l) => l.similarity >= threshold) ?? [];
+  // keyword 링크는 항상 표시, semantic 링크만 threshold 필터 적용
+  const filteredLinks = data?.links.filter(
+    (l) => l.type === 'keyword' || l.similarity >= threshold
+  ) ?? [];
 
   // 컨테이너 크기 측정
   useEffect(() => {
