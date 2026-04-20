@@ -13,12 +13,12 @@ import type { ForceGraphNode, ForceGraphLink } from '@/types/memo-graph';
 const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false });
 
 const COLOR_MAP: Record<string, { bg: string; border: string; text: string }> = {
-  default: { bg: '#E8EAED', border: '#9AA0AC', text: '#1B1F2B' },
-  blue:    { bg: '#DBEAFE', border: '#3B82F6', text: '#1E40AF' },
-  green:   { bg: '#DCFCE7', border: '#22C55E', text: '#166534' },
-  yellow:  { bg: '#FEF9C3', border: '#EAB308', text: '#854D0E' },
-  red:     { bg: '#FEE2E2', border: '#EF4444', text: '#991B1B' },
-  purple:  { bg: '#F3E8FF', border: '#A855F7', text: '#6B21A8' },
+  default: { bg: '#CBD5E1', border: '#64748B', text: '#1E293B' },
+  blue:    { bg: '#93C5FD', border: '#2563EB', text: '#1E3A8A' },
+  green:   { bg: '#86EFAC', border: '#16A34A', text: '#14532D' },
+  yellow:  { bg: '#FDE047', border: '#CA8A04', text: '#713F12' },
+  red:     { bg: '#FCA5A5', border: '#DC2626', text: '#7F1D1D' },
+  purple:  { bg: '#D8B4FE', border: '#9333EA', text: '#4C1D95' },
 };
 
 const NODE_R = 10;
@@ -99,7 +99,7 @@ export default function MemoGraphView({ memos, onView }: MemoGraphViewProps) {
       ctx.beginPath();
       ctx.arc(x, y, r, 0, 2 * Math.PI);
       ctx.strokeStyle = isSelected ? '#2E6FF2' : border;
-      ctx.lineWidth = isSelected ? 2.5 : 1.5;
+      ctx.lineWidth = isSelected ? 1.5 : 1;
       ctx.stroke();
       ctx.restore();
 
@@ -212,7 +212,7 @@ export default function MemoGraphView({ memos, onView }: MemoGraphViewProps) {
       {/* 그래프 + 사이드 패널 */}
       <div className="flex relative">
         {/* 캔버스 */}
-        <div ref={containerRef} className="bg-[#FAFBFC] flex-1" style={{ height: 520 }}>
+        <div ref={containerRef} className="bg-[#FAFBFC] flex-1" style={{ height: 'calc(100vh - 240px)', minHeight: 480 }}>
           {data && (
             <ForceGraph2D
               ref={graphRef}
