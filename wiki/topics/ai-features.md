@@ -389,6 +389,76 @@ GET /api/quality-check?document_id={id}
 
 ---
 
+## 문서 자동채우기 (Autofill, v6.7.0+) [coverage: medium -- 1 source]
+
+### 개요
+
+DOCX/HWPX/HWP 파일의 빈 필드를 자동 감지하고 GPT-4o로 필드명을 추론한 뒤, 사용자 DB 정보(이름/직급/부서/날짜)를 자동 매핑해 채워진 파일을 다운로드할 수 있다.
+
+### 전체 흐름
+
+```
+1. POST /api/autofill/analyze
+   → 파일 업로드 (최대 20MB, docx/hwpx/hwp)
+   → analyzeDocumentStructure(): 빈칸/언더라인/대괄호/플레이스홀더 감지
+   → GPT-4o로 각 필드명 추론 + confidence 분류 (high/medium/low)
+   → 이름/직급/부서/날짜 키워드 매칭으로 DB 값 자동 매핑 (autoMapped=true)
+   → autofill_sessions 레코드 생성 → 세션 ID 반환
+
+2. POST /api/autofill/generate { session_id, filled_values }
+   → autofill_sessions에서 detected_fields 조회
+   → filled_values를 파일에 치환
+   → 채워진 파일 바이너리 반환 (Content-Disposition: attachment)
+```
+
+### DetectedField 타입
+
+```typescript
+interface DetectedField {
+  key: string;
+  label: string;
+  type: 'blank' | 'placeholder' | 'underline' | 'bracket';
+  location: string;
+  context?: string;
+  inferredName?: string;    // GPT-4o 추론 필드명
+  confidence: 'high' | 'medium' | 'low';
+  autoMapped?: boolean;     // 이름/직급/부서/날짜 자동 매핑됨
+  autoValue?: string;       // 자동 매핑된 값
+}
+```
+
+### 자동 매핑 키워드
+
+| 타입 | 키워드 |
+|------|--------|
+| 날짜 | 날짜, 일자, 일시, 작성일, 계약일, 체결일, 기준일, 신청일, 등록일 |
+| 이름 | 이름, 성명, 작성자, 담당자, 신청자, 대표자 |
+| 직급 | 직급, 직위, 직책, 직함 |
+| 부서 | 부서, 소속, 팀, 부서명, 소속팀 |
+
+날짜는 `{연도}년 {월}월 {일}일` 형식으로 오늘 날짜 자동 입력.
+
+### DB 스키마 (`autofill_sessions`, migration 017)
+
+```
+id, user_id, file_name, file_type (docx|hwpx|hwp),
+detected_fields JSONB,  -- DetectedField[]
+filled_values JSONB,    -- key→value 최종 매핑
+status (pending|analyzed|completed|error),
+output_path
+```
+
+RLS: 본인 세션만 접근.
+
+### API Surface
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | `/api/autofill/analyze` | 파일 분석 + 세션 생성 | 
+| POST | `/api/autofill/generate` | 채워진 파일 다운로드 |
+
+---
+
 ## 벡터 검색 [coverage: medium -- 2 sources]
 
 ```
@@ -436,6 +506,8 @@ GET /api/quality-check?document_id={id}
 | POST | `/api/generate` | 문서 생성 | GPT-4o |
 | POST | `/api/chat` | AI Q&A 채팅 | GPT-4o-mini |
 | POST | `/api/documents/[id]/apply-comments` | 댓글 부분 반영 | GPT-4o |
+| POST | `/api/autofill/analyze` | DOCX/HWPX 빈 필드 감지 + GPT-4o 추론 + 자동 매핑 | GPT-4o |
+| POST | `/api/autofill/generate` | 채워진 파일 다운로드 | — |
 
 **환경 변수**: `OPENAI_API_KEY` (모든 AI 기능 필수)
 

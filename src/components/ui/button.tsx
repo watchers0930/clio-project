@@ -16,11 +16,11 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    'bg-navy text-white hover:bg-navy-light active:bg-navy-lighter shadow-sm',
+    'bg-primary text-white hover:bg-primary-dark active:bg-primary-dark shadow-sm',
   secondary:
-    'border border-clio-border bg-white text-clio-text hover:bg-clio-bg active:bg-clio-border/50',
+    'border border-border bg-white text-secondary hover:bg-page-bg active:bg-page-bg',
   ghost:
-    'text-clio-text-secondary hover:bg-clio-bg hover:text-clio-text active:bg-clio-border/30',
+    'text-secondary hover:bg-page-bg hover:text-foreground active:bg-border/30',
   danger:
     'bg-danger text-white hover:bg-danger/90 active:bg-danger/80 shadow-sm',
 };

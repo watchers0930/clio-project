@@ -1,6 +1,6 @@
 # CLIO 데이터 스키마 빠른 참조
 
-**최종 업데이트:** 2026-04-13 (v6.4.0 기준)
+**최종 업데이트:** 2026-04-17 (v6.9.0 기준)
 
 ---
 
@@ -60,6 +60,28 @@ todos
 
 audit_logs
     └── user_id → users
+
+memos  ← migration 016
+    └── created_by → users
+
+autofill_sessions  ← migration 017
+    └── user_id → users
+
+contract_clause_fixes  ← migration 018
+    ├── analysis_id → contract_risk_analyses
+    └── user_id → users
+
+law_chunks  ← migration 019
+    └── (독립 테이블, 공공 법령 데이터)
+
+work_logs  ← migration 020
+    ├── user_id → users
+    └── UNIQUE(user_id, log_date)
+
+work_log_attachments  ← migration 020
+    ├── log_id → work_logs
+    ├── document_id → documents (nullable)
+    └── file_id → files (nullable, 둘 중 하나만 non-NULL)
 ```
 
 > `approvals` 테이블은 **migration 015에서 DROP** (v6.3.0). `document_comments`로 대체.
@@ -106,6 +128,11 @@ migration-permissions.sql        → 추가 권한
 013_meeting_todos.sql            → todo_extractions 테이블 (회의록 할일 추출 이력)
 014_files_scope.sql              → files.scope 컬럼 + files_select RLS 교체
 015_drop_approvals_add_comments.sql → approvals DROP + document_comments 생성
+016_memos.sql                    → memos 테이블 (개인 메모)
+017_autofill_sessions.sql        → autofill_sessions 테이블 (문서 자동채우기)
+018_contract_clause_fixes.sql    → contract_clause_fixes 테이블 (계약 조항 수정 이력)
+019_law_chunks.sql               → law_chunks 테이블 + match_law_chunks RPC (법령 RAG)
+020_work_logs.sql                → work_logs + work_log_attachments 테이블 (업무일지)
 ```
 
 ---

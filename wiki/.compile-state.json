@@ -1,68 +1,99 @@
 {
-  "version": 1,
-  "compiled_at": "2026-04-12T00:00:00.000Z",
-  "project_version": "5.4.0",
+  "version": 2,
+  "compiled_at": "2026-04-17T00:00:00.000Z",
+  "project_version": "6.9.0",
   "mode": "codebase",
   "sources_read": [
     "README.md",
     "CLAUDE.md",
     "AGENTS.md",
-    "docs/01-plan/features/clio-next-phase.plan.md",
     "package.json",
     "supabase/schema.sql",
-    "supabase/migrations/004_approval_workflow.sql",
-    "supabase/migrations/007_users_signature.sql",
-    "src/lib/supabase/types.ts",
-    "src/store/auth-store.ts"
+    "supabase/migrations/016_memos.sql",
+    "supabase/migrations/017_autofill_sessions.sql",
+    "supabase/migrations/018_contract_clause_fixes.sql",
+    "supabase/migrations/019_law_chunks.sql",
+    "supabase/migrations/020_work_logs.sql",
+    "src/types/work-log.ts",
+    "src/hooks/useWorkLog.ts",
+    "src/app/api/work-logs/[date]/route.ts",
+    "src/app/api/work-logs/[date]/unlock/route.ts",
+    "src/app/api/work-logs/team/route.ts",
+    "src/app/api/work-logs/weekly-summary/route.ts",
+    "src/app/api/autofill/analyze/route.ts",
+    "src/components/work-logs/WorkLogViewer.tsx",
+    "src/components/layout/sidebar.tsx"
   ],
   "articles": [
     {
       "file": "topics/platform-overview.md",
       "title": "CLIO 플랫폼 전체 개요",
       "coverage": "high",
-      "sources": 4
+      "sources": 5,
+      "last_updated": "2026-04-17"
     },
     {
       "file": "topics/authentication.md",
       "title": "인증 및 권한 시스템",
       "coverage": "high",
-      "sources": 3
+      "sources": 3,
+      "last_updated": "2026-04-13"
     },
     {
       "file": "topics/document-management.md",
       "title": "문서 관리",
       "coverage": "high",
-      "sources": 3
+      "sources": 3,
+      "last_updated": "2026-04-13"
     },
     {
       "file": "topics/approval-workflow.md",
-      "title": "결재 워크플로우",
+      "title": "결재 워크플로우 (→ 댓글/AI 반영)",
       "coverage": "high",
-      "sources": 2
+      "sources": 2,
+      "last_updated": "2026-04-13"
     },
     {
       "file": "topics/database.md",
       "title": "데이터베이스 스키마 및 RLS 정책",
       "coverage": "high",
-      "sources": 3
+      "sources": 8,
+      "last_updated": "2026-04-17"
     },
     {
       "file": "topics/ai-features.md",
       "title": "AI 기능",
       "coverage": "high",
-      "sources": 2
+      "sources": 10,
+      "last_updated": "2026-04-17"
     },
     {
       "file": "topics/messaging.md",
       "title": "메시징 및 채널",
       "coverage": "medium",
-      "sources": 2
+      "sources": 2,
+      "last_updated": "2026-04-13"
     },
     {
       "file": "topics/deployment.md",
       "title": "배포 구성",
       "coverage": "medium",
-      "sources": 2
+      "sources": 2,
+      "last_updated": "2026-04-13"
+    },
+    {
+      "file": "topics/file-management.md",
+      "title": "파일 관리",
+      "coverage": "high",
+      "sources": 4,
+      "last_updated": "2026-04-13"
+    },
+    {
+      "file": "topics/work-logs.md",
+      "title": "업무일지 (Work Logs)",
+      "coverage": "high",
+      "sources": 8,
+      "last_updated": "2026-04-17"
     }
   ],
   "meta": {

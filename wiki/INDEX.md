@@ -1,7 +1,7 @@
 # CLIO Wiki Index
 
-**최종 컴파일:** 2026-04-16  
-**프로젝트 버전:** v6.5.1
+**최종 컴파일:** 2026-04-17  
+**프로젝트 버전:** v6.9.0
 
 ---
 
@@ -9,15 +9,16 @@
 
 | 파일 | 설명 | 커버리지 | 상태 |
 |------|------|---------|------|
-| [platform-overview.md](topics/platform-overview.md) | CLIO 플랫폼 전체 개요, 기술 스택, 화면 구성, 권한 모델 | high | active |
+| [platform-overview.md](topics/platform-overview.md) | CLIO 플랫폼 전체 개요, 기술 스택, 화면 구성(10개 메뉴), 권한 모델 | high | active |
 | [authentication.md](topics/authentication.md) | 인증/권한 시스템 (Supabase Auth + JWT + Zustand) | high | active |
 | [document-management.md](topics/document-management.md) | 문서 생성, 뷰어, diff, AI 댓글 반영(insert/append), 품질검수 | high | active |
 | [approval-workflow.md](topics/approval-workflow.md) | 댓글 & AI 반영 시스템 (⚠️ 구 결재 시스템 v6.2.0 제거됨) | high | active |
-| [ai-features.md](topics/ai-features.md) | GPT-4o, 계약 리스크 분석, **법령 기반 수정 제안(v6.5.0)**, STT/Whisper, 할일 추출, 만료일 추출, 품질검수 | high | active |
-| [database.md](topics/database.md) | DB 스키마, RLS 정책, 마이그레이션 001~015 | high | active |
-| [file-management.md](topics/file-management.md) | 파일 업로드, scope 관리, 만료일 알림, 외부 공유 링크, 벡터화 파이프라인 | high | **new** |
+| [ai-features.md](topics/ai-features.md) | GPT-4o, 계약 리스크 분석, 법령 수정 제안, STT, 할일 추출, 만료일 추출, 품질검수, **문서 자동채우기(v6.7.0+)** | high | active |
+| [database.md](topics/database.md) | DB 스키마, RLS 정책, 마이그레이션 001~020 | high | active |
+| [file-management.md](topics/file-management.md) | 파일 업로드, scope 관리, 만료일 알림, 외부 공유 링크, 벡터화 파이프라인 | high | active |
 | [messaging.md](topics/messaging.md) | 채팅 채널/메시지 시스템 | medium | active |
 | [deployment.md](topics/deployment.md) | Vercel 배포, 환경 변수, deploy.sh | medium | active |
+| [work-logs.md](topics/work-logs.md) | 업무일지 (날짜별 done/plan/note, 잠금, 팀 현황, 주간 요약 DOCX) | high | **new** |
 
 ---
 
@@ -26,7 +27,7 @@
 | 항목 | 경로 |
 |------|------|
 | DB 스키마 | `supabase/schema.sql` |
-| 마이그레이션 | `supabase/migrations/` (015개) |
+| 마이그레이션 | `supabase/migrations/` (020개) |
 | 타입 정의 | `src/lib/supabase/types.ts` |
 | 인증 스토어 | `src/store/auth-store.ts` |
 | AI 모듈 | `src/lib/ai/` |
@@ -66,6 +67,7 @@
 
 ## 최근 변경
 
+- **2026-04-17**: v6.9.0 갱신 — 업무일지(work-logs) 토픽 신규, 메모/자동채우기 기능 추가, migration 016~020, 사이드바 10개 메뉴 반영
 - **2026-04-16**: v6.5.1 갱신 — 법령 기반 수정 제안(v6.5.0), Storage 버그픽스(v6.5.1), ai-features 섹션 추가
 - **2026-04-13**: v6.4.0 전면 갱신 — 결재→댓글/AI반영, 계약리스크, STT, diff, 품질검수, 만료일, 파일scope 반영
 - **2026-04-13**: `file-management` 토픽 신규 생성

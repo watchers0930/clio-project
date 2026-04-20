@@ -31,21 +31,33 @@ export async function POST(request: NextRequest) {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) return NextResponse.json({ error: 'OpenAI API 키가 설정되지 않았습니다.' }, { status: 503 });
 
-    // 1. 벡터 검색
+    // 1. 내 파일 목록 조회 (메타데이터 질문 대응)
+    const { data: userFiles } = await supabase
+      .from('files')
+      .select('id, name, created_at, size')
+      .eq('uploaded_by', authUserId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    const myFileIds = new Set((userFiles ?? []).map((f: { id: string }) => f.id));
+
+    // 2. 벡터 검색 (내 파일 청크만)
     const embedding = await generateEmbedding(message);
     const { data: chunks } = await supabase.rpc('match_file_chunks', {
       query_embedding: embedding,
-      match_count: 8,
-      match_threshold: 0.3,
+      match_count: 12,
+      match_threshold: 0.25,
     });
 
-    // 2. fileIds 필터 (선택)
-    let relevantChunks = (chunks ?? []) as Array<{ file_id: string; content: string }>;
+    // 3. 내 파일에 속한 청크만 필터 + fileIds 필터 (선택)
+    let relevantChunks = ((chunks ?? []) as Array<{ file_id: string; content: string }>).filter(
+      (c) => myFileIds.has(c.file_id),
+    );
     if (Array.isArray(fileIds) && fileIds.length > 0) {
       relevantChunks = relevantChunks.filter((c) => fileIds.includes(c.file_id));
     }
 
-    // 3. 컨텍스트 구성 (파일명 포함)
+    // 4. 컨텍스트 구성 (파일명 포함)
     let context = '';
     let sourceFileIds: string[] = [];
 
@@ -53,12 +65,8 @@ export async function POST(request: NextRequest) {
       const uniqueFileIds = [...new Set(relevantChunks.map((c) => c.file_id))];
       sourceFileIds = uniqueFileIds;
 
-      const { data: files } = await supabase
-        .from('files')
-        .select('id, name')
-        .in('id', uniqueFileIds);
       const fileNameMap = new Map(
-        (files ?? []).map((f: { id: string; name: string }) => [f.id, f.name]),
+        (userFiles ?? []).map((f: { id: string; name: string }) => [f.id, f.name]),
       );
 
       context = relevantChunks
@@ -66,12 +74,24 @@ export async function POST(request: NextRequest) {
         .join('\n\n---\n\n');
     }
 
-    // 4. 시스템 프롬프트 구성
-    const systemPrompt = context
-      ? `당신은 CLIO 문서관리 시스템의 AI 어시스턴트입니다. 아래 참고 문서를 바탕으로 사용자의 질문에 한국어로 정확하게 답변하세요. 문서에 없는 내용은 솔직하게 모른다고 말하세요.\n\n[참고 문서]\n${context}`
-      : `당신은 CLIO 문서관리 시스템의 AI 어시스턴트입니다. 관련 문서를 찾지 못했습니다. 파일을 먼저 업로드하면 문서 기반으로 답변할 수 있습니다.`;
+    // 5. 파일 목록 컨텍스트 (최근 20개 — 메타데이터 질문 대응)
+    const fileListContext =
+      (userFiles ?? []).length > 0
+        ? (userFiles ?? [])
+            .slice(0, 20)
+            .map((f: { name: string; created_at: string }, i: number) => {
+              const date = new Date(f.created_at).toLocaleDateString('ko-KR');
+              return `${i + 1}. ${f.name} (등록일: ${date})`;
+            })
+            .join('\n')
+        : '등록된 파일이 없습니다.';
 
-    // 5. GPT-4o-mini 호출
+    // 6. 시스템 프롬프트 구성
+    const systemPrompt = context
+      ? `당신은 CLIO 문서관리 시스템의 AI 어시스턴트입니다. 아래 참고 문서와 파일 목록을 바탕으로 사용자의 질문에 한국어로 정확하게 답변하세요. 문서에 없는 내용은 솔직하게 모른다고 말하세요.\n\n[등록된 파일 목록]\n${fileListContext}\n\n[참고 문서 내용]\n${context}`
+      : `당신은 CLIO 문서관리 시스템의 AI 어시스턴트입니다. 관련 문서 내용을 찾지 못했지만 아래 파일 목록 정보를 바탕으로 답변할 수 있습니다.\n\n[등록된 파일 목록]\n${fileListContext}`;
+
+    // 7. GPT-4o-mini 호출
     const openai = new OpenAI({ apiKey });
     const messages = [
       { role: 'system' as const, content: systemPrompt },

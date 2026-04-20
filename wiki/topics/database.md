@@ -1,6 +1,6 @@
 # 데이터베이스
 
-[coverage: high -- sources: supabase/schema.sql, supabase/migrations/003~015, src/lib/supabase/types.ts]
+[coverage: high -- sources: supabase/schema.sql, supabase/migrations/003~020, src/lib/supabase/types.ts]
 
 ---
 
@@ -16,7 +16,7 @@ CLIO는 Supabase PostgreSQL을 사용한다. pgvector 확장으로 파일 청크
 
 ## 테이블 구조 (전체) [coverage: high]
 
-### 현재 유효한 테이블 목록 (v6.4.0 기준)
+### 현재 유효한 테이블 목록 (v6.9.0 기준)
 
 | 테이블 | 생성 위치 | 설명 |
 |--------|-----------|------|
@@ -37,6 +37,12 @@ CLIO는 Supabase PostgreSQL을 사용한다. pgvector 확장으로 파일 청크
 | `shared_links` | migration 009 | 외부 공유 링크 |
 | `contract_risk_analyses` | migration 011 | 계약서 AI 리스크 분석 결과 |
 | `todo_extractions` | migration 013 | 회의록 할일 추출 이력 |
+| `memos` | migration 016 | 개인 메모 (색상/고정 지원) |
+| `autofill_sessions` | migration 017 | 문서 자동채우기 세션 이력 |
+| `contract_clause_fixes` | migration 018 | 계약 조항 수정 제안 이력 |
+| `law_chunks` | migration 019 | 법령 조문 벡터 청크 (pgvector RAG) |
+| `work_logs` | migration 020 | 업무일지 (날짜별, 잠금 포함) |
+| `work_log_attachments` | migration 020 | 업무일지 첨부파일 (문서 또는 파일 참조) |
 
 > `approvals` 테이블은 **migration 015에서 DROP** (v6.3.0). `DocumentStatus`에서 `submitted | approved | rejected` 상태도 `completed`로 일괄 변환됨.
 
@@ -217,6 +223,130 @@ CREATE TABLE public.todo_extractions (
 );
 ```
 
+### memos (migration 016)
+
+개인 메모. 색상 구분, 고정(pin) 지원. 본인 메모만 접근 가능.
+
+```sql
+CREATE TABLE public.memos (
+  id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  title      TEXT NOT NULL,
+  content    TEXT,
+  color      TEXT NOT NULL DEFAULT 'default',
+  is_pinned  BOOLEAN NOT NULL DEFAULT false,
+  created_by UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+RLS: `created_by = auth.uid()` — 본인 메모 ALL.
+
+### autofill_sessions (migration 017)
+
+문서 자동채우기(DOCX/HWPX 빈 필드 감지 + GPT-4o 추론) 세션 이력.
+
+```sql
+CREATE TABLE public.autofill_sessions (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id         UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  file_name       TEXT NOT NULL,
+  file_type       TEXT NOT NULL CHECK (file_type IN ('docx', 'hwpx', 'hwp')),
+  detected_fields JSONB NOT NULL DEFAULT '[]',   -- DetectedField[] 배열
+  filled_values   JSONB NOT NULL DEFAULT '{}',   -- key→value 매핑
+  status          TEXT NOT NULL DEFAULT 'pending'
+                  CHECK (status IN ('pending', 'analyzed', 'completed', 'error')),
+  output_path     TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+RLS: `user_id = auth.uid()` — 본인 세션 ALL.
+
+### contract_clause_fixes (migration 018)
+
+계약서 리스크 분석 결과의 조항별 수정 제안 이력. 각 항목에 대한 AI 수정 제안과 사용자 최종 채택 문구를 기록한다.
+
+```sql
+CREATE TABLE public.contract_clause_fixes (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  analysis_id     UUID NOT NULL REFERENCES public.contract_risk_analyses(id) ON DELETE CASCADE,
+  user_id         UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  clause_index    INTEGER NOT NULL,          -- 원본 리스크 항목 인덱스
+  clause_title    TEXT NOT NULL,             -- 조항 제목
+  clause_text     TEXT NOT NULL,             -- 원문 조항
+  law_references  JSONB NOT NULL DEFAULT '[]', -- 참조 법령 목록
+  suggested_fix   TEXT,                      -- AI 수정 제안
+  status          TEXT NOT NULL DEFAULT 'pending'
+                  CHECK (status IN ('pending', 'accepted', 'rejected', 'modified')),
+  final_text      TEXT,                      -- 최종 채택 문구
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+RLS: `user_id = auth.uid()` — 본인 것 ALL.
+
+### law_chunks (migration 019)
+
+법령 조문 pgvector RAG 테이블. 계약서 수정 제안 시 관련 법령을 코사인 유사도 검색에 사용.
+
+```sql
+CREATE TABLE law_chunks (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  law_name    TEXT NOT NULL,     -- 법령명 (예: '근로기준법')
+  article_no  TEXT NOT NULL,     -- 조 번호 (예: '제17조')
+  clause_no   TEXT,              -- 항 번호 (nullable)
+  content     TEXT NOT NULL,     -- 조문 내용
+  embedding   vector(1536),      -- text-embedding-3-small
+  category    TEXT NOT NULL,     -- 'payment'|'penalty'|'termination'|'privacy'|'general'
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+-- ivfflat 인덱스 (lists=100, cosine)
+-- category 필터링 인덱스
+```
+
+RLS: SELECT only — 공개 데이터. `FOR SELECT USING (true)`.  
+시드: `POST /api/laws/seed` → `src/lib/laws/law-seed-data.ts`에서 임베딩 후 INSERT.
+
+### work_logs (migration 020)
+
+업무일지. 사용자×날짜 단위로 유니크. 잠금 시스템 포함.
+
+```sql
+CREATE TABLE work_logs (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  log_date    DATE NOT NULL,
+  done        TEXT,           -- 오늘 한 일
+  plan        TEXT,           -- 내일 할 일
+  note        TEXT,           -- 특이사항
+  is_locked   BOOLEAN NOT NULL DEFAULT false,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(user_id, log_date)
+);
+```
+
+### work_log_attachments (migration 020)
+
+업무일지 첨부파일. documents 또는 files 중 정확히 하나를 참조 (CHECK 제약).
+
+```sql
+CREATE TABLE work_log_attachments (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  log_id      UUID NOT NULL REFERENCES work_logs(id) ON DELETE CASCADE,
+  document_id UUID REFERENCES documents(id) ON DELETE SET NULL,
+  file_id     UUID REFERENCES files(id) ON DELETE SET NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK (
+    (document_id IS NOT NULL AND file_id IS NULL) OR
+    (document_id IS NULL AND file_id IS NOT NULL)
+  )
+);
+```
+
 ### events (schema.sql + migration 012 컬럼 추가)
 
 migration 012는 `schedules` 테이블에 컬럼을 추가한다. CLIO의 실제 일정 테이블은 schema.sql의 `events`이며, `schedules`는 별도 테이블일 가능성이 있다. migration 012 원문 기준으로 정리:
@@ -332,6 +462,11 @@ CREATE TABLE public.audit_logs (
 | `013_meeting_todos.sql` | todo_extractions 테이블 생성 (회의록 할일 추출 이력, 중복 방지) |
 | `014_files_scope.sql` | files.scope 컬럼 추가 ('company' \| 'department') + files_select RLS 정책 교체 |
 | `015_drop_approvals_add_comments.sql` | approvals DROP + documents status 정리 + document_comments 생성 |
+| `016_memos.sql` | memos 테이블 생성 (개인 메모, 색상/고정) |
+| `017_autofill_sessions.sql` | autofill_sessions 테이블 생성 (문서 자동채우기 세션) |
+| `018_contract_clause_fixes.sql` | contract_clause_fixes 테이블 생성 (계약 조항 수정 제안 이력) |
+| `019_law_chunks.sql` | law_chunks 테이블 생성 + match_law_chunks RPC 함수 (법령 pgvector RAG) |
+| `020_work_logs.sql` | work_logs + work_log_attachments 테이블 생성 (업무일지 + 첨부) |
 
 ---
 
@@ -356,6 +491,12 @@ CREATE TABLE public.audit_logs (
 | `todos` | `user_id = auth.uid()` (ALL) | | | |
 | `audit_logs` | `user_id = auth.uid()` | `user_id = auth.uid()` | - | - |
 | `todo_extractions` | `extracted_by = auth.uid()` | `extracted_by = auth.uid()` | - | - |
+| `memos` | `created_by = auth.uid()` | `created_by = auth.uid()` | `created_by = auth.uid()` | `created_by = auth.uid()` |
+| `autofill_sessions` | `user_id = auth.uid()` | `user_id = auth.uid()` | `user_id = auth.uid()` | `user_id = auth.uid()` |
+| `contract_clause_fixes` | `user_id = auth.uid()` | `user_id = auth.uid()` | `user_id = auth.uid()` | `user_id = auth.uid()` |
+| `law_chunks` | 전체 인증 사용자 | - | - | - |
+| `work_logs` | 본인 OR 같은 부서 manager/admin | `user_id = auth.uid()` | `user_id = auth.uid()` | `user_id = auth.uid()` |
+| `work_log_attachments` | 본인 일지 첨부 | 본인 일지 첨부 | 본인 일지 첨부 | 본인 일지 첨부 |
 
 **files_select 주의**: migration 014에서 기존 정책이 교체됨. `scope = 'company'` 조건이 앞에 추가되어 전사 공개 파일은 모든 인증 사용자가 열람 가능하다.
 
@@ -395,6 +536,26 @@ $$ LANGUAGE plpgsql;
 ```
 
 `contract_risk_analyses` 테이블에 BEFORE UPDATE 트리거로 연결됨.
+
+### match_law_chunks (migration 019, 법령 pgvector 유사도 검색)
+
+```sql
+FUNCTION match_law_chunks(
+  query_embedding vector(1536),
+  match_count      INT DEFAULT 3,
+  filter_category  TEXT DEFAULT NULL  -- NULL이면 전체 카테고리
+) RETURNS TABLE (
+  id          UUID,
+  law_name    TEXT,
+  article_no  TEXT,
+  clause_no   TEXT,
+  content     TEXT,
+  category    TEXT,
+  similarity  FLOAT
+);
+```
+
+계약서 리스크 수정 제안 시 `law-embedder.ts`가 호출. `filter_category`로 관련 법령 범주를 사전 필터링 후 코사인 유사도 검색.
 
 ### handle_updated_at (schema.sql 공통)
 

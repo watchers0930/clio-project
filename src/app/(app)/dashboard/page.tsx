@@ -67,7 +67,6 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
   const [loading, setLoading] = useState(true);
-
   const fetchData = useCallback(async () => {
     try {
       const [statsRes, filesRes] = await Promise.all([

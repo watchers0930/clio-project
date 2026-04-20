@@ -1,11 +1,6 @@
 'use client';
 
-import {
-  useEffect,
-  useRef,
-  type ReactNode,
-  type MouseEvent,
-} from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -34,91 +29,63 @@ function Modal({
   className,
   size = 'md',
 }: ModalProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-
   useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
+    if (!open) return;
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [open, onClose]);
 
-    if (open) {
-      if (!dialog.open) dialog.showModal();
-    } else {
-      dialog.close();
-    }
-  }, [open]);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-
-    const handleClose = () => onClose();
-    dialog.addEventListener('close', handleClose);
-    return () => dialog.removeEventListener('close', handleClose);
-  }, [onClose]);
-
-  const handleBackdropClick = (e: MouseEvent<HTMLDialogElement>) => {
-    if (e.target === dialogRef.current) {
-      onClose();
-    }
-  };
+  if (!open) return null;
 
   return (
-    <dialog
-      ref={dialogRef}
-      onClick={handleBackdropClick}
-      className={cn(
-        'backdrop:bg-navy/40 backdrop:backdrop-blur-sm',
-        'bg-transparent p-0 m-auto',
-        'open:animate-in open:fade-in-0 open:zoom-in-95',
-        'max-h-[90vh]'
-      )}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
         className={cn(
-          'bg-white rounded-xl shadow-xl border border-clio-border',
-          'w-[calc(100vw-2rem)]',
+          'bg-white rounded-2xl shadow-xl w-full mx-4 max-h-[85vh] overflow-y-auto',
           sizeStyles[size],
           className
         )}
       >
-        {/* Header */}
+        {/* 헤더 */}
         {(title || description) && (
-          <div className="flex items-start justify-between px-6 py-5 border-b border-clio-border">
-            <div>
-              {title && (
-                <h2 className="text-[15px] font-semibold text-clio-text">
-                  {title}
-                </h2>
-              )}
-              {description && (
-                <p className="mt-0.5 text-xs text-clio-text-secondary">
-                  {description}
-                </p>
-              )}
-            </div>
+          <div className="relative flex flex-col items-center px-8 py-6 border-b border-border">
+            {title && (
+              <h2 className="text-[15px] font-semibold text-foreground text-center">{title}</h2>
+            )}
+            {description && (
+              <p className="text-xs text-secondary text-center" style={{ marginTop: '2px' }}>{description}</p>
+            )}
             <button
               onClick={onClose}
-              className="rounded-lg p-1.5 text-clio-text-secondary hover:bg-clio-bg hover:text-clio-text transition-colors cursor-pointer"
+              className="absolute right-6 top-1/2 -translate-y-1/2 text-[#aaa] hover:text-foreground transition-colors cursor-pointer"
             >
-              <X size={18} />
+              <X size={16} strokeWidth={1.5} />
             </button>
           </div>
         )}
 
-        {/* Close button if no header */}
+        {/* 헤더 없을 때 닫기 버튼 */}
         {!title && !description && (
-          <button
-            onClick={onClose}
-            className="absolute right-4 top-4 rounded-lg p-1.5 text-clio-text-secondary hover:bg-clio-bg hover:text-clio-text transition-colors cursor-pointer"
-          >
-            <X size={18} />
-          </button>
+          <div className="flex justify-end px-6 pt-4">
+            <button
+              onClick={onClose}
+              className="text-[#aaa] hover:text-foreground transition-colors cursor-pointer"
+            >
+              <X size={16} strokeWidth={1.5} />
+            </button>
+          </div>
         )}
 
-        {/* Content */}
-        <div className="px-6 py-5 pb-6">{children}</div>
+        {/* 컨텐츠 */}
+        <div className="px-8 py-6">{children}</div>
       </div>
-    </dialog>
+    </div>
   );
 }
 

@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Building2, Users, Plus, Pencil, Trash2, Save, PenLine, Upload, X } from 'lucide-react';
+import { Building2, Users, Plus, Pencil, Trash2, Save, PenLine, Upload, X, FileText } from 'lucide-react';
 import { Spinner, Tabs, ConfirmDialog } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
+import TemplatesPage from '@/app/(app)/templates/page';
 
 /* ── types ── */
 interface Department {
@@ -33,7 +34,7 @@ const ROLES = [
 ];
 
 export default function SettingsPage() {
-  const [tab, setTab] = useState<'departments' | 'users' | 'signature'>('departments');
+  const [tab, setTab] = useState<'departments' | 'users' | 'signature' | 'templates'>('departments');
   const [departments, setDepartments] = useState<Department[]>([]);
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -338,9 +339,10 @@ export default function SettingsPage() {
           { id: 'departments', label: '부서 관리', icon: <Building2 size={15} /> },
           { id: 'users',       label: '사용자 관리', icon: <Users size={15} /> },
           { id: 'signature',   label: '내 서명',   icon: <PenLine size={15} /> },
+          { id: 'templates',   label: '템플릿 관리', icon: <FileText size={15} /> },
         ]}
         activeTab={tab}
-        onChange={(id) => setTab(id as 'departments' | 'users' | 'signature')}
+        onChange={(id) => setTab(id as 'departments' | 'users' | 'signature' | 'templates')}
       />
 
       {/* 부서 관리 */}
@@ -667,6 +669,9 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+      {/* 템플릿 관리 */}
+      {tab === 'templates' && <TemplatesPage />}
+
       {/* 확인 다이얼로그 */}
       <ConfirmDialog
         open={confirmState.open}

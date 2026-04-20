@@ -4,6 +4,7 @@ import { Pencil, Pin, X } from 'lucide-react';
 import type { MemoItem } from '@/lib/supabase/types';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import RelatedMemos from './RelatedMemos';
 
 const COLOR_MAP: Record<string, string> = {
   default: '#94A3B8',
@@ -19,9 +20,10 @@ interface MemoViewModalProps {
   open: boolean;
   onClose: () => void;
   onEdit: (memo: MemoItem) => void;
+  onNavigateToRelated?: (id: string, title: string) => void;
 }
 
-export default function MemoViewModal({ memo, open, onClose, onEdit }: MemoViewModalProps) {
+export default function MemoViewModal({ memo, open, onClose, onEdit, onNavigateToRelated }: MemoViewModalProps) {
   if (!open || !memo) return null;
 
   const borderColor = COLOR_MAP[memo.color] ?? COLOR_MAP.default;
@@ -76,6 +78,15 @@ export default function MemoViewModal({ memo, open, onClose, onEdit }: MemoViewM
             <p className="text-[13px] text-clio-text-secondary italic">내용 없음</p>
           )}
         </div>
+
+        {/* 관련 메모 */}
+        <RelatedMemos
+          memoId={memo.id}
+          onNavigate={(id, title) => {
+            onClose();
+            onNavigateToRelated?.(id, title);
+          }}
+        />
 
         {/* 날짜 */}
         <div className="px-8 py-5 border-t border-clio-border flex-shrink-0">

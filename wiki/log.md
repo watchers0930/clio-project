@@ -1,5 +1,38 @@
 # Wiki Compile Log
 
+## 2026-04-17 — v6.9.0 갱신 (v8)
+
+**프로젝트 버전:** v6.9.0
+
+**업데이트된 토픽:**
+- `work-logs` — 신규 토픽 생성 (업무일지 전체 기능)
+- `database` — migration 016~020 추가 (memos, autofill_sessions, contract_clause_fixes, law_chunks, work_logs/work_log_attachments), RLS 정책 표 갱신
+- `platform-overview` — v6.9.0, 사이드바 10개 메뉴 반영 (업무일지/메모 신규, 템플릿 제거), 신규 기능 섹션 추가
+- `ai-features` — 문서 자동채우기(autofill) 섹션 신규, API Surface 테이블 갱신
+- `schema.md` — v6.9.0, migration 016~020 추가, 새 테이블 관계도 갱신
+- `INDEX.md` — v6.9.0, work-logs 토픽 추가, 최근 변경 갱신
+
+**소스 변경 (v6.5.1 → v6.9.0):**
+
+| 파일/마이그레이션 | 내용 |
+|------|------|
+| `016_memos.sql` | memos 테이블 신규 |
+| `017_autofill_sessions.sql` | autofill_sessions 테이블 신규 |
+| `018_contract_clause_fixes.sql` | contract_clause_fixes 테이블 신규 |
+| `019_law_chunks.sql` | law_chunks 테이블 + match_law_chunks RPC 신규 |
+| `020_work_logs.sql` | work_logs + work_log_attachments 테이블 신규 |
+| `src/types/work-log.ts` | 업무일지 타입 정의 신규 |
+| `src/hooks/useWorkLog.ts` | 업무일지 상태 관리 훅 신규 |
+| `src/components/work-logs/` | WorkLogEditor/Viewer/AttachmentSelector/TeamLogGrid/WeeklySummaryModal |
+| `src/app/(app)/work-logs/` | 업무일지 메인 페이지 신규 |
+| `src/app/api/work-logs/` | API 라우트 전체 신규 |
+| `src/app/(app)/memos/` | 메모 페이지 신규 |
+| `src/app/api/memos/` | 메모 CRUD API 신규 |
+| `src/app/api/autofill/` | 자동채우기 analyze/generate API 신규 |
+| `src/components/layout/sidebar.tsx` | 메뉴 10개로 갱신 (업무일지/메모 추가, 템플릿 제거) |
+
+---
+
 ## 2026-04-16 — v6.5.1 갱신 (v7)
 
 **프로젝트 버전:** v6.5.1

@@ -284,6 +284,18 @@ export interface Database {
         Update: { action?: string; target_type?: string | null; target_id?: string | null; details?: Record<string, unknown> };
         Relationships: [];
       };
+      work_logs: {
+        Row: DbWorkLog;
+        Insert: { id?: string; user_id: string; log_date: string; done?: string | null; plan?: string | null; note?: string | null; is_locked?: boolean; created_at?: string; updated_at?: string };
+        Update: { done?: string | null; plan?: string | null; note?: string | null; is_locked?: boolean; updated_at?: string };
+        Relationships: [];
+      };
+      work_log_attachments: {
+        Row: DbWorkLogAttachment;
+        Insert: { id?: string; log_id: string; document_id?: string | null; file_id?: string | null; created_at?: string };
+        Update: { document_id?: string | null; file_id?: string | null };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -513,6 +525,67 @@ export interface DashboardStats {
   department_breakdown: Record<string, number>;
   upload_trend?: Array<{ week: string; label: string; count: number }>;
   doc_dept_breakdown?: Record<string, number>;
+}
+
+// ---------------------------------------------------------------------------
+// 업무일지 타입 (work-logs)
+// ---------------------------------------------------------------------------
+
+/** 업무일지 (DB Row) */
+export interface DbWorkLog {
+  id: string;
+  user_id: string;
+  log_date: string;      // DATE — 'YYYY-MM-DD'
+  done: string | null;
+  plan: string | null;
+  note: string | null;
+  is_locked: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** 업무일지 첨부파일 (DB Row) */
+export interface DbWorkLogAttachment {
+  id: string;
+  log_id: string;
+  document_id: string | null;
+  file_id: string | null;
+  created_at: string;
+}
+
+/** 업무일지 앱 레벨 타입 */
+export interface WorkLog {
+  id: string;
+  user_id: string;
+  log_date: string;
+  done: string | null;
+  plan: string | null;
+  note: string | null;
+  is_locked: boolean;
+  created_at: string;
+  updated_at: string;
+  /** 조인 시 포함되는 작성자 이름 */
+  user_name?: string;
+}
+
+/** 업무일지 첨부파일 앱 레벨 타입 */
+export interface WorkLogAttachment {
+  id: string;
+  log_id: string;
+  document_id: string | null;
+  file_id: string | null;
+  created_at: string;
+}
+
+/** 팀 일지 조회 결과 단건 */
+export interface TeamWorkLogEntry {
+  user_id: string;
+  user_name: string;
+  position: string;
+  log_date: string;
+  has_log: boolean;
+  is_locked: boolean;
+  log_id: string | null;
 }
 
 // ---------------------------------------------------------------------------
