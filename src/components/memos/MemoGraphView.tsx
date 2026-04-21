@@ -165,13 +165,15 @@ export default function MemoGraphView({ data, onEdit, onMemoSaved }: Props) {
     const cy = connectedNodes.length > 0
       ? connectedNodes.reduce((s, n) => s + (n.y ?? 0), 0) / connectedNodes.length : 0;
 
-    // 고립 노드: 클러스터 중심 기준 원형 균등 배치
+    // 고립 노드: 클러스터와 같은 높이(cy)에 좌우 나란히 배치
     const isolatedNodes = allNodes.filter((n) => !connectedIds.has(n.id));
-    const R = 150;
+    const spacing = 200;
     isolatedNodes.forEach((n, i) => {
-      const angle = (i / Math.max(isolatedNodes.length, 1)) * 2 * Math.PI - Math.PI / 4;
-      n.x = cx + Math.cos(angle) * R;
-      n.y = cy + Math.sin(angle) * R;
+      // 짝수: 오른쪽, 홀수: 왼쪽 / 여러 개면 거리 누적
+      const side = i % 2 === 0 ? 1 : -1;
+      const dist = Math.ceil((i + 1) / 2) * spacing;
+      n.x = cx + side * dist;
+      n.y = cy;
       n.fx = n.x;
       n.fy = n.y;
     });
