@@ -138,8 +138,8 @@ export default function MemoGraphView({ data, onEdit, onMemoSaved }: Props) {
   useEffect(() => {
     const t = setTimeout(() => {
       if (!fgRef.current) return;
-      fgRef.current.d3Force('charge')?.strength(-180);
-      fgRef.current.d3Force('link')?.distance(100);
+      fgRef.current.d3Force('charge')?.strength(-80);
+      fgRef.current.d3Force('link')?.distance(60);
     }, 50);
     return () => clearTimeout(t);
   }, [data.nodes, data.links]);
@@ -154,6 +154,7 @@ export default function MemoGraphView({ data, onEdit, onMemoSaved }: Props) {
       fgRef.current.d3Force('link', null);
       fgRef.current.d3Force('charge', null);
       fgRef.current.d3Force('center', null);
+      fgRef.current.zoomToFit(400, 60);
     }
   }, [data.nodes]);
 
@@ -318,7 +319,7 @@ export default function MemoGraphView({ data, onEdit, onMemoSaved }: Props) {
               onEngineStop={handleEngineStop}
               nodeLabel={() => ''}
               cooldownTicks={150}
-              d3VelocityDecay={0.3}
+              d3VelocityDecay={0.4}
               nodeRelSize={5}
             />
           )}
