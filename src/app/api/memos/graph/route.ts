@@ -33,11 +33,14 @@ function cosineSimilarity(a: number[], b: number[]): number {
 }
 
 function extractWords(text: string): string[] {
-  // 한글 2자 이상, 영문 3자 이상 단어 추출
   const words = new Set<string>();
   const korean = text.match(/[가-힣]{2,}/g) ?? [];
   const english = text.match(/[a-zA-Z]{3,}/g) ?? [];
-  korean.forEach((w) => words.add(w));
+  korean.forEach((w) => {
+    words.add(w);
+    // 2글자 슬라이딩 — "메모기능을" → "메모","기능" 등 복합어 분해
+    for (let i = 0; i + 2 <= w.length; i++) words.add(w.slice(i, i + 2));
+  });
   english.forEach((w) => words.add(w.toLowerCase()));
   return Array.from(words);
 }

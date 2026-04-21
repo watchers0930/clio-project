@@ -20,7 +20,6 @@ function detectClusters(
   }
 
   links
-    .filter((l) => l.type === 'semantic' || l.similarity >= 0.5)
     .forEach((l) => {
       const src = typeof l.source === 'string' ? l.source : (l.source as ForceGraphNode).id;
       const tgt = typeof l.target === 'string' ? l.target : (l.target as ForceGraphNode).id;
