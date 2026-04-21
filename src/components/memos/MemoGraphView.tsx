@@ -106,35 +106,13 @@ export default function MemoGraphView({ data, onEdit, onMemoSaved }: Props) {
   // 클러스터 탐지 + AI 명명
   const clusters = useMemoCluster(data.nodes, data.links);
 
-  // 고립 노드 초기 위치: ForceGraph2D에 넘기기 전에 x/y 주입
-  const filteredGraphData = useMemo(() => {
-    const connectedIds = new Set<string>();
-    data.links.forEach((l) => {
-      connectedIds.add(typeof l.source === 'string' ? l.source : (l.source as ForceGraphNode).id);
-      connectedIds.add(typeof l.target === 'string' ? l.target : (l.target as ForceGraphNode).id);
-    });
-
-    const isolated = data.nodes.filter((n) => !connectedIds.has(n.id));
-    const R = 160; // 클러스터 중심에서 고립 노드까지 거리 (graph 좌표계 px)
-    const isolatedPositions = new Map(
-      isolated.map((n, i) => {
-        const angle = (i / Math.max(isolated.length, 1)) * 2 * Math.PI - Math.PI / 4;
-        return [n.id, { x: Math.cos(angle) * R, y: Math.sin(angle) * R }];
-      })
-    );
-
-    const nodes = data.nodes.map((n) => {
-      const pos = isolatedPositions.get(n.id);
-      return pos ? { ...n, x: pos.x, y: pos.y } : n;
-    });
-
-    return {
-      nodes: nodes as unknown as object[],
-      links: data.links.filter(
-        (l) => l.type === 'title' || l.similarity >= threshold
-      ) as unknown as object[],
-    };
-  }, [data.nodes, data.links, threshold]);
+  // 임계값 필터링 — title 링크는 항상 표시
+  const filteredGraphData = useMemo(() => ({
+    nodes: data.nodes as unknown as object[],
+    links: data.links.filter(
+      (l) => l.type === 'title' || l.similarity >= threshold
+    ) as unknown as object[],
+  }), [data.nodes, data.links, threshold]);
 
   // 클릭 핸들러 — Shift+클릭: 멀티셀렉트 토글 / 일반 클릭: 사이드패널
   const handleNodeClick = useCallback((node: object, event: MouseEvent) => {
@@ -168,11 +146,38 @@ export default function MemoGraphView({ data, onEdit, onMemoSaved }: Props) {
 
   const handleEngineStop = useCallback(() => {
     if (!fgRef.current) return;
-    const nodes = fgRef.current.graphData().nodes as Array<{ x?: number; y?: number; fx?: number; fy?: number }>;
-    nodes.forEach((n) => {
-      if (n.x != null) n.fx = n.x;
-      if (n.y != null) n.fy = n.y;
+    type SimNode = ForceGraphNode & { x?: number; y?: number; fx?: number; fy?: number };
+    const nodes = fgRef.current.graphData().nodes as SimNode[];
+    const links = fgRef.current.graphData().links as Array<{ source: SimNode | string; target: SimNode | string }>;
+
+    // 연결된 노드 ID 수집
+    const connectedIds = new Set<string>();
+    links.forEach((l) => {
+      connectedIds.add(typeof l.source === 'string' ? l.source : l.source.id);
+      connectedIds.add(typeof l.target === 'string' ? l.target : l.target.id);
     });
+
+    // 클러스터 중심 계산
+    const connectedNodes = nodes.filter((n) => connectedIds.has(n.id) && n.x != null);
+    const cx = connectedNodes.length > 0 ? connectedNodes.reduce((s, n) => s + (n.x ?? 0), 0) / connectedNodes.length : 0;
+    const cy = connectedNodes.length > 0 ? connectedNodes.reduce((s, n) => s + (n.y ?? 0), 0) / connectedNodes.length : 0;
+
+    // 고립 노드: 클러스터 중심 기준 원형 균등 배치
+    const isolatedNodes = nodes.filter((n) => !connectedIds.has(n.id));
+    const R = 150;
+    isolatedNodes.forEach((n, i) => {
+      const angle = (i / Math.max(isolatedNodes.length, 1)) * 2 * Math.PI - Math.PI / 4;
+      n.fx = cx + Math.cos(angle) * R;
+      n.fy = cy + Math.sin(angle) * R;
+      n.x = n.fx;
+      n.y = n.fy;
+    });
+
+    // 모든 노드 위치 고정
+    nodes.forEach((n) => {
+      if (n.fx == null && n.x != null) { n.fx = n.x; n.fy = n.y; }
+    });
+
     fgRef.current.d3Force('link', null);
     fgRef.current.d3Force('charge', null);
     fgRef.current.d3Force('center', null);
