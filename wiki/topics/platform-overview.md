@@ -12,7 +12,7 @@ CLIO는 기업 내부용 **RAG 기반 AI 문서관리 + 협업 통합 플랫폼*
 파일 업로드 → 텍스트 추출 → pgvector 임베딩 → AI 문서 생성으로 이어지는 전 파이프라인이 실운영 상태이며, 문서 댓글·AI 반영·계약 리스크 분석·STT 회의록·문서 Diff·품질 검수·만료일 알림·파일 공개 범위 관리까지 포괄하는 통합 사내 협업 플랫폼이다.
 
 - **배포 URL:** https://clioai.vercel.app
-- **현재 버전:** v6.9.0
+- **현재 버전:** v7.2.0
 - **위치:** `/Users/watchers/Desktop/clio-project`
 - **결재(Approval) 워크플로우:** v6.2.0에서 완전 제거됨 (DB 테이블 포함 삭제)
 
@@ -36,6 +36,7 @@ CLIO는 기업 내부용 **RAG 기반 AI 문서관리 + 협업 통합 플랫폼*
 | 문서 템플릿 | docxtemplater + pizzip | — |
 | 인증 | Supabase Auth + JWT (jsonwebtoken) + bcryptjs | — |
 | 날짜 유틸 | date-fns | ^4.1.0 |
+| 그래프 시각화 | react-force-graph-2d | — |
 | 배포 | Vercel | — |
 
 ---
@@ -56,7 +57,7 @@ CLIO는 기업 내부용 **RAG 기반 AI 문서관리 + 협업 통합 플랫폼*
 | 6 | 메시지 | `/messages` | DM/채널, 첨부파일, Supabase Realtime; 미읽음 배지 (10초 폴링) |
 | 7 | 일정/할일 | `/schedule` | 월간 캘린더 + CRUD |
 | 8 | 업무일지 | `/work-logs` | 날짜별 일지, 잠금, 팀 현황, 주간 요약 DOCX (v6.9.0 신규) |
-| 9 | 메모 | `/memos` | 개인 메모, 색상/고정 지원 (v6.9.0 신규) |
+| 9 | 메모 | `/memos` | 개인 메모 + AI 그룹화 + 아이디어 제안 + 그래프 뷰 (v7.x 대폭 확장) |
 | 10 | 설정 | `/settings` | 부서/사용자 관리, RBAC 역할 설정 |
 
 > **결재 메뉴 없음** — v6.2.0에서 완전 제거.  
@@ -124,9 +125,14 @@ CLIO는 기업 내부용 **RAG 기반 AI 문서관리 + 협업 통합 플랫폼*
 - 주간 요약 DOCX: GPT-4o로 주간 일지 요약 + 다운로드
 - 사이드바: 오늘 일지 미작성 시 빨간 점 배지 표시
 
-### 메모 (v6.9.0)
-- 개인 메모, 색상 구분, 고정(pin) 지원
-- `/memos` 페이지 — RLS: 본인 메모만 접근
+### 메모 인사이트 (v7.0.0+)
+- 개인 메모, 색상 구분(6색), 고정(pin) 지원
+- `/memos` 페이지 — 목록/그룹/그래프 3가지 뷰 모드
+- **자동 그룹화**: `text-embedding-3-small` 임베딩 → Union-Find 클러스터링 (유사도 ≥ 0.75) → GPT-4o-mini 그룹명 자동 작명
+- **아이디어 제안**: 그룹 선택 → GPT-4o 아이디어 3~5개 SSE 스트리밍 → 문서 생성 또는 메모 저장
+- **연관 메모**: 메모 열람 시 유사도 상위 3개 자동 표시 (pgvector RPC)
+- **그래프 뷰**: react-force-graph-2d force-directed 그래프, 유사도 임계값 슬라이더, 노드 클릭 → 사이드 패널
+- RLS: 본인 메모만 접근 (`memos`, `memo_embeddings`, `memo_groups` 모두 본인만)
 
 ### 문서 자동채우기
 - DOCX/HWPX 빈 필드 자동 감지 (빈칸/언더라인/대괄호/플레이스홀더)
@@ -221,3 +227,5 @@ CLIO는 기업 내부용 **RAG 기반 AI 문서관리 + 협업 통합 플랫폼*
 - `/Users/watchers/Desktop/clio-project/src/app/(app)/documents/[id]/diff/page.tsx`
 - `/Users/watchers/Desktop/clio-project/src/app/api/quality-check/route.ts`
 - `/Users/watchers/Desktop/clio-project/src/components/expiry/ExpiryDashboardWidget.tsx`
+- /Users/watchers/Desktop/clio-project/docs/01-plan/features/memo-insight.plan.md
+- /Users/watchers/Desktop/clio-project/docs/01-plan/features/memo-graph.plan.md

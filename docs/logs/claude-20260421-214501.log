@@ -1,0 +1,57 @@
+신규/수정 파일 모두 TypeScript 오류 없음. 모든 작업 완료.
+
+---
+
+```
+─────────────────────────────────────────────────
+📋 플랫폼 개발 원칙 점검
+─────────────────────────────────────────────────
+1. 페이지 500줄 제한   : ✅ 준수
+   MemoGraphView.tsx  429줄
+   memo-idea-panel.tsx 194줄
+   page.tsx 144줄  memo-list.tsx 145줄  (모두 500줄 미만)
+
+2. 단일 책임           : ✅ 준수
+   UI(memo-card) / SSE훅(useMemoIdea) / 패널UI(memo-idea-panel) /
+   그래프캔버스(MemoGraphView) / 상태조율(page.tsx) 명확히 분리
+   memo-idea-panel은 API 직접 호출하되 그래프 상태 참조 없음
+
+3. 서버 검증·보안      : ✅ 준수
+   POST /api/memos/idea — 서버 memoIds 소유자 확인 (기존 구현)
+   POST /api/todos/from-idea — 서버 authUserId 검증 (기존 구현)
+   UI는 클라이언트 fetch만; 서버 API 로직 미수정
+
+4. 성능 (중복·N+1)     : ✅ 준수
+   그래프 1회 fetch + useMemoGraph 캐시
+   클러스터 탐지 클라이언트 사이드 (API 추가 호출 없음)
+   임계값 슬라이더: 재fetch 없이 클라이언트 필터링
+   임베딩 fire-and-forget 유지
+
+5. 폴더 구조           : ✅ 준수
+   hooks/ — useMemoIdea.ts
+   components/memos/ — 모든 신규 컴포넌트
+   types/ — ClusterInfo 추가 (memo-graph.ts)
+   app/api/, lib/, actions/ 미수정
+─────────────────────────────────────────────────
+위반 항목: 없음
+─────────────────────────────────────────────────
+```
+
+---
+
+**구현 완료 요약:**
+
+| 파일 | 작업 |
+|------|------|
+| `src/hooks/useMemoIdea.ts` | 신규 — POST /api/memos/idea SSE 스트리밍 훅 |
+| `src/components/memos/memo-graph-controls.tsx` | 신규 — 임계값 슬라이더 (클라이언트 링크 필터링) |
+| `src/components/memos/memo-idea-panel.tsx` | 신규 — SSE 패널 + 메모저장·할일추출·문서생성 버튼 |
+| `src/components/memos/memo-todo-confirm-modal.tsx` | 신규 — 할일 추출 결과 확인 모달 |
+| `src/components/memos/MemoGraphView.tsx` | 수정 — Shift+클릭 멀티셀렉트, 클러스터 헐(Union-Find + convexHull), 임계값 슬라이더, 아이디어 패널 통합 |
+| `src/components/memos/MemoGraphSidePanel.tsx` | 수정 — 단일 노드 미리보기만 (아이디어 생성 로직 분리) |
+| `src/components/memos/memo-card.tsx` | 수정 — 컬러 뱃지 좌하단, 핀 노란 배경 원형, p-4 통일 |
+| `src/types/memo-graph.ts` | 수정 — ClusterInfo 타입 추가 |
+| `src/components/memos/memo-list.tsx` | 수정 — onMemoSaved 콜백 전달 |
+| `src/app/(app)/memos/page.tsx` | 수정 — onMemoSaved={fetchMemos} 연결 |
+
+**위키 컴파일 완료** — memos 토픽 아키텍처·API Surface 갱신 (clio.design.md v7.4.0 반영)

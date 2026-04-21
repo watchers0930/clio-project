@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "compiled_at": "2026-04-17T00:00:00.000Z",
-  "project_version": "6.9.0",
+  "compiled_at": "2026-04-21T00:00:00.000Z",
+  "project_version": "7.4.0",
   "mode": "codebase",
   "sources_read": [
     "README.md",
@@ -14,23 +14,33 @@
     "supabase/migrations/018_contract_clause_fixes.sql",
     "supabase/migrations/019_law_chunks.sql",
     "supabase/migrations/020_work_logs.sql",
-    "src/types/work-log.ts",
-    "src/hooks/useWorkLog.ts",
-    "src/app/api/work-logs/[date]/route.ts",
-    "src/app/api/work-logs/[date]/unlock/route.ts",
-    "src/app/api/work-logs/team/route.ts",
-    "src/app/api/work-logs/weekly-summary/route.ts",
-    "src/app/api/autofill/analyze/route.ts",
-    "src/components/work-logs/WorkLogViewer.tsx",
-    "src/components/layout/sidebar.tsx"
+    "supabase/migrations/021_memo_embeddings.sql",
+    "docs/01-plan/features/clio.plan.md",
+    "docs/01-plan/features/memo-graph.plan.md",
+    "docs/01-plan/features/memo-insight.plan.md",
+    "docs/02-design/features/clio.design.md",
+    "docs/02-design/features/memo-insight.design.md",
+    "src/app/api/memos/graph/route.ts",
+    "src/app/api/memos/idea/route.ts",
+    "src/app/api/memos/[id]/embed/route.ts",
+    "src/app/api/memos/[id]/related/route.ts",
+    "src/app/api/todos/from-idea/route.ts",
+    "src/hooks/useMemoGraph.ts",
+    "src/types/memo-graph.ts",
+    "src/components/memos/MemoGraphView.tsx",
+    "src/components/memos/MemoGraphSidePanel.tsx",
+    "src/components/memos/memo-idea-panel.tsx",
+    "src/components/memos/memo-todo-confirm-modal.tsx",
+    "src/hooks/useMemoIdea.ts",
+    "src/app/api/todos/from-idea/route.ts"
   ],
   "articles": [
     {
       "file": "topics/platform-overview.md",
       "title": "CLIO 플랫폼 전체 개요",
       "coverage": "high",
-      "sources": 5,
-      "last_updated": "2026-04-17"
+      "sources": 7,
+      "last_updated": "2026-04-20"
     },
     {
       "file": "topics/authentication.md",
@@ -57,15 +67,15 @@
       "file": "topics/database.md",
       "title": "데이터베이스 스키마 및 RLS 정책",
       "coverage": "high",
-      "sources": 8,
-      "last_updated": "2026-04-17"
+      "sources": 10,
+      "last_updated": "2026-04-20"
     },
     {
       "file": "topics/ai-features.md",
       "title": "AI 기능",
       "coverage": "high",
-      "sources": 10,
-      "last_updated": "2026-04-17"
+      "sources": 18,
+      "last_updated": "2026-04-20"
     },
     {
       "file": "topics/messaging.md",
@@ -94,6 +104,27 @@
       "coverage": "high",
       "sources": 8,
       "last_updated": "2026-04-17"
+    },
+    {
+      "file": "topics/memos.md",
+      "title": "메모 (Memos)",
+      "coverage": "high",
+      "sources": 14,
+      "last_updated": "2026-04-20"
+    }
+  ],
+  "concepts": [
+    {
+      "file": "concepts/pgvector-multi-purpose.md",
+      "title": "pgvector 다목적 활용 패턴",
+      "topics_connected": ["ai-features", "database", "memos"],
+      "last_updated": "2026-04-20"
+    },
+    {
+      "file": "concepts/async-ai-graceful-degradation.md",
+      "title": "비동기 AI 처리 + Graceful Degradation 패턴",
+      "topics_connected": ["ai-features", "memos", "work-logs"],
+      "last_updated": "2026-04-20"
     }
   ],
   "meta": {

@@ -2,7 +2,7 @@
 
 > AI 에이전트가 이 프로젝트에서 작업 시 먼저 읽어야 할 핵심 맥락 문서
 
-**생성일:** 2026-04-12 | **최종 갱신:** 2026-04-17 | **버전:** v6.9.0 | **배포:** https://clioai.vercel.app
+**생성일:** 2026-04-12 | **최종 갱신:** 2026-04-20 | **버전:** v7.2.0 | **배포:** https://clioai.vercel.app
 
 ---
 
@@ -146,3 +146,10 @@ supabase/
 - [file-management.md](topics/file-management.md) — 파일 업로드, scope, 만료일 알림, 공유 링크
 - [messaging.md](topics/messaging.md) — 메시지/채널
 - [deployment.md](topics/deployment.md) — 배포 구성
+- [work-logs.md](topics/work-logs.md) — 업무일지 (날짜별 일지, 잠금, 팀 현황, 주간 요약 DOCX)
+- [memos.md](topics/memos.md) — 메모 CRUD + AI 그룹화 + 아이디어 제안 + 연관 메모 + 그래프 뷰
+
+## Concepts
+
+- [pgvector-multi-purpose.md](concepts/pgvector-multi-purpose.md) — pgvector 3가지 재활용 패턴
+- [async-ai-graceful-degradation.md](concepts/async-ai-graceful-degradation.md) — AI 실패 격리 패턴

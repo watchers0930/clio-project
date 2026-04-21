@@ -1,6 +1,6 @@
 # CLIO 데이터 스키마 빠른 참조
 
-**최종 업데이트:** 2026-04-17 (v6.9.0 기준)
+**최종 업데이트:** 2026-04-20 (v7.2.0 기준)
 
 ---
 
@@ -63,6 +63,8 @@ audit_logs
 
 memos  ← migration 016
     └── created_by → users
+    ├── memo_embeddings  ← migration 021 (pgvector, 1:1)
+    └── memo_groups      ← migration 021 (클러스터 캐시, TTL 1h)
 
 autofill_sessions  ← migration 017
     └── user_id → users
@@ -133,6 +135,7 @@ migration-permissions.sql        → 추가 권한
 018_contract_clause_fixes.sql    → contract_clause_fixes 테이블 (계약 조항 수정 이력)
 019_law_chunks.sql               → law_chunks 테이블 + match_law_chunks RPC (법령 RAG)
 020_work_logs.sql                → work_logs + work_log_attachments 테이블 (업무일지)
+021_memo_embeddings.sql          → memo_embeddings + memo_groups + match_memo_embeddings RPC (메모 pgvector 인사이트)
 ```
 
 ---
@@ -154,6 +157,15 @@ update_contract_risk_updated_at() RETURNS TRIGGER;
 
 -- files, templates, events, todos updated_at 자동 갱신 (schema.sql 공통)
 handle_updated_at() RETURNS TRIGGER;
+
+-- 메모 연관 유사도 검색 (migration 021)
+match_memo_embeddings(
+  query_embedding      vector(1536),
+  match_user_id        UUID,
+  exclude_memo_id      UUID,
+  match_count          INT DEFAULT 3,
+  similarity_threshold FLOAT DEFAULT 0.75
+) RETURNS TABLE(memo_id UUID, similarity FLOAT);
 ```
 
 ---

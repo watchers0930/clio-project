@@ -1,5 +1,68 @@
 # Wiki Compile Log
 
+## 2026-04-21 — GAP 분석 후 소스 확인 등록 (v12)
+
+**업데이트된 토픽:** 없음 (memos 토픽 내용 이미 정확)
+
+**신규 소스 등록 (실 구현 파일 확인):**
+- `src/components/memos/memo-idea-panel.tsx`
+- `src/components/memos/memo-todo-confirm-modal.tsx`
+- `src/hooks/useMemoIdea.ts`
+- `src/app/api/todos/from-idea/route.ts`
+
+**GAP 분석 결과:** `docs/03-analysis/clio.analysis.md` 생성
+
+---
+
+## 2026-04-21 — clio.design.md UI 구현 반영 (v11)
+
+**업데이트된 토픽:**
+- `memos` — clio.design.md 기반 아키텍처 갱신. 신규 컴포넌트(memo-idea-panel, useMemoIdea, memo-graph-controls, memo-todo-confirm-modal) + 클러스터 헐 + 멀티셀렉트 + ClusterInfo 타입 반영
+
+**소스 스캔:** 1개 (memos topic)
+**변경된 소스:** 1개
+
+---
+
+## 2026-04-21 — v7.4.0 설계 반영 (v10)
+
+**프로젝트 버전:** v7.4.0 (설계 단계)
+
+**업데이트된 토픽:**
+- `memos` — groups API 제거 + idea/route.ts 신규 반영. 아키텍처 전면 갱신 (3종 링크 타입, memoIds 직접 선택)
+- `ai-features` — 메모 인사이트 섹션 갱신 (groups/suggest 제거, memos/idea + todos/from-idea 추가)
+
+**신규 파일:**
+- `docs/01-plan/features/clio.plan.md` (memos·ai-features 토픽으로 분류)
+- `src/app/api/memos/idea/route.ts` (신규 구현)
+
+**제거된 파일 반영:**
+- groups/route.ts, groups/suggest/route.ts, memo-clustering.ts, IdeaSuggestPanel.tsx 외 다수
+
+**소스 스캔:** 11개
+**변경된 소스:** 11개 (memos 관련 리팩토링 전체)
+
+---
+
+## 2026-04-20 — v7.2.0 갱신 (v9)
+
+**프로젝트 버전:** v7.2.0
+
+**업데이트된 토픽:**
+- `memos` — 신규 토픽 생성 (메모 인사이트 전체 기능: 그룹화, 아이디어 제안, 연관 메모, 그래프 뷰)
+- `ai-features` — 메모 인사이트 섹션 추가 (임베딩 파이프라인, 클러스터링, 아이디어 제안 SSE, 그래프 뷰, API Surface)
+- `database` — migration 021 추가 (memo_embeddings, memo_groups, match_memo_embeddings RPC)
+- `platform-overview` — v7.2.0, 메모 인사이트 기능 상세 반영, react-force-graph-2d 스택 추가
+
+**신규 컨셉:**
+- `pgvector-multi-purpose` — file_chunks/law_chunks/memo_embeddings 3가지 pgvector 재활용 패턴
+- `async-ai-graceful-degradation` — 기본 CRUD + AI 실패 격리 패턴
+
+**소스 스캔:** 26개  
+**변경된 소스:** 26개 (migration 021 신규, 메모 AI 관련 파일 다수)
+
+---
+
 ## 2026-04-17 — v6.9.0 갱신 (v8)
 
 **프로젝트 버전:** v6.9.0

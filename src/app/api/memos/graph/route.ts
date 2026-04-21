@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
-import { cosineSimilarity } from '@/lib/ai/memo-clustering';
+import type { MemoGraphData, GraphNode, GraphLink } from '@/types/memo-graph';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rawFrom(admin: ReturnType<typeof createAdminSupabaseClient>, table: string): any {
@@ -16,33 +16,53 @@ interface MemoRow {
   color: string;
 }
 
-interface EmbRow {
+interface EmbeddingRow {
   memo_id: string;
   embedding: string | number[];
 }
 
-const MAX_EMBEDDED = 100;
-const SIMILARITY_THRESHOLD = 0.7;
-
-// 한글/영문 의미 있는 단어 추출 (2자 이상, 조사·불용어 제외)
-const STOP_WORDS = new Set(['이다', '이고', '있다', '없다', '하다', '되다', '그리고', '하지만', '또는', '및', 'the', 'a', 'an', 'is', 'are', 'to', 'of', 'in', 'for', 'on', 'with']);
-
-function extractKeywords(text: string): Set<string> {
-  const words = text
-    .toLowerCase()
-    .split(/[\s,.?!()[\]{}<>/\\|@#$%^&*+=~`'";\n\t]+/)
-    .filter((w) => w.length >= 2 && !STOP_WORDS.has(w));
-  return new Set(words);
-}
-
-function hasKeywordOverlap(a: MemoRow, b: MemoRow): boolean {
-  const aWords = extractKeywords((a.title ?? '') + ' ' + (a.content ?? ''));
-  const bWords = extractKeywords((b.title ?? '') + ' ' + (b.content ?? ''));
-  for (const w of aWords) {
-    if (bWords.has(w)) return true;
+function cosineSimilarity(a: number[], b: number[]): number {
+  let dot = 0, ma = 0, mb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    ma += a[i] * a[i];
+    mb += b[i] * b[i];
   }
-  return false;
+  const denom = Math.sqrt(ma) * Math.sqrt(mb);
+  return denom === 0 ? 0 : dot / denom;
 }
+
+function extractWords(text: string): string[] {
+  // 한글 2자 이상, 영문 3자 이상 단어 추출
+  const words = new Set<string>();
+  const korean = text.match(/[가-힣]{2,}/g) ?? [];
+  const english = text.match(/[a-zA-Z]{3,}/g) ?? [];
+  korean.forEach((w) => words.add(w));
+  english.forEach((w) => words.add(w.toLowerCase()));
+  return Array.from(words);
+}
+
+/** 제목 간 공통 단어 수 (정확한 단어 단위) */
+function titleOverlapScore(titleA: string, titleB: string): number {
+  const wordsA = extractWords(titleA);
+  if (wordsA.length === 0) return 0;
+  const wordsB = new Set(extractWords(titleB));
+  const matches = wordsA.filter((w) => wordsB.has(w)).length;
+  return matches / Math.max(wordsA.length, wordsB.size);
+}
+
+/** A 제목 단어가 B 내용에 포함되는지 (정확한 단어 단위) */
+function titleInContentScore(titleA: string, contentB: string | null): number {
+  const wordsA = extractWords(titleA);
+  if (wordsA.length === 0 || !contentB) return 0;
+  const contentWords = new Set(extractWords(contentB));
+  const matches = wordsA.filter((w) => contentWords.has(w)).length;
+  return matches / wordsA.length;
+}
+
+const TITLE_THRESHOLD = 0.15;
+const CONTENT_THRESHOLD = 0.2;
+const SEMANTIC_THRESHOLD = 0.78;
 
 export async function GET() {
   try {
@@ -57,90 +77,88 @@ export async function GET() {
 
     const admin = createAdminSupabaseClient();
 
+    // 사용자 메모 전체 조회
     const { data: memosRaw, error: memosError } = await admin
       .from('memos')
       .select('id, title, content, color')
-      .eq('created_by', authUserId)
-      .order('updated_at', { ascending: false });
+      .eq('created_by', authUserId);
 
     if (memosError) {
-      console.error('[graph/GET] memos error:', memosError.message);
       return NextResponse.json({ success: false, error: '메모 조회 실패' }, { status: 500 });
     }
 
-    const allMemos = (memosRaw as unknown as MemoRow[]) ?? [];
-    if (allMemos.length === 0) {
-      return NextResponse.json({ success: true, nodes: [], links: [] });
+    const memos = (memosRaw ?? []) as MemoRow[];
+    if (memos.length === 0) {
+      return NextResponse.json({ success: true, data: { nodes: [], links: [] } });
     }
 
-    const { data: embRaw } = await rawFrom(admin, 'memo_embeddings')
+    // 임베딩 조회
+    const memoIds = memos.map((m) => m.id);
+    const { data: embeddingsRaw } = await rawFrom(admin, 'memo_embeddings')
       .select('memo_id, embedding')
-      .in('memo_id', allMemos.map((m) => m.id))
-      .limit(MAX_EMBEDDED);
+      .in('memo_id', memoIds);
 
-    const embRows = (embRaw as EmbRow[] | null) ?? [];
-    const embeddedIds = new Set(embRows.map((e) => e.memo_id));
+    const embeddingMap = new Map<string, number[]>();
+    for (const row of (embeddingsRaw ?? []) as EmbeddingRow[]) {
+      const vec = typeof row.embedding === 'string'
+        ? (JSON.parse(row.embedding) as number[])
+        : row.embedding;
+      embeddingMap.set(row.memo_id, vec);
+    }
 
-    const nodes = allMemos.map((m) => ({
+    // 노드 생성
+    const nodes: GraphNode[] = memos.map((m) => ({
       id: m.id,
       title: m.title,
-      color: m.color,
-      hasEmbedding: embeddedIds.has(m.id),
+      content: m.content,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      color: m.color as any,
+      hasEmbedding: embeddingMap.has(m.id),
     }));
 
-    const parsedEmbeddings = embRows.map((e) => ({
-      memo_id: e.memo_id,
-      embedding: typeof e.embedding === 'string'
-        ? (JSON.parse(e.embedding) as number[])
-        : (e.embedding as number[]),
-    }));
+    // 링크 생성: 모든 쌍 비교
+    const links: GraphLink[] = [];
+    for (let i = 0; i < memos.length; i++) {
+      for (let j = i + 1; j < memos.length; j++) {
+        const a = memos[i];
+        const b = memos[j];
 
-    const memoMap = new Map(allMemos.map((m) => [m.id, m]));
-    const linkedPairs = new Set<string>();
-    const links: { source: string; target: string; similarity: number; type: 'semantic' | 'keyword' }[] = [];
-
-    // 1) 임베딩 유사도 기반 연결
-    for (let i = 0; i < parsedEmbeddings.length; i++) {
-      for (let j = i + 1; j < parsedEmbeddings.length; j++) {
-        const sim = cosineSimilarity(
-          parsedEmbeddings[i].embedding,
-          parsedEmbeddings[j].embedding,
+        // 1순위: 제목 간 동일 단어 → 실선 (title)
+        const titleScore = Math.max(
+          titleOverlapScore(a.title, b.title),
+          titleOverlapScore(b.title, a.title),
         );
-        if (sim >= SIMILARITY_THRESHOLD) {
-          const key = [parsedEmbeddings[i].memo_id, parsedEmbeddings[j].memo_id].sort().join(':');
-          linkedPairs.add(key);
-          links.push({
-            source: parsedEmbeddings[i].memo_id,
-            target: parsedEmbeddings[j].memo_id,
-            similarity: Math.round(sim * 1000) / 1000,
-            type: 'semantic',
-          });
+        if (titleScore >= TITLE_THRESHOLD) {
+          links.push({ source: a.id, target: b.id, similarity: titleScore, type: 'title' });
+          continue;
+        }
+
+        // 2순위: 제목 단어가 상대 내용에 포함 → 점선 (content)
+        const contentScore = Math.max(
+          titleInContentScore(a.title, b.content),
+          titleInContentScore(b.title, a.content),
+        );
+        if (contentScore >= CONTENT_THRESHOLD) {
+          links.push({ source: a.id, target: b.id, similarity: contentScore, type: 'content' });
+          continue;
+        }
+
+        // 3순위: 임베딩 의미 유사도 → 점선 (semantic)
+        const vecA = embeddingMap.get(a.id);
+        const vecB = embeddingMap.get(b.id);
+        if (vecA && vecB) {
+          const sim = cosineSimilarity(vecA, vecB);
+          if (sim >= SEMANTIC_THRESHOLD) {
+            links.push({ source: a.id, target: b.id, similarity: sim, type: 'semantic' });
+          }
         }
       }
     }
 
-    // 2) 제목+내용 공통 키워드 기반 연결 (중복 제외)
-    for (let i = 0; i < allMemos.length; i++) {
-      for (let j = i + 1; j < allMemos.length; j++) {
-        const key = [allMemos[i].id, allMemos[j].id].sort().join(':');
-        if (linkedPairs.has(key)) continue;
-        const memoA = memoMap.get(allMemos[i].id);
-        const memoB = memoMap.get(allMemos[j].id);
-        if (memoA && memoB && hasKeywordOverlap(memoA, memoB)) {
-          linkedPairs.add(key);
-          links.push({
-            source: allMemos[i].id,
-            target: allMemos[j].id,
-            similarity: 0.5,
-            type: 'keyword',
-          });
-        }
-      }
-    }
-
-    return NextResponse.json({ success: true, nodes, links });
+    const data: MemoGraphData = { nodes, links };
+    return NextResponse.json({ success: true, data });
   } catch (err) {
-    console.error('[graph/GET] error:', err);
+    console.error('[memos/graph/GET]', err);
     return NextResponse.json({ success: false, error: '서버 오류' }, { status: 500 });
   }
 }

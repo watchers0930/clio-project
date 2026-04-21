@@ -1,6 +1,6 @@
 # AI 기능
 
-[coverage: high -- sources: clio-contract-risk.design.md, clio-contract-suggest.design.md, clio-recording-stt.design.md, clio-meeting-todo.design.md, clio-expiry-alert.design.md, contract-risk-analyzer.ts, extract-todos.ts, extract-expiry.ts, transcribe/route.ts, quality-check/route.ts, suggest/route.ts, apply/route.ts, clause-extractor.ts, clause-replacer.ts]
+[coverage: high -- sources: clio-contract-risk.design.md, clio-contract-suggest.design.md, clio-recording-stt.design.md, clio-meeting-todo.design.md, clio-expiry-alert.design.md, contract-risk-analyzer.ts, extract-todos.ts, extract-expiry.ts, transcribe/route.ts, quality-check/route.ts, suggest/route.ts, apply/route.ts, clause-extractor.ts, clause-replacer.ts, memo-insight.plan.md, memo-graph.plan.md, memo-clustering.ts, memos/graph/route.ts, memos/groups/route.ts, memos/groups/suggest/route.ts, memos/[id]/embed/route.ts, memos/[id]/related/route.ts]
 
 ---
 
@@ -481,6 +481,81 @@ RLS: 본인 세션만 접근.
 
 ---
 
+## 메모 인사이트 (Memo Insight, v7.4.0+) [coverage: high -- 6 sources]
+
+### 개요 (현재 아키텍처)
+
+메모 저장 시 `text-embedding-3-small`으로 임베딩을 생성하고, 이를 활용해 (1) 그래프 시각화 + 멀티셀렉트, (2) 선택 메모 기반 AI 아이디어 생성(SSE), (3) 아이디어에서 할일 자동 추출, (4) 연관 메모 추천을 제공한다.
+
+**v7.3.0 변경**: groups API 제거, 클러스터링 라이브러리 제거. 아이디어 생성은 memoIds[] 직접 전달 방식으로 단순화.
+
+### 임베딩 파이프라인
+
+```
+POST /api/memos/[id]/embed
+  1. 인증 + 메모 소유권 확인
+  2. title + "\n" + content → text-embedding-3-small → vector(1536)
+  3. memo_embeddings UPSERT (onConflict: memo_id)
+```
+
+- fire-and-forget. 임베딩 없는 메모는 semantic 링크 없음 (title/content 링크는 가능)
+
+### 아이디어 생성 (POST /api/memos/idea)
+
+```
+요청: { memoIds: ["uuid1", "uuid2", ...] }   // 최소 2개
+  → 소유자 일치 필터
+  → 각 메모 title + content 수집
+  → GPT-4o streaming (temperature=0.7, max_tokens=1000)
+     출력: ## 💡 제목 / ## 핵심 개념 / ## 실행 방안 / ## 기대 효과
+  → SSE: data: {"text":"..."} ... data: [DONE]
+```
+
+### 연관 메모 추천
+
+```
+GET /api/memos/[id]/related
+  → match_memo_embeddings RPC (threshold=0.75, count=3)
+  → 임베딩 없으면 [] 반환 (에러 없음)
+```
+
+### 메모 그래프 뷰
+
+```
+GET /api/memos/graph
+  → 전체 메모 + 임베딩 조회
+  → N×N 쌍 비교, 링크 생성 (우선순위 순):
+      title:    제목 단어 일치율 ≥ 0.15  (실선)
+      content:  제목 단어가 상대 내용에 포함 ≥ 0.20  (점선)
+      semantic: 코사인 유사도 ≥ 0.78  (점선, 파란색)
+  → { nodes, links } 반환
+```
+
+- react-force-graph-2d, Canvas 기반
+- SSR 불가: `dynamic(() => import(...), { ssr: false })` 필수
+
+### 모델 할당
+
+| 기능 | 모델 | SDK |
+|------|------|-----|
+| 메모 임베딩 생성 | `text-embedding-3-small` | OpenAI SDK |
+| 아이디어 생성 SSE | `gpt-4o` | OpenAI SDK (streaming) |
+| 할일 추출 from idea | `gpt-4o` | OpenAI SDK (json_object) |
+
+### API Surface (메모 AI — 현재)
+
+| 메서드 | 경로 | 기능 | 모델 |
+|--------|------|------|------|
+| POST | `/api/memos/[id]/embed` | 임베딩 생성·갱신 | text-embedding-3-small |
+| GET | `/api/memos/[id]/related` | 연관 메모 상위 3개 | — (RPC) |
+| GET | `/api/memos/graph` | 그래프 노드+링크 (3종 타입) | — (서버 계산) |
+| POST | `/api/memos/idea` | memoIds[] → 아이디어 SSE | gpt-4o |
+| POST | `/api/todos/from-idea` | ideaText → 할일 3~7개 추출+등록 | gpt-4o |
+
+**제거됨**: ~~GET /api/memos/groups~~, ~~POST /api/memos/groups/suggest~~ (v7.3.0)
+
+---
+
 ## API Surface [coverage: high -- 9 sources]
 
 전체 AI 관련 엔드포인트 요약.
@@ -508,6 +583,11 @@ RLS: 본인 세션만 접근.
 | POST | `/api/documents/[id]/apply-comments` | 댓글 부분 반영 | GPT-4o |
 | POST | `/api/autofill/analyze` | DOCX/HWPX 빈 필드 감지 + GPT-4o 추론 + 자동 매핑 | GPT-4o |
 | POST | `/api/autofill/generate` | 채워진 파일 다운로드 | — |
+| POST | `/api/memos/[id]/embed` | 메모 임베딩 생성·갱신 | text-embedding-3-small |
+| GET | `/api/memos/[id]/related` | 연관 메모 상위 3개 | — (RPC) |
+| GET | `/api/memos/graph` | 그래프 노드+링크 (3종 타입) | — (서버 계산) |
+| POST | `/api/memos/idea` | memoIds[] → 아이디어 SSE | gpt-4o |
+| POST | `/api/todos/from-idea` | 아이디어 텍스트 → 할일 추출+등록 | gpt-4o |
 
 **환경 변수**: `OPENAI_API_KEY` (모든 AI 기능 필수)
 
@@ -526,6 +606,10 @@ RLS: 본인 세션만 접근.
 | 할일 추출 입력 15,000자 제한 | 회의록은 계약서보다 짧고 액션 아이템 추출에 앞부분이 중요. maxTokens=2000으로 충분 |
 | 담당자 이름 users 매핑 실패 시 요청자 fallback | 이름 오표기·퇴직자 등 매핑 불가 케이스에서 할일 자체가 누락되지 않도록 |
 | MediaRecorder + 서버 변경 없음 | 브라우저 직접 녹음 Blob과 파일 업로드 Blob을 FormData로 동일하게 처리 가능 |
+| 메모 그래프 링크 3종 방식 | 임베딩 없는 메모도 title/content 링크로 포함. orphan 노드 최소화 |
+| groups API 제거 → memoIds 직접 전달 | 서버 클러스터 캐시 없이 그래프에서 직접 선택. 단순성·유연성 향상 |
+| 아이디어 제안 SSE 방식 | GPT-4o 응답 대기 시간이 길므로 스트리밍으로 UX 개선 |
+| todos/from-idea 즉시 INSERT | 아이디어 텍스트에서 할일 추출 후 바로 DB 저장. UI에서 결과 표시 후 완료 안내 |
 
 ---
 
@@ -555,3 +639,11 @@ RLS: 본인 세션만 접근.
 - `/Users/watchers/Desktop/clio-project/src/app/api/transcribe/route.ts`
 - `/Users/watchers/Desktop/clio-project/src/app/api/quality-check/route.ts`
 - `/Users/watchers/Desktop/clio-project/src/lib/contract-risk-items.ts`
+- `/Users/watchers/Desktop/clio-project/docs/01-plan/features/clio.plan.md`
+- `/Users/watchers/Desktop/clio-project/docs/01-plan/features/memo-insight.plan.md`
+- `/Users/watchers/Desktop/clio-project/docs/01-plan/features/memo-graph.plan.md`
+- `/Users/watchers/Desktop/clio-project/src/app/api/memos/graph/route.ts`
+- `/Users/watchers/Desktop/clio-project/src/app/api/memos/idea/route.ts`
+- `/Users/watchers/Desktop/clio-project/src/app/api/memos/[id]/embed/route.ts`
+- `/Users/watchers/Desktop/clio-project/src/app/api/memos/[id]/related/route.ts`
+- `/Users/watchers/Desktop/clio-project/src/app/api/todos/from-idea/route.ts`

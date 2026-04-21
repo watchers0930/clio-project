@@ -1,6 +1,6 @@
 # 데이터베이스
 
-[coverage: high -- sources: supabase/schema.sql, supabase/migrations/003~020, src/lib/supabase/types.ts]
+[coverage: high -- sources: supabase/schema.sql, supabase/migrations/003~021, src/lib/supabase/types.ts]
 
 ---
 
@@ -43,6 +43,8 @@ CLIO는 Supabase PostgreSQL을 사용한다. pgvector 확장으로 파일 청크
 | `law_chunks` | migration 019 | 법령 조문 벡터 청크 (pgvector RAG) |
 | `work_logs` | migration 020 | 업무일지 (날짜별, 잠금 포함) |
 | `work_log_attachments` | migration 020 | 업무일지 첨부파일 (문서 또는 파일 참조) |
+| `memo_embeddings` | migration 021 | 메모 pgvector 임베딩 (코사인 유사도 검색) |
+| `memo_groups`     | migration 021 | 메모 클러스터 그룹 캐시 (TTL 1시간) |
 
 > `approvals` 테이블은 **migration 015에서 DROP** (v6.3.0). `DocumentStatus`에서 `submitted | approved | rejected` 상태도 `completed`로 일괄 변환됨.
 
@@ -347,6 +349,45 @@ CREATE TABLE work_log_attachments (
 );
 ```
 
+### memo_embeddings (migration 021)
+
+메모 임베딩 저장. memo_id 유니크 — 동일 메모 재생성 시 UPSERT.
+
+```sql
+CREATE TABLE memo_embeddings (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  memo_id    UUID NOT NULL REFERENCES memos(id) ON DELETE CASCADE,
+  embedding  vector(1536) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(memo_id)
+);
+-- ivfflat 인덱스 (lists=100, cosine)
+CREATE INDEX idx_memo_embeddings_vector
+  ON memo_embeddings USING ivfflat (embedding vector_cosine_ops)
+  WITH (lists = 100);
+```
+
+RLS: 메모 소유자만 ALL (`memos.created_by = auth.uid()` EXISTS 체크).
+
+### memo_groups (migration 021)
+
+클러스터링 결과 캐시. TTL 1시간. 만료 후 재요청 시 자동 재계산.
+
+```sql
+CREATE TABLE memo_groups (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL,        -- GPT-4o-mini 자동 작명
+  memo_ids   UUID[] NOT NULL,      -- 소속 메모 ID 배열
+  expires_at TIMESTAMPTZ NOT NULL DEFAULT (now() + INTERVAL '1 hour'),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_memo_groups_user ON memo_groups(user_id, expires_at);
+```
+
+RLS: `user_id = auth.uid()` — 본인 그룹 ALL.
+
 ### events (schema.sql + migration 012 컬럼 추가)
 
 migration 012는 `schedules` 테이블에 컬럼을 추가한다. CLIO의 실제 일정 테이블은 schema.sql의 `events`이며, `schedules`는 별도 테이블일 가능성이 있다. migration 012 원문 기준으로 정리:
@@ -467,6 +508,7 @@ CREATE TABLE public.audit_logs (
 | `018_contract_clause_fixes.sql` | contract_clause_fixes 테이블 생성 (계약 조항 수정 제안 이력) |
 | `019_law_chunks.sql` | law_chunks 테이블 생성 + match_law_chunks RPC 함수 (법령 pgvector RAG) |
 | `020_work_logs.sql` | work_logs + work_log_attachments 테이블 생성 (업무일지 + 첨부) |
+| `021_memo_embeddings.sql` | memo_embeddings + memo_groups 테이블 생성 + match_memo_embeddings RPC (메모 pgvector 인사이트) |
 
 ---
 
@@ -497,6 +539,8 @@ CREATE TABLE public.audit_logs (
 | `law_chunks` | 전체 인증 사용자 | - | - | - |
 | `work_logs` | 본인 OR 같은 부서 manager/admin | `user_id = auth.uid()` | `user_id = auth.uid()` | `user_id = auth.uid()` |
 | `work_log_attachments` | 본인 일지 첨부 | 본인 일지 첨부 | 본인 일지 첨부 | 본인 일지 첨부 |
+| `memo_embeddings` | 메모 소유자만 (EXISTS memos subquery) | 동일 | 동일 | 동일 |
+| `memo_groups`     | `user_id = auth.uid()` | 동일 | 동일 | 동일 |
 
 **files_select 주의**: migration 014에서 기존 정책이 교체됨. `scope = 'company'` 조건이 앞에 추가되어 전사 공개 파일은 모든 인증 사용자가 열람 가능하다.
 
@@ -556,6 +600,23 @@ FUNCTION match_law_chunks(
 ```
 
 계약서 리스크 수정 제안 시 `law-embedder.ts`가 호출. `filter_category`로 관련 법령 범주를 사전 필터링 후 코사인 유사도 검색.
+
+### match_memo_embeddings (migration 021)
+
+```sql
+FUNCTION match_memo_embeddings(
+  query_embedding      vector(1536),
+  match_user_id        UUID,
+  exclude_memo_id      UUID,
+  match_count          INT DEFAULT 3,
+  similarity_threshold FLOAT DEFAULT 0.75
+) RETURNS TABLE (
+  memo_id    UUID,
+  similarity FLOAT
+)
+```
+
+연관 메모 검색 (`/api/memos/[id]/related`)에서 호출. 코사인 유사도 기반, exclude_memo_id로 자기 자신 제외.
 
 ### handle_updated_at (schema.sql 공통)
 
@@ -624,4 +685,5 @@ DB 문자열 컬럼에서 PostgreSQL CHECK 제약으로 관리되며, TypeScript
 - `/Users/watchers/Desktop/clio-project/supabase/migrations/013_meeting_todos.sql`
 - `/Users/watchers/Desktop/clio-project/supabase/migrations/014_files_scope.sql`
 - `/Users/watchers/Desktop/clio-project/supabase/migrations/015_drop_approvals_add_comments.sql`
+- `/Users/watchers/Desktop/clio-project/supabase/migrations/021_memo_embeddings.sql`
 - `/Users/watchers/Desktop/clio-project/src/lib/supabase/types.ts`

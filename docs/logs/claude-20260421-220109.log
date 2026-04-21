@@ -1,0 +1,31 @@
+Wiki 컴파일 완료 ✅
+
+---
+
+## `docs/03-analysis/clio.analysis.md` 작성 완료
+
+### 분석 결과 요약
+
+**전체 일치율: ~80%**
+
+#### Gap 목록 (우선순위 순)
+
+| # | 심각도 | 내용 | 파일 |
+|---|--------|------|------|
+| GAP-1 | ★ HIGH | **클러스터 AI 명명 API 호출 미연결** — 헐은 그려지나 클러스터명이 표시되지 않음 | `MemoGraphView.tsx` |
+| GAP-2 | MEDIUM | `viewMode·selectedIds·ideaPanelOpen` 상태가 설계 지정 위치(`page.tsx`)가 아닌 하위 컴포넌트에 분산 | `memo-list.tsx`, `MemoGraphView.tsx` |
+| GAP-3 | MEDIUM | `memo-idea-panel.tsx`가 API 직접 호출 — 설계상 page.tsx 핸들러 주입 방식 이탈 | `memo-idea-panel.tsx` |
+| GAP-4 | LOW | 확인 모달 버튼 `[취소][할일로 등록]` → `[확인]` 1개로 변경 | `memo-todo-confirm-modal.tsx` |
+| GAP-5~7 | LOW | 헐 알파 0.09 vs 0.08, 카드 Paperlogy 폰트 미적용, Phase 4 stub | 각 파일 |
+
+#### 플랫폼 절대규칙 점검
+
+```
+1. 페이지 500줄 제한  : ✅ 준수 (MemoGraphView 429줄 — GAP-1 추가 시 분리 권장)
+2. 단일 책임          : ⚠️ 경미 위반 (memo-idea-panel, memo-list)
+3. 서버 검증·보안     : ✅ 준수 (전체 API 인증+소유권 검증 완료)
+4. 성능               : ✅ 준수 (불변성 경고 1건)
+5. 폴더 구조          : ✅ 준수
+```
+
+**가장 시급한 수정**: GAP-1 — `MemoGraphView.tsx`에 `/api/memos/graph/clusters` 호출 로직 30줄 추가하면 설계 의도 달성. 이때 줄 수가 ~460줄로 증가하므로 `useMemoCluster.ts` 훅 분리도 함께 권장.

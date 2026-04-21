@@ -19,6 +19,7 @@ interface MemoListProps {
   onView: (memo: MemoItem) => void;
   onEdit: (memo: MemoItem) => void;
   onDelete: (id: string) => void;
+  onMemoSaved?: () => void;
 }
 
 export default function MemoList({
@@ -30,6 +31,7 @@ export default function MemoList({
   onView,
   onEdit,
   onDelete,
+  onMemoSaved,
 }: MemoListProps) {
   const [tab, setTab] = useState<'list' | 'graph'>('list');
   const graph = useMemoGraph({ enabled: tab === 'graph' });
@@ -134,7 +136,7 @@ export default function MemoList({
               </button>
             </div>
           ) : graph.data ? (
-            <MemoGraphView data={graph.data} onEdit={handleEditById} />
+            <MemoGraphView data={graph.data} onEdit={handleEditById} onMemoSaved={onMemoSaved} />
           ) : null}
         </div>
       )}

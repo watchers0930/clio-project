@@ -1,0 +1,47 @@
+위키 컴파일 완료: memos·ai-features 2개 토픽 업데이트, INDEX/log/state 갱신.
+
+---
+
+설계서가 `docs/02-design/features/clio.design.md`에 작성됐습니다. 주요 내용 요약입니다.
+
+---
+
+## 설계서 요약
+
+### 1. 아키텍처 & 파일 분리
+
+| 파일 | 상태 | 예상 줄수 |
+|------|------|----------|
+| `page.tsx` | 기존 수정 | ~180줄 |
+| `MemoGraphView.tsx` | 기존 + 멀티셀렉트·헐 추가 | 300줄+ → `cluster-hull-utils.ts` 분리 대응 |
+| `memo-idea-panel.tsx` | 신규 | ~150줄 |
+| `useMemoIdea.ts` | 신규 훅 | ~60줄 |
+| `memo-todo-confirm-modal.tsx` | 신규 | ~80줄 |
+| `app/api/memos/graph/clusters/route.ts` | Phase 2 신규 | ~100줄 |
+
+### 2. 데이터 모델
+
+신규 마이그레이션 없음. 기존 `memos` + `memo_embeddings` 테이블 그대로 활용.
+
+### 3. API 스펙 (주요)
+
+| 메서드 | 경로 | 상태 | 설명 |
+|--------|------|------|------|
+| `GET` | `/api/memos/graph` | ✅ 기존 | title·content·semantic 3종 링크 |
+| `POST` | `/api/memos/idea` | ✅ 기존 | memoIds[] → GPT-4o SSE |
+| `POST` | `/api/todos/from-idea` | ✅ 기존 | ideaText → 할일 3~7개 추출+등록 |
+| `POST` | `/api/memos/graph/clusters` | 🆕 Phase 2 | 클러스터 memoIds → AI 명명 |
+
+### 4. 구현 순서
+
+**Phase 1** (UI) → **Phase 2** (그래프 멀티셀렉트 + 아이디어 패널 + 클러스터 시각화) → **Phase 3** (할일 연결) → **Phase 4** (Export)
+
+### 5. 절대규칙 준수
+
+```
+1. 500줄 제한  ✅ — MemoGraphView 증가분은 utils 분리 계획 수립
+2. 단일 책임   ✅ — UI/훅/API 명확 분리
+3. 서버 검증   ✅ — memoIds 소유자 일치 서버 검증 확인
+4. 성능        ✅ — 클러스터 탐지 클라이언트 사이드, 재API 호출 없음
+5. 폴더 구조   ✅ — hooks/components/api/types 기준 준수
+```

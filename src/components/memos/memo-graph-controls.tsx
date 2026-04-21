@@ -2,38 +2,32 @@
 
 interface MemoGraphControlsProps {
   threshold: number;
-  onThresholdChange: (value: number) => void;
+  onChange: (value: number) => void;
 }
 
-const MIN = 0.70;
-const MAX = 0.95;
-const STEP = 0.01;
-
-export default function MemoGraphControls({
-  threshold,
-  onThresholdChange,
-}: MemoGraphControlsProps) {
+export default function MemoGraphControls({ threshold, onChange }: MemoGraphControlsProps) {
   return (
-    <div className="flex items-center gap-3 px-4 py-2.5 border-b border-[#E2E5EA] bg-white">
-      <label
-        htmlFor="graph-threshold"
-        className="text-[12px] text-[#7C8494] whitespace-nowrap flex-shrink-0"
-      >
-        연결 강도
-      </label>
+    <div
+      className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] text-[#64748B]"
+      style={{
+        background: 'rgba(255,255,255,0.92)',
+        border: '1px solid #E2E8F0',
+        backdropFilter: 'blur(4px)',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+      }}
+    >
+      <span className="whitespace-nowrap">연결 임계값</span>
       <input
-        id="graph-threshold"
         type="range"
-        min={MIN}
-        max={MAX}
-        step={STEP}
+        min={0}
+        max={1}
+        step={0.05}
         value={threshold}
-        onChange={(e) => onThresholdChange(parseFloat(e.target.value))}
-        className="flex-1 h-1.5 accent-[#2E6FF2] cursor-pointer"
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        className="w-20 cursor-pointer accent-[#6366F1]"
+        style={{ height: 3 }}
       />
-      <span className="text-[12px] font-medium text-[#1B1F2B] w-8 text-right flex-shrink-0">
-        {threshold.toFixed(2)}
-      </span>
+      <span className="w-7 text-right tabular-nums">{Math.round(threshold * 100)}%</span>
     </div>
   );
 }
