@@ -167,7 +167,7 @@ export default function MemoGraphView({ data, onEdit, onMemoSaved }: Props) {
 
     // 고립 노드: 클러스터와 같은 높이(cy)에 좌우 나란히 배치
     const isolatedNodes = allNodes.filter((n) => !connectedIds.has(n.id));
-    const spacing = 200;
+    const spacing = 100;
     isolatedNodes.forEach((n, i) => {
       // 짝수: 오른쪽, 홀수: 왼쪽 / 여러 개면 거리 누적
       const side = i % 2 === 0 ? 1 : -1;
