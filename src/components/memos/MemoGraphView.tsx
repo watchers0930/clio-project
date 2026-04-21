@@ -146,43 +146,44 @@ export default function MemoGraphView({ data, onEdit, onMemoSaved }: Props) {
 
   const handleEngineStop = useCallback(() => {
     if (!fgRef.current) return;
-    type SimNode = ForceGraphNode & { x?: number; y?: number; fx?: number; fy?: number };
-    const nodes = fgRef.current.graphData().nodes as SimNode[];
-    const links = fgRef.current.graphData().links as Array<{ source: SimNode | string; target: SimNode | string }>;
+    type PosNode = { id: string; x?: number; y?: number; fx?: number; fy?: number };
+    const allNodes = data.nodes as unknown as PosNode[];
 
-    // 연결된 노드 ID 수집
+    // 연결된 노드 ID 수집 (시뮬레이션 후 source/target이 객체로 바뀜)
     const connectedIds = new Set<string>();
-    links.forEach((l) => {
-      connectedIds.add(typeof l.source === 'string' ? l.source : l.source.id);
-      connectedIds.add(typeof l.target === 'string' ? l.target : l.target.id);
+    data.links.forEach((l) => {
+      const src = typeof l.source === 'string' ? l.source : (l.source as ForceGraphNode).id;
+      const tgt = typeof l.target === 'string' ? l.target : (l.target as ForceGraphNode).id;
+      connectedIds.add(src);
+      connectedIds.add(tgt);
     });
 
     // 클러스터 중심 계산
-    const connectedNodes = nodes.filter((n) => connectedIds.has(n.id) && n.x != null);
-    const cx = connectedNodes.length > 0 ? connectedNodes.reduce((s, n) => s + (n.x ?? 0), 0) / connectedNodes.length : 0;
-    const cy = connectedNodes.length > 0 ? connectedNodes.reduce((s, n) => s + (n.y ?? 0), 0) / connectedNodes.length : 0;
+    const connectedNodes = allNodes.filter((n) => connectedIds.has(n.id) && n.x != null);
+    const cx = connectedNodes.length > 0
+      ? connectedNodes.reduce((s, n) => s + (n.x ?? 0), 0) / connectedNodes.length : 0;
+    const cy = connectedNodes.length > 0
+      ? connectedNodes.reduce((s, n) => s + (n.y ?? 0), 0) / connectedNodes.length : 0;
 
     // 고립 노드: 클러스터 중심 기준 원형 균등 배치
-    const isolatedNodes = nodes.filter((n) => !connectedIds.has(n.id));
+    const isolatedNodes = allNodes.filter((n) => !connectedIds.has(n.id));
     const R = 150;
     isolatedNodes.forEach((n, i) => {
       const angle = (i / Math.max(isolatedNodes.length, 1)) * 2 * Math.PI - Math.PI / 4;
-      n.fx = cx + Math.cos(angle) * R;
-      n.fy = cy + Math.sin(angle) * R;
-      n.x = n.fx;
-      n.y = n.fy;
+      n.x = cx + Math.cos(angle) * R;
+      n.y = cy + Math.sin(angle) * R;
+      n.fx = n.x;
+      n.fy = n.y;
     });
 
-    // 모든 노드 위치 고정
-    nodes.forEach((n) => {
-      if (n.fx == null && n.x != null) { n.fx = n.x; n.fy = n.y; }
-    });
+    // 연결 노드 위치 고정
+    connectedNodes.forEach((n) => { if (n.x != null) { n.fx = n.x; n.fy = n.y; } });
 
     fgRef.current.d3Force('link', null);
     fgRef.current.d3Force('charge', null);
     fgRef.current.d3Force('center', null);
     setTimeout(() => fgRef.current?.zoomToFit(400, 60), 50);
-  }, []);
+  }, [data.nodes, data.links]);
 
   const handleZoomIn  = useCallback(() => { fgRef.current?.zoom(fgRef.current.zoom() * 1.3, 300); }, []);
   const handleZoomOut = useCallback(() => { fgRef.current?.zoom(fgRef.current.zoom() / 1.3, 300); }, []);
