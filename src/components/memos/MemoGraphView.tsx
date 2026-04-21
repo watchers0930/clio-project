@@ -138,8 +138,8 @@ export default function MemoGraphView({ data, onEdit, onMemoSaved }: Props) {
   useEffect(() => {
     const t = setTimeout(() => {
       if (!fgRef.current) return;
-      fgRef.current.d3Force('charge')?.strength(-80);
-      fgRef.current.d3Force('link')?.distance(60);
+      fgRef.current.d3Force('charge')?.strength(-35);
+      fgRef.current.d3Force('link')?.distance(40);
     }, 50);
     return () => clearTimeout(t);
   }, [data.nodes, data.links]);
