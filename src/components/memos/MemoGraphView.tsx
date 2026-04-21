@@ -47,9 +47,8 @@ function convexHull(pts: Pt[]): Pt[] {
   return hull;
 }
 
-function hullColor(idx: number): string {
-  const hue = (idx * 137.5) % 360;
-  return `hsla(${hue}, 55%, 58%, 0.09)`;
+function hullColor(_idx: number): string {
+  return 'rgba(148, 163, 184, 0.07)';
 }
 
 // ──────────── Props ────────────
