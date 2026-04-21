@@ -134,6 +134,16 @@ export default function MemoGraphView({ data, onEdit, onMemoSaved }: Props) {
     setPanelNode(null);
   }, []);
 
+  // 시뮬레이션 시작 전 반발력·링크 거리 강화 — 노드 간격 2배
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (!fgRef.current) return;
+      fgRef.current.d3Force('charge')?.strength(-180);
+      fgRef.current.d3Force('link')?.distance(100);
+    }, 50);
+    return () => clearTimeout(t);
+  }, [data.nodes, data.links]);
+
   const handleEngineStop = useCallback(() => {
     (data.nodes as unknown as Array<{ x?: number; y?: number; fx?: number; fy?: number }>)
       .forEach((n) => {
@@ -308,7 +318,7 @@ export default function MemoGraphView({ data, onEdit, onMemoSaved }: Props) {
               onEngineStop={handleEngineStop}
               nodeLabel={() => ''}
               cooldownTicks={150}
-              d3VelocityDecay={0.7}
+              d3VelocityDecay={0.3}
               nodeRelSize={5}
             />
           )}
