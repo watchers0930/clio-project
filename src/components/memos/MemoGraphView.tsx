@@ -134,15 +134,38 @@ export default function MemoGraphView({ data, onEdit, onMemoSaved }: Props) {
     setPanelNode(null);
   }, []);
 
-  // 시뮬레이션 시작 전 반발력·링크 거리 강화 — 노드 간격 2배
+  // 시뮬레이션 시작 전: 반발력·거리 설정 + 고립 노드 초기 위치 균등 배치
   useEffect(() => {
     const t = setTimeout(() => {
       if (!fgRef.current) return;
       fgRef.current.d3Force('charge')?.strength(-35);
       fgRef.current.d3Force('link')?.distance(40);
+
+      // 연결된 노드 ID 수집
+      const connectedIds = new Set<string>();
+      data.links.forEach((l) => {
+        const src = typeof l.source === 'string' ? l.source : (l.source as ForceGraphNode).id;
+        const tgt = typeof l.target === 'string' ? l.target : (l.target as ForceGraphNode).id;
+        connectedIds.add(src);
+        connectedIds.add(tgt);
+      });
+
+      // 고립 노드: 클러스터 주변 원형 균등 배치
+      const isolated = data.nodes.filter((n) => !connectedIds.has(n.id));
+      if (isolated.length > 0) {
+        const R = Math.min(dimensions.width, dimensions.height) * 0.3;
+        const graphNodes = fgRef.current.graphData().nodes as Array<{ id: string; x?: number; y?: number }>;
+        const nodeMap = new Map(graphNodes.map((n) => [n.id, n]));
+        isolated.forEach((n, i) => {
+          const angle = (i / isolated.length) * 2 * Math.PI - Math.PI / 2;
+          const gn = nodeMap.get(n.id);
+          if (gn) { gn.x = Math.cos(angle) * R; gn.y = Math.sin(angle) * R; }
+        });
+        fgRef.current.d3ReheatSimulation();
+      }
     }, 50);
     return () => clearTimeout(t);
-  }, [data.nodes, data.links]);
+  }, [data.nodes, data.links, dimensions]);
 
   const handleEngineStop = useCallback(() => {
     (data.nodes as unknown as Array<{ x?: number; y?: number; fx?: number; fy?: number }>)
