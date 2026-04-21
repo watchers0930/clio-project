@@ -173,7 +173,7 @@ export default function MemoGraphView({ data, onEdit, onMemoSaved }: Props) {
       const side = i % 2 === 0 ? 1 : -1;
       const dist = Math.ceil((i + 1) / 2) * spacing;
       n.x = cx + side * dist;
-      n.y = cy;
+      n.y = cy + 50;
       n.fx = n.x;
       n.fy = n.y;
     });
@@ -184,7 +184,13 @@ export default function MemoGraphView({ data, onEdit, onMemoSaved }: Props) {
     fgRef.current.d3Force('link', null);
     fgRef.current.d3Force('charge', null);
     fgRef.current.d3Force('center', null);
-    setTimeout(() => fgRef.current?.zoomToFit(400, 60), 50);
+    setTimeout(() => {
+      fgRef.current?.zoomToFit(400, 60);
+      setTimeout(() => {
+        const z = fgRef.current?.zoom();
+        if (z) fgRef.current?.zoom(z * 0.8, 300);
+      }, 450);
+    }, 50);
   }, [data.nodes, data.links]);
 
   const handleZoomIn  = useCallback(() => { fgRef.current?.zoom(fgRef.current.zoom() * 1.3, 300); }, []);
