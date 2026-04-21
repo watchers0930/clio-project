@@ -44,7 +44,7 @@ export default function MemoList({
   return (
     <div>
       {/* 검색 + 새 메모 + 탭 */}
-      <div className="flex items-center gap-3 mb-5">
+      <div className="flex items-center gap-3 mb-[40px]">
         <div className="relative flex-1">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A0A7B5]" />
           <input
