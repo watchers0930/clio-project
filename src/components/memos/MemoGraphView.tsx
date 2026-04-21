@@ -157,7 +157,7 @@ export default function MemoGraphView({ data, onEdit, onMemoSaved }: Props) {
     const n = node as ForceGraphNode & { x: number; y: number };
     const color = NODE_COLOR[n.color] ?? NODE_COLOR.default;
     const isMulti = selectedIdsRef.current.has(n.id);
-    const r = isMulti ? 8 : 5;
+    const r = isMulti ? 4 : 2.5;
 
     if (isMulti) { ctx.shadowColor = color; ctx.shadowBlur = 12; }
     ctx.beginPath();
