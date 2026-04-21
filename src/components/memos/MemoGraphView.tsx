@@ -61,7 +61,7 @@ interface Props {
 export default function MemoGraphView({ data, onEdit, onMemoSaved }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef        = useRef<any>(null);
-  const [dimensions, setDimensions] = useState({ width: 1400, height: 600 });
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   // 단일 노드 미리보기 (사이드패널)
   const [panelNode, setPanelNode] = useState<ForceGraphNode | null>(null);
@@ -154,7 +154,7 @@ export default function MemoGraphView({ data, onEdit, onMemoSaved }: Props) {
       fgRef.current.d3Force('link', null);
       fgRef.current.d3Force('charge', null);
       fgRef.current.d3Force('center', null);
-      fgRef.current.zoomToFit(400, 60);
+      setTimeout(() => fgRef.current?.zoomToFit(400, 60), 50);
     }
   }, [data.nodes]);
 
@@ -302,7 +302,7 @@ export default function MemoGraphView({ data, onEdit, onMemoSaved }: Props) {
             <div className="flex items-center justify-center h-full text-[13px] text-[#94A3B8]">
               메모가 없거나 연결된 메모가 없습니다
             </div>
-          ) : (
+          ) : dimensions.width > 0 ? (
             <ForceGraph2D
               ref={fgRef}
               graphData={filteredGraphData}
@@ -322,7 +322,7 @@ export default function MemoGraphView({ data, onEdit, onMemoSaved }: Props) {
               d3VelocityDecay={0.4}
               nodeRelSize={5}
             />
-          )}
+          ) : null}
 
           {/* 범례 + 임계값 슬라이더 */}
           <div className="absolute bottom-4 left-4 flex items-center gap-2 flex-wrap">
