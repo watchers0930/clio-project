@@ -69,8 +69,7 @@ function titleInContentScore(titleA: string, contentB: string | null): number {
 }
 
 const TITLE_THRESHOLD = 0.15;
-const CONTENT_THRESHOLD = 0.2;
-const SEMANTIC_THRESHOLD = 0.78;
+const SEMANTIC_THRESHOLD = 0.70;
 
 export async function GET() {
   try {
@@ -141,17 +140,7 @@ export async function GET() {
           continue;
         }
 
-        // 2순위: 제목 단어가 상대 내용에 포함 → 점선 (content)
-        const contentScore = Math.max(
-          titleInContentScore(a.title, b.content),
-          titleInContentScore(b.title, a.content),
-        );
-        if (contentScore >= CONTENT_THRESHOLD) {
-          links.push({ source: a.id, target: b.id, similarity: contentScore, type: 'content' });
-          continue;
-        }
-
-        // 3순위: 임베딩 의미 유사도 → 점선 (semantic)
+        // 2순위: 임베딩 의미 유사도 → 점선 (semantic)
         const vecA = embeddingMap.get(a.id);
         const vecB = embeddingMap.get(b.id);
         if (vecA && vecB) {

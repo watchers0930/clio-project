@@ -191,7 +191,7 @@ export default function MemoGraphView({ data, onEdit, onMemoSaved }: Props) {
     ctx.moveTo(sx, sy);
     ctx.lineTo(tx, ty);
     ctx.strokeStyle = isTitle ? LINK_TITLE : isSemantic ? LINK_SEMANTIC : LINK_DASHED;
-    ctx.lineWidth = isTitle ? 1.5 : 1;
+    ctx.lineWidth = 1;
     ctx.stroke();
     ctx.setLineDash([]);
   }, []);
