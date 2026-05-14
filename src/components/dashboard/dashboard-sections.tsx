@@ -44,6 +44,14 @@ interface DashboardData {
     commented: number;
     reflected: number;
   };
+  flow_diagnostics?: {
+    active_user_count: number;
+    search_user_count: number;
+    created_document_count: number;
+    completed_document_count: number;
+    total_comment_count: number;
+    reflected_comment_count: number;
+  };
 }
 
 export function DashboardMidSection({ recentFiles, loading }: { recentFiles: RecentFile[]; data: DashboardData | null; loading: boolean }) {

@@ -1,6 +1,6 @@
 type AuditClient = {
   from: (table: 'audit_logs') => {
-    insert: (payload: Record<string, unknown>) => Promise<unknown>;
+    insert: (payload: Record<string, unknown>) => PromiseLike<unknown>;
   };
 };
 
