@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { recordAuditEvent } from '@/lib/audit';
 import { canAccessDocument, canManageDocument, getUserRoleInfo } from '@/lib/permissions';
 
 export async function GET(
@@ -82,13 +83,13 @@ export async function POST(
       return NextResponse.json({ success: false, error: '권한 부여 실패' }, { status: 500 });
     }
 
-    await supabase.from('audit_logs').insert({
-      user_id: authUserId,
+    await recordAuditEvent(supabase, {
+      userId: authUserId,
       action: 'document.share',
-      target_type: 'document',
-      target_id: documentId,
+      targetType: 'document',
+      targetId: documentId,
       details: { shared_with_user: userId, shared_with_dept: departmentId, permission: permission ?? 'read' },
-    }).then(() => {}, () => {});
+    });
 
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch {

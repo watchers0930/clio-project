@@ -3,6 +3,7 @@ import { FilePlus, FolderOpen, Mic, Sparkles, ScrollText } from 'lucide-react';
 import {
   PLATFORM_LABEL,
 } from '@/lib/constants/ui';
+import { buildReportDraftHref } from '@/lib/documents/navigation';
 
 interface DocumentsPageHeaderProps {
   onOpenStt: () => void;
@@ -47,7 +48,7 @@ export function DocumentsPageHeader({
       description: '보고서 작성',
       icon: ScrollText,
       kind: 'link' as const,
-      href: '/reports',
+      href: buildReportDraftHref(),
     },
   ];
 

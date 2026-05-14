@@ -31,6 +31,19 @@ interface DashboardData {
   upload_trend?: Array<{ week: string; label: string; count: number }>;
   doc_dept_breakdown?: Record<string, number>;
   derived_document_count?: number;
+  flow_kpis?: {
+    upload_count_30d: number;
+    search_usage_rate_30d: number;
+    document_generation_completion_rate_30d: number;
+    shared_document_count: number;
+    comment_reflect_completion_rate_30d: number;
+  };
+  document_flow_funnel_30d?: {
+    created: number;
+    shared: number;
+    commented: number;
+    reflected: number;
+  };
 }
 
 export function DashboardMidSection({ recentFiles, loading }: { recentFiles: RecentFile[]; data: DashboardData | null; loading: boolean }) {
@@ -39,7 +52,17 @@ export function DashboardMidSection({ recentFiles, loading }: { recentFiles: Rec
   );
 }
 
-export function DashboardBottomSection({ data, loading }: { data: DashboardData | null; loading: boolean }) {
+export function DashboardBottomSection({
+  data,
+  loading,
+  flowWindowDays,
+  onFlowWindowChange,
+}: {
+  data: DashboardData | null;
+  loading: boolean;
+  flowWindowDays: 7 | 30;
+  onFlowWindowChange: (value: 7 | 30) => void;
+}) {
   const breakdown = data?.file_type_breakdown ?? {};
   const totalFileCount = Object.values(breakdown).reduce((a, b) => a + b, 0);
   const typeEntries = Object.entries(breakdown).sort(([, a], [, b]) => b - a).slice(0, 4);
@@ -49,6 +72,13 @@ export function DashboardBottomSection({ data, loading }: { data: DashboardData 
 
   return (
     <>
+      <FlowKpiSection
+        data={data}
+        loading={loading}
+        flowWindowDays={flowWindowDays}
+        onFlowWindowChange={onFlowWindowChange}
+      />
+
       <div className="grid grid-cols-1 gap-4 lg:gap-6 lg:grid-cols-[3fr_2fr]">
         <div className="overflow-hidden rounded-[26px] border border-border bg-card">
           <div className="border-b border-[#e5e5e7] px-4 py-4 sm:px-8 sm:py-6">
@@ -128,6 +158,124 @@ export function DashboardBottomSection({ data, loading }: { data: DashboardData 
       <ExpiryDashboardWidget />
       <DepartmentDocumentsCard docDeptBreakdown={data?.doc_dept_breakdown ?? {}} loading={loading} />
     </>
+  );
+}
+
+function FlowKpiSection({
+  data,
+  loading,
+  flowWindowDays,
+  onFlowWindowChange,
+}: {
+  data: DashboardData | null;
+  loading: boolean;
+  flowWindowDays: 7 | 30;
+  onFlowWindowChange: (value: 7 | 30) => void;
+}) {
+  const kpis = data?.flow_kpis;
+  const funnel = data?.document_flow_funnel_30d;
+  const diagnostics = data?.flow_diagnostics;
+
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:gap-6 xl:grid-cols-[2fr_3fr]">
+      <div className="overflow-hidden rounded-[26px] border border-border bg-card">
+        <div className="border-b border-[#e5e5e7] px-4 py-4 sm:px-8 sm:py-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-[16px] font-semibold text-foreground">핵심 KPI</h2>
+              <p className="mt-1 text-[12px] text-muted">최근 {flowWindowDays}일 기준 문서 운영 지표</p>
+            </div>
+            <div className="inline-flex rounded-full border border-[#E2E5EA] bg-[#fbfbfc] p-1">
+              {[7, 30].map((days) => (
+                <button
+                  key={days}
+                  onClick={() => onFlowWindowChange(days as 7 | 30)}
+                  className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                    flowWindowDays === days ? 'bg-[#1d1d1f] text-white' : 'text-[#6e6e73] hover:bg-white'
+                  }`}
+                >
+                  최근 {days}일
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        {loading || !kpis ? (
+          <div className="flex justify-center py-8"><Spinner size="sm" /></div>
+        ) : (
+          <div className="space-y-4 px-4 py-5 sm:px-8 sm:py-8">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+              <KpiCard label="업로드 수" value={`${kpis.upload_count_30d}`} helper={`최근 ${flowWindowDays}일`} />
+              <KpiCard label="검색 사용률" value={`${kpis.search_usage_rate_30d}%`} helper="활성 사용자 기준" />
+              <KpiCard label="문서 완료율" value={`${kpis.document_generation_completion_rate_30d}%`} helper="생성 문서 대비" />
+              <KpiCard label="공유 문서 수" value={`${kpis.shared_document_count}`} helper="현재 공유 상태" />
+              <KpiCard label="코멘트 반영률" value={`${kpis.comment_reflect_completion_rate_30d}%`} helper={`최근 ${flowWindowDays}일`} />
+            </div>
+            {diagnostics ? (
+              <div className="rounded-2xl border border-[#E2E5EA] bg-[#fbfbfc] px-4 py-4">
+                <p className="text-[12px] font-semibold text-[#1d1d1f]">진단용 원본 수치</p>
+                <p className="mt-1 text-[11px] leading-5 text-[#6e6e73]">
+                  KPI 해석이 맞는지 보려면 분모와 분자를 함께 확인하세요.
+                </p>
+                <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <DiagnosticItem label="활성 사용자" value={diagnostics.active_user_count} />
+                  <DiagnosticItem label="검색 사용자" value={diagnostics.search_user_count} />
+                  <DiagnosticItem label="생성 문서" value={diagnostics.created_document_count} />
+                  <DiagnosticItem label="완료 문서" value={diagnostics.completed_document_count} />
+                  <DiagnosticItem label="전체 코멘트" value={diagnostics.total_comment_count} />
+                  <DiagnosticItem label="반영 코멘트" value={diagnostics.reflected_comment_count} />
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )}
+      </div>
+
+      <div className="overflow-hidden rounded-[26px] border border-border bg-card">
+        <div className="border-b border-[#e5e5e7] px-4 py-4 sm:px-8 sm:py-6">
+          <h2 className="text-[16px] font-semibold text-foreground">문서 운영 퍼널</h2>
+          <p className="mt-1 text-[12px] text-muted">생성 - 공유 - 코멘트 - 반영</p>
+        </div>
+        {loading || !funnel ? (
+          <div className="flex justify-center py-8"><Spinner size="sm" /></div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 px-4 py-5 sm:grid-cols-4 sm:px-8 sm:py-8">
+            <FunnelCard label="생성" value={funnel.created} accent="bg-[#F3F8FF] text-[#2E6FF2]" />
+            <FunnelCard label="공유" value={funnel.shared} accent="bg-[#EEF7F1] text-[#258A4E]" />
+            <FunnelCard label="코멘트" value={funnel.commented} accent="bg-[#FAF5FF] text-[#7C3AED]" />
+            <FunnelCard label="반영" value={funnel.reflected} accent="bg-[#FFF8ED] text-[#B06D00]" />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function KpiCard({ label, value, helper }: { label: string; value: string; helper: string }) {
+  return (
+    <div className="rounded-2xl border border-[#E2E5EA] bg-[#fbfbfc] px-4 py-4">
+      <p className="text-[12px] text-[#6e6e73]">{label}</p>
+      <p className="mt-2 text-[22px] font-bold text-[#1d1d1f] font-num">{value}</p>
+      <p className="mt-1 text-[11px] text-[#7C8494]">{helper}</p>
+    </div>
+  );
+}
+
+function FunnelCard({ label, value, accent }: { label: string; value: number; accent: string }) {
+  return (
+    <div className="rounded-2xl border border-[#E2E5EA] bg-white px-4 py-4">
+      <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ${accent}`}>{label}</span>
+      <p className="mt-3 text-[24px] font-bold text-[#1d1d1f] font-num">{value}</p>
+    </div>
+  );
+}
+
+function DiagnosticItem({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-xl border border-[#E2E5EA] bg-white px-3 py-3">
+      <p className="text-[11px] text-[#6e6e73]">{label}</p>
+      <p className="mt-1 text-[18px] font-bold text-[#1d1d1f] font-num">{value}</p>
+    </div>
   );
 }
 

@@ -39,6 +39,28 @@ interface DashboardData {
   }>;
   file_type_breakdown: Record<string, number>;
   department_breakdown: Record<string, number>;
+  flow_window_days?: number;
+  flow_kpis?: {
+    upload_count_30d: number;
+    search_usage_rate_30d: number;
+    document_generation_completion_rate_30d: number;
+    shared_document_count: number;
+    comment_reflect_completion_rate_30d: number;
+  };
+  document_flow_funnel_30d?: {
+    created: number;
+    shared: number;
+    commented: number;
+    reflected: number;
+  };
+  flow_diagnostics?: {
+    active_user_count: number;
+    search_user_count: number;
+    created_document_count: number;
+    completed_document_count: number;
+    total_comment_count: number;
+    reflected_comment_count: number;
+  };
 }
 
 interface RecentFile {
@@ -132,6 +154,7 @@ export default function DashboardPage() {
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [flowWindowDays, setFlowWindowDays] = useState<7 | 30>(30);
 
   const fetchData = useCallback(async () => {
     try {
@@ -140,7 +163,7 @@ export default function DashboardPage() {
       const monthEnd = endOfMonth(now).toISOString();
 
       const [statsRes, filesRes, eventsRes] = await Promise.all([
-        fetch('/api/dashboard/stats'),
+        fetch(`/api/dashboard/stats?days=${flowWindowDays}`),
         fetch('/api/files?limit=5'),
         fetch(`/api/events?start=${encodeURIComponent(monthStart)}&end=${encodeURIComponent(monthEnd)}`),
       ]);
@@ -170,7 +193,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [flowWindowDays]);
 
   useEffect(() => {
     fetchData();
@@ -371,7 +394,12 @@ export default function DashboardPage() {
       </section>
 
       <DashboardMidSection recentFiles={recentFiles} data={data as never} loading={loading} />
-      <DashboardBottomSection data={data as never} loading={loading} />
+      <DashboardBottomSection
+        data={data as never}
+        loading={loading}
+        flowWindowDays={flowWindowDays}
+        onFlowWindowChange={setFlowWindowDays}
+      />
     </div>
   );
 }

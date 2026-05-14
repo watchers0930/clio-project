@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { CalendarDays, Mic, Search, Sparkles } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import { SttModal } from '@/components/meetings/SttModal';
+import { buildDocumentCreateHref } from '@/lib/documents/navigation';
 
 interface MeetingEvent {
   id: string;
@@ -97,7 +98,7 @@ function MeetingsPageContent() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#0071e3]">Meeting Workflow</p>
             <h1 className="text-[24px] font-bold leading-[1.25] text-[#1d1d1f] sm:text-[28px]">회의</h1>
             <p className="max-w-2xl text-[15px] text-[#6e6e73]" style={{ lineHeight: '20px' }}>
-              회의록 생성이나 기존 회의록 검토부터 시작하세요.
+              회의는 독립 기능이 아니라 문서 입력 채널입니다. 회의록 생성이나 기존 회의록 검토부터 시작한 뒤 문서 운영 흐름으로 넘기세요.
             </p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <MetricCard label="다가오는 회의" value={events.length} />
@@ -143,7 +144,11 @@ function MeetingsPageContent() {
                 description="초안 바로 만들기"
                 onClick={() => {
                   const focus = nextMeeting?.title ?? '회의';
-                  router.push(`/documents?create=true&originContext=meeting_minutes&contextTitle=${encodeURIComponent(focus)}&instructions=${encodeURIComponent(`${focus} 회의 내용을 정리한 회의록 초안을 작성하세요.`)}`);
+                  router.push(buildDocumentCreateHref({
+                    originContext: 'meeting_minutes',
+                    contextTitle: focus,
+                    instructions: `${focus} 회의 내용을 정리한 회의록 초안을 작성하세요.`,
+                  }));
                 }}
               />
               <QuickAction
@@ -176,7 +181,11 @@ function MeetingsPageContent() {
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2.5">
                   <button
-                    onClick={() => router.push(`/documents?create=true&originContext=meeting_minutes&contextTitle=${encodeURIComponent(event.title)}&instructions=${encodeURIComponent(`${event.title} 회의 내용을 정리한 회의록 초안을 작성하세요.`)}`)}
+                    onClick={() => router.push(buildDocumentCreateHref({
+                      originContext: 'meeting_minutes',
+                      contextTitle: event.title,
+                      instructions: `${event.title} 회의 내용을 정리한 회의록 초안을 작성하세요.`,
+                    }))}
                     className="rounded-xl bg-[#1d1d1f] px-4 py-2.5 text-[12px] font-medium text-white hover:bg-[#0071e3] transition-colors"
                   >
                     회의록 작성
@@ -212,7 +221,12 @@ function MeetingsPageContent() {
                     문서 열기
                   </button>
                   <button
-                    onClick={() => router.push(`/documents?create=true&originDocumentId=${encodeURIComponent(doc.id)}&originContext=meeting_followup&contextTitle=${encodeURIComponent(doc.title)}&instructions=${encodeURIComponent(`"${doc.title}" 회의 문서를 바탕으로 후속 보고 문서를 작성해줘.`)}`)}
+                    onClick={() => router.push(buildDocumentCreateHref({
+                      originDocumentId: doc.id,
+                      originContext: 'meeting_followup',
+                      contextTitle: doc.title,
+                      instructions: `"${doc.title}" 회의 문서를 바탕으로 후속 보고 문서를 작성해줘.`,
+                    }))}
                     className="rounded-xl border border-[#D7EFDE] px-4 py-2.5 text-[12px] font-medium text-[#258A4E] hover:bg-[#F4FBF6] transition-colors"
                   >
                     후속 문서 작성

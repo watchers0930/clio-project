@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { recordAuditEvent } from '@/lib/audit';
 import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
 
 async function loadUserNameMap(admin: ReturnType<typeof createAdminSupabaseClient>, userIds: string[]) {
@@ -101,6 +102,17 @@ export async function POST(
 
     if (error) throw error;
     const userNameMap = await loadUserNameMap(admin, [authUserId]);
+
+    await recordAuditEvent(admin, {
+      userId: authUserId,
+      action: 'document.comment.create',
+      targetType: 'document',
+      targetId: documentId,
+      details: {
+        comment_id: data.id,
+        content_length: content.length,
+      },
+    });
 
     return NextResponse.json({
       success: true,

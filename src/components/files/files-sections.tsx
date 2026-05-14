@@ -71,6 +71,8 @@ export function FilesHeaderActions({ layoutConfig }: HeaderActionsProps) {
     >
       <div className="flex flex-col gap-3 sm:gap-4">
         <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#0071e3]">Core Flow</p>
+          <p className="mt-2 text-[12px] text-[#7C8494]">문서허브 - AI 검색 - 문서 생성 - 검토 반영 - 공유</p>
           <h2 className="text-[22px] font-bold text-[#1d1d1f] sm:text-2xl">문서 자산 목록</h2>
           <p className="mt-2 text-[13px] text-[#6e6e73]">업로드된 문서와 생성 문서를 바로 처리하세요.</p>
         </div>
@@ -204,6 +206,10 @@ export function FilesListView({
   onToggleAll,
   onToggleSelect,
   onOpenFile,
+  onOpenCommentsFromFile,
+  onOpenSearchFromFile,
+  onOpenDocumentsFromFile,
+  onOpenContractRiskFromFile,
 }: FilesContentProps) {
   return (
     <div className="overflow-hidden rounded-[16px] border border-[#e5e5e7] bg-white shadow-sm">
@@ -216,7 +222,7 @@ export function FilesListView({
               </th>
               <th className="px-6 py-5.5 font-medium">파일명</th>
               <th className="hidden px-6 py-5.5 font-medium sm:table-cell">부서</th>
-              <th className="hidden px-6 py-5.5 font-medium md:table-cell">공개 범위</th>
+              <th className="hidden px-6 py-5.5 font-medium md:table-cell">다음 작업</th>
               <th className="hidden px-6 py-5.5 font-medium md:table-cell">크기</th>
               <th className="hidden px-6 py-5.5 font-medium md:table-cell">업로드일</th>
               <th className="px-6 py-5.5 font-medium">상태</th>
@@ -242,7 +248,20 @@ export function FilesListView({
                 </td>
                 <td className="hidden px-6 py-6 leading-6 text-[#6e6e73] sm:table-cell">{file.department}</td>
                 <td className="hidden px-6 py-6 md:table-cell">
-                  <ScopeBadge scope={file.scope} />
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => onOpenSearchFromFile(file)} className="rounded-lg border border-[#D7E7FF] px-2.5 py-1.5 text-[11px] font-medium text-[#2E6FF2] hover:bg-[#EEF6FF] transition-colors">
+                      검색
+                    </button>
+                    <button onClick={() => onOpenDocumentsFromFile(file)} className="rounded-lg border border-[#D7EFDE] px-2.5 py-1.5 text-[11px] font-medium text-[#258A4E] hover:bg-[#F4FBF6] transition-colors">
+                      생성
+                    </button>
+                    <button onClick={() => onOpenCommentsFromFile(file)} className="rounded-lg border border-[#E6DBFF] px-2.5 py-1.5 text-[11px] font-medium text-[#7C3AED] hover:bg-[#FAF5FF] transition-colors">
+                      검토
+                    </button>
+                    <button onClick={() => onOpenContractRiskFromFile(file)} className="rounded-lg border border-[#FDE4E4] px-2.5 py-1.5 text-[11px] font-medium text-[#C24141] hover:bg-[#FFF5F5] transition-colors">
+                      리스크
+                    </button>
+                  </div>
                 </td>
                 <td className="hidden px-6 py-6 leading-6 text-[#6e6e73] md:table-cell">{file.size}</td>
                 <td className="hidden px-6 py-6 leading-6 text-[#6e6e73] md:table-cell">{file.uploadDate}</td>
@@ -286,6 +305,17 @@ export function FilesListView({
                 <div className="sr-only">
                   <ScopeBadge scope={file.scope} />
                   <span className={`inline-flex min-h-[24px] items-center rounded-full px-2.5 py-0 text-xs font-medium leading-none ${FILE_STATUS_COLOR[file.status]}`}>{file.status}</span>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button onClick={() => onOpenSearchFromFile(file)} className="rounded-lg border border-[#D7E7FF] px-3 py-2 text-[11px] font-medium text-[#2E6FF2] hover:bg-[#EEF6FF] transition-colors">
+                    관련 문서 검색
+                  </button>
+                  <button onClick={() => onOpenDocumentsFromFile(file)} className="rounded-lg border border-[#D7EFDE] px-3 py-2 text-[11px] font-medium text-[#258A4E] hover:bg-[#F4FBF6] transition-colors">
+                    후속 문서 작성
+                  </button>
+                  <button onClick={() => onOpenCommentsFromFile(file)} className="rounded-lg border border-[#E6DBFF] px-3 py-2 text-[11px] font-medium text-[#7C3AED] hover:bg-[#FAF5FF] transition-colors">
+                    검토 문서 열기
+                  </button>
                 </div>
               </div>
             </div>

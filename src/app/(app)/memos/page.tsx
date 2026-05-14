@@ -188,7 +188,7 @@ function MemosPageContent() {
               <h1 className="text-[24px] font-bold leading-[1.25] text-[#1d1d1f] sm:text-[28px]">메모</h1>
               <p className="max-w-2xl text-[15px] text-[#6e6e73]" style={{ lineHeight: '20px' }}>
                 메모는 문서 작업 사이에서 아이디어와 근거를 붙잡아 두는 중간 작업 공간입니다.
-                메모에서 정리한 포인트를 AI 검색, 문서 생성, 공유 가능한 운영 문서로 바로 이어갈 수 있습니다.
+                메모 자체를 키우기보다, 여기서 정리한 포인트를 AI 검색, 문서 생성, 공유 가능한 운영 문서로 바로 이어가는 데 집중합니다.
               </p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <MetricCard label="전체 메모" value={memos.length} />

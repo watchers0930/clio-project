@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { SearchInput, EmptyState, Spinner } from '@/components/ui';
 import { VoiceInputButton } from '@/components/common/VoiceInputButton';
+import { DocumentActionRow } from '@/components/documents/document-action-row';
 import { ArrowRight } from 'lucide-react';
 import type { SearchResult } from './types';
 
@@ -378,30 +379,44 @@ export function FileSearchTab({
                     <p className="mt-5 text-[12px] leading-5 text-[#5E6573]">{result.excerpt}</p>
 
                     <div aria-hidden="true" style={{ height: 10 }} />
-                    <div className="mt-5 flex flex-wrap items-center gap-2.5">
-                      <button onClick={() => onOpenResult(result)} className="inline-flex items-center gap-2 rounded-xl bg-[#1d1d1f] px-4 py-2.5 text-[12px] font-medium text-white transition-colors hover:bg-[#0071e3]">
-                        {result.sourceType === 'document' ? '문서 열기' : '파일 열기'}
-                        <ArrowRight size={14} />
-                      </button>
-                      <button onClick={() => onOpenComments(result)} className="inline-flex items-center gap-2 rounded-xl border border-[#D7E7FF] px-4 py-2.5 text-[12px] font-medium text-[#2E6FF2] transition-colors hover:bg-[#eef6ff]">
-                        {result.sourceType === 'document' ? '코멘트 보기' : 'AI에게 묻기'}
-                      </button>
-                      <button onClick={() => onOpenShare(result)} className="inline-flex items-center gap-2 rounded-xl border border-[#E6DBFF] px-4 py-2.5 text-[12px] font-medium text-[#7B61FF] transition-colors hover:bg-[#f6f3ff]">
-                        공유
-                      </button>
-                      <button onClick={() => onOpenDocumentsFromResult(result)} className="inline-flex items-center gap-2 rounded-xl border border-[#0071e3] px-4 py-2.5 text-[12px] font-medium text-[#0071e3] transition-colors hover:bg-[#eef6ff]">
-                        새 문서 활용
-                        <ArrowRight size={14} />
-                      </button>
-                      {canAnalyzeContract(result) ? (
-                        <button onClick={() => onOpenContractRiskFromResult(result)} className="inline-flex items-center gap-2 rounded-xl border border-[#f59e0b] px-4 py-2.5 text-[12px] font-medium text-[#f59e0b] transition-colors hover:bg-amber-50">
-                          계약 리스크 분석
-                        </button>
-                      ) : null}
-                      <button onClick={onOpenFiles} className="inline-flex items-center gap-2 rounded-xl border border-[#e5e5e7] px-4 py-2.5 text-[12px] font-medium text-[#6e6e73] transition-colors hover:bg-[#f5f5f7]">
-                        문서허브 보기
-                      </button>
-                    </div>
+                    <DocumentActionRow
+                      items={[
+                        {
+                          label: result.sourceType === 'document' ? '문서 열기' : '파일 열기',
+                          onClick: () => onOpenResult(result),
+                          variant: 'primary',
+                          trailing: <ArrowRight size={14} />,
+                        },
+                        {
+                          label: result.sourceType === 'document' ? '코멘트 보기' : 'AI에게 묻기',
+                          onClick: () => onOpenComments(result),
+                          variant: 'secondary',
+                        },
+                        {
+                          label: '공유',
+                          onClick: () => onOpenShare(result),
+                          variant: 'share',
+                        },
+                        {
+                          label: '새 문서 활용',
+                          onClick: () => onOpenDocumentsFromResult(result),
+                          variant: 'secondary',
+                          trailing: <ArrowRight size={14} />,
+                        },
+                        ...(canAnalyzeContract(result)
+                          ? [{
+                              label: '계약 리스크 분석',
+                              onClick: () => onOpenContractRiskFromResult(result),
+                              variant: 'warning' as const,
+                            }]
+                          : []),
+                        {
+                          label: '문서허브 보기',
+                          onClick: onOpenFiles,
+                          variant: 'muted',
+                        },
+                      ]}
+                    />
 
                     <div className="mt-4 flex items-center gap-4 border-t border-[#f5f5f7] pt-4">
                       <button onClick={() => onOpenPreview(result.id)} className="flex items-center gap-1.5 text-sm font-medium text-[#6e6e73] transition-colors hover:text-[#1d1d1f]">
@@ -487,14 +502,32 @@ function WorkflowResumeCard({
           </div>
           <p className="line-clamp-2 text-[12px] leading-5 text-[#5E6573]" style={{ marginTop: spacing.excerptMarginTop }}>{result.excerpt}</p>
           <div aria-hidden="true" style={{ height: 10 }} />
-          <div className="flex flex-wrap gap-2.5" style={{ marginTop: spacing.actionsMarginTop }}>
-            <button onClick={() => onOpenResult(result)} className="inline-flex items-center gap-2 rounded-xl bg-[#1d1d1f] px-4 py-2.5 text-[12px] font-medium text-white transition-colors hover:bg-[#0071e3]">
-              {primaryActionLabel}
-              <ArrowRight size={14} />
-            </button>
-            <button onClick={() => onSecondaryAction(result)} className="inline-flex items-center gap-2 rounded-xl border border-[#D7E7FF] px-4 py-2.5 text-[12px] font-medium text-[#2E6FF2] transition-colors hover:bg-[#eef6ff]">{secondaryActionLabel}</button>
-            <button onClick={() => onShare(result)} className="inline-flex items-center gap-2 rounded-xl border border-[#E6DBFF] px-4 py-2.5 text-[12px] font-medium text-[#7B61FF] transition-colors hover:bg-[#f6f3ff]">공유</button>
-            <button onClick={() => onTertiaryAction(result)} className="inline-flex items-center gap-2 rounded-xl border border-[#0071e3] px-4 py-2.5 text-[12px] font-medium text-[#0071e3] transition-colors hover:bg-[#eef6ff]">{tertiaryActionLabel}</button>
+          <div style={{ marginTop: spacing.actionsMarginTop }}>
+            <DocumentActionRow
+              items={[
+                {
+                  label: primaryActionLabel,
+                  onClick: () => onOpenResult(result),
+                  variant: 'primary',
+                  trailing: <ArrowRight size={14} />,
+                },
+                {
+                  label: secondaryActionLabel,
+                  onClick: () => onSecondaryAction(result),
+                  variant: 'secondary',
+                },
+                {
+                  label: '공유',
+                  onClick: () => onShare(result),
+                  variant: 'share',
+                },
+                {
+                  label: tertiaryActionLabel,
+                  onClick: () => onTertiaryAction(result),
+                  variant: 'secondary',
+                },
+              ]}
+            />
           </div>
         </div>
       ) : (

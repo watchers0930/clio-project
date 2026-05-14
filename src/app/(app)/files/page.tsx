@@ -3,6 +3,7 @@
 import { Suspense, useState } from 'react';
 import { EmptyState } from '@/components/ui';
 import { ShareLinkModal } from '@/components/documents/ShareLinkModal';
+import { buildDocumentCreateHref } from '@/lib/documents/navigation';
 import {
   BulkActionsBar,
   FilesFilterBar,
@@ -100,7 +101,10 @@ function FilesPage() {
       return;
     }
 
-    router.push(`/documents?create=true&files=${encodeURIComponent(file.id)}&instructions=${encodeURIComponent(`"${file.name}" 파일을 검토용 문서로 정리하고 코멘트를 받을 수 있게 초안을 작성하세요.`)}`);
+    router.push(buildDocumentCreateHref({
+      fileIds: [file.id],
+      instructions: `"${file.name}" 파일을 검토용 문서로 정리하고 코멘트를 받을 수 있게 초안을 작성하세요.`,
+    }));
   };
 
   if (loading) return <FilesPageSkeleton />;
@@ -129,6 +133,36 @@ function FilesPage() {
         onResourceFilterChange={(value) => { setResourceFilter(value); setPage(1); }}
         mode="actions-only"
       />
+
+      <section className="rounded-2xl border border-[#D7E7FF] bg-[#F7FBFF] px-4 py-4 sm:px-5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#2E6FF2]">Next Step</p>
+            <p className="mt-1 text-[13px] font-semibold text-[#1B1F2B]">문서를 올린 뒤 바로 검색, 생성, 검토 흐름으로 넘기세요.</p>
+            <p className="mt-1 text-[12px] leading-5 text-[#6B7280]">문서허브는 저장소가 아니라 이후 작업의 시작점입니다.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => router.push('/search')}
+              className="rounded-xl border border-[#D7E7FF] bg-white px-4 py-2.5 text-[12px] font-medium text-[#2E6FF2] hover:bg-[#EEF6FF] transition-colors"
+            >
+              AI 검색
+            </button>
+            <button
+              onClick={() => router.push(buildDocumentCreateHref())}
+              className="rounded-xl bg-[#1d1d1f] px-4 py-2.5 text-[12px] font-medium text-white hover:bg-[#0071e3] transition-colors"
+            >
+              새 문서 생성
+            </button>
+            <button
+              onClick={() => router.push('/reviews')}
+              className="rounded-xl border border-[#E6DBFF] bg-white px-4 py-2.5 text-[12px] font-medium text-[#7C3AED] hover:bg-[#FAF5FF] transition-colors"
+            >
+              검토 큐
+            </button>
+          </div>
+        </div>
+      </section>
 
       <div className="flex items-center justify-between gap-3 py-[12px]">
         <p className="text-sm text-[#6e6e73]">
@@ -167,7 +201,10 @@ function FilesPage() {
           onOpenFile={handleOpenFile}
           onOpenCommentsFromFile={openCommentsFromFile}
           onOpenSearchFromFile={(file) => router.push(`/search?q=${encodeURIComponent(file.name)}`)}
-          onOpenDocumentsFromFile={(file) => router.push(`/documents?create=true&files=${encodeURIComponent(file.id)}&instructions=${encodeURIComponent(`"${file.name}" 파일을 참고 자료로 사용해 후속 문서를 작성하세요.`)}`)}
+          onOpenDocumentsFromFile={(file) => router.push(buildDocumentCreateHref({
+            fileIds: [file.id],
+            instructions: `"${file.name}" 파일을 참고 자료로 사용해 후속 문서를 작성하세요.`,
+          }))}
           onOpenContractRiskFromFile={(file) => router.push(`/contract-risk?source=${encodeURIComponent(file.name)}`)}
           onOpenShare={(file) => setShareTarget({ id: file.id, title: file.name, type: file.sourceType === 'document' ? 'document' : 'file' })}
           onDownload={handleDownload}

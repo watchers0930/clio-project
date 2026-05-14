@@ -212,6 +212,28 @@ export interface DashboardStats {
   upload_trend?: Array<{ week: string; label: string; count: number }>;
   doc_dept_breakdown?: Record<string, number>;
   derived_document_count?: number;
+  flow_kpis?: {
+    upload_count_30d: number;
+    search_usage_rate_30d: number;
+    document_generation_completion_rate_30d: number;
+    shared_document_count: number;
+    comment_reflect_completion_rate_30d: number;
+  };
+  document_flow_funnel_30d?: {
+    created: number;
+    shared: number;
+    commented: number;
+    reflected: number;
+  };
+  flow_window_days?: number;
+  flow_diagnostics?: {
+    active_user_count: number;
+    search_user_count: number;
+    created_document_count: number;
+    completed_document_count: number;
+    total_comment_count: number;
+    reflected_comment_count: number;
+  };
 }
 
 export interface WorkLog {

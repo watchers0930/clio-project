@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRightLeft, ArrowUpRight, MessageSquareText, Share2 } from 'lucide-react';
 import { Spinner } from '@/components/ui';
+import { DocumentActionRow } from '@/components/documents/document-action-row';
+import { buildDocumentCreateHref } from '@/lib/documents/navigation';
 
 interface SharedDocCard {
   id: string;
@@ -98,6 +100,10 @@ export default function SharedDocumentsPage() {
                 부서나 사용자에게 공유받은 문서와, 내가 외부 링크나 내부 공유로 배포 중인 문서를 한곳에서 다시 확인합니다.
                 여기서 바로 문서 상세, 코멘트 검토, 새 문서 활용으로 이어집니다.
               </p>
+              <div className="rounded-2xl border border-[#D7E7FF] bg-[#F7FBFF] px-4 py-3.5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#2E6FF2]">Core Flow</p>
+                <p className="mt-1 text-[12px] leading-5 text-[#425466]">공유 문서는 검토 반영과 후속 문서 작성으로 이어지는 운영 단계입니다.</p>
+              </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <MetricCard label="나에게 공유됨" value={data?.incomingCount ?? 0} />
                 <MetricCard label="내가 공유 중" value={data?.outgoingCount ?? 0} />
@@ -131,8 +137,13 @@ export default function SharedDocumentsPage() {
                     const nextDoc = data?.incomingDocuments[0];
                     router.push(
                       nextDoc
-                        ? `/documents?create=true&originDocumentId=${encodeURIComponent(nextDoc.id)}&originContext=shared_followup&contextTitle=${encodeURIComponent(nextDoc.title)}&instructions=${encodeURIComponent(`"${nextDoc.title}" 문서를 바탕으로 후속 문서를 작성해줘.`)}`
-                        : '/documents?create=true',
+                        ? buildDocumentCreateHref({
+                            originDocumentId: nextDoc.id,
+                            originContext: 'shared_followup',
+                            contextTitle: nextDoc.title,
+                            instructions: `"${nextDoc.title}" 문서를 바탕으로 후속 문서를 작성해줘.`,
+                          })
+                        : buildDocumentCreateHref(),
                     );
                   }}
                 />
@@ -150,7 +161,12 @@ export default function SharedDocumentsPage() {
           items={data?.incomingDocuments ?? []}
           onOpen={(item) => router.push(item.href)}
           onOpenComments={(item) => router.push(`${item.href}#document-comment-panel`)}
-          onReuse={(item) => router.push(`/documents?create=true&originDocumentId=${encodeURIComponent(item.id)}&originContext=shared_followup&contextTitle=${encodeURIComponent(item.title)}&instructions=${encodeURIComponent(`"${item.title}" 문서를 참고해 후속 문서를 작성해줘.`)}`)}
+          onReuse={(item) => router.push(buildDocumentCreateHref({
+            originDocumentId: item.id,
+            originContext: 'shared_followup',
+            contextTitle: item.title,
+            instructions: `"${item.title}" 문서를 참고해 후속 문서를 작성해줘.`,
+          }))}
         />
         <SharedDocSection
           title="내가 공유 중인 문서"
@@ -159,7 +175,12 @@ export default function SharedDocumentsPage() {
           items={data?.outgoingDocuments ?? []}
           onOpen={(item) => router.push(item.href)}
           onOpenComments={(item) => router.push(`${item.href}#document-comment-panel`)}
-          onReuse={(item) => router.push(`/documents?create=true&originDocumentId=${encodeURIComponent(item.id)}&originContext=shared_followup&contextTitle=${encodeURIComponent(item.title)}&instructions=${encodeURIComponent(`"${item.title}" 문서를 바탕으로 새 버전이나 공유용 문서를 작성해줘.`)}`)}
+          onReuse={(item) => router.push(buildDocumentCreateHref({
+            originDocumentId: item.id,
+            originContext: 'shared_followup',
+            contextTitle: item.title,
+            instructions: `"${item.title}" 문서를 바탕으로 새 버전이나 공유용 문서를 작성해줘.`,
+          }))}
         />
       </div>
     </div>
@@ -241,18 +262,26 @@ function SharedDocSection({
               )}
             </div>
             <p className="mt-3 text-[12px] leading-5 text-[#6e6e73]">{buildShareMeta(item)}</p>
-            <div className="mt-4 flex flex-wrap gap-2.5">
-              <button onClick={() => onOpen(item)} className="inline-flex items-center gap-2 rounded-xl bg-[#1d1d1f] px-4 py-2.5 text-[12px] font-medium text-white hover:bg-[#0071e3] transition-colors">
-                문서 열기
-                <ArrowUpRight size={14} />
-              </button>
-              <button onClick={() => onOpenComments(item)} className="rounded-xl border border-[#E6DBFF] px-4 py-2.5 text-[12px] font-medium text-[#7C3AED] hover:bg-[#FAF5FF] transition-colors">
-                코멘트 보기
-              </button>
-              <button onClick={() => onReuse(item)} className="rounded-xl border border-[#D7E7FF] px-4 py-2.5 text-[12px] font-medium text-[#2E6FF2] hover:bg-[#eef6ff] transition-colors">
-                새 문서 활용
-              </button>
-            </div>
+            <DocumentActionRow
+              items={[
+                {
+                  label: '문서 열기',
+                  onClick: () => onOpen(item),
+                  variant: 'primary',
+                  trailing: <ArrowUpRight size={14} />,
+                },
+                {
+                  label: '코멘트 보기',
+                  onClick: () => onOpenComments(item),
+                  variant: 'review',
+                },
+                {
+                  label: '새 문서 활용',
+                  onClick: () => onReuse(item),
+                  variant: 'secondary',
+                },
+              ]}
+            />
           </div>
         ))}
       </div>

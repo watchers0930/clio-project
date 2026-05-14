@@ -16,7 +16,6 @@ import {
   MessageSquareText,
   ShieldAlert,
   StickyNote,
-  BarChart3,
   Settings,
   ChevronsLeft,
   ChevronsRight,
@@ -47,13 +46,12 @@ const navItems: NavItem[] = [
   { group: 'collab', label: '일정/할일', href: '/schedule', icon: CalendarDays, description: '회의와 실행 일정 정리' },
   { group: 'collab', label: '메모', href: '/memos', icon: StickyNote, description: '문서와 연결되는 메모' },
   { group: 'support', label: '계약 리스크', href: '/contract-risk', icon: ShieldAlert, description: '특정 문서용 전문 분석 기능' },
-  { group: 'support', label: '보고서', href: '/reports', icon: BarChart3, description: '보고 문서를 문서 생성 흐름으로 연결' },
   { group: 'support', label: '설정', href: '/settings', icon: Settings, description: '사용자, 부서, 템플릿, 서명 설정' },
 ];
 
 const navGroups: Array<{ key: NavItem['group']; label: string; accent: string; helper: string }> = [
   { key: 'core', label: '문서 운영', accent: 'text-white/65', helper: PLATFORM_CORE_FLOW },
-  { key: 'collab', label: '협업', accent: 'text-white/58', helper: '대화 · 회의 · 메모' },
+  { key: 'collab', label: '기타 메뉴', accent: 'text-white/58', helper: '메시지 · 회의 · 일정/할일 · 메모' },
   { key: 'support', label: '업무 지원', accent: 'text-white/58', helper: '전문 기능 · 설정' },
 ];
 

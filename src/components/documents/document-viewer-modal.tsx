@@ -28,6 +28,7 @@ interface DocumentViewerModalProps {
   onReuseDocument: (doc: DocumentItem) => void;
   onSearchRelated: (doc: DocumentItem) => void;
   onOpenMemo: (doc: DocumentItem) => void;
+  onOpenContractRisk: (doc: DocumentItem) => void;
   onSave: () => void;
   onComplete: () => void;
   onRevertToDraft: () => void;
@@ -68,6 +69,7 @@ export function DocumentViewerModal({
   onReuseDocument,
   onSearchRelated,
   onOpenMemo,
+  onOpenContractRisk,
   onSave,
   onComplete,
   onRevertToDraft,
@@ -145,8 +147,8 @@ export function DocumentViewerModal({
                 <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7C8494]">Workflow</span>
                 <span className="text-[12px] text-[#1B1F2B]">
                   {isDraft
-                    ? '초안 편집 -> 공유 검토 -> 댓글 반영 -> 완료 처리'
-                    : '완성 문서 -> 공유 -> 후속 수정 -> 버전 관리 -> 재활용'}
+                    ? '저장 -> 검토 공유 -> 댓글 반영 -> 완료 처리'
+                    : '검색/재활용 -> 수정 반영 -> 버전 관리 -> 공유 운영'}
                 </span>
               </div>
             </div>
@@ -158,6 +160,7 @@ export function DocumentViewerModal({
               onOpenShare={() => onOpenShare(viewDoc)}
               onOpenVersions={() => onOpenVersions(viewDoc.id)}
               onReuse={() => onReuseDocument(viewDoc)}
+              onOpenContractRisk={() => onOpenContractRisk(viewDoc)}
               onOpenMemo={() => onOpenMemo(viewDoc)}
               onSearchRelated={() => onSearchRelated(viewDoc)}
             />
@@ -258,6 +261,9 @@ export function DocumentViewerModal({
                 <select value={selectedFont} onChange={(e) => onChangeSelectedFont(e.target.value)} className="px-3 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] bg-white max-w-[120px]">
                   {fontOptions.map((font) => <option key={font} value={font}>{font}</option>)}
                 </select>
+                <button onClick={() => onOpenContractRisk(viewDoc)} className="px-4 py-2.5 rounded-xl border border-[#FDE4E4] text-sm text-[#C24141] font-medium hover:bg-[#FFF5F5] transition-colors whitespace-nowrap">
+                  계약 리스크 검토
+                </button>
                 <button onClick={() => onDownload(viewDoc)} className="px-4 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors whitespace-nowrap">
                   다운로드
                 </button>

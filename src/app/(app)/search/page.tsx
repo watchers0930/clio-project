@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
 import { isContractTemplate } from '@/lib/contract-fields';
+import { buildDocumentCreateHref } from '@/lib/documents/navigation';
 import {
   AiSearchTab,
   FileSearchTab,
@@ -264,7 +265,9 @@ export default function SearchPage() {
         query={query}
         onActivateFileTab={() => setActiveTab('file')}
         onActivateAiTab={() => setActiveTab('ai')}
-        onOpenDocuments={() => router.push(`/documents?create=true${query.trim() ? `&instructions=${encodeURIComponent(`"${query.trim()}" 관련 내용을 반영해 문서를 작성해줘.`)}` : ''}`)}
+        onOpenDocuments={() => router.push(buildDocumentCreateHref({
+          instructions: query.trim() ? `"${query.trim()}" 관련 내용을 반영해 문서를 작성해줘.` : null,
+        }))}
         onOpenContractRisk={() => router.push(`/contract-risk${query.trim() ? `?source=${encodeURIComponent(query.trim())}` : ''}`)}
         onOpenFiles={() => router.push('/files')}
       />
@@ -301,7 +304,10 @@ export default function SearchPage() {
             onToggleSummary={(id) => setExpandedSummary(expandedSummary === id ? null : id)}
             onDownloadOriginal={(result) => { void handleDownloadOriginal(result); }}
             onStartChat={startChatFromResult}
-            onOpenDocumentsFromResult={(result) => router.push(`/documents?create=true&files=${encodeURIComponent(result.id)}&instructions=${encodeURIComponent(`"${result.name}" 문서를 중심으로 문서를 작성해줘.`)}`)}
+            onOpenDocumentsFromResult={(result) => router.push(buildDocumentCreateHref({
+              fileIds: [result.id],
+              instructions: `"${result.name}" 문서를 중심으로 문서를 작성해줘.`,
+            }))}
             onOpenContractRiskFromResult={(result) => router.push(`/contract-risk?source=${encodeURIComponent(result.name)}`)}
             onOpenFiles={() => router.push('/files')}
             canAnalyzeContract={canAnalyzeContract}

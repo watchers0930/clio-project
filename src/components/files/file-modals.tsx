@@ -1,7 +1,9 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { buildDocumentCreateHref } from '@/lib/documents/navigation';
 import { AutofillModal } from '@/components/common/AutofillModal';
+import { DocumentActionStack } from '@/components/documents/document-action-row';
 import { ConfirmDialog, Spinner } from '@/components/ui';
 import { FILE_STATUS_COLOR, FILE_TYPE_BADGE } from '@/lib/constants/ui';
 import { formatSize, getFileType } from '@/lib/utils/format';
@@ -238,30 +240,67 @@ export function FileDetailModal({
           {showRecommendedActions && (
             <div className="flex flex-col gap-[20px]">
               <p className="text-[11px] text-[#9CA3AF] font-medium">문서 운영 다음 작업</p>
-              {isDocForm && (
-                <button onClick={() => onAutofill(file)} className="w-full py-3 rounded-xl border border-[#2E6FF2] text-[#2E6FF2] text-[13px] font-medium hover:bg-[#2E6FF2]/5 transition-colors">
-                  ✨ 자동채우기
-                </button>
-              )}
-              <button onClick={() => { router.push(`/documents?create=true&files=${encodeURIComponent(file.id)}&instructions=${encodeURIComponent(`"${file.name}" 파일을 참고 자료로 사용해 후속 문서를 작성하세요.`)}`); onClose(); }} className="w-full py-3 rounded-xl border border-[#10b981] text-[#10b981] text-[13px] font-medium hover:bg-emerald-50 transition-colors">
-                📄 이 파일로 후속 문서 작성
-              </button>
-              {(isContract || ['DOCX', 'HWPX', 'HWP', 'PDF'].includes(ext)) && (
-                <button onClick={() => { router.push(`/contract-risk?source=${encodeURIComponent(file.name)}`); onClose(); }} className="w-full py-3 rounded-xl border border-[#f59e0b] text-[#f59e0b] text-[13px] font-medium hover:bg-amber-50 transition-colors">
-                  🛡 계약 리스크 분석
-                </button>
-              )}
-              <button onClick={() => { router.push(`/search?q=${encodeURIComponent(file.name)}`); onClose(); }} className="w-full py-3 rounded-xl border border-[#2E6FF2] text-[#2E6FF2] text-[13px] font-medium hover:bg-[#2E6FF2]/5 transition-colors">
-                🔎 AI 검색에 활용
-              </button>
-              {isMeeting && (
-                <button onClick={() => { router.push(`/documents?create=true&files=${encodeURIComponent(file.id)}&instructions=${encodeURIComponent(`"${file.name}" 파일을 중심으로 문서를 작성해줘.`)}`); onClose(); }} className="w-full py-3 rounded-xl border border-[#10b981] text-[#10b981] text-[13px] font-medium hover:bg-emerald-50 transition-colors">
-                  ✅ 할일 추출
-                </button>
-              )}
-              <button onClick={() => { router.push('/documents?create=true'); onClose(); }} className="w-full py-3 rounded-xl border border-[#E2E5EA] text-[#6B7280] text-[13px] font-medium hover:bg-[#F7F8FA] transition-colors">
-                📄 문서 생성으로 이동
-              </button>
+              <DocumentActionStack
+                items={[
+                  ...(isDocForm
+                    ? [{
+                        label: '자동채우기',
+                        onClick: () => onAutofill(file),
+                        variant: 'secondary' as const,
+                      }]
+                    : []),
+                  {
+                    label: '이 파일로 후속 문서 작성',
+                    onClick: () => {
+                      router.push(buildDocumentCreateHref({
+                        fileIds: [file.id],
+                        instructions: `"${file.name}" 파일을 참고 자료로 사용해 후속 문서를 작성하세요.`,
+                      }));
+                      onClose();
+                    },
+                    variant: 'success' as const,
+                  },
+                  ...((isContract || ['DOCX', 'HWPX', 'HWP', 'PDF'].includes(ext))
+                    ? [{
+                        label: '계약 리스크 분석',
+                        onClick: () => {
+                          router.push(`/contract-risk?source=${encodeURIComponent(file.name)}`);
+                          onClose();
+                        },
+                        variant: 'warning' as const,
+                      }]
+                    : []),
+                  {
+                    label: 'AI 검색에 활용',
+                    onClick: () => {
+                      router.push(`/search?q=${encodeURIComponent(file.name)}`);
+                      onClose();
+                    },
+                    variant: 'secondary' as const,
+                  },
+                  ...(isMeeting
+                    ? [{
+                        label: '할일 추출',
+                        onClick: () => {
+                          router.push(buildDocumentCreateHref({
+                            fileIds: [file.id],
+                            instructions: `"${file.name}" 파일을 중심으로 문서를 작성해줘.`,
+                          }));
+                          onClose();
+                        },
+                        variant: 'success' as const,
+                      }]
+                    : []),
+                  {
+                    label: '문서 생성으로 이동',
+                    onClick: () => {
+                      router.push(buildDocumentCreateHref());
+                      onClose();
+                    },
+                    variant: 'muted' as const,
+                  },
+                ]}
+              />
             </div>
           )}
         </div>

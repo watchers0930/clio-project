@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { recordAuditEvent } from '@/lib/audit';
 import { createHash, randomBytes } from 'crypto';
 
 function hashPassword(password: string): string {
@@ -87,6 +88,18 @@ export async function POST(request: NextRequest) {
       console.error('[share/POST]', error.message);
       return NextResponse.json({ error: '링크 생성에 실패했습니다.' }, { status: 500 });
     }
+
+    await recordAuditEvent(admin, {
+      userId: authUserId,
+      action: 'share.link.create',
+      targetType: resourceType,
+      targetId: resourceId,
+      details: {
+        title: title ?? '공유 링크',
+        expires_in_days: expiresInDays ?? null,
+        has_password: !!password,
+      },
+    });
 
     return NextResponse.json({
       success: true,

@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { buildReportDraftHref } from '@/lib/documents/navigation';
 import { ArrowRight, Building2, FileText, PenLine, Plus, Share2, ShieldCheck, Trash2, Upload, Users, Pencil, Save, X } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import type { Department, UserItem } from '@/components/settings/types';
@@ -157,7 +158,7 @@ export function SettingsOpsSummary({ departments, users }: SettingsOpsSummaryPro
           <div className="mt-5 flex flex-wrap gap-2.5">
             <Link href="/shared-documents" className="rounded-xl bg-[#1D1D1F] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#2E6FF2] transition-colors">공유 문서</Link>
             <Link href="/reviews" className="rounded-xl bg-[#F7F8FA] px-4 py-2.5 text-sm font-medium text-[#1B1F2B] hover:bg-[#EEF3FE] hover:text-[#2E6FF2] transition-colors">코멘트/검토</Link>
-            <Link href="/reports" className="rounded-xl bg-[#F7F8FA] px-4 py-2.5 text-sm font-medium text-[#1B1F2B] hover:bg-[#EEF3FE] hover:text-[#2E6FF2] transition-colors">보고서 흐름</Link>
+            <Link href={buildReportDraftHref()} className="rounded-xl bg-[#F7F8FA] px-4 py-2.5 text-sm font-medium text-[#1B1F2B] hover:bg-[#EEF3FE] hover:text-[#2E6FF2] transition-colors">보고서 흐름</Link>
           </div>
         </div>
       </div>

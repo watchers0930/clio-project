@@ -10,6 +10,7 @@ interface DocumentOpsSummaryProps {
   onOpenShare: () => void;
   onOpenVersions: () => void;
   onReuse: () => void;
+  onOpenContractRisk?: () => void;
   onExtractTodos?: () => void;
   onSearchRelated?: () => void;
   onOpenMemo?: () => void;
@@ -31,6 +32,7 @@ export function DocumentOpsSummary({
   onOpenShare,
   onOpenVersions,
   onReuse,
+  onOpenContractRisk,
   onExtractTodos,
   onSearchRelated,
   onOpenMemo,
@@ -92,6 +94,14 @@ export function DocumentOpsSummary({
             >
               {isMeetingDoc ? '3. 후속 문서 작성' : '후속 문서 작성'}
             </button>
+            {onOpenContractRisk && (
+              <button
+                onClick={onOpenContractRisk}
+                className="rounded-lg border border-[#FDE4E4] bg-white px-3.5 py-2.5 text-[12px] font-medium text-[#C24141] hover:bg-[#FFF5F5] transition-colors"
+              >
+                계약 리스크 검토
+              </button>
+            )}
             <button
               onClick={onOpenShare}
               className="rounded-lg border border-[#D7E7FF] bg-white px-3.5 py-2.5 text-[12px] font-medium text-[#2E6FF2] hover:bg-[#F3F8FF] transition-colors"

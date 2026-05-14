@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCheck, Clock3, MessageSquareText } from 'lucide-react';
 import { Spinner } from '@/components/ui';
+import { DocumentActionRow } from '@/components/documents/document-action-row';
+import { buildDocumentCreateHref } from '@/lib/documents/navigation';
 
 interface ReviewQueueItem {
   id: string;
@@ -128,10 +130,15 @@ export default function ReviewsPage() {
                 description="검토를 끝낸 문서를 열어 반영과 새 문서 활용 작업을 이어갑니다."
                 onClick={() => {
                   const nextDoc = data?.items[0];
-                  router.push(
-                    nextDoc
-                      ? `/documents?create=true&originDocumentId=${encodeURIComponent(nextDoc.id)}&originContext=review_followup&contextTitle=${encodeURIComponent(nextDoc.title)}&instructions=${encodeURIComponent(`"${nextDoc.title}" 문서의 검토 의견을 반영한 후속 문서를 작성해줘.`)}`
-                      : '/documents?create=true',
+                    router.push(
+                      nextDoc
+                        ? buildDocumentCreateHref({
+                            originDocumentId: nextDoc.id,
+                            originContext: 'review_followup',
+                            contextTitle: nextDoc.title,
+                            instructions: `"${nextDoc.title}" 문서의 검토 의견을 반영한 후속 문서를 작성해줘.`,
+                          })
+                        : buildDocumentCreateHref(),
                   );
                 }}
               />
@@ -170,20 +177,30 @@ export default function ReviewsPage() {
               <p className="mt-3 text-[12px] leading-5 text-[#6e6e73]">
                 우선 처리 {getStatusSummary(item)} · 최근 코멘트 {formatDateLabel(item.latestCommentAt)}
               </p>
-              <div className="mt-4 flex flex-wrap gap-2.5">
-                <button onClick={() => router.push(item.href)} className="inline-flex items-center gap-2 rounded-xl bg-[#1d1d1f] px-4 py-2.5 text-[12px] font-medium text-white hover:bg-[#0071e3] transition-colors">
-                  코멘트 패널 열기
-                </button>
-                <button onClick={() => router.push(item.href.replace('#document-comment-panel', ''))} className="rounded-xl border border-[#D7E7FF] px-4 py-2.5 text-[12px] font-medium text-[#2E6FF2] hover:bg-[#eef6ff] transition-colors">
-                  문서 상세 보기
-                </button>
-                <button
-                  onClick={() => router.push(`/documents?create=true&originDocumentId=${encodeURIComponent(item.id)}&originContext=review_followup&contextTitle=${encodeURIComponent(item.title)}&instructions=${encodeURIComponent(`"${item.title}" 문서의 검토 의견을 반영한 후속 문서를 작성해줘.`)}`)}
-                  className="rounded-xl border border-[#D7EFDE] px-4 py-2.5 text-[12px] font-medium text-[#258A4E] hover:bg-[#F4FBF6] transition-colors"
-                >
-                  새 문서 활용
-                </button>
-              </div>
+              <DocumentActionRow
+                items={[
+                  {
+                    label: '코멘트 패널 열기',
+                    onClick: () => router.push(item.href),
+                    variant: 'primary',
+                  },
+                  {
+                    label: '문서 상세 보기',
+                    onClick: () => router.push(item.href.replace('#document-comment-panel', '')),
+                    variant: 'secondary',
+                  },
+                  {
+                    label: '새 문서 활용',
+                    onClick: () => router.push(buildDocumentCreateHref({
+                      originDocumentId: item.id,
+                      originContext: 'review_followup',
+                      contextTitle: item.title,
+                      instructions: `"${item.title}" 문서의 검토 의견을 반영한 후속 문서를 작성해줘.`,
+                    })),
+                    variant: 'success',
+                  },
+                ]}
+              />
             </div>
           ))}
         </div>

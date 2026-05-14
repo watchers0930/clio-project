@@ -141,7 +141,7 @@ export default function SchedulePage() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#0071e3]">Schedule Workflow</p>
               <h1 className="text-[24px] font-bold leading-[1.25] text-[#1d1d1f] sm:text-[28px]">일정 / 할일</h1>
               <p className="max-w-2xl text-[15px] text-[#6e6e73]" style={{ lineHeight: '20px' }}>
-                일정과 할일도 문서 운영의 실행 단계입니다. 회의 일정과 실행 항목을 정리한 뒤,
+                일정과 할일도 독립 제품이 아니라 문서 운영의 실행 단계입니다. 회의 일정과 실행 항목을 정리한 뒤,
                 관련 문서를 찾고 회의록, 보고서, 후속 실행 문서로 바로 이어갈 수 있습니다.
               </p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

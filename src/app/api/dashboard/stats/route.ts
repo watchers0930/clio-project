@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import type { ApiResponse, DashboardStats, AuditLog, DbAuditLog } from '@/lib/supabase/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
@@ -25,7 +25,12 @@ function lastNWeeks(n: number): string[] {
   return [...new Set(keys)];
 }
 
-export async function GET() {
+function ratio(part: number, whole: number) {
+  if (whole <= 0) return 0;
+  return Math.round((part / whole) * 100);
+}
+
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
     if (!supabase) {
@@ -45,7 +50,11 @@ export async function GET() {
     const admin = createAdminSupabaseClient();
 
     // 병렬 조회
-    const [r1, r3, r4, r5, r6, r7, r8] = await Promise.all([
+    const requestedDays = Number(new URL(request.url).searchParams.get('days') ?? 30);
+    const flowWindowDays = requestedDays === 7 ? 7 : 30;
+    const flowWindowStartIso = new Date(Date.now() - flowWindowDays * 24 * 60 * 60 * 1000).toISOString();
+
+    const [r1, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13] = await Promise.all([
       supabase.from('files').select('*', { count: 'exact', head: true }),
       supabase.from('users').select('*', { count: 'exact', head: true }),
       supabase.from('templates').select('*', { count: 'exact', head: true }),
@@ -54,6 +63,25 @@ export async function GET() {
       supabase.from('departments').select('id, name'),
       // 문서 + 작성자 부서 (created_by → users.department_id)
       admin.from('documents').select('id, created_by, users:created_by(department_id)'),
+      admin
+        .from('audit_logs')
+        .select('action, user_id, target_id, details, created_at')
+        .gte('created_at', flowWindowStartIso),
+      admin
+        .from('documents')
+        .select('id, status, created_at')
+        .gte('created_at', flowWindowStartIso),
+      admin
+        .from('document_comments')
+        .select('id, status, created_at')
+        .gte('created_at', flowWindowStartIso),
+      admin
+        .from('document_permissions')
+        .select('document_id'),
+      admin
+        .from('shared_links')
+        .select('resource_id')
+        .eq('resource_type', 'document'),
     ]);
 
     const deptList = (r7.data ?? []) as Array<{ id: string; name: string }>;
@@ -116,11 +144,60 @@ export async function GET() {
       .filter((doc) => accessibleDocList.some((accessibleDoc) => accessibleDoc.id === doc.id))
       .length;
     const docDeptBreakdown: Record<string, number> = {};
+    const accessibleDocumentIdSet = new Set(accessibleDocList.map((doc) => doc.id));
     for (const doc of accessibleDocList) {
       const deptId = (doc.users as { department_id: string } | null)?.department_id;
       const deptName = deptId ? (deptMap.get(deptId) ?? '미지정') : '미지정';
       docDeptBreakdown[deptName] = (docDeptBreakdown[deptName] ?? 0) + 1;
     }
+
+    const auditRows = (r9.data ?? []) as Array<{
+      action: string;
+      user_id: string | null;
+      target_id?: string | null;
+      details?: Record<string, unknown> | null;
+      created_at: string;
+    }>;
+    const recentDocs = (r10.data ?? []) as Array<{ id: string; status: string; created_at: string }>;
+    const recentComments = (r11.data ?? []) as Array<{ id: string; status: string; created_at: string }>;
+    const documentPermissionRows = (r12.data ?? []) as Array<{ document_id: string }>;
+    const sharedLinkRows = (r13.data ?? []) as Array<{ resource_id: string }>;
+
+    const activeUsers = new Set(auditRows.map((row) => row.user_id).filter(Boolean));
+    const searchUsers = new Set(auditRows.filter((row) => row.action === 'search').map((row) => row.user_id).filter(Boolean));
+    const uploadCount = auditRows.filter((row) => row.action === 'file.upload').length;
+    const createdDocCount = recentDocs.length;
+    const completedDocCount = recentDocs.filter((row) => row.status === 'completed' || row.status === '완료').length;
+    const reflectedCommentCount = recentComments.filter((row) => row.status === 'applied').length;
+    const sharedDocumentIds = new Set<string>();
+    documentPermissionRows.forEach((row) => {
+      if (accessibleDocumentIdSet.has(row.document_id)) sharedDocumentIds.add(row.document_id);
+    });
+    sharedLinkRows.forEach((row) => {
+      if (accessibleDocumentIdSet.has(row.resource_id)) sharedDocumentIds.add(row.resource_id);
+    });
+
+    const createdDocumentIds = new Set(
+      auditRows
+        .filter((row) => row.action === 'document.create' && row.target_id)
+        .map((row) => row.target_id as string),
+    );
+    const sharedDocumentIdsInWindow = new Set(
+      auditRows
+        .filter((row) => row.action === 'document.share' || row.action === 'share.link.create')
+        .map((row) => (row.target_id as string | undefined) ?? (typeof row.details?.resource_id === 'string' ? row.details.resource_id : null))
+        .filter(Boolean) as string[],
+    );
+    const commentedDocumentIds = new Set(
+      auditRows
+        .filter((row) => row.action === 'document.comment.create' && row.target_id)
+        .map((row) => row.target_id as string),
+    );
+    const reflectedDocumentIds = new Set(
+      auditRows
+        .filter((row) => row.action === 'document.comment.reflect' && row.target_id)
+        .map((row) => row.target_id as string),
+    );
 
     const stats: DashboardStats = {
       total_files: accessibleFileList.length,
@@ -152,6 +229,28 @@ export async function GET() {
       upload_trend: uploadTrend,
       doc_dept_breakdown: docDeptBreakdown,
       derived_document_count: accessibleDerivedDocCount,
+      flow_window_days: flowWindowDays,
+      flow_kpis: {
+        upload_count_30d: uploadCount,
+        search_usage_rate_30d: ratio(searchUsers.size, activeUsers.size),
+        document_generation_completion_rate_30d: ratio(completedDocCount, createdDocCount),
+        shared_document_count: sharedDocumentIds.size,
+        comment_reflect_completion_rate_30d: ratio(reflectedCommentCount, recentComments.length),
+      },
+      document_flow_funnel_30d: {
+        created: createdDocumentIds.size,
+        shared: sharedDocumentIdsInWindow.size,
+        commented: commentedDocumentIds.size,
+        reflected: reflectedDocumentIds.size,
+      },
+      flow_diagnostics: {
+        active_user_count: activeUsers.size,
+        search_user_count: searchUsers.size,
+        created_document_count: createdDocCount,
+        completed_document_count: completedDocCount,
+        total_comment_count: recentComments.length,
+        reflected_comment_count: reflectedCommentCount,
+      },
     };
 
     return NextResponse.json<ApiResponse<DashboardStats>>({ success: true, data: stats });

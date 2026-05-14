@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { recordAuditEvent } from '@/lib/audit';
 import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
 
 // PATCH /api/documents/[id]/comments/[commentId] — 댓글 상태 변경
@@ -46,6 +47,17 @@ export async function PATCH(
     }).eq('id', commentId);
 
     if (error) throw error;
+
+    await recordAuditEvent(admin, {
+      userId: authUserId,
+      action: 'document.comment.status',
+      targetType: 'document',
+      targetId: documentId,
+      details: {
+        comment_id: commentId,
+        status: nextStatus,
+      },
+    });
 
     return NextResponse.json({ success: true, status: nextStatus });
   } catch {

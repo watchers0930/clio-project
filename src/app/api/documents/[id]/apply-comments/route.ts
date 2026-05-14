@@ -4,6 +4,7 @@ import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { extractSectionContent, replaceSectionContent } from '@/lib/utils/parse-sections';
 import OpenAI from 'openai';
+import { recordAuditEvent } from '@/lib/audit';
 import { canManageDocument, getUserRoleInfo } from '@/lib/permissions';
 import {
   buildCurrentDocumentUpdate,
@@ -216,6 +217,18 @@ ${feedbackList}
       .in('id', selectedCommentIds);
 
     if (commentUpdateError) throw commentUpdateError;
+
+    await recordAuditEvent(admin, {
+      userId: authUserId,
+      action: 'document.comment.reflect',
+      targetType: 'document',
+      targetId: documentId,
+      details: {
+        mode,
+        reflected_comment_count: selectedCommentIds.length,
+        next_version_number: nextVersionNumber,
+      },
+    });
 
     return NextResponse.json({ success: true, updatedContent });
   } catch (e) {
