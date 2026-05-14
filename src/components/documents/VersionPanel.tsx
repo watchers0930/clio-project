@@ -2,16 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { Spinner, EmptyState } from '@/components/ui';
+import type { VersionItem } from '@/components/documents/page-types';
 
-export interface VersionItem {
-  id: string;
-  title: string;
-  versionNumber: number;
-  createdAt: string;
-  status: string;
-  createdBy: string;
-  isCurrent: boolean;
-}
+export type { VersionItem } from '@/components/documents/page-types';
 
 interface VersionPanelProps {
   docId: string;
@@ -45,13 +38,13 @@ export function VersionPanel({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-end"
+      className="fixed inset-0 z-50 flex items-end justify-end sm:items-center"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
     >
-      <div className="bg-white h-full w-full max-w-sm flex flex-col shadow-2xl">
+      <div className="bg-white h-[92vh] w-full max-w-none rounded-t-[28px] flex flex-col shadow-2xl sm:h-full sm:max-w-sm sm:rounded-none">
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-[#e5e5e7]">
+        <div className="flex items-start justify-between gap-3 px-4 py-4 border-b border-[#e5e5e7] sm:px-6 sm:py-5">
           <div>
             <h2 className="text-base font-semibold text-[#1d1d1f]">버전 이력</h2>
             <p className="text-xs text-[#6e6e73] mt-0.5">문서의 모든 버전을 확인합니다</p>
@@ -64,7 +57,7 @@ export function VersionPanel({
         </div>
 
         {/* 새 버전 생성 + 버전 비교 버튼 */}
-        <div className="px-6 py-4 border-b border-[#e5e5e7] flex flex-col gap-2">
+        <div className="px-4 py-3 border-b border-[#e5e5e7] flex flex-col gap-2 sm:px-6 sm:py-4">
           <button
             onClick={() => onCreateNewVersion(docId)}
             className="w-full py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors"
@@ -85,7 +78,7 @@ export function VersionPanel({
         </div>
 
         {/* 버전 타임라인 */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Spinner size="lg" />
@@ -95,9 +88,9 @@ export function VersionPanel({
           ) : (
             <div className="relative">
               <div className="absolute left-[11px] top-2 bottom-2 w-px bg-[#e5e5e7]" />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              <div className="flex flex-col gap-5 sm:gap-6">
                 {items.map((v) => (
-                  <div key={v.id} className="flex gap-4 relative">
+                  <div key={v.id} className="flex gap-3 sm:gap-4 relative">
                     <div
                       className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 z-10 ${
                         v.isCurrent ? 'bg-[#0071e3] border-[#0071e3]' : 'bg-white border-[#d1d1d6]'
@@ -118,7 +111,27 @@ export function VersionPanel({
                         <span className="text-[11px] text-[#6e6e73]">{v.createdAt}</span>
                         {v.createdBy && <span className="text-[11px] text-[#6e6e73]">· {v.createdBy}</span>}
                       </div>
-                      <div className="flex items-center gap-3 mt-2">
+                      {(v.appliedComments?.length ?? 0) > 0 && (
+                        <div className="mt-2 rounded-xl border border-[#E6F0FF] bg-[#F7FAFF] px-3 py-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#2E6FF2]">
+                            반영된 댓글 {v.appliedComments?.length}
+                          </p>
+                          <div className="mt-2 flex flex-col gap-2">
+                            {v.appliedComments?.slice(0, 2).map((comment) => (
+                              <div key={comment.id}>
+                                <p className="text-[11px] font-medium text-[#1B1F2B]">{comment.userName}</p>
+                                <p className="mt-0.5 text-[11px] leading-5 text-[#5E6573] line-clamp-2">{comment.content}</p>
+                              </div>
+                            ))}
+                            {(v.appliedComments?.length ?? 0) > 2 && (
+                              <p className="text-[10px] text-[#7C8494]">
+                                외 {(v.appliedComments?.length ?? 0) - 2}개 댓글이 이 버전에 함께 반영되었습니다.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
                         <button
                           onClick={() => onDownload(v.id, v.title, v.status, v.createdAt)}
                           className="text-[11px] text-[#0071e3] hover:underline"

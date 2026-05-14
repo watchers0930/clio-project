@@ -1,8 +1,9 @@
 # CLIO 메모 시스템 고도화 — 설계-구현 GAP 분석서
 
 > **분석 대상**: `docs/02-design/features/clio.design.md` vs. 실제 구현 코드
-> **분석일**: 2026-04-21
-> **버전 기준**: v7.4.0
+> **초기 분석일**: 2026-04-21
+> **후속 반영일**: 2026-05-06
+> **버전 기준**: v7.7.0
 > **분석자**: 크로미
 
 ---
@@ -11,34 +12,37 @@
 
 | Phase | 항목 | 일치율 | 비고 |
 |-------|------|--------|------|
-| Phase 1 | UI 기반 강화 (card·list·page) | 90% | 카드 Paperlogy 폰트 미적용 |
-| Phase 2 | 그래프 + AI 아이디어 워크플로우 | 80% | clusters API 호출 미연결, 상태 위치 불일치 |
-| Phase 3 | 할일 연결 (모달) | 90% | 버튼 구조 소폭 불일치 |
+| Phase 1 | UI 기반 강화 (card·list·page) | 100% | 주요 UI gap 해소 |
+| Phase 2 | 그래프 + AI 아이디어 워크플로우 | 95% | clusters API 연결, 상태 허브 반영 완료 |
+| Phase 3 | 할일 연결 (모달) | 95% | 빈 결과 안내 및 액션 정리 완료 |
 | Phase 4 | 문서 생성 출력 연결 | 20% | 설계 자체가 "추후 구현" 명시. stub 상태 |
-| **전체** | | **~80%** | |
+| **전체** | | **~92%** | Phase 4 제외 시 실사용 흐름 대부분 정합 |
 
 ---
 
 ## 2. Gap 목록
 
-### GAP-1 ★ HIGH — clusters API 호출 코드 미구현
+### GAP-1 RESOLVED — clusters API 호출 코드 연결 완료
 
 **설계 (5절, 6-5절)**:
 > 클러스터 탐지 후 `/api/memos/graph/clusters` 호출 → AI 생성 클러스터명을 헐 중심에 표시
 
-**현실**:
-- `detectClusters()` 함수: ✅ 구현됨 (`MemoGraphView.tsx:28~58`)
-- `convexHull` + 헐 렌더링: ✅ 구현됨 (`MemoGraphView.tsx:64~277`)
-- `cluster.name` 처리 코드: ✅ 존재함 (`MemoGraphView.tsx:269`)
-- **BUT**: API를 실제로 호출하는 코드 없음 → `cluster.name`이 항상 `undefined` → 클러스터명 표시 안 됨
+**현재 상태**:
+- `useMemoCluster()`가 `/api/memos/graph/clusters` 호출과 응답 캐시를 담당
+- 클러스터 ID 정규화, 중복 요청 방지, 요청 실패 fallback 처리 완료
+- `MemoGraphView.tsx`는 이름이 반영된 `clusters`를 그대로 렌더링
 
-**영향**: 헐(hull)은 그려지나 AI 생성 클러스터명이 나타나지 않음.
+**반영 파일**:
+- `src/hooks/useMemoCluster.ts`
+- `src/app/api/memos/graph/clusters/route.ts`
 
-**수정**: `MemoGraphView.tsx`에 `useEffect(() => { fetchClusterNames(clusters) }, [clusters])` 추가 (~30줄).
+**추가 처리**:
+- OpenAI 키가 없어도 이름 없는 클러스터로 안전하게 동작
+- 응답 name 길이 제한과 공백 정리 처리
 
 ---
 
-### GAP-2 ★ MEDIUM — page.tsx 상태 구조 불일치
+### GAP-2 RESOLVED — page.tsx 상태 구조 정합화 완료
 
 **설계 (2-2절)**:
 ```typescript
@@ -48,49 +52,42 @@ selectedMemoIds: Set<string>
 ideaPanelOpen: boolean
 ```
 
-**현실**:
+**현재 상태**:
 | 상태 | 설계 위치 | 실제 위치 |
 |------|----------|----------|
-| `viewMode` (→ `tab`) | `page.tsx` | `memo-list.tsx:36` |
-| `selectedIds` | `page.tsx` | `MemoGraphView.tsx:103` |
-| `ideaPanelOpen` | `page.tsx` | `MemoGraphView.tsx:108` |
+| `viewMode` | `page.tsx` | `page.tsx` |
+| `selectedMemoIds` | `page.tsx` | `page.tsx` |
+| `ideaPanelOpen` | `page.tsx` | `page.tsx` |
 
-설계 9단계 "page.tsx에 selectedMemoIds·ideaPanelOpen 연결"이 실행되지 않음.
-
-**영향**: 기능은 정상 동작하나, 설계가 의도한 "page.tsx = 상태 조율 허브" 원칙에서 이탈. 향후 다른 탭(목록 탭)에서 그래프 멀티셀렉트 상태를 활용해야 할 경우 구조 변경 필요.
+`page.tsx`가 상태 허브 역할을 하고, `memo-list.tsx`/`MemoGraphView.tsx`는 props 기반으로만 동작한다.
 
 ---
 
-### GAP-3 ★ MEDIUM — memo-idea-panel API 직접 호출 (단일 책임 경미 위반)
+### GAP-3 RESOLVED — memo-idea-panel API 직접 호출 제거
 
 **설계 (2-3절)**:
 > `page.tsx`: 책임 = "API 호출, 핸들러 조립"
 > `memo-idea-panel.tsx`: 책임 = "SSE 표시, 액션 버튼", 금지 = "그래프 상태 참조"
 
-**현실**:
-`memo-idea-panel.tsx`가 다음 API를 직접 호출:
-- `POST /api/memos` (메모 저장, `memo-idea-panel.tsx:47`)
-- `POST /api/todos/from-idea` (할일 추출, `memo-idea-panel.tsx:69`)
-
-설계가 이를 명시적으로 "금지"하지는 않았으나(금지 항목은 "그래프 상태 참조" 뿐), 설계 원칙상 `page.tsx`가 핸들러를 props로 내려주는 구조가 맞음.
-
-**영향**: 기능 이상 없음. 다만 `memo-idea-panel`의 테스트 가능성이 저하되고, API 로직이 컴포넌트에 혼재됨.
+**현재 상태**:
+- `page.tsx`가 `onSaveIdeaMemo`, `onExtractIdeaTodos` 핸들러를 조립
+- `memo-idea-panel.tsx`는 표시/UI 상태만 담당
+- 저장/추출 실패 메시지도 props 기반 호출 결과만 사용
 
 ---
 
-### GAP-4 LOW — memo-todo-confirm-modal 버튼 구조 불일치
+### GAP-4 PARTIAL — memo-todo-confirm-modal은 현재 UX 기준으로 정리 완료
 
 **설계 (6-4절) 와이어프레임**:
 ```
 [취소]  [할일로 등록]
 ```
 
-**현실 (`memo-todo-confirm-modal.tsx:81~87`)**:
-```
-[확인]
-```
+**현재 상태**:
+- 저장 완료 후 결과 확인 모달이므로 `확인` 단일 액션 유지
+- 추가로 `0건 추출` 케이스를 별도 빈 상태 UI로 처리
 
-`POST /api/todos/from-idea`는 **이미 DB 저장 완료** 후 모달을 띄우는 구조이므로, `[확인]`만 두는 것이 기능적으로는 맞음. 다만 설계 와이어프레임과 다름.
+설계 와이어프레임과 버튼 수는 다르지만, 실제 저장 시점 기준으로는 현재 UX가 더 일관적이다.
 
 ---
 
@@ -104,13 +101,13 @@ ideaPanelOpen: boolean
 
 ---
 
-### GAP-6 LOW — memo-card.tsx Paperlogy 폰트 미적용
+### GAP-6 RESOLVED — memo-card.tsx 제목 폰트 반영 완료
 
 **설계 (6-5절)**: "제목 폰트 → Paperlogy 또는 Pretendard (CSS 변수 활용)"
 
-**현실**:
-- 그래프 캔버스 노드 라벨: `"Paperlogy", "Noto Sans KR"` ✅ (`MemoGraphView.tsx:211`)
-- 카드 제목: `font-semibold` (시스템 폰트, Paperlogy 클래스 없음)
+**현재 상태**:
+- 그래프 캔버스 노드 라벨: `"Paperlogy", "Noto Sans KR"` ✅
+- 카드 제목: `"Paperlogy", "Pretendard", "Noto Sans KR"` ✅
 
 ---
 
@@ -200,20 +197,17 @@ ideaPanelOpen: boolean
 
 ### 종합 평가
 
-전체 구현 완성도는 **약 80%**. Phase 1~3의 핵심 기능(카드 디자인, 그래프 멀티셀렉트, SSE 아이디어 생성, 할일 추출 모달)은 모두 정상 동작 상태. API 서버 검증·보안 전면 준수. 성능 규칙 준수.
+전체 구현 완성도는 **약 92%**. Phase 1~3의 핵심 기능(카드 디자인, 그래프 멀티셀렉트, SSE 아이디어 생성, 할일 추출 모달, 클러스터 명명)은 정상 동작 상태다. API 서버 검증도 유지된다.
 
-미달 원인은 하나: **클러스터 AI 명명 API 호출 연결 미완료 (GAP-1)**. 설계의 Phase 2 완성을 위해 이 부분만 해결하면 됨.
+남은 미구현은 사실상 **Phase 4 문서 생성 연결 stub** 뿐이다.
 
 ### 수정 우선순위
 
 | 순위 | GAP | 파일 | 예상 작업량 | 비고 |
 |------|-----|------|------------|------|
-| P0 | GAP-1 클러스터 API 호출 | `MemoGraphView.tsx` | ~30줄 추가 | 기능 완성 핵심 |
-| P1 | GAP-1 분리 예방 | `src/hooks/useMemoCluster.ts` 분리 | ~50줄 | MemoGraphView 500줄 초과 방지 |
-| P2 | GAP-2 상태 위치 | `page.tsx` 또는 `memo-list.tsx` 조정 | 중간 | 필수 아니나 설계 의도 정합성 |
-| P3 | GAP-3 단일 책임 | `memo-idea-panel.tsx` props 핸들러화 | 소규모 | 리팩 성격 |
-| P4 | GAP-4 모달 버튼 | `memo-todo-confirm-modal.tsx` | 5줄 | UX 일관성 |
-| P5 | GAP-6 폰트 | `memo-card.tsx` | 2줄 | 미관 |
+| P0 | Phase 4 문서 생성 연결 | `memo-idea-panel.tsx`, `/api/generate` 연계부 | 중간 | 별도 기획 필요 |
+| P1 | `handleEngineStop` 불변성 리스크 검토 | `MemoGraphView.tsx` | 중간 | 현재 동작 이상 없음 |
+| P2 | 클러스터/헐 유틸 추가 분리 | `src/hooks` 또는 `src/lib/memos` | 중간 | 유지보수성 개선 |
 
 ---
 
@@ -229,7 +223,7 @@ ideaPanelOpen: boolean
 | 메모로 저장 | POST /api/memos → 목록 갱신 | ✅ 완료 |
 | 할일 추출 | POST /api/todos/from-idea → 확인 모달 | ✅ 완료 |
 | 클러스터 헐 표시 | 연결된 노드 그룹에 반투명 헐 | ✅ 완료 |
-| 클러스터명 표시 | 헐 위에 AI 생성 클러스터명 | ❌ **미구현 (GAP-1)** |
+| 클러스터명 표시 | 헐 위에 AI 생성 클러스터명 | ✅ 완료 |
 | 500줄 제한 | 모든 파일 500줄 미만 | ✅ 완료 (MemoGraphView 주의 요) |
 | 인증 없는 API 호출 방어 | 로그아웃 후 401 반환 | ✅ 완료 |
 
@@ -241,13 +235,13 @@ ideaPanelOpen: boolean
 ─────────────────────────────────────────────────
 1. 페이지 500줄 제한   : ✅ 준수 (MemoGraphView 429줄 — GAP-1 추가 시 분리 권장)
 2. 단일 책임           : ⚠️ 경미 위반
-                         memo-idea-panel.tsx — SSE 표시 + API 직접 호출 혼재
-                         memo-list.tsx — UI + 탭 상태 + 훅 호출 혼재
+                         memo-list.tsx — UI + 그래프 로드 훅 호출 혼재
+                         memo-idea-panel.tsx 직접 API 호출 위반은 해소
 3. 서버 검증·보안      : ✅ 준수 — 모든 변이 API 인증·소유권 검증 완료
 4. 성능 (중복·N+1)     : ✅ 준수 (handleEngineStop 불변성 경고 제외)
 5. 폴더 구조           : ✅ 준수 (cluster-hull-utils 분리 미진행 — 경미)
 ─────────────────────────────────────────────────
-위반 항목: 경미 2건 (기능 동작 영향 없음)
-핵심 미구현: GAP-1 — 클러스터 AI 명명 API 호출 연결
+위반 항목: 경미 1~2건 수준 (기능 동작 영향 없음)
+핵심 미구현: Phase 4 — 문서 생성 연결 stub
 ─────────────────────────────────────────────────
 ```

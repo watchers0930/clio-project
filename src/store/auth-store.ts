@@ -9,6 +9,7 @@ interface AuthState {
   token: string | null;
   isLoading: boolean;
   error: string | null;
+  hasHydrated: boolean;
 
   login: (email: string, password: string) => Promise<boolean>;
   signup: (email: string, password: string, name: string, departmentId?: string) => Promise<boolean>;
@@ -16,6 +17,7 @@ interface AuthState {
   fetchMe: () => Promise<void>;
   clearError: () => void;
   initAuthListener: () => () => void;
+  setHasHydrated: (value: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -25,6 +27,7 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       isLoading: false,
       error: null,
+      hasHydrated: false,
 
       login: async (email, password) => {
         set({ isLoading: true, error: null });
@@ -96,13 +99,16 @@ export const useAuthStore = create<AuthState>()(
 
         if (res.success && res.data) {
           set({ user: res.data, isLoading: false });
-        } else {
-          // Token expired or invalid
+        } else if (res.status === 401) {
+          // Only clear auth on an explicit unauthorized response.
           set({ user: null, token: null, isLoading: false });
+        } else {
+          set({ isLoading: false });
         }
       },
 
       clearError: () => set({ error: null }),
+      setHasHydrated: (value) => set({ hasHydrated: value }),
 
       /**
        * Subscribe to Supabase auth state changes.
@@ -133,6 +139,12 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'clio-auth',
       partialize: (state) => ({ token: state.token }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+        if (state?.token) {
+          apiClient.setToken(state.token);
+        }
+      },
     },
   ),
 );

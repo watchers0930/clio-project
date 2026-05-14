@@ -17,6 +17,15 @@ export function injectSignatureDocx(docxBuffer: Buffer, sigBuffer: Buffer): Buff
     // 1. 서명 이미지를 word/media/signature.png로 추가
     zip.file('word/media/signature.png', sigBuffer);
 
+    // 1-1. DOCX 패키지에 PNG content type 등록
+    const contentTypesPath = '[Content_Types].xml';
+    const contentTypesXml = zip.file(contentTypesPath)?.asText() ?? '';
+    if (contentTypesXml && !/Extension="png"\s+ContentType="image\/png"/.test(contentTypesXml)) {
+      const pngDefault = '<Default Extension="png" ContentType="image/png"/>';
+      const updatedContentTypes = contentTypesXml.replace('</Types>', `  ${pngDefault}\n</Types>`);
+      zip.file(contentTypesPath, updatedContentTypes);
+    }
+
     // 2. 관계 파일에 이미지 관계 추가
     const relsPath = 'word/_rels/document.xml.rels';
     const relsXml = zip.file(relsPath)?.asText() ?? '';

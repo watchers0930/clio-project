@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
@@ -7,7 +7,7 @@ import { getAuthUserId } from '@/lib/auth-helper';
  * GET /api/files/shared
  * 나에게 공유된 파일 목록 (유효 기간 내)
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createServerSupabaseClient();
     if (!supabase) return NextResponse.json({ success: false, error: 'DB 미설정' }, { status: 503 });

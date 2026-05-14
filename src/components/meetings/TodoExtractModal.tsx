@@ -128,13 +128,14 @@ export function TodoExtractModal({
   const allChecked = todos.length > 0 && checkedIdx.size === todos.length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 flex flex-col max-h-[85vh]">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm">
+      <div className="flex min-h-full items-end justify-center p-0 sm:items-center sm:p-4">
+      <div className="bg-white rounded-t-[28px] shadow-xl w-full max-w-lg flex flex-col max-h-[92vh] sm:max-h-[85vh] sm:rounded-2xl">
         {/* 헤더 */}
-        <div className="px-6 py-5 border-b border-[#E2E5EA] flex items-start justify-between flex-shrink-0">
+        <div className="px-4 py-4 border-b border-[#E2E5EA] flex items-start justify-between gap-3 flex-shrink-0 sm:px-6 sm:py-5">
           <div>
             <h2 className="text-[15px] font-semibold text-[#1B1F2B]">할일 자동 추출 결과</h2>
-            <p className="text-[12px] text-[#888] mt-0.5 truncate max-w-xs">문서: {documentTitle}</p>
+            <p className="text-[12px] text-[#888] mt-0.5 break-words sm:truncate sm:max-w-xs">문서: {documentTitle}</p>
           </div>
           <button onClick={onClose} className="p-1 rounded hover:bg-[#F7F8FA] text-[#888] transition-colors">
             <X size={18} />
@@ -156,10 +157,10 @@ export function TodoExtractModal({
         {!isReExtracting && (
           <>
             {/* 컨트롤 바 */}
-            <div className="px-6 py-3 border-b border-[#E2E5EA] flex items-center justify-between flex-shrink-0">
+            <div className="px-4 py-4 border-b border-[#E2E5EA] flex flex-col items-start justify-between gap-3 flex-shrink-0 sm:px-6 sm:flex-row sm:items-center">
               <button
                 onClick={toggleAll}
-                className="flex items-center gap-1.5 text-[12px] text-[#555] hover:text-[#1B1F2B] transition-colors"
+                className="flex items-center gap-2 text-[12px] text-[#555] hover:text-[#1B1F2B] transition-colors"
               >
                 {allChecked
                   ? <CheckSquare size={15} className="text-[#2E6FF2]" />
@@ -169,7 +170,7 @@ export function TodoExtractModal({
               <button
                 onClick={handleReExtract}
                 disabled={isReExtracting}
-                className="flex items-center gap-1 text-[12px] text-[#2E6FF2] hover:text-[#1E5FE2] transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] text-[#2E6FF2] hover:bg-[#EEF6FF] hover:text-[#1E5FE2] transition-colors disabled:opacity-50"
               >
                 <RefreshCw size={13} />
                 다시 추출
@@ -177,7 +178,7 @@ export function TodoExtractModal({
             </div>
 
             {/* 할일 목록 */}
-            <div className="flex-1 overflow-y-auto px-6 py-3 flex flex-col gap-2">
+            <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3 sm:px-6">
               {todos.length === 0 ? (
                 <div className="py-10 text-center">
                   <p className="text-[24px] mb-2">📭</p>
@@ -194,7 +195,7 @@ export function TodoExtractModal({
                       key={idx}
                       onClick={() => toggle(idx)}
                       className={cn(
-                        'flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all',
+                        'flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all',
                         isChecked
                           ? 'border-[#2E6FF2] bg-blue-50/50'
                           : 'border-[#E2E5EA] bg-white hover:border-[#2E6FF2]/50',
@@ -205,18 +206,18 @@ export function TodoExtractModal({
                         : <Square size={16} className="text-[#ccc] flex-shrink-0 mt-0.5" />}
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-medium text-[#1B1F2B] leading-snug">{todo.title}</p>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className={cn('text-[10px] px-1.5 py-0.5 rounded border font-medium', badge.cls)}>
+                        <div className="mt-2 flex items-center gap-2.5 flex-wrap">
+                          <span className={cn('text-[10px] px-2 py-1 rounded-md border font-medium', badge.cls)}>
                             {badge.label}
                           </span>
                           {todo.assigneeName && (
-                            <span className="flex items-center gap-1 text-[11px] text-[#888]">
+                            <span className="flex items-center gap-1.5 text-[11px] text-[#888]">
                               <User size={11} />
                               {todo.assigneeName}
                             </span>
                           )}
                           {todo.dueDate && (
-                            <span className="flex items-center gap-1 text-[11px] text-[#888]">
+                            <span className="flex items-center gap-1.5 text-[11px] text-[#888]">
                               <CalendarDays size={11} />
                               {todo.dueDate}
                             </span>
@@ -231,17 +232,17 @@ export function TodoExtractModal({
 
             {/* 에러 */}
             {error && (
-              <div className="mx-6 mb-2 flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
+              <div className="mx-4 mb-3 flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-lg px-4 py-3 sm:mx-6">
                 <AlertCircle size={14} className="text-red-500 flex-shrink-0 mt-0.5" />
                 <p className="text-[12px] text-red-700">{error}</p>
               </div>
             )}
 
             {/* 하단 버튼 */}
-            <div className="px-6 py-4 border-t border-[#E2E5EA] flex items-center justify-end gap-2 flex-shrink-0">
+            <div className="px-4 py-4 border-t border-[#E2E5EA] flex flex-col-reverse items-stretch justify-end gap-3 flex-shrink-0 sm:px-6 sm:flex-row sm:items-center">
               <button
                 onClick={onClose}
-                className="px-4 py-2 rounded-lg border border-[#E2E5EA] text-[13px] text-[#555] hover:bg-[#F7F8FA] transition-colors"
+                className="w-full px-4 py-2.5 rounded-lg border border-[#E2E5EA] text-[13px] text-[#555] hover:bg-[#F7F8FA] transition-colors sm:w-auto"
               >
                 취소
               </button>
@@ -249,7 +250,7 @@ export function TodoExtractModal({
                 onClick={handleRegister}
                 disabled={isLoading || checkedCount === 0}
                 className={cn(
-                  'px-4 py-2 rounded-lg text-[13px] font-medium transition-all',
+                  'w-full px-4 py-2.5 rounded-lg text-[13px] font-medium transition-all sm:w-auto',
                   checkedCount > 0 && !isLoading
                     ? 'bg-[#2E6FF2] text-white hover:bg-[#1E5FE2]'
                     : 'bg-[#E2E5EA] text-[#aaa] cursor-not-allowed',
@@ -268,6 +269,7 @@ export function TodoExtractModal({
             </div>
           </>
         )}
+      </div>
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
+import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
 
 export const maxDuration = 30;
 
@@ -25,6 +26,16 @@ export async function POST(
   const authUserId = await getAuthUserId(supabase);
   if (!authUserId) {
     return NextResponse.json({ error: '인증 필요' }, { status: 401 });
+  }
+
+  const roleInfo = await getUserRoleInfo(supabase, authUserId);
+  if (!roleInfo) {
+    return NextResponse.json({ error: '사용자 정보 없음' }, { status: 403 });
+  }
+
+  const canAccess = await canAccessDocument(supabase, authUserId, roleInfo.role, roleInfo.department_id, id);
+  if (!canAccess) {
+    return NextResponse.json({ error: '문서 접근 권한이 없습니다.' }, { status: 403 });
   }
 
   // 문서 조회
@@ -97,7 +108,7 @@ ${content}
     model: openai('gpt-4o-mini'),
     system: systemPrompt,
     prompt: userPrompt,
-    maxTokens: 4000,
+    maxOutputTokens: 4000,
     temperature: 0.7,
   });
 

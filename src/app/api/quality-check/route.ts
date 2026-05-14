@@ -8,6 +8,7 @@ import type {
   QualityCheckItem,
   QualityCheckResponse,
 } from '@/lib/supabase/types';
+import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
 
 export const maxDuration = 60;
 
@@ -94,6 +95,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
   }
 
+  const roleInfo = await getUserRoleInfo(supabase, authUserId);
+  if (!roleInfo) {
+    return NextResponse.json({ error: '사용자 정보가 없습니다.' }, { status: 403 });
+  }
+
   // 3. 파라미터 파싱
   let body: { document_id?: string; force?: boolean };
   try {
@@ -127,7 +133,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '문서를 찾을 수 없습니다.' }, { status: 404 });
   }
 
-  if (doc.created_by !== authUserId) {
+  const canAccess = await canAccessDocument(supabase, authUserId, roleInfo.role, roleInfo.department_id, document_id);
+  if (!canAccess) {
     return NextResponse.json({ error: '접근 권한이 없습니다.' }, { status: 403 });
   }
 
@@ -257,9 +264,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
   }
 
+  const roleInfo = await getUserRoleInfo(supabase, authUserId);
+  if (!roleInfo) {
+    return NextResponse.json({ error: '사용자 정보가 없습니다.' }, { status: 403 });
+  }
+
   const document_id = request.nextUrl.searchParams.get('document_id');
   if (!document_id) {
     return NextResponse.json({ error: '문서 ID가 필요합니다.' }, { status: 400 });
+  }
+
+  const canAccess = await canAccessDocument(supabase, authUserId, roleInfo.role, roleInfo.department_id, document_id);
+  if (!canAccess) {
+    return NextResponse.json({ error: '접근 권한이 없습니다.' }, { status: 403 });
   }
 
   const admin = createAdminSupabaseClient();

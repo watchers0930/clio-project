@@ -46,7 +46,10 @@ export default function MemoCard({ memo, onPin, onView, onEdit, onDelete }: Memo
       )}
 
       {/* 제목 */}
-      <h4 className="text-[14px] font-semibold text-[#1B1F2B] truncate pr-7 leading-snug">
+      <h4
+        className="text-[14px] font-semibold text-[#1B1F2B] truncate pr-7 leading-snug"
+        style={{ fontFamily: '"Paperlogy", "Pretendard", "Noto Sans KR", sans-serif' }}
+      >
         {memo.title}
       </h4>
 
@@ -67,8 +70,8 @@ export default function MemoCard({ memo, onPin, onView, onEdit, onDelete }: Memo
           />
           {colorInfo.label}
         </span>
-        {/* 날짜 */}
-        <p className="text-[11px] text-[#A0A7B5]">
+        {/* 날짜 — hover 시 액션 버튼과 겹치지 않도록 숨김 */}
+        <p className={`text-[11px] text-[#A0A7B5] transition-opacity duration-150 ${hovered ? 'opacity-0' : 'opacity-100'}`}>
           {format(new Date(memo.updated_at), 'M월 d일 HH:mm', { locale: ko })}
         </p>
       </div>

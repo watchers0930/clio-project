@@ -29,13 +29,13 @@ export function ExpiryDashboardWidget() {
           <h2 className="text-[16px] font-semibold text-foreground">만료 임박 문서</h2>
         </div>
         {items.length > 0 && (
-          <span className="text-[12px] font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md">
+          <span className="text-[12px] font-semibold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-md">
             {items.length}건
           </span>
         )}
       </div>
 
-      <div style={{ padding: '8px 0' }}>
+      <div style={{ padding: '10px 0' }}>
         {isLoading ? (
           <div className="flex items-center justify-center gap-2 py-6">
             <Clock size={14} className="text-muted animate-spin" />
@@ -52,10 +52,10 @@ export function ExpiryDashboardWidget() {
               <div
                 key={item.schedule_id}
                 className="flex items-center border-b border-border last:border-b-0"
-                style={{ gap: 12, padding: '12px 24px' }}
+                style={{ gap: 14, padding: '14px 24px' }}
               >
                 <span
-                  className={`flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md ${badge.bg} ${badge.text}`}
+                  className={`flex-shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-md ${badge.bg} ${badge.text}`}
                 >
                   {badge.label}
                 </span>

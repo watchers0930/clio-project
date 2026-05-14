@@ -9,7 +9,13 @@ import type { SuggestionItem, LawChunk, SuggestRequest } from '@/lib/types/contr
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getOpenAI() {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY가 설정되지 않았습니다.');
+  }
+  return new OpenAI({ apiKey });
+}
 
 const SYSTEM_PROMPT = `당신은 한국 IT 계약 분야의 법률 검토 전문가입니다.
 계약서의 불리하거나 누락된 조항을 수정하는 데 있어 한국 법령(민법, 하도급법 등)을 근거로
@@ -30,6 +36,7 @@ async function suggestForItem(
   item: RiskItem,
   laws: (LawChunk & { similarity: number })[],
 ): Promise<{ revised: string; reason: string }> {
+  const openai = getOpenAI();
   const lawsText = laws
     .map(
       (l) =>
@@ -71,6 +78,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+
+  if (!process.env.OPENAI_API_KEY) {
+    return NextResponse.json({ error: 'AI 서비스가 설정되지 않았습니다.' }, { status: 503 });
+  }
 
   if (!UUID_RE.test(id)) {
     return NextResponse.json({ error: 'INVALID_REQUEST', message: '유효하지 않은 ID입니다.' }, { status: 400 });

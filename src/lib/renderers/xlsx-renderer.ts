@@ -7,6 +7,12 @@
 import type { ExcelSheet, ExcelCellData, RenderOutput, CorporateTheme } from './types';
 import { DEFAULT_THEME } from './types';
 
+function toNodeBuffer(value: Buffer | ArrayBuffer | Uint8Array): Buffer {
+  if (Buffer.isBuffer(value)) return Buffer.from(value);
+  if (value instanceof ArrayBuffer) return Buffer.from(new Uint8Array(value));
+  return Buffer.from(value);
+}
+
 export async function renderXlsx(
   sheets: ExcelSheet[],
   title: string,
@@ -87,7 +93,7 @@ export async function renderXlsx(
   }
 
   const arrayBuffer = await workbook.xlsx.writeBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+  const buffer = toNodeBuffer(arrayBuffer);
 
   return {
     buffer,
@@ -108,7 +114,8 @@ export async function renderXlsxFromTemplate(
 ): Promise<RenderOutput> {
   const ExcelJS = await import('exceljs');
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(templateBuffer);
+  type WorkbookLoadBuffer = Parameters<typeof workbook.xlsx.load>[0];
+  await workbook.xlsx.load(Buffer.from(templateBuffer) as unknown as WorkbookLoadBuffer);
 
   // AI가 지정한 셀에 값 주입 (기존 서식 유지)
   for (const [sheetName, cells] of Object.entries(cellData)) {
@@ -126,7 +133,7 @@ export async function renderXlsxFromTemplate(
   }
 
   const arrayBuffer = await workbook.xlsx.writeBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+  const buffer = toNodeBuffer(arrayBuffer);
 
   return {
     buffer,

@@ -215,7 +215,11 @@ export async function analyzeDocumentStructure(
 ): Promise<DetectedPlaceholder[]> {
   const ext = fileName.split('.').pop()?.toLowerCase();
 
-  if (ext === 'docx' || mimeType.includes('wordprocessingml')) {
+  if (
+    ext === 'docx' ||
+    ext === 'dotx' ||
+    mimeType.includes('wordprocessingml')
+  ) {
     return analyzeDocx(buffer);
   }
 

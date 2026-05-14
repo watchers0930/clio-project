@@ -14,9 +14,20 @@ interface MemoRow {
   created_by: string;
 }
 
-function getOpenAI(): OpenAI {
+function normalizeMemoIds(ids: unknown): string[] {
+  if (!Array.isArray(ids)) return [];
+  return [...new Set(ids.filter((id): id is string => typeof id === 'string' && id.trim().length > 0))];
+}
+
+function sanitizeClusterName(name: string | null): string | null {
+  const trimmed = name?.trim();
+  if (!trimmed) return null;
+  return trimmed.length > 18 ? `${trimmed.slice(0, 18)}…` : trimmed;
+}
+
+function getOpenAI(): OpenAI | null {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error('OPENAI_API_KEY 미설정');
+  if (!apiKey) return null;
   return new OpenAI({ apiKey });
 }
 
@@ -61,7 +72,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: '클러스터 수 초과 (최대 20개)' }, { status: 400 });
     }
 
-    const allIds = clusters.flatMap((c) => c.memoIds);
+    const normalizedClusters = clusters.map((cluster) => ({
+      memoIds: normalizeMemoIds(cluster.memoIds),
+    }));
+
+    if (normalizedClusters.some((cluster) => cluster.memoIds.length < 2)) {
+      return NextResponse.json({ success: false, error: '각 클러스터는 최소 2개의 메모가 필요합니다' }, { status: 400 });
+    }
+
+    const allIds = normalizedClusters.flatMap((c) => c.memoIds);
     const admin = createAdminSupabaseClient();
     const { data: memosRaw, error } = await admin
       .from('memos')
@@ -79,11 +98,11 @@ export async function POST(request: NextRequest) {
 
     const openai = getOpenAI();
     const results = await Promise.all(
-      clusters.map(async (cluster, index) => {
+      normalizedClusters.map(async (cluster, index) => {
         const ownedIds = cluster.memoIds.filter((id) => memoMap.has(id));
         if (ownedIds.length < 2) return { index, name: null, memoIds: cluster.memoIds };
         const titles = ownedIds.map((id) => memoMap.get(id)!.title);
-        const name = await nameCluster(openai, titles);
+        const name = openai ? sanitizeClusterName(await nameCluster(openai, titles)) : null;
         return { index, name, memoIds: cluster.memoIds };
       }),
     );

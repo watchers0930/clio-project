@@ -11,6 +11,7 @@ export function sanitizeFileName(name: string): string {
 export const ALLOWED_MIMES = new Set([
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   'application/haansofthwp',
@@ -29,7 +30,7 @@ export const ALLOWED_MIMES = new Set([
 
 /** 허용 확장자 (MIME 타입 미확인 시 폴백) */
 export const ALLOWED_EXTENSIONS = new Set([
-  'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+  'pdf', 'doc', 'docx', 'dotx', 'xls', 'xlsx', 'ppt', 'pptx',
   'hwp', 'hwpx', 'md', 'txt', 'csv', 'tsv',
   'm4a', 'mp3', 'wav', 'webm', 'ogg',
 ]);

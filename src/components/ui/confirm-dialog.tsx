@@ -40,7 +40,7 @@ export function ConfirmDialog({
       style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
       onClick={(e) => { if (e.target === e.currentTarget && !loading) onCancel(); }}
     >
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8 text-center">
+      <div className="bg-white rounded-[24px] shadow-xl w-full max-w-sm p-9 text-center sm:p-10">
         {/* 아이콘 */}
         <div className={cn(
           'w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center',
@@ -63,11 +63,11 @@ export function ConfirmDialog({
         )}
         {!description && <div className="mb-6" />}
 
-        <div className="flex gap-3">
+        <div className="flex gap-3.5">
           <button
             onClick={onCancel}
             disabled={loading}
-            className="flex-1 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors disabled:opacity-40"
+            className="flex-1 py-3 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors disabled:opacity-40"
           >
             {cancelLabel}
           </button>
@@ -75,7 +75,7 @@ export function ConfirmDialog({
             onClick={onConfirm}
             disabled={loading}
             className={cn(
-              'flex-1 py-2.5 rounded-xl text-sm font-medium text-white transition-colors disabled:opacity-40 flex items-center justify-center gap-2',
+              'flex-1 py-3 rounded-xl text-sm font-medium text-white transition-colors disabled:opacity-40 flex items-center justify-center gap-2',
               variant === 'danger'
                 ? 'bg-[#1d1d1f] hover:bg-[#2d2d2f]'
                 : 'bg-[#0071e3] hover:bg-[#005bbf]'

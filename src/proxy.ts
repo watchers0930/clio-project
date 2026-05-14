@@ -9,7 +9,7 @@ import { updateSession } from '@/lib/supabase/middleware';
 // 인증 없이 접근 가능한 경로
 const PUBLIC_PATHS = ['/login', '/signup', '/auth/callback', '/share'];
 
-export async function middleware(request: NextRequest) {
+async function handleProxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 정적 파일, API 라우트, 공개 경로는 건너뛰기
@@ -43,6 +43,10 @@ export async function middleware(request: NextRequest) {
   }
 
   return response;
+}
+
+export async function proxy(request: NextRequest) {
+  return handleProxy(request);
 }
 
 export const config = {

@@ -169,7 +169,10 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   // 10분 초과 자동 정지
   useEffect(() => {
     if (status === 'recording' && duration >= MAX_DURATION_SECS) {
-      stopRecording();
+      const timer = window.setTimeout(() => {
+        stopRecording();
+      }, 0);
+      return () => window.clearTimeout(timer);
     }
   }, [duration, status, stopRecording]);
 

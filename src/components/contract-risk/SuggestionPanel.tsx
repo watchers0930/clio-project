@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, AlertTriangle, Info, CheckCircle, SkipForward } from 'lucide-react';
+import { CheckCircle, SkipForward } from 'lucide-react';
 import { LawReferenceCard } from './LawReferenceCard';
 import { RevisedClauseBox } from './RevisedClauseBox';
 import { cn } from '@/lib/utils';
@@ -12,18 +12,6 @@ interface SuggestionPanelProps {
   onSkip: (key: string) => void;
   isLoading: boolean;
 }
-
-const RISK_ICON = {
-  high: AlertCircle,
-  medium: AlertTriangle,
-  low: Info,
-};
-
-const RISK_COLOR = {
-  high: 'text-red-500',
-  medium: 'text-amber-500',
-  low: 'text-emerald-500',
-};
 
 function LoadingSkeleton() {
   return (
@@ -46,7 +34,7 @@ function LoadingSkeleton() {
 export function SuggestionPanel({ suggestion, onAccept, onSkip, isLoading }: SuggestionPanelProps) {
   if (isLoading) {
     return (
-      <div className="flex-1 overflow-y-auto px-6 py-5">
+      <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
         <LoadingSkeleton />
       </div>
     );
@@ -64,7 +52,7 @@ export function SuggestionPanel({ suggestion, onAccept, onSkip, isLoading }: Sug
   const isSkipped = suggestion.decision === 'skipped';
 
   return (
-    <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
+    <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 flex flex-col gap-4 sm:gap-5">
       {/* 헤더 */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-[11px] font-mono text-[#888] bg-[#F7F8FA] border border-[#E2E5EA] px-1.5 py-0.5 rounded">
@@ -116,10 +104,10 @@ export function SuggestionPanel({ suggestion, onAccept, onSkip, isLoading }: Sug
 
       {/* 액션 버튼 */}
       {suggestion.decision === 'pending' && (
-        <div className="flex gap-3 pt-1">
-          <button
-            onClick={() => onSkip(suggestion.item_key)}
-            className="flex-1 py-2.5 rounded-xl border border-[#E2E5EA] text-[13px] text-[#888] hover:bg-[#F7F8FA] transition-colors"
+      <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:gap-3">
+        <button
+          onClick={() => onSkip(suggestion.item_key)}
+          className="flex-1 py-2.5 rounded-xl border border-[#E2E5EA] text-[13px] text-[#888] hover:bg-[#F7F8FA] transition-colors"
           >
             건너뜀
           </button>
@@ -133,7 +121,7 @@ export function SuggestionPanel({ suggestion, onAccept, onSkip, isLoading }: Sug
       )}
 
       {suggestion.decision !== 'pending' && (
-        <div className="flex gap-3 pt-1">
+        <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:gap-3">
           <button
             onClick={() => onSkip(suggestion.item_key)}
             className={cn(

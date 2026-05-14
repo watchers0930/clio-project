@@ -19,7 +19,7 @@ CLIO 메모는 단순 CRUD를 넘어 "생각의 파편을 조직화하는 허브
 
 ## Architecture [coverage: high -- 8 sources]
 
-### 파일 구조 (v7.4.0)
+### 파일 구조 (v7.5.0)
 
 ```
 src/
@@ -237,6 +237,7 @@ CREATE TABLE memo_groups (
 ## Gotchas [coverage: high -- 4 sources]
 
 - **SSR 불가**: `react-force-graph-2d`는 Canvas API 사용. `dynamic(() => import(...), { ssr: false })` 필수. 누락 시 서버 사이드 에러
+- **그래프 튕김 버그 (v7.5.0 수정)**: 사이드패널이 flex 자식으로 구성된 경우 패널 열기/닫기 시 그래프 컨테이너 너비가 변경 → ResizeObserver 발화 → ForceGraph2D 재초기화 → 노드 위치 리셋. `MemoGraphView` 외부 컨테이너를 `relative w-full`로 변경하고 그래프는 `absolute inset-0`, 사이드패널/아이디어패널은 `absolute right-0 z-10` 오버레이로 전환하여 해결.
 - **링크 우선순위**: 동일 쌍에 title·content·semantic이 모두 해당되면 title만 생성 (continue). 그래프 링크 중복 방지
 - **memo_embeddings embedding 타입**: DB에서 문자열로 반환될 수 있음. `typeof e.embedding === 'string'` 체크 후 JSON.parse 필요
 - **idea API 소유권 확인**: memoIds를 DB에서 필터링 후 본인 소유 메모가 2개 미만이면 403. admin 클라이언트 사용이므로 코드 레벨 소유권 확인 필수

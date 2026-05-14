@@ -4,6 +4,7 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Sidebar } from './sidebar';
 import { Header } from './header';
+import { MobileBottomNav } from './mobile-bottom-nav';
 import { ToastRenderer } from '@/components/ui/toast';
 import { useAuthStore } from '@/store/auth-store';
 import { ExpiryAlertProvider } from '@/components/expiry/ExpiryAlertProvider';
@@ -54,7 +55,7 @@ function AppLayout({ children }: AppLayoutProps) {
             onClick={() => setMobileMenuOpen(false)}
           />
           <div className="fixed inset-y-0 left-0 z-50 lg:hidden">
-            <Sidebar onToggle={() => setMobileMenuOpen(false)} />
+            <Sidebar mobile onToggle={() => setMobileMenuOpen(false)} />
           </div>
         </>
       )}
@@ -64,18 +65,19 @@ function AppLayout({ children }: AppLayoutProps) {
         <Header onMenuClick={() => setMobileMenuOpen(!mobileMenuOpen)} />
         {isViewer ? (
           /* 문서 뷰어: 풀스크린, 패딩·푸터 없음 */
-          <main className="flex-1 overflow-hidden">
+          <main className="flex-1 overflow-y-auto pb-[88px] lg:pb-0">
             {children}
           </main>
         ) : (
           /* 일반 페이지: 스크롤 가능, 푸터는 콘텐츠 하단에 위치 */
-          <main className="flex-1 overflow-y-auto">
-            <div className="w-[94%]" style={{ padding: '32px 0 32px 30px' }}>
+          <main className="flex-1 overflow-y-auto pb-[92px] lg:pb-0">
+            <div className="mx-auto w-full max-w-[1680px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10 xl:px-10 xl:py-12">
               {children}
             </div>
           </main>
         )}
       </div>
+      <MobileBottomNav />
       <ToastRenderer />
       <OnboardingModal />
     </div>

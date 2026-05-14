@@ -1,6 +1,6 @@
 # 파일 관리
 
-[coverage: high -- sources: src/app/api/files/route.ts, src/app/api/files/[id]/route.ts, src/app/api/files/[id]/expiry/route.ts, src/app/api/files/[id]/share/route.ts, src/components/expiry/ExpiryAlertModal.tsx, src/types/expiry.ts, docs/02-design/features/clio-expiry-alert.design.md]
+[coverage: high -- sources: src/app/(app)/files/page.tsx, src/app/api/files/route.ts, src/app/api/files/[id]/route.ts, src/app/api/files/[id]/reprocess/route.ts, src/app/api/files/process/route.ts, src/app/api/files/[id]/expiry/route.ts, src/app/api/files/[id]/share/route.ts, src/components/expiry/ExpiryAlertModal.tsx, src/types/expiry.ts, docs/02-design/features/clio-expiry-alert.design.md]
 
 ---
 
@@ -43,11 +43,64 @@ CLIO의 파일 관리 시스템은 문서 업로드부터 벡터 색인, 공개 
 ```
 uploading → processing → indexed (완료)
                        → error (오류)
+                         ↑
+                   재처리 가능 (POST /api/files/[id]/reprocess)
 ```
 
 `STATUS_MAP`이 DB 내부 상태를 프론트 표시 문자열로 변환한다 (`indexed`/`completed` → '완료').
 
 **JSON body 모드**: `multipart` 없이 JSON body만 보내면 메타데이터 전용 레코드를 `status: 'indexed'`로 즉시 생성한다 (Storage 업로드 없음).
+
+---
+
+## 파일 재처리 (Reprocess) [coverage: high]
+
+`POST /api/files/[id]/reprocess` — `'오류'` 또는 `'처리중'` 상태 파일을 재처리한다.
+
+**처리 흐름**:
+1. 인증 확인 (`getAuthUserId`)
+2. 파일 소유자 확인 (`file.uploaded_by === authUserId`) — 403 반환
+3. `storage_path` 유무 확인 — 없으면 400 반환
+4. 기존 `file_chunks` 삭제 (`DELETE WHERE file_id = fileId`)
+5. `files.status` → `'processing'`으로 초기화
+6. `POST /api/files/process` fire-and-forget 호출
+7. 즉시 `{ success: true }` 반환
+
+**UI 표시 조건**: 파일 목록(테이블/그리드 뷰)에서 `status === '오류' || status === '처리중'` **이고** `isOwner === true`인 경우에만 재처리 버튼 표시. 타인 파일은 버튼 자체가 숨겨진다.
+
+---
+
+## 파일 처리 파이프라인 (벡터화) [coverage: high]
+
+업로드 완료 즉시 백그라운드에서 `POST /api/files/process`가 fire-and-forget으로 호출된다. 이 엔드포인트가 아래 파이프라인을 순차 실행한다.
+
+**`export const maxDuration = 60`** — Vercel Hobby Plan 기본 10초 제한을 60초로 확장. 이 설정 없이는 대용량 파일 처리 중 함수가 강제 종료되어 `file_chunks`가 생성되지 않는다.
+
+```
+파일 업로드 (status: processing)
+    │
+    ▼
+텍스트 추출 (PDF/DOCX/PPTX/XLSX/MD 포맷별 파서)
+    │
+    ▼
+청킹 (Chunk 단위 분할)
+    │
+    ▼
+임베딩 생성 (OpenAI Embeddings API)
+    │
+    ▼
+벡터 색인 저장 → status: indexed
+    │
+    ▼ (비동기, 독립 실행)
+만료일 추출 POST /api/files/[id]/extract-expiry
+    → GPT-4o → schedules INSERT
+```
+
+**멱등성**: `status === 'indexed'` 이고 `file_chunks` 건수 > 0이면 재처리 없이 즉시 성공 반환.
+
+**오디오 파일**: `isAudioFile()` 판별 후 STT 별도 처리 필요 표시 → `status: 'indexed'`로 즉시 완료 처리.
+
+파이프라인 중 오류 발생 시 `files.status`가 `'error'`로 갱신된다. 만료일 추출 단계는 try/catch로 격리되어 실패해도 파이프라인 전체는 `'indexed'`로 완료된다.
 
 ---
 
@@ -66,6 +119,58 @@ uploading → processing → indexed (완료)
   - 본인이 업로드한 파일만 변경 가능 (`uploaded_by === authUserId` 검사)
 
 **목록 조회 필터**: `GET /api/files?scope=company` 또는 `?scope=department`로 필터링 가능. `전체` 또는 미전달 시 전체 조회.
+
+---
+
+## 파일 관리 페이지 UI — AI 생성 문서 통합 [coverage: high]
+
+`src/app/(app)/files/page.tsx`는 마운트 시점에 업로드된 파일과 AI 생성 문서를 모두 불러와 단일 `files` 상태 배열로 병합하여 렌더링한다.
+
+### 데이터 로드 방식
+
+컴포넌트 마운트 `useEffect`에서 세 가지 API 호출이 병렬로 실행된다.
+
+```
+Promise.all([
+  GET /api/files       → 업로드된 파일 목록
+  GET /api/documents   → AI 생성 문서 목록
+  GET /api/departments → 부서 목록 (필터 UI용)
+])
+```
+
+문서(`/api/documents` 응답)는 아래 형태로 `FileItem` 포맷에 맞게 변환된 뒤 파일 목록과 합쳐진다.
+
+```typescript
+{
+  id: d.id,
+  name: d.title,
+  type: d.template ?? 'AI문서',
+  department: '미분류',
+  size: '-',
+  uploadDate: d.createdAt,
+  status: '완료',
+  scope: 'company',
+  isOwner: false,
+  sourceType: 'document',   // 핵심 구분자
+}
+```
+
+### FileItem 인터페이스 변경
+
+`FileItem` 인터페이스에 `sourceType?: 'file' | 'document'` 필드가 추가되었다. 업로드된 파일은 이 필드가 없거나 `'file'`이고, AI 생성 문서는 `'document'`다.
+
+### UI 차이점 — 문서 아이템 (`sourceType === 'document'`)
+
+| 항목 | 일반 파일 | AI 생성 문서 |
+|------|-----------|-------------|
+| 파일 타입 배지 | 확장자/MIME 기반 배지 | 보라색 `AI문서` 배지 |
+| 아이템 클릭 | 상세 패널(모달) 열기 | `/documents` 페이지로 이동 |
+| 다운로드 버튼 | 표시 | 숨김 |
+| 재처리 버튼 | 소유자이고 오류 상태면 표시 | 숨김 |
+| 삭제 버튼 | 표시 (권한 있을 때) | 숨김 |
+| 상세 모달 하단 버튼 | "다운로드" | "문서 보기" (파란색, `/documents` 이동) |
+
+리스트 뷰와 그리드 뷰 모두 동일하게 적용된다.
 
 ---
 
@@ -179,34 +284,6 @@ interface ExpirySummaryResponse {
 
 ---
 
-## 파일 처리 파이프라인 (벡터화) [coverage: medium]
-
-업로드 완료 즉시 백그라운드에서 `POST /api/files/process`가 fire-and-forget으로 호출된다. 이 엔드포인트가 아래 파이프라인을 순차 실행한다.
-
-```
-파일 업로드 (status: processing)
-    │
-    ▼
-텍스트 추출 (PDF/DOCX/PPTX/XLSX/MD 포맷별 파서)
-    │
-    ▼
-청킹 (Chunk 단위 분할)
-    │
-    ▼
-임베딩 생성 (OpenAI Embeddings API)
-    │
-    ▼
-벡터 색인 저장 → status: indexed
-    │
-    ▼ (비동기, 독립 실행)
-만료일 추출 POST /api/files/[id]/extract-expiry
-    → GPT-4o → schedules INSERT
-```
-
-파이프라인 중 오류 발생 시 `files.status`가 `'error'`로 갱신된다. 만료일 추출 단계는 try/catch로 격리되어 실패해도 파이프라인 전체는 `'indexed'`로 완료된다.
-
----
-
 ## API Surface [coverage: high]
 
 | 메서드 | 경로 | 설명 | 인증 |
@@ -216,12 +293,14 @@ interface ExpirySummaryResponse {
 | GET | `/api/files/[id]` | 파일 상세 조회 (접근 권한 판별 포함) | 필수 |
 | PATCH | `/api/files/[id]` | 공개 범위(scope) 변경 | 필수 (소유자만) |
 | DELETE | `/api/files/[id]` | 파일 삭제 (Storage + DB) | 필수 (권한 검사) |
+| POST | `/api/files/[id]/reprocess` | 파일 재처리 (청크 삭제 후 재색인) | 필수 (소유자만) |
 | PATCH | `/api/files/[id]/expiry` | 만료일 수동 수정 | 필수 |
 | POST | `/api/files/[id]/extract-expiry` | AI 만료일 추출 + schedules 등록 | 필수 |
 | GET | `/api/dashboard/expiry-summary` | D-30 이내 만료 문서 목록 | 필수 |
 | GET | `/api/files/[id]/share` | 파일 공유 현황 조회 | 필수 |
 | POST | `/api/files/[id]/share` | 공유 권한 부여 | 필수 |
 | DELETE | `/api/files/[id]/share` | 공유 권한 제거 | 필수 |
+| POST | `/api/files/process` | 내부 처리 파이프라인 (내부 호출 전용) | X-Internal-Secret |
 
 **목록 조회 쿼리 파라미터** (`GET /api/files`):
 
@@ -239,6 +318,12 @@ interface ExpirySummaryResponse {
 
 ## Key Decisions [coverage: high]
 
+**maxDuration = 60 (Vercel 함수 타임아웃 확장)**
+Vercel Hobby Plan 기본값 10초로는 대용량 파일의 텍스트 추출 → 임베딩 파이프라인 완료 불가. `export const maxDuration = 60`을 `/api/files/process/route.ts`에 추가하여 60초로 확장. 이 설정 누락 시 파일이 `'처리중'` 또는 `'오류'` 상태로 고착되고 RAG 검색에서 제외된다.
+
+**재처리는 소유자 본인만 허용**
+`POST /api/files/[id]/reprocess`에서 `uploaded_by !== authUserId`이면 403. 타인 파일의 청크 삭제는 데이터 무결성 위반. UI에서도 `isOwner === true`일 때만 버튼 표시.
+
 **만료일 알림은 cron/이메일 없이 모달 팝업**
 외부 알림 서비스 의존도를 제거하기 위해 앱 진입 시 클라이언트가 직접 API를 호출하는 방식을 선택했다. "오늘 다시 보지 않기" 상태는 localStorage로만 관리하여 서버 부하 없이 동작한다.
 
@@ -251,31 +336,35 @@ interface ExpirySummaryResponse {
 **만료일 AI 추출 실패 격리**
 GPT-4o 호출 실패가 파일 업로드 전체를 실패시키지 않도록 try/catch로 격리한다. 추출 실패 시 `schedules` 레코드가 생성되지 않을 뿐 파일은 정상 색인된다.
 
-**파일 삭제 시 Storage와 DB 동시 정리**
-`DELETE /api/files/[id]`는 `supabase.storage.from('files').remove([storage_path])`로 Storage 원본 파일을 삭제한 뒤 DB 레코드를 삭제한다. `storage_path`가 null인 경우(JSON 전용 등록) Storage 삭제는 건너뛴다.
-
 ---
 
 ## Gotchas [coverage: high]
 
+- **Vercel 10초 타임아웃**: `/api/files/process`에 `maxDuration = 60` 누락 시 대용량 파일 처리 중 함수가 강제 종료된다. `file_chunks`가 0건이 되고 파일은 RAG 검색에서 제외된다. 재처리 버튼으로 복구 가능.
+
+- **`/api/files/process`는 내부 전용**: `INTERNAL_API_SECRET` 헤더(`X-Internal-Secret`) 검증. 프로덕션에서 미설정 시 500 반환. 개발 환경에서는 경고 로그 후 허용.
+
 - **macOS 한글 파일명 NFD 문제**: macOS에서 업로드된 한글 파일명은 NFD로 인코딩되어 검색이 깨진다. `file.name.normalize('NFC')` 처리가 필수이며, 이를 누락하면 `ilike` 검색이 동작하지 않는다.
 
-- **type 필터는 DB가 아닌 메모리에서 수행**: `type` 파라미터 필터는 Supabase 쿼리가 아닌 결과 배열에 대해 `.filter()`를 적용한다. 따라서 `total` 카운트가 type 필터 적용 전 DB 전체 건수로 반환될 수 있다 (`type && type !== '전체'` 조건 분기 있음).
+- **type 필터는 DB가 아닌 메모리에서 수행**: `type` 파라미터 필터는 Supabase 쿼리가 아닌 결과 배열에 대해 `.filter()`를 적용한다. 따라서 `total` 카운트가 type 필터 적용 전 DB 전체 건수로 반환될 수 있다.
 
-- **만료일 쿼리 범위**: `GET /api/dashboard/expiry-summary`는 `end_date >= today`를 조건으로 포함하지 않는다. 설계서 기준 이미 만료된 문서(음수 days_remaining)도 D-30 이내면 포함된다 (`has_expired: true`로 표시).
+- **만료일 쿼리 범위**: `GET /api/dashboard/expiry-summary`는 `end_date >= today`를 조건으로 포함하지 않는다. 이미 만료된 문서(음수 days_remaining)도 D-30 이내면 포함된다 (`has_expired: true`로 표시).
 
 - **공유 권한 조회는 adminClient 사용**: `GET /api/files/[id]`는 RLS를 우회하기 위해 adminClient로 파일을 조회한다. 이후 코드 레벨에서 소유자/부서/공유 권한을 직접 판별한다.
 
-- **EXTENSION_MIME_MAP에 doc/xls/ppt/hwp 포함**: 구형 Office 포맷(`.doc`, `.xls`, `.ppt`) 및 HWP도 MIME 폴백 매핑에 존재하지만 `validateFile` 함수에서 실제 허용 여부를 별도로 검증하므로 이 매핑 자체가 허용을 보장하지 않는다.
+- **EXTENSION_MIME_MAP에 doc/xls/ppt/hwp 포함**: 구형 Office 포맷 및 HWP도 MIME 폴백 매핑에 존재하지만 `validateFile` 함수에서 실제 허용 여부를 별도로 검증하므로 이 매핑 자체가 허용을 보장하지 않는다.
 
-- **ExpiryAlertModal은 백드롭 클릭으로도 닫힘**: `onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}` 패턴으로 모달 외부 클릭 시 닫힌다. "오늘 다시 보지 않기"와 달리 localStorage에 저장하지 않으므로 새로고침 시 다시 표시된다.
+- **일괄 삭제·scope 변경 시 문서 아이템 포함 주의**: 파일 목록에서 전체 선택 후 일괄 삭제 또는 scope 변경을 실행하면 `sourceType === 'document'` 아이템도 선택 대상에 포함된다. UI는 해당 작업을 시도하지만 내부적으로 `DELETE /api/files/[id]` 및 `PATCH /api/files/[id]`를 호출하며, 이 엔드포인트들은 업로드된 파일만 처리하도록 설계되어 있다. 문서 아이템에 대한 호출은 해당 `id`가 `files` 테이블에 존재하지 않아 404 또는 오류로 **조용히 실패**한다. 사용자에게 별도 에러 메시지가 표시되지 않을 수 있으므로 향후 일괄 작업 시 `sourceType` 기준으로 문서 아이템을 사전 필터링하는 처리가 필요하다.
 
 ---
 
 ## Sources [coverage: high]
 
+- `src/app/(app)/files/page.tsx` — 파일 관리 페이지 (업로드 파일 + AI 문서 병합 렌더링)
 - `src/app/api/files/route.ts` — 파일 목록/업로드 API
 - `src/app/api/files/[id]/route.ts` — 파일 상세/scope 변경/삭제 API
+- `src/app/api/files/[id]/reprocess/route.ts` — 파일 재처리 API (소유자 전용)
+- `src/app/api/files/process/route.ts` — 내부 처리 파이프라인 (maxDuration=60)
 - `src/app/api/files/[id]/expiry/route.ts` — 만료일 수동 수정 API
 - `src/app/api/files/[id]/share/route.ts` — 공유 권한 관리 API
 - `src/components/expiry/ExpiryAlertModal.tsx` — 만료 알림 모달 컴포넌트

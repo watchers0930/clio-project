@@ -1,983 +1,265 @@
 'use client';
 
-import { useState, useEffect, useRef, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { useToast } from '@/components/ui/toast';
-import { FILE_TYPE_BADGE, FILE_STATUS_COLOR } from '@/lib/constants/ui';
-import { formatSize, getFileType } from '@/lib/utils/format';
-import { Spinner, EmptyState, ConfirmDialog } from '@/components/ui';
-import { AutofillModal } from '@/components/common/AutofillModal';
-import { isContractTemplate } from '@/lib/contract-fields';
+import { Suspense, useState } from 'react';
+import { EmptyState } from '@/components/ui';
+import { ShareLinkModal } from '@/components/documents/ShareLinkModal';
+import {
+  BulkActionsBar,
+  FilesFilterBar,
+  FilesHeaderActions,
+  FilesListView,
+  FilesPagination,
+} from '@/components/files/files-sections';
+import {
+  FileDetailModal,
+  FilesPageDialogs,
+  FilesUploadModal,
+  ScrapeModal,
+} from '@/components/files/file-modals';
+import { useFilesPage } from '@/components/files/use-files-page';
 
-/* ────────────────────────── types ────────────────────────── */
-interface FileItem {
-  id: string;
-  name: string;
-  type: string;
-  department: string;
-  size: string;
-  sizeBytes?: number;
-  uploadDate: string;
-  status: '완료' | '처리중' | '오류';
-  scope: 'company' | 'department';
-  isOwner: boolean;
-}
-
-/* ────────────────────────── constants ────────────────────── */
-const TYPES = ['전체', 'PDF', 'DOCX', 'PPTX', 'XLSX', 'MD'];
-const STATUSES = ['전체', '완료', '처리중', '오류'];
-
-// 공통 상수 사용: FILE_TYPE_BADGE, FILE_STATUS_COLOR (from @/lib/constants/ui)
-
-const PAGE_SIZE = 6;
-
-// formatSize, getFileType → @/lib/utils/format 에서 import
-
-/* ────────────────────────── page ─────────────────────────── */
 export default function FilesPageWrapper() {
   return (
-    <Suspense fallback={
-      <div className="space-y-6 animate-pulse">
-        <div className="h-8 w-48 bg-[#e5e5e7] rounded-lg" />
-        <div className="h-12 bg-white rounded-2xl border border-[#e5e5e7]" />
-        <div className="h-96 bg-white rounded-2xl border border-[#e5e5e7]" />
-      </div>
-    }>
+    <Suspense fallback={<FilesPageSkeleton />}>
       <FilesPage />
     </Suspense>
   );
 }
 
 function FilesPage() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const toast = useToast();
+  const {
+    router,
+    fileInputRef,
+    loading,
+    search,
+    resourceFilter,
+    showUpload,
+    uploadProgress,
+    selectedIds,
+    dragOver,
+    selectedFiles,
+    detailFile,
+    deleteConfirm,
+    bulkConfirmOpen,
+    downloadToast,
+    uploadScope,
+    showScrape,
+    autofillFile,
+    showAutofill,
+    scrapeUrl,
+    scrapeLoading,
+    scrapeResult,
+    filtered,
+    safePage,
+    totalPages,
+    paged,
+    reprocessableSelectedCount,
+    setSearch,
+    setResourceFilter,
+    setPage,
+    setShowUpload,
+    setSelectedIds,
+    setDragOver,
+    setSelectedFiles,
+    setDetailFile,
+    setDeleteConfirm,
+    setBulkConfirmOpen,
+    setUploadScope,
+    setShowScrape,
+    setShowAutofill,
+    setScrapeUrl,
+    setScrapeResult,
+    toggleSelect,
+    toggleAll,
+    handleFileInputChange,
+    handleDrop,
+    handleUpload,
+    confirmDelete,
+    doBulkDelete,
+    bulkChangeScope,
+    handleAutofill,
+    handleReprocess,
+    handleBulkReprocess,
+    handleReprocessAllErrors,
+    handleDownload,
+    handleScrape,
+    closeUploadModal,
+    handleOpenFile,
+    handleDetailScopeToggle,
+  } = useFilesPage();
+  const [shareTarget, setShareTarget] = useState<{ id: string; title: string; type: 'document' | 'file' } | null>(null);
 
-  const [files, setFiles] = useState<FileItem[]>([]);
-  const [departments, setDepartments] = useState<string[]>(['전체']);
-  const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<'list' | 'grid'>('list');
-  const [search, setSearch] = useState('');
-  const [deptFilter, setDeptFilter] = useState('전체');
-  const [typeFilter, setTypeFilter] = useState('전체');
-  const [statusFilter, setStatusFilter] = useState('전체');
-  const [page, setPage] = useState(1);
-  const [showUpload, setShowUpload] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; percent: number } | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [dragOver, setDragOver] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [detailFile, setDetailFile] = useState<FileItem | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<FileItem | null>(null);
-  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
-  const [downloadToast, setDownloadToast] = useState<string | null>(null);
-  const [uploadScope, setUploadScope] = useState<'company' | 'department'>('department');
-  const [scopeFilter, setScopeFilter] = useState<'전체' | 'company' | 'department'>('전체');
-  const [showScrape, setShowScrape] = useState(false);
-  const [autofillFile, setAutofillFile] = useState<File | null>(null);
-  const [showAutofill, setShowAutofill] = useState(false);
-  const [scrapeUrl, setScrapeUrl] = useState('');
-  const [scrapeLoading, setScrapeLoading] = useState(false);
-  const [scrapeResult, setScrapeResult] = useState<{ success: boolean; message: string; linkCount?: number } | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  /* auto-open upload modal from query param */
-  useEffect(() => {
-    if (searchParams.get('upload') === 'true') {
-      setShowUpload(true);
-    }
-  }, [searchParams]);
-
-  useEffect(() => {
-    async function load() {
-      try {
-        const [filesRes, deptsRes] = await Promise.all([
-          fetch('/api/files?limit=500'),
-          fetch('/api/departments'),
-        ]);
-        if (filesRes.ok) {
-          const data = await filesRes.json();
-          setFiles(data.files ?? []);
-        }
-        if (deptsRes.ok) {
-          const data = await deptsRes.json();
-          const deptNames = (data.data ?? [])
-            .filter((d: { is_active: boolean }) => d.is_active !== false)
-            .map((d: { name: string }) => d.name);
-          setDepartments(['전체', ...deptNames]);
-        }
-      } catch {
-        setFiles([]);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, []);
-
-  /* filter */
-  const filtered = files.filter((f) => {
-    if (search && !f.name.toLowerCase().includes(search.toLowerCase())) return false;
-    if (deptFilter !== '전체' && f.department !== deptFilter) return false;
-    if (typeFilter !== '전체' && f.type !== typeFilter) return false;
-    if (statusFilter !== '전체' && f.status !== statusFilter) return false;
-    if (scopeFilter !== '전체' && f.scope !== scopeFilter) return false;
-    return true;
-  });
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-
-  const toggleAll = () => {
-    if (selectedIds.size === paged.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(paged.map((f) => f.id)));
-    }
-  };
-
-  const ALLOWED_EXTS = new Set(['pdf', 'docx', 'pptx', 'xlsx', 'hwp', 'hwpx', 'md', 'txt', 'csv']);
-  const MAX_SIZE = 50 * 1024 * 1024;
-
-  const addFiles = (incoming: File[]) => {
-    const valid = incoming.filter((f) => {
-      const ext = f.name.split('.').pop()?.toLowerCase() ?? '';
-      return ALLOWED_EXTS.has(ext) && f.size <= MAX_SIZE;
-    });
-    if (valid.length === 0) return;
-    setSelectedFiles((prev) => {
-      const names = new Set(prev.map((f) => f.name));
-      return [...prev, ...valid.filter((f) => !names.has(f.name))];
-    });
-  };
-
-  const handleFilePicker = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files?.length) addFiles(Array.from(files));
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const files = e.dataTransfer.files;
-    if (files?.length) addFiles(Array.from(files));
-  };
-
-  const handleUpload = async () => {
-    if (selectedFiles.length === 0) return;
-    const total = selectedFiles.length;
-    const failed: string[] = [];
-
-    for (let i = 0; i < total; i++) {
-      setUploadProgress({ current: i + 1, total, percent: Math.round(((i) / total) * 100) });
-
-      try {
-        const formData = new FormData();
-        formData.append('file', selectedFiles[i]);
-        formData.append('scope', uploadScope);
-
-        const res = await fetch('/api/files', { method: 'POST', body: formData });
-        if (!res.ok) {
-          const text = await res.text();
-          let msg = `(${res.status})`;
-          try { msg = JSON.parse(text)?.error || msg; } catch { /* non-JSON */ }
-          failed.push(`${selectedFiles[i].name}: ${msg}`);
-        }
-      } catch {
-        failed.push(`${selectedFiles[i].name}: 네트워크 오류`);
-      }
-
-      setUploadProgress({ current: i + 1, total, percent: Math.round(((i + 1) / total) * 100) });
+  const openCommentsFromFile = (file: { id: string; name: string; sourceType?: 'document' | 'file'; linkedDocumentId?: string | null }) => {
+    if (file.sourceType === 'document') {
+      router.push(`/documents/${file.id}#document-comment-panel`);
+      return;
     }
 
-    // 파일 목록 갱신
-    const listRes = await fetch('/api/files?limit=500');
-    if (listRes.ok) {
-      const data = await listRes.json();
-      setFiles(data.files ?? []);
+    if (file.linkedDocumentId) {
+      router.push(`/documents/${file.linkedDocumentId}#document-comment-panel`);
+      return;
     }
 
-    if (failed.length > 0) {
-      toast.error(`${total - failed.length}/${total}개 업로드 완료 (실패: ${failed.join(', ')})`);
-    }
-
-    setTimeout(() => {
-      setUploadProgress(null);
-      setShowUpload(false);
-      setSelectedFiles([]);
-      setUploadScope('department');
-      setPage(1);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }, failed.length > 0 ? 0 : 600);
+    router.push(`/documents?create=true&files=${encodeURIComponent(file.id)}&instructions=${encodeURIComponent(`"${file.name}" 파일을 검토용 문서로 정리하고 코멘트를 받을 수 있게 초안을 작성하세요.`)}`);
   };
 
-  const handleDelete = (file: FileItem) => {
-    setDeleteConfirm(file);
-  };
-
-  const confirmDelete = async () => {
-    if (!deleteConfirm) return;
-    try {
-      const res = await fetch(`/api/files/${deleteConfirm.id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setFiles((prev) => prev.filter((f) => f.id !== deleteConfirm.id));
-        setSelectedIds((prev) => {
-          const next = new Set(prev);
-          next.delete(deleteConfirm.id);
-          return next;
-        });
-      } else {
-        toast.error('파일 삭제에 실패했습니다.');
-      }
-    } catch {
-      toast.error('파일 삭제 중 오류가 발생했습니다.');
-    }
-    setDeleteConfirm(null);
-  };
-
-  const bulkDelete = () => {
-    if (selectedIds.size === 0) return;
-    setBulkConfirmOpen(true);
-  };
-
-  const _doBulkDelete = async () => {
-    const ids = Array.from(selectedIds);
-    await Promise.allSettled(ids.map((id) => fetch(`/api/files/${id}`, { method: 'DELETE' })));
-    setFiles((prev) => prev.filter((f) => !selectedIds.has(f.id)));
-    setSelectedIds(new Set());
-    setBulkConfirmOpen(false);
-  };
-
-  const bulkChangeScope = async (newScope: 'company' | 'department') => {
-    const ids = Array.from(selectedIds);
-    const results = await Promise.allSettled(
-      ids.map((id) =>
-        fetch(`/api/files/${id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ scope: newScope }),
-        }).then((r) => ({ id, ok: r.ok }))
-      )
-    );
-    const succeeded = results
-      .filter((r) => r.status === 'fulfilled' && r.value.ok)
-      .map((r) => (r as PromiseFulfilledResult<{ id: string; ok: boolean }>).value.id);
-    const failed = ids.length - succeeded.length;
-
-    setFiles((prev) =>
-      prev.map((f) => succeeded.includes(f.id) ? { ...f, scope: newScope } : f)
-    );
-
-    if (failed > 0) {
-      toast.error(`${succeeded.length}개 변경 완료, ${failed}개 실패 (본인 파일만 변경 가능)`);
-    } else {
-      toast.success(`${succeeded.length}개 파일을 ${newScope === 'company' ? '전사' : '부서'}로 변경했습니다.`);
-    }
-  };
-
-  const handleAutofill = async (file: FileItem) => {
-    // 파일을 Storage에서 다운로드해 File 객체로 변환 후 모달에 전달
-    try {
-      const res = await fetch(`/api/files/${file.id}/download`);
-      if (!res.ok) throw new Error('download api failed');
-      const data = await res.json();
-      if (!data.url) throw new Error('no url');
-
-      const fileRes = await fetch(data.url);
-      if (!fileRes.ok) throw new Error('fetch file failed');
-      const blob = await fileRes.blob();
-      const fileObj = new File([blob], file.name, { type: blob.type });
-
-      setAutofillFile(fileObj);
-    } catch {
-      // 다운로드 실패 시 파일 없이 모달 열기 (수동 업로드)
-      setAutofillFile(null);
-    }
-    setShowAutofill(true);
-    setDetailFile(null);
-  };
-
-  const handleDownload = async (file: FileItem) => {
-    setDownloadToast(file.name);
-    try {
-      const res = await fetch(`/api/files/${file.id}/download`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.url) {
-          const a = document.createElement('a');
-          a.href = data.url;
-          a.download = file.name;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-        }
-      } else {
-        toast.error('파일 다운로드에 실패했습니다.');
-      }
-    } catch {
-      toast.error('다운로드 중 오류가 발생했습니다.');
-    }
-    setTimeout(() => setDownloadToast(null), 2000);
-  };
-
-  const handleScrape = async () => {
-    if (!scrapeUrl.trim() || scrapeLoading) return;
-    setScrapeLoading(true);
-    setScrapeResult(null);
-    try {
-      const res = await fetch('/api/files/scrape', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: scrapeUrl }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setScrapeResult({ success: false, message: data.error ?? '수집에 실패했습니다.' });
-        return;
-      }
-      if (data.data?.linkCount === 0) {
-        setScrapeResult({ success: true, message: data.message ?? '상품 링크를 찾을 수 없습니다.', linkCount: 0 });
-        return;
-      }
-      setScrapeResult({
-        success: true,
-        message: `${data.data.linkCount}개의 상품 링크를 수집하여 "${data.data.name}" 파일로 저장했습니다.`,
-        linkCount: data.data.linkCount,
-      });
-      // 파일 목록 갱신
-      const listRes = await fetch('/api/files?limit=500');
-      if (listRes.ok) {
-        const listData = await listRes.json();
-        setFiles(listData.files ?? []);
-      }
-    } catch {
-      setScrapeResult({ success: false, message: '네트워크 오류가 발생했습니다.' });
-    } finally {
-      setScrapeLoading(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-8 w-48 bg-[#e5e5e7] rounded-lg" />
-        <div className="h-12 bg-white rounded-2xl border border-[#e5e5e7]" />
-        <div className="h-96 bg-white rounded-2xl border border-[#e5e5e7]" />
-      </div>
-    );
-  }
+  if (loading) return <FilesPageSkeleton />;
 
   return (
-    <div className="space-y-6 pb-10">
-      {/* header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3" style={{ marginBottom: 15 }}>
-        <h1 className="text-2xl font-bold text-[#1d1d1f]">파일 관리</h1>
-        <div className="flex gap-3 w-full sm:w-auto">
+    <div className="space-y-[25px] pb-10">
+      <FilesHeaderActions />
+
+      <BulkActionsBar
+        selectedCount={selectedIds.size}
+        reprocessableSelectedCount={reprocessableSelectedCount}
+        onCompanyScope={() => { void bulkChangeScope('company'); }}
+        onDepartmentScope={() => { void bulkChangeScope('department'); }}
+        onBulkReprocess={() => { void handleBulkReprocess(); }}
+        onBulkDelete={() => setBulkConfirmOpen(true)}
+        onClearSelection={() => setSelectedIds(new Set())}
+      />
+
+      <FilesFilterBar
+        search={search}
+        resourceFilter={resourceFilter}
+        onOpenUpload={() => setShowUpload(true)}
+        onReprocessErrors={() => { void handleReprocessAllErrors(); }}
+        onOpenScrape={() => { setShowScrape(true); setScrapeUrl(''); setScrapeResult(null); }}
+        onSearchChange={(value) => { setSearch(value); setPage(1); }}
+        onResourceFilterChange={(value) => { setResourceFilter(value); setPage(1); }}
+        mode="actions-only"
+      />
+
+      <div className="flex items-center justify-between gap-3 py-[12px]">
+        <p className="text-sm text-[#6e6e73]">
+          총 <span className="font-num font-medium text-[#1d1d1f]">{filtered.length}</span>개 파일
+        </p>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => { void handleReprocessAllErrors(); }}
+            className="inline-flex min-h-[32px] items-center justify-center gap-1.5 rounded-full border border-[#f6d7a3] bg-[#fffaf2] px-3 text-[10px] font-medium text-[#b06d00] transition-colors hover:bg-[#fff4df] sm:min-h-[34px] sm:px-3.5 sm:text-[11px]"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+            </svg>
+            오류파일재처리
+          </button>
           <button
             onClick={() => { setShowScrape(true); setScrapeUrl(''); setScrapeResult(null); }}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-[#1d1d1f] text-[#1d1d1f] text-sm font-medium hover:bg-[#f5f5f7] transition-colors w-full sm:w-auto"
+            className="inline-flex min-h-[32px] items-center justify-center gap-1.5 rounded-full border border-[#e5e5e7] bg-white px-3 text-[10px] font-medium text-[#4b5563] transition-colors hover:bg-[#f5f5f7] sm:min-h-[34px] sm:px-3.5 sm:text-[11px]"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-2.07a4.5 4.5 0 00-1.242-7.244l-4.5-4.5a4.5 4.5 0 00-6.364 6.364l1.757 1.757" />
             </svg>
-            URL 상품 링크 수집
-          </button>
-          <button
-            onClick={() => setShowUpload(true)}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors shadow-sm w-full sm:w-auto"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-            </svg>
-            파일 업로드
+            상품링크
           </button>
         </div>
       </div>
 
-      {/* bulk actions bar */}
-      {selectedIds.size > 0 && (
-        <div className="flex items-center flex-wrap gap-3 px-4 py-3 bg-[#f5f5f7] border border-[#0071e3]/30 rounded-xl">
-          <span className="text-sm font-medium text-[#1d1d1f]">
-            <span className="font-num">{selectedIds.size}</span>개 선택됨
-          </span>
-          <button
-            onClick={() => bulkChangeScope('company')}
-            className="px-4 py-2 rounded-lg border border-[#0071e3] text-[#0071e3] text-sm font-medium hover:bg-[#e0f0ff] transition-colors"
-          >
-            전사로 변경
-          </button>
-          <button
-            onClick={() => bulkChangeScope('department')}
-            className="px-4 py-2 rounded-lg border border-[#e5e5e7] bg-white text-sm font-medium text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
-          >
-            부서로 변경
-          </button>
-          <button
-            onClick={bulkDelete}
-            className="ml-auto px-5 py-2 rounded-lg bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors"
-          >
-            선택 삭제
-          </button>
-          <button
-            onClick={() => setSelectedIds(new Set())}
-            className="px-5 py-2 rounded-lg border border-[#e5e5e7] bg-white text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
-          >
-            선택 해제
-          </button>
-        </div>
+      {filtered.length === 0 ? (
+        <EmptyState title="검색 결과가 없습니다." description="필터를 조정하거나 새 파일을 업로드해보세요." />
+      ) : (
+        <FilesListView
+          paged={paged}
+          selectedIds={selectedIds}
+          onToggleAll={toggleAll}
+          onToggleSelect={toggleSelect}
+          onOpenFile={handleOpenFile}
+          onOpenCommentsFromFile={openCommentsFromFile}
+          onOpenSearchFromFile={(file) => router.push(`/search?q=${encodeURIComponent(file.name)}`)}
+          onOpenDocumentsFromFile={(file) => router.push(`/documents?create=true&files=${encodeURIComponent(file.id)}&instructions=${encodeURIComponent(`"${file.name}" 파일을 참고 자료로 사용해 후속 문서를 작성하세요.`)}`)}
+          onOpenContractRiskFromFile={(file) => router.push(`/contract-risk?source=${encodeURIComponent(file.name)}`)}
+          onOpenShare={(file) => setShareTarget({ id: file.id, title: file.name, type: file.sourceType === 'document' ? 'document' : 'file' })}
+          onDownload={handleDownload}
+          onReprocess={handleReprocess}
+          onDelete={(file) => setDeleteConfirm(file)}
+        />
       )}
 
-      {/* filter bar */}
-      <div className="flex flex-wrap gap-4 items-center" style={{ marginTop: 10 }}>
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6e6e73]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-          </svg>
-          <input
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            placeholder="파일 검색..."
-            className="w-full pl-10 pr-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3]"
-          />
-        </div>
-        <select value={deptFilter} onChange={(e) => { setDeptFilter(e.target.value); setPage(1); }} className="px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3]">
-          {departments.map((d) => <option key={d}>{d}</option>)}
-        </select>
-        <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }} className="px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3]">
-          {TYPES.map((t) => <option key={t}>{t}</option>)}
-        </select>
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3]">
-          {STATUSES.map((s) => <option key={s}>{s}</option>)}
-        </select>
-        <select value={scopeFilter} onChange={(e) => { setScopeFilter(e.target.value as typeof scopeFilter); setPage(1); }} className="px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3]">
-          <option value="전체">전체 범위</option>
-          <option value="company">전사</option>
-          <option value="department">부서</option>
-        </select>
+      <FilesPagination safePage={safePage} totalPages={totalPages} onPageChange={setPage} />
 
-        {/* view toggle */}
-        <div className="flex rounded-xl border border-[#e5e5e7] overflow-hidden ml-auto">
-          <button onClick={() => setView('list')} className={`px-3.5 py-2.5 text-sm ${view === 'list' ? 'bg-[#1d1d1f] text-white' : 'bg-white text-[#6e6e73] hover:bg-[#f5f5f7]'} transition-colors`}>
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
-          </button>
-          <button onClick={() => setView('grid')} className={`px-3.5 py-2.5 text-sm ${view === 'grid' ? 'bg-[#1d1d1f] text-white' : 'bg-white text-[#6e6e73] hover:bg-[#f5f5f7]'} transition-colors`}>
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" /></svg>
-          </button>
-        </div>
-      </div>
-
-      {/* result count */}
-      <p className="text-sm text-[#6e6e73]" style={{ marginTop: 12, marginBottom: 8 }}>총 <span className="font-num font-medium text-[#1d1d1f]">{filtered.length}</span>개 파일</p>
-
-      {/* ── LIST VIEW ── */}
-      {view === 'list' && (
-        <div className="bg-white rounded-2xl border border-[#e5e5e7] shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-[#f5f5f7] text-left text-[#6e6e73]">
-                  <th className="px-4 py-4 w-10">
-                    <input type="checkbox" checked={selectedIds.size === paged.length && paged.length > 0} onChange={toggleAll} className="rounded border-[#e5e5e7] text-[#0071e3] focus:ring-[#0071e3]" />
-                  </th>
-                  <th className="px-4 py-4 font-medium">파일명</th>
-                  <th className="px-4 py-4 font-medium hidden sm:table-cell">부서</th>
-                  <th className="px-4 py-4 font-medium hidden md:table-cell">공개 범위</th>
-                  <th className="px-4 py-4 font-medium hidden md:table-cell">크기</th>
-                  <th className="px-4 py-4 font-medium hidden md:table-cell">업로드일</th>
-                  <th className="px-4 py-4 font-medium">상태</th>
-                  <th className="px-4 py-4 font-medium w-28">작업</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#e5e5e7]">
-                {paged.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-12 text-center text-[#6e6e73]">검색 결과가 없습니다.</td>
-                  </tr>
-                )}
-                {paged.map((f) => (
-                  <tr key={f.id} className="hover:bg-[#f5f5f7] transition-colors">
-                    <td className="px-4 py-3">
-                      <input type="checkbox" checked={selectedIds.has(f.id)} onChange={() => toggleSelect(f.id)} className="rounded border-[#e5e5e7] text-[#0071e3] focus:ring-[#0071e3]" />
-                    </td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => setDetailFile(f)} className="flex items-center gap-2 text-left group">
-                        <svg className={`w-5 h-5 shrink-0 ${FILE_TYPE_BADGE[f.type] ?? 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                        </svg>
-                        <span className="font-medium text-[#1d1d1f] truncate max-w-[200px] group-hover:text-[#0071e3] transition-colors">{f.name}</span>
-                        <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${FILE_TYPE_BADGE[f.type] ?? 'bg-gray-100 text-gray-600'}`}>{f.type}</span>
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 hidden sm:table-cell text-[#6e6e73]">{f.department}</td>
-                    <td className="px-4 py-3 hidden md:table-cell">
-                      <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${f.scope === 'company' ? 'bg-[#e0f0ff] text-[#0071e3]' : 'bg-[#f5f5f7] text-[#6e6e73]'}`}>
-                        {f.scope === 'company' ? '전사' : '부서'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 hidden md:table-cell text-[#6e6e73]">{f.size}</td>
-                    <td className="px-4 py-3 hidden md:table-cell text-[#6e6e73]">{f.uploadDate}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${FILE_STATUS_COLOR[f.status]}`}>{f.status}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => setDetailFile(f)} title="보기" className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73] hover:text-[#0071e3] transition-colors">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                        </button>
-                        <button onClick={() => handleDownload(f)} title="다운로드" className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73] hover:text-[#0071e3] transition-colors">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
-                        </button>
-                        <button onClick={() => handleDelete(f)} title="삭제" className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73] hover:text-[#ff3b30] transition-colors">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* ── GRID VIEW ── */}
-      {view === 'grid' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {paged.length === 0 && (
-            <div className="col-span-full text-center py-12 text-[#6e6e73]">검색 결과가 없습니다.</div>
-          )}
-          {paged.map((f) => (
-            <div key={f.id} className="bg-white rounded-2xl border border-[#e5e5e7] p-5 shadow-sm hover:shadow-md transition-shadow group relative">
-              <div className="flex items-center gap-3 mb-3">
-                <div className={`w-10 h-10 rounded-xl bg-[#f5f5f7] flex items-center justify-center ${FILE_TYPE_BADGE[f.type] ?? 'text-gray-400'}`}>
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                  </svg>
-                </div>
-                <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${FILE_STATUS_COLOR[f.status]}`}>{f.status}</span>
-                {/* grid actions */}
-                <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => setDetailFile(f)} title="보기" className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73] hover:text-[#0071e3]">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                  </button>
-                  <button onClick={() => handleDownload(f)} title="다운로드" className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73] hover:text-[#0071e3]">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
-                  </button>
-                  <button onClick={() => handleDelete(f)} title="삭제" className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73] hover:text-[#ff3b30]">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
-                  </button>
-                </div>
-              </div>
-              <button onClick={() => setDetailFile(f)} className="text-left w-full">
-                <h3 className="font-medium text-[#1d1d1f] truncate mb-1 hover:text-[#0071e3] transition-colors">{f.name}</h3>
-              </button>
-              <div className="flex items-center gap-2 text-xs text-[#6e6e73]">
-                <span>{f.size}</span>
-                <span>·</span>
-                <span>{f.uploadDate}</span>
-              </div>
-              <div className="flex items-center gap-2 mt-2 flex-wrap">
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${FILE_TYPE_BADGE[f.type] ?? 'bg-gray-100 text-gray-600'}`}>{f.type}</span>
-                <span className="text-xs text-[#6e6e73]">{f.department}</span>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${f.scope === 'company' ? 'bg-[#e0f0ff] text-[#0071e3]' : 'bg-[#f5f5f7] text-[#6e6e73]'}`}>
-                  {f.scope === 'company' ? '전사' : '부서'}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2" style={{ marginTop: 20 }}>
-          <button disabled={safePage <= 1} onClick={() => setPage(safePage - 1)} className="px-3 py-1.5 rounded-lg border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">이전</button>
-          {Array.from({ length: totalPages }, (_, i) => (
-            <button
-              key={i}
-              onClick={() => setPage(i + 1)}
-              className={`w-8 h-8 rounded-lg text-sm font-medium font-num transition-colors ${safePage === i + 1 ? 'bg-[#1d1d1f] text-white' : 'text-[#6e6e73] hover:bg-[#f5f5f7]'}`}
-            >
-              {i + 1}
-            </button>
-          ))}
-          <button disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)} className="px-3 py-1.5 rounded-lg border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">다음</button>
-        </div>
-      )}
-
-      {/* ── Upload Modal ── */}
-      {showUpload && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) { setShowUpload(false); setUploadProgress(null); setSelectedFiles([]); } }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4">
-            {/* 헤더 */}
-            <div className="px-8 py-5 border-b border-[#e5e5e7] flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-[#1d1d1f]">파일 업로드</h2>
-              <button onClick={() => { setShowUpload(false); setUploadProgress(null); setSelectedFiles([]); }} className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-
-            {/* 바디 */}
-            <div className="px-8 py-6 space-y-6">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.docx,.pptx,.xlsx,.hwp,.hwpx,.md,.txt,.csv"
-                multiple
-                className="hidden"
-                onChange={handleFileInputChange}
-              />
-
-              {/* 공개 범위 선택 */}
-              <div>
-                <label className="block text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: '5px' }}>공개 범위</label>
-                <div className="flex gap-3" style={{ marginBottom: '10px' }}>
-                  <button
-                    onClick={() => setUploadScope('department')}
-                    className={`flex-1 py-3.5 rounded-xl border text-sm font-medium transition-colors ${uploadScope === 'department' ? 'border-[#1d1d1f] bg-[#1d1d1f] text-white' : 'border-[#e5e5e7] text-[#6e6e73] hover:bg-[#f5f5f7]'}`}
-                  >
-                    부서 공유
-                  </button>
-                  <button
-                    onClick={() => setUploadScope('company')}
-                    className={`flex-1 py-3.5 rounded-xl border text-sm font-medium transition-colors ${uploadScope === 'company' ? 'border-[#0071e3] bg-[#0071e3] text-white' : 'border-[#e5e5e7] text-[#6e6e73] hover:bg-[#f5f5f7]'}`}
-                  >
-                    전사 공개
-                  </button>
-                </div>
-                <p className="text-xs text-[#6e6e73]" style={{ padding: '10px 0' }}>
-                  {uploadScope === 'company' ? '모든 임직원이 이 파일을 볼 수 있습니다.' : '같은 부서 구성원만 이 파일을 볼 수 있습니다.'}
-                </p>
-              </div>
-
-              {/* 드롭존 */}
-              <div
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={handleDrop}
-                style={{ marginTop: '24px' }}
-                className={`border-2 border-dashed rounded-2xl py-8 px-6 flex flex-col items-center text-center transition-colors ${dragOver ? 'border-[#0071e3] bg-[#eef4ff]' : 'border-[#e5e5e7] bg-[#f5f5f7]'}`}
-              >
-                <svg className="w-10 h-10 text-[#6e6e73] mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
-                </svg>
-                <p className="text-sm font-medium text-[#1d1d1f] mb-1">파일을 여기에 끌어다 놓으세요</p>
-                <p className="text-xs text-[#6e6e73] mb-4">또는</p>
-                <button onClick={handleFilePicker} style={{ margin: '10px 0' }} className="px-5 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-[13px] font-medium hover:bg-[#0071e3] transition-colors">
-                  파일 선택
-                </button>
-                <p className="text-xs text-[#6e6e73] mt-4">PDF, DOCX, PPTX, XLSX, HWP, MD (최대 50MB)</p>
-              </div>
-
-              {/* 선택된 파일 목록 */}
-              {selectedFiles.length > 0 && uploadProgress === null && (
-                <div className="p-4 bg-[#f5f5f7] rounded-xl border border-[#e5e5e7]">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm font-medium text-[#1d1d1f]">
-                      {selectedFiles.length}개 파일 · {formatSize(selectedFiles.reduce((s, f) => s + f.size, 0))}
-                    </p>
-                    <button onClick={() => { setSelectedFiles([]); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="text-xs text-[#6e6e73] hover:text-[#1d1d1f]">
-                      전체 삭제
-                    </button>
-                  </div>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {selectedFiles.map((file, idx) => (
-                      <div key={`${file.name}-${idx}`} className="flex items-center gap-3 bg-white rounded-lg px-3 py-2 border border-[#e5e5e7]">
-                        <div className={`w-8 h-8 rounded-lg bg-[#f5f5f7] flex items-center justify-center shrink-0 ${FILE_TYPE_BADGE[getFileType(file.name)] ?? 'text-gray-400'}`}>
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-[#1d1d1f] truncate">{file.name}</p>
-                          <p className="text-xs text-[#6e6e73]">{formatSize(file.size)}</p>
-                        </div>
-                        <button onClick={() => setSelectedFiles((prev) => prev.filter((_, i) => i !== idx))} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73] shrink-0">
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <button
-                    onClick={handleUpload}
-                    className="mt-3 w-full py-2 rounded-xl bg-[#1d1d1f] text-white text-[13px] font-medium hover:bg-[#0071e3] transition-colors"
-                  >
-                    {selectedFiles.length}개 파일 업로드
-                  </button>
-                </div>
-              )}
-
-              {uploadProgress !== null && (
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-[#1d1d1f]">{uploadProgress.percent >= 100 ? '업로드 완료!' : `업로드 중... (${uploadProgress.current}/${uploadProgress.total})`}</span>
-                    <span className="text-[#0071e3] font-medium font-num">{uploadProgress.percent}%</span>
-                  </div>
-                  <div className="h-2 bg-[#f5f5f7] rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full transition-all duration-300 ${uploadProgress.percent >= 100 ? 'bg-[#30d158]' : 'bg-[#0071e3]'}`} style={{ width: `${uploadProgress.percent}%` }} />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Detail Modal ── */}
-      {detailFile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) setDetailFile(null); }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4">
-            <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between">
-              <h2 className="text-[15px] font-semibold text-[#1B1F2B]">파일 상세</h2>
-              <button onClick={() => setDetailFile(null)} className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-            <div className="px-6 py-5">
-            <div className="flex items-center gap-4 mb-5">
-              <div className={`w-14 h-14 rounded-2xl bg-[#f5f5f7] flex items-center justify-center ${FILE_TYPE_BADGE[detailFile.type] ?? 'text-gray-400'}`}>
-                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                </svg>
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-semibold text-[#1d1d1f] truncate">{detailFile.name}</h3>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${FILE_TYPE_BADGE[detailFile.type] ?? 'bg-gray-100 text-gray-600'}`}>{detailFile.type}</span>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${FILE_STATUS_COLOR[detailFile.status]}`}>{detailFile.status}</span>
-                </div>
-              </div>
-            </div>
-            <dl className="text-sm mb-5" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div className="flex justify-between"><dt className="text-[#6e6e73]">부서</dt><dd className="text-[#1d1d1f] font-medium">{detailFile.department}</dd></div>
-              <div className="flex justify-between items-center">
-                <dt className="text-[#6e6e73]">공개 범위</dt>
-                <dd className="flex items-center gap-2">
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${detailFile.scope === 'company' ? 'bg-[#e0f0ff] text-[#0071e3]' : 'bg-[#f5f5f7] text-[#6e6e73]'}`}>
-                    {detailFile.scope === 'company' ? '전사' : '부서'}
-                  </span>
-                  {detailFile.isOwner && (
-                    <button
-                      onClick={async () => {
-                        const newScope = detailFile.scope === 'company' ? 'department' : 'company';
-                        const res = await fetch(`/api/files/${detailFile.id}`, {
-                          method: 'PATCH',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ scope: newScope }),
-                        });
-                        if (res.ok) {
-                          setFiles((prev) => prev.map((f) => f.id === detailFile.id ? { ...f, scope: newScope } : f));
-                          setDetailFile((prev) => prev ? { ...prev, scope: newScope } : null);
-                          toast.success(`공개 범위를 ${newScope === 'company' ? '전사' : '부서'}로 변경했습니다.`);
-                        } else {
-                          toast.error('공개 범위 변경에 실패했습니다.');
-                        }
-                      }}
-                      className="text-xs text-[#0071e3] hover:underline"
-                    >
-                      {detailFile.scope === 'company' ? '부서로 변경' : '전사로 변경'}
-                    </button>
-                  )}
-                </dd>
-              </div>
-              <div className="flex justify-between"><dt className="text-[#6e6e73]">크기</dt><dd className="text-[#1d1d1f] font-medium">{detailFile.size}</dd></div>
-              <div className="flex justify-between"><dt className="text-[#6e6e73]">업로드일</dt><dd className="text-[#1d1d1f] font-medium">{detailFile.uploadDate}</dd></div>
-              <div className="flex justify-between"><dt className="text-[#6e6e73]">상태</dt><dd className="text-[#1d1d1f] font-medium">{detailFile.status}</dd></div>
-            </dl>
-            <div className="flex gap-3">
-              <button onClick={() => { handleDownload(detailFile); setDetailFile(null); }} className="flex-1 py-2 rounded-xl bg-[#1d1d1f] text-white text-[13px] font-medium hover:bg-[#0071e3] transition-colors">
-                다운로드
-              </button>
-              <button onClick={() => setDetailFile(null)} className="flex-1 py-2 rounded-xl border border-[#e5e5e7] text-[13px] font-medium text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">
-                닫기
-              </button>
-            </div>
-            {/* 파일 타입별 상황별 액션 */}
-            {(() => {
-              const ext = (detailFile.type ?? '').toUpperCase();
-              const name = detailFile.name ?? '';
-              const isDocForm = ['DOCX', 'HWPX', 'HWP'].includes(ext);
-              const isContract = isContractTemplate(name);
-              const isMeeting = /회의|minutes|meeting/i.test(name);
-              if (!isDocForm && !['PDF'].includes(ext)) return null;
-              return (
-                <div className="space-y-2">
-                  <p className="text-[11px] text-[#9CA3AF] font-medium">다음 단계</p>
-                  {isDocForm && (
-                    <button
-                      onClick={() => handleAutofill(detailFile)}
-                      className="w-full py-2 rounded-xl border border-[#2E6FF2] text-[#2E6FF2] text-[13px] font-medium hover:bg-[#2E6FF2]/5 transition-colors"
-                    >
-                      ✨ 자동채우기
-                    </button>
-                  )}
-                  {(isContract || ['DOCX', 'HWPX', 'HWP', 'PDF'].includes(ext)) && (
-                    <button
-                      onClick={() => { router.push('/contract-risk'); setDetailFile(null); }}
-                      className="w-full py-2 rounded-xl border border-[#f59e0b] text-[#f59e0b] text-[13px] font-medium hover:bg-amber-50 transition-colors"
-                    >
-                      🛡 리스크 분석
-                    </button>
-                  )}
-                  {isMeeting && (
-                    <button
-                      onClick={() => { router.push('/documents'); setDetailFile(null); }}
-                      className="w-full py-2 rounded-xl border border-[#10b981] text-[#10b981] text-[13px] font-medium hover:bg-emerald-50 transition-colors"
-                    >
-                      ✅ 할일 추출
-                    </button>
-                  )}
-                  <button
-                    onClick={() => { router.push('/documents'); setDetailFile(null); }}
-                    className="w-full py-2 rounded-xl border border-[#E2E5EA] text-[#6B7280] text-[13px] font-medium hover:bg-[#F7F8FA] transition-colors"
-                  >
-                    📄 문서 생성에 활용
-                  </button>
-                </div>
-              );
-            })()}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Delete Confirm Modal ── */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) setDeleteConfirm(null); }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 px-6 py-6 text-center">
-            <div className="w-12 h-12 rounded-full bg-[#fff1f0] flex items-center justify-center mx-auto mb-4">
-              <svg className="w-6 h-6 text-[#ff3b30]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-              </svg>
-            </div>
-            <h3 className="text-[15px] font-semibold text-[#1B1F2B] mb-1.5">파일 삭제</h3>
-            <p className="text-sm text-[#6e6e73] mb-5">
-              &quot;{deleteConfirm.name}&quot;을(를) 삭제하시겠습니까?<br />이 작업은 되돌릴 수 없습니다.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-2 rounded-xl border border-[#e5e5e7] text-[13px] font-medium text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">
-                취소
-              </button>
-              <button onClick={confirmDelete} className="flex-1 py-2 rounded-xl bg-[#1d1d1f] text-white text-[13px] font-medium hover:bg-[#0071e3] transition-colors">
-                삭제
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Scrape Modal ── */}
-      {showScrape && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget && !scrapeLoading) setShowScrape(false); }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4">
-            <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between">
-              <h2 className="text-[15px] font-semibold text-[#1B1F2B]">URL 상품 링크 수집</h2>
-              {!scrapeLoading && (
-                <button onClick={() => setShowScrape(false)} className="p-1.5 rounded-lg hover:bg-[#f5f5f7]">
-                  <svg className="w-5 h-5 text-[#6e6e73]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              )}
-            </div>
-
-            <div className="px-6 py-5 flex flex-col gap-4">
-            <p className="text-sm text-[#6e6e73]">
-              쇼핑몰 카테고리 페이지 URL을 입력하면 상품 링크를 자동으로 수집합니다.
-            </p>
-
-            <input
-              type="url"
-              value={scrapeUrl}
-              onChange={(e) => setScrapeUrl(e.target.value)}
-              placeholder="https://example.com/category/..."
-              disabled={scrapeLoading}
-              className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] disabled:opacity-50"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && scrapeUrl.trim() && !scrapeLoading) handleScrape();
-              }}
-            />
-
-            {/* Loading */}
-            {scrapeLoading && (
-              <div className="flex items-center gap-3 mt-4 p-4 rounded-xl bg-[#f5f5f7]">
-                <Spinner size="sm" />
-                <span className="text-sm text-[#6e6e73]">상품 링크를 수집하고 있습니다...</span>
-              </div>
-            )}
-
-            {/* Result */}
-            {scrapeResult && !scrapeLoading && (
-              <div className={`flex items-start gap-3 mt-4 p-4 rounded-xl ${scrapeResult.success ? 'bg-[#f0fdf4]' : 'bg-[#fef2f2]'}`}>
-                {scrapeResult.success ? (
-                  <svg className="w-5 h-5 text-[#30d158] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                ) : (
-                  <svg className="w-5 h-5 text-[#ff3b30] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9.303 3.376c-.866 1.5-3.032 1.5-3.898 0L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
-                )}
-                <span className="text-sm text-[#1d1d1f]">{scrapeResult.message}</span>
-              </div>
-            )}
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowScrape(false)}
-                disabled={scrapeLoading}
-                className="flex-1 py-2 rounded-xl border border-[#e5e5e7] text-[13px] font-medium text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors disabled:opacity-50"
-              >
-                {scrapeResult?.success && scrapeResult.linkCount ? '닫기' : '취소'}
-              </button>
-              {!(scrapeResult?.success && scrapeResult.linkCount) && (
-                <button
-                  onClick={handleScrape}
-                  disabled={!scrapeUrl.trim() || scrapeLoading}
-                  className="flex-1 py-2 rounded-xl bg-[#1d1d1f] text-white text-[13px] font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-50"
-                >
-                  수집 시작
-                </button>
-              )}
-            </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 일괄 삭제 확인 다이얼로그 */}
-      <ConfirmDialog
-        open={bulkConfirmOpen}
-        title={`${selectedIds.size}개 파일을 삭제하시겠습니까?`}
-        description="삭제된 파일은 복구할 수 없습니다."
-        confirmLabel="삭제"
-        variant="danger"
-        onConfirm={_doBulkDelete}
-        onCancel={() => setBulkConfirmOpen(false)}
+      <FilesFilterBar
+        search={search}
+        resourceFilter={resourceFilter}
+        onOpenUpload={() => setShowUpload(true)}
+        onReprocessErrors={() => { void handleReprocessAllErrors(); }}
+        onOpenScrape={() => { setShowScrape(true); setScrapeUrl(''); setScrapeResult(null); }}
+        onSearchChange={(value) => { setSearch(value); setPage(1); }}
+        onResourceFilterChange={(value) => { setResourceFilter(value); setPage(1); }}
+        mode="search-only"
       />
 
-      {/* ── Download Toast ── */}
-      <AutofillModal
-        open={showAutofill}
-        onClose={() => setShowAutofill(false)}
-        initialFile={autofillFile}
+      <FilesUploadModal
+        open={showUpload}
+        fileInputRef={fileInputRef}
+        dragOver={dragOver}
+        selectedFiles={selectedFiles}
+        uploadProgress={uploadProgress}
+        uploadScope={uploadScope}
+        onClose={closeUploadModal}
+        onFileInputChange={handleFileInputChange}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+        onFilePicker={() => fileInputRef.current?.click()}
+        onUploadScopeChange={setUploadScope}
+        onRemoveSelectedFile={(index) => setSelectedFiles((prev) => prev.filter((_, i) => i !== index))}
+        onClearSelectedFiles={() => {
+          setSelectedFiles([]);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        }}
+        onUpload={() => { void handleUpload(); }}
       />
 
-      {downloadToast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3 bg-[#1d1d1f] text-white rounded-xl shadow-lg animate-[slideUp_0.3s_ease-out]">
-          <svg className="w-5 h-5 text-[#30d158] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span className="text-sm">&quot;{downloadToast}&quot; 다운로드를 시작합니다.</span>
-        </div>
+      <FileDetailModal
+        file={detailFile}
+        onClose={() => setDetailFile(null)}
+        onDownload={handleDownload}
+        onAutofill={(file) => { void handleAutofill(file); }}
+        onScopeToggle={handleDetailScopeToggle}
+      />
+
+      <ScrapeModal
+        open={showScrape}
+        scrapeUrl={scrapeUrl}
+        scrapeLoading={scrapeLoading}
+        scrapeResult={scrapeResult}
+        onClose={() => setShowScrape(false)}
+        onUrlChange={setScrapeUrl}
+        onScrape={() => { void handleScrape(); }}
+      />
+
+      <FilesPageDialogs
+        deleteConfirm={deleteConfirm}
+        bulkConfirmOpen={bulkConfirmOpen}
+        showAutofill={showAutofill}
+        autofillFile={autofillFile}
+        downloadToast={downloadToast}
+        onCloseDeleteConfirm={() => setDeleteConfirm(null)}
+        onConfirmDelete={() => { void confirmDelete(); }}
+        onBulkConfirm={() => { void doBulkDelete(); }}
+        onBulkCancel={() => setBulkConfirmOpen(false)}
+        onCloseAutofill={() => setShowAutofill(false)}
+      />
+
+      {shareTarget && (
+        <ShareLinkModal
+          resourceId={shareTarget.id}
+          resourceTitle={shareTarget.title}
+          resourceType={shareTarget.type}
+          onClose={() => setShareTarget(null)}
+        />
       )}
+    </div>
+  );
+}
+
+function FilesPageSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <div className="h-8 w-48 bg-[#e5e5e7] rounded-lg" />
+      <div className="h-12 bg-white rounded-2xl border border-[#e5e5e7]" />
+      <div className="h-96 bg-white rounded-2xl border border-[#e5e5e7]" />
     </div>
   );
 }

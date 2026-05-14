@@ -20,9 +20,9 @@ interface SearchInputProps {
 }
 
 const sizeMap = {
-  sm: { wrapper: 'h-9',  input: 'pl-9 pr-3 text-sm',   icon: 'left-3 w-4 h-4' },
-  md: { wrapper: 'h-11', input: 'pl-10 pr-3 text-sm',   icon: 'left-3 w-4.5 h-4.5' },
-  lg: { wrapper: 'h-13', input: 'pl-12 pr-4 text-base', icon: 'left-4 w-5 h-5' },
+  sm: { wrapper: 'h-10', input: 'pl-10 pr-4 text-sm', icon: 'left-3 w-4 h-4' },
+  md: { wrapper: 'h-12', input: 'pl-11 pr-4 text-sm', icon: 'left-3 w-4.5 h-4.5' },
+  lg: { wrapper: 'h-14', input: 'pl-12 pr-5 text-base', icon: 'left-4 w-5 h-5' },
 };
 
 export function SearchInput({
@@ -78,7 +78,7 @@ export function SearchInput({
         <button
           onClick={onSearch}
           disabled={buttonDisabled ?? disabled ?? loading}
-          className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-[#1d1d1f] text-white text-xs font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40"
+          className="absolute right-2 top-1/2 -translate-y-1/2 px-3.5 py-2 rounded-lg bg-[#1d1d1f] text-white text-xs font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40"
         >
           {loading ? (
             <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />

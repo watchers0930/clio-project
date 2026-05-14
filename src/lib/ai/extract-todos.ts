@@ -77,7 +77,7 @@ export async function extractTodosFromText(
       model: openai('gpt-4o'),
       system: EXTRACT_SYSTEM_PROMPT,
       prompt: buildExtractUserPrompt(transcriptText),
-      maxTokens: 2000,
+      maxOutputTokens: 2000,
       temperature: 0.1,
     });
 

@@ -6,7 +6,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getAuthUserId } from '@/lib/auth-helper';
 import { extractExpiryFromText } from '@/lib/ai/extract-expiry';
+import { canAccessFile, getUserRoleInfo } from '@/lib/permissions';
 
 export async function POST(
   request: NextRequest,
@@ -14,6 +17,44 @@ export async function POST(
 ) {
   try {
     const { id: fileId } = await params;
+    const internalSecret = process.env.INTERNAL_API_SECRET?.trim();
+    const providedSecret = request.headers.get('X-Internal-Secret')?.trim();
+    const isInternalRequest = !!internalSecret && providedSecret === internalSecret;
+
+    if (!isInternalRequest) {
+      const supabase = await createServerSupabaseClient();
+      if (!supabase) {
+        return NextResponse.json(
+          { error: { code: 'SERVER_UNAVAILABLE', message: '데이터베이스가 설정되지 않았습니다.' } },
+          { status: 503 },
+        );
+      }
+
+      const authUserId = await getAuthUserId(supabase);
+      if (!authUserId) {
+        return NextResponse.json(
+          { error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
+          { status: 401 },
+        );
+      }
+
+      const roleInfo = await getUserRoleInfo(supabase, authUserId);
+      if (!roleInfo) {
+        return NextResponse.json(
+          { error: { code: 'FORBIDDEN', message: '사용자 정보가 없습니다.' } },
+          { status: 403 },
+        );
+      }
+
+      const allowed = await canAccessFile(supabase, authUserId, roleInfo.role, roleInfo.department_id, fileId);
+      if (!allowed) {
+        return NextResponse.json(
+          { error: { code: 'FORBIDDEN', message: '접근 권한이 없습니다.' } },
+          { status: 403 },
+        );
+      }
+    }
+
     const supabase = createAdminSupabaseClient();
 
     // 1. 파일 메타데이터 + 청크 텍스트 조회

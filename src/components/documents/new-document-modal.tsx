@@ -1,14 +1,21 @@
 import { Spinner } from '@/components/ui';
 import { getContractSchema } from '@/lib/contract-fields';
 import type { DocumentItem, SourceFile, TemplateItem } from '@/components/documents/page-types';
+import { isWorklogTemplateName, WORKLOG_FIELDS } from '@/lib/templates/worklog';
+import { NewDocumentGeneralStep } from '@/components/documents/new-document-general-step';
+import { DOCUMENT_RELATION_LABELS, TEMPLATE_ICONS } from '@/components/documents/document-page-constants';
 
-const TEMPLATE_ICONS: Record<string, string> = {
-  '주간업무보고서': '📊',
-  '회의록': '📝',
-  '기술설계문서': '💡',
-  '마케팅_캠페인_기획서': '🎯',
-  '채용공고_양식': '👥',
-};
+function getAllowedOutputFormats(templateFile: TemplateItem['templateFile'] | null, isContract: boolean) {
+  if (isContract) return ['hwpx'] as const;
+  if (!templateFile?.name) return ['docx', 'pdf', 'xlsx', 'pptx'] as const;
+
+  const ext = templateFile.name.split('.').pop()?.toLowerCase() ?? '';
+  if (ext === 'docx' || ext === 'dotx') return ['docx', 'pdf'] as const;
+  if (ext === 'hwpx' || ext === 'hwp') return ['hwpx', 'pdf'] as const;
+  if (ext === 'xlsx' || ext === 'xls') return ['xlsx'] as const;
+  if (ext === 'pptx' || ext === 'ppt') return ['pptx'] as const;
+  return ['docx', 'pdf', 'xlsx', 'pptx'] as const;
+}
 
 interface NewDocumentModalProps {
   open: boolean;
@@ -17,6 +24,9 @@ interface NewDocumentModalProps {
   selectedFiles: Set<string>;
   instructions: string;
   customStructure: string;
+  documentInputs: Record<string, string>;
+  aiAssistEnabled: boolean;
+  aiAssistPrompt: string;
   generating: boolean;
   generatedDoc: DocumentItem | null;
   outputFormat: string;
@@ -29,6 +39,9 @@ interface NewDocumentModalProps {
   fileTypeFilter: string;
   templates: TemplateItem[];
   sourceFiles: SourceFile[];
+  originDocumentId: string | null;
+  originContext: string | null;
+  creationContextTitle: string;
   onClose: () => void;
   onBack: () => void;
   onNext: () => void;
@@ -40,6 +53,9 @@ interface NewDocumentModalProps {
   onClearSelectedFiles: () => void;
   onSetInstructions: (value: string) => void;
   onSetCustomStructure: (value: string) => void;
+  onSetDocumentInputs: (updater: (prev: Record<string, string>) => Record<string, string>) => void;
+  onSetAiAssistEnabled: (value: boolean) => void;
+  onSetAiAssistPrompt: (value: string) => void;
   onSetOutputFormat: (value: string) => void;
   onSetContractFormData: (updater: (prev: Record<string, string>) => Record<string, string>) => void;
   onHandleDateInput: (key: string, raw: string) => void;
@@ -58,6 +74,9 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
     selectedFiles,
     instructions,
     customStructure,
+    documentInputs,
+    aiAssistEnabled,
+    aiAssistPrompt,
     generating,
     generatedDoc,
     outputFormat,
@@ -70,6 +89,9 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
     fileTypeFilter,
     templates,
     sourceFiles,
+    originDocumentId,
+    originContext,
+    creationContextTitle,
     onClose,
     onBack,
     onNext,
@@ -81,6 +103,9 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
     onClearSelectedFiles,
     onSetInstructions,
     onSetCustomStructure,
+    onSetDocumentInputs,
+    onSetAiAssistEnabled,
+    onSetAiAssistPrompt,
     onSetOutputFormat,
     onSetContractFormData,
     onHandleDateInput,
@@ -94,7 +119,14 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
   if (!open) return null;
 
   const selectedTemplateItem = templates.find((template) => template.id === selectedTemplate);
+  const isWorklogTemplate = isWorklogTemplateName(selectedTemplateItem?.name);
   const contractSchema = selectedTemplateItem ? getContractSchema(selectedTemplateItem.name) : null;
+  const allowedOutputFormats = getAllowedOutputFormats(selectedTemplateItem?.templateFile ?? null, Boolean(contractSchema));
+  const templateFields = selectedTemplateItem?.templateFields
+    ?? (isWorklogTemplate ? [...WORKLOG_FIELDS] : [
+    { key: 'report_title', label: '문서 제목', type: 'text' as const, required: true, placeholder: '예: 2026년 2분기 사업 보고서' },
+    { key: 'subtitle', label: '소제목', type: 'text' as const, placeholder: '예: 경영회의 보고용' },
+  ]);
   const departments = Array.from(new Set(sourceFiles.map((file) => file.department)));
   const types = Array.from(new Set(sourceFiles.map((file) => file.type)));
   const filteredFiles = sourceFiles.filter((file) => {
@@ -103,11 +135,11 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
     if (fileTypeFilter !== '전체' && file.type !== fileTypeFilter) return false;
     return true;
   });
-
+  const relationLabel = DOCUMENT_RELATION_LABELS[originContext ?? ''] ?? null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="new-doc-title">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between sticky top-0 bg-white rounded-t-2xl z-10">
+      <div className="mx-4 max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-2xl border-b border-[#e5e5e7] bg-white px-4 py-4 sm:px-6 sm:py-5">
           <h2 id="new-doc-title" className="text-[15px] font-semibold text-[#1B1F2B]">새 문서 생성</h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -115,7 +147,16 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
         </div>
 
         {step <= 4 && (
-          <div className="px-6 py-5">
+          <div className="px-4 py-4 sm:px-6 sm:py-5">
+            {originDocumentId && creationContextTitle && relationLabel ? (
+              <div className="mb-5 rounded-2xl border border-[#D7E7FF] bg-[#F3F8FF] px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#2E6FF2]">Document Relation</p>
+                <p className="mt-2 text-[14px] font-semibold text-[#1B1F2B]">{relationLabel}</p>
+                <p className="mt-1 text-[12px] leading-5 text-[#5E6573]">
+                  이 문서는 <span className="font-medium text-[#1B1F2B]">{creationContextTitle}</span> 문서와 연결된 후속 문서로 생성됩니다.
+                </p>
+              </div>
+            ) : null}
             <div className="flex items-center gap-2">
               {[1, 2, 3, 4].map((s) => (
                 <div key={s} className="flex items-center gap-2 flex-1">
@@ -126,7 +167,7 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
                 </div>
               ))}
             </div>
-            <div className="flex justify-between text-xs text-[#6e6e73] mt-2">
+            <div className="mt-2 hidden justify-between text-xs text-[#6e6e73] sm:flex">
               <span>템플릿 선택</span>
               <span>소스 파일</span>
               <span>추가 지시</span>
@@ -135,9 +176,9 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
           </div>
         )}
 
-        <div className="px-8 py-6">
+        <div className="flex flex-col gap-[20px] px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
           {step === 1 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
               <button
                 onClick={() => { onSetSelectedTemplate('__none__'); onSetCustomStructure(''); }}
                 className={`p-5 rounded-xl border text-left transition-all ${selectedTemplate === '__none__' ? 'border-[#0071e3] bg-[#f5f5f7] ring-2 ring-[#0071e3]/30' : 'border-dashed border-[#d1d1d6] hover:border-[#0071e3]'}`}
@@ -156,8 +197,8 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
                   <h4 className="font-medium text-[#1d1d1f] text-sm mt-2">{template.name}</h4>
                   <p className="text-xs text-[#6e6e73] mt-1 line-clamp-2">{template.description}</p>
                   {template.templateFile && (
-                    <div className="flex items-center gap-1.5 mt-2">
-                      <span className="text-[10px] font-bold px-1 py-0.5 rounded bg-blue-50 text-blue-600">{template.templateFile.type}</span>
+                    <div className="mt-2.5 flex items-center gap-2">
+                      <span className="text-[10px] font-bold px-1.5 py-1 rounded-md bg-blue-50 text-blue-600">{template.templateFile.type}</span>
                       <span className="text-[10px] text-[#6e6e73] truncate">{template.templateFile.name}</span>
                     </div>
                   )}
@@ -168,12 +209,12 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
 
           {step === 2 && (
             <div className="space-y-5">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm text-[#6e6e73]">참조할 소스 파일을 선택하세요 (선택사항)</p>
                 <span className="text-xs font-medium text-[#0071e3]">{selectedFiles.size}개 선택됨</span>
               </div>
               {selectedFiles.size === 0 && (
-                <p className="text-xs text-[#ff9f0a] bg-[#fff8f0] px-3 py-2 rounded-lg">파일 없이도 템플릿 양식 기반으로 문서를 생성할 수 있습니다.</p>
+                <p className="text-xs text-[#ff9f0a] bg-[#fff8f0] px-3.5 py-2.5 rounded-lg">파일 없이도 템플릿 양식 기반으로 문서를 생성할 수 있습니다.</p>
               )}
               <div className="relative" style={{ marginTop: 10, marginBottom: 15 }}>
                 <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6e6e73]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -186,17 +227,17 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
                   className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3]"
                 />
               </div>
-              <div className="flex gap-2 flex-wrap" style={{ marginBottom: 10 }}>
-                <select value={fileDeptFilter} onChange={(e) => onSetFileDeptFilter(e.target.value)} className="px-3 py-1.5 rounded-lg border border-[#e5e5e7] text-xs text-[#1d1d1f] bg-white focus:outline-none focus:ring-2 focus:ring-[#0071e3]">
+              <div className="mb-3 flex flex-wrap gap-2.5">
+                <select value={fileDeptFilter} onChange={(e) => onSetFileDeptFilter(e.target.value)} className="px-3.5 py-2 rounded-lg border border-[#e5e5e7] text-xs text-[#1d1d1f] bg-white focus:outline-none focus:ring-2 focus:ring-[#0071e3]">
                   <option value="전체">전체 부서</option>
                   {departments.map((department) => <option key={department} value={department}>{department}</option>)}
                 </select>
-                <select value={fileTypeFilter} onChange={(e) => onSetFileTypeFilter(e.target.value)} className="px-3 py-1.5 rounded-lg border border-[#e5e5e7] text-xs text-[#1d1d1f] bg-white focus:outline-none focus:ring-2 focus:ring-[#0071e3]">
+                <select value={fileTypeFilter} onChange={(e) => onSetFileTypeFilter(e.target.value)} className="px-3.5 py-2 rounded-lg border border-[#e5e5e7] text-xs text-[#1d1d1f] bg-white focus:outline-none focus:ring-2 focus:ring-[#0071e3]">
                   <option value="전체">전체 타입</option>
                   {types.map((type) => <option key={type} value={type}>{type}</option>)}
                 </select>
                 {selectedFiles.size > 0 && (
-                  <button onClick={onClearSelectedFiles} className="px-3 py-1.5 rounded-lg text-xs text-[#ff3b30] hover:bg-red-50 transition-colors">
+                  <button onClick={onClearSelectedFiles} className="px-3.5 py-2 rounded-lg text-xs text-[#ff3b30] hover:bg-red-50 transition-colors">
                     선택 해제
                   </button>
                 )}
@@ -211,7 +252,7 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
                   <p className="text-sm text-[#6e6e73]">검색 결과가 없습니다</p>
                 </div>
               ) : (
-                <div className="max-h-80 overflow-y-auto" style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <div className="max-h-80 overflow-y-auto" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {filteredFiles.map((file) => (
                     <label
                       key={file.id}
@@ -231,7 +272,7 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
           )}
 
           {step === 3 && contractSchema && (
-            <div className="space-y-6">
+            <div className="flex flex-col gap-[20px]">
               <div className="flex items-center gap-3 p-4 rounded-xl bg-[#f0f5ff] border border-[#d0e2ff]">
                 <div>
                   <p className="text-sm font-semibold text-[#1d1d1f]">계약서 자동 작성</p>
@@ -246,7 +287,7 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
                       <span className="w-1.5 h-1.5 rounded-full bg-[#0071e3]" />
                       {group}
                     </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4" style={{ marginBottom: 10 }}>
+                    <div className="mb-[10px] grid grid-cols-1 gap-x-4 md:grid-cols-2">
                       {fields.map((field) => (
                         <div key={field.key} className={field.half ? '' : 'md:col-span-2'} style={{ paddingTop: 5, paddingBottom: 15 }}>
                           <label className="block text-xs text-[#6e6e73]" style={{ marginBottom: 8 }}>
@@ -302,61 +343,30 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
           )}
 
           {step === 3 && !contractSchema && (
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-5">
-                <div>
-                  <p className="text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 8 }}>출력 포맷</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { value: 'docx', label: 'DOCX', icon: '📄', desc: '문서 파일' },
-                      { value: 'pdf', label: 'PDF', icon: '📕', desc: '인쇄용 문서' },
-                      { value: 'xlsx', label: 'XLSX', icon: '📊', desc: 'Excel 보고서' },
-                      { value: 'pptx', label: 'PPTX', icon: '📙', desc: '프레젠테이션' },
-                    ].map((format) => (
-                      <button
-                        key={format.value}
-                        onClick={() => onSetOutputFormat(format.value)}
-                        className={`p-3 rounded-xl border text-center transition-all ${outputFormat === format.value ? 'border-[#0071e3] bg-[#f0f5ff] ring-2 ring-[#0071e3]/30' : 'border-[#e5e5e7] hover:border-[#0071e3]'}`}
-                      >
-                        <span className="text-xl">{format.icon}</span>
-                        <p className="text-xs font-bold text-[#1d1d1f] mt-1">{format.label}</p>
-                        <p className="text-[10px] text-[#6e6e73]">{format.desc}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-5">
-                <div className="flex flex-col h-full">
-                  <p className="text-sm text-[#6e6e73]" style={{ marginBottom: 10 }}>추가 지시사항 (선택)</p>
-                  <textarea
-                    value={instructions}
-                    onChange={(e) => onSetInstructions(e.target.value)}
-                    placeholder="예: 핵심 수치 위주로 요약해 주세요. 표 형태로 정리해 주세요."
-                    rows={14}
-                    className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none"
-                  />
-                </div>
-                {selectedTemplate === '__none__' && (
-                  <div>
-                    <p className="text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>문서 구조 *</p>
-                    <p className="text-xs text-[#6e6e73]" style={{ marginBottom: 8 }}>AI가 이 구조를 따라 문서를 생성합니다</p>
-                    <textarea
-                      value={customStructure}
-                      onChange={(e) => onSetCustomStructure(e.target.value)}
-                      placeholder={"예:\n# 업무일지\n## 오늘의 업무\n- 주요 업무 내용 1\n- 주요 업무 내용 2\n## 문제점 및 해결 방안\n## 내일의 계획"}
-                      rows={6}
-                      className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none font-mono"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
+            <NewDocumentGeneralStep
+              isWorklogTemplate={isWorklogTemplate}
+              selectedTemplate={selectedTemplate}
+              selectedTemplateItem={selectedTemplateItem}
+              documentInputs={documentInputs}
+              aiAssistEnabled={aiAssistEnabled}
+              aiAssistPrompt={aiAssistPrompt}
+              instructions={instructions}
+              customStructure={customStructure}
+              outputFormat={outputFormat}
+              templateFields={templateFields}
+              allowedOutputFormats={allowedOutputFormats}
+              onSetDocumentInputs={onSetDocumentInputs}
+              onSetOutputFormat={onSetOutputFormat}
+              onSetInstructions={onSetInstructions}
+              onSetAiAssistEnabled={onSetAiAssistEnabled}
+              onSetAiAssistPrompt={onSetAiAssistPrompt}
+              onSetCustomStructure={onSetCustomStructure}
+            />
           )}
 
           {step === 4 && (
-            <div className="space-y-4">
-              <div className="bg-[#f5f5f7] rounded-xl p-6 space-y-4 text-sm">
+            <div className="flex flex-col gap-[20px]">
+              <div className="flex flex-col gap-[10px] rounded-xl bg-[#f5f5f7] p-4 text-sm sm:p-6">
                 <div className="flex justify-between">
                   <span className="text-[#6e6e73]">템플릿</span>
                   <span className="text-[#1d1d1f] font-medium">{selectedTemplate === '__none__' ? '직접 작성' : selectedTemplateItem?.name}</span>
@@ -369,10 +379,26 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
                   <span className="text-[#6e6e73]">출력 포맷</span>
                   <span className="text-[#1d1d1f] font-medium">{outputFormat.toUpperCase()}</span>
                 </div>
+                {Object.entries(documentInputs).filter(([, value]) => value).length > 0 && (
+                  <div>
+                    <span className="text-[#6e6e73]">기본 정보</span>
+                    <div className="mt-1 text-[#1d1d1f] space-y-1">
+                      {templateFields.filter((field) => documentInputs[field.key]).map((field) => (
+                        <p key={field.key}>{field.label}: {documentInputs[field.key]}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {instructions && (
                   <div>
                     <span className="text-[#6e6e73]">추가 지시사항</span>
                     <p className="text-[#1d1d1f] mt-1">{instructions}</p>
+                  </div>
+                )}
+                {aiAssistEnabled && (
+                  <div>
+                    <span className="text-[#6e6e73]">AI 보강</span>
+                    <p className="text-[#1d1d1f] mt-1">{aiAssistPrompt || '기본 보강 규칙 사용'}</p>
                   </div>
                 )}
               </div>
@@ -388,7 +414,7 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
           )}
 
           {step === 5 && generatedDoc && (
-            <div className="space-y-4">
+            <div className="flex flex-col gap-[20px]">
               <div className="flex items-center gap-3 p-4 rounded-xl bg-[#f5f5f7] border border-[#e5e5e7]">
                 <div>
                   <h4 className="font-semibold text-[#1d1d1f]">{outputFormat.toUpperCase()} 문서가 생성되었습니다!</h4>
@@ -447,7 +473,7 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
           )}
         </div>
 
-        <div className="px-6 py-4 border-t border-[#e5e5e7] flex items-center justify-between sticky bottom-0 bg-white rounded-b-2xl">
+        <div className="sticky bottom-0 flex flex-col gap-2 border-t border-[#e5e5e7] bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <button onClick={onBack} className="px-5 py-2 rounded-xl border border-[#e5e5e7] text-[13px] text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">
             {step === 1 || step === 5 ? '닫기' : '이전'}
           </button>

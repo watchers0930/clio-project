@@ -46,14 +46,14 @@ export default function TodoList({
   return (
     <div>
       {/* 헤더 */}
-      <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
+      <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
         <div className="flex items-center gap-3">
-          <div className="flex gap-1 bg-[#f5f5f7] rounded-lg p-1">
+          <div className="flex gap-1.5 bg-[#f5f5f7] rounded-lg p-1.5">
             {FILTERS.map((f) => (
               <button
                 key={f.value}
                 onClick={() => onFilterChange(f.value)}
-                className="px-3.5 py-1.5 text-[12px] font-medium rounded-md transition-all"
+                className="px-4 py-2 text-[12px] font-medium rounded-md transition-all"
                 style={{
                   backgroundColor: filter === f.value ? '#fff' : 'transparent',
                   color: filter === f.value ? '#1B1F2B' : '#7C8494',
@@ -69,7 +69,7 @@ export default function TodoList({
 
         <button
           onClick={onAdd}
-          className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-white bg-[#2E6FF2] rounded-lg hover:bg-[#1A5AD9] transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium text-white bg-[#2E6FF2] rounded-lg hover:bg-[#1A5AD9] transition-colors"
         >
           <Plus size={15} />
           할일 추가

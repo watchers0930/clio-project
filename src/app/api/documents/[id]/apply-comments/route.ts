@@ -4,8 +4,32 @@ import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { extractSectionContent, replaceSectionContent } from '@/lib/utils/parse-sections';
 import OpenAI from 'openai';
+import { canManageDocument, getUserRoleInfo } from '@/lib/permissions';
+import {
+  buildCurrentDocumentUpdate,
+  buildSnapshotInsertPayload,
+  type VersionedDocumentRow,
+} from '@/lib/documents/versioning';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getOpenAI() {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY가 설정되지 않았습니다.');
+  }
+  return new OpenAI({ apiKey });
+}
+
+async function loadCommentUserNames(
+  admin: ReturnType<typeof createAdminSupabaseClient>,
+  comments: Array<{ user_id: string | null }>,
+) {
+  const userIds = [...new Set(comments.map((comment) => comment.user_id).filter(Boolean))] as string[];
+  if (userIds.length === 0) return new Map<string, string>();
+
+  const { data: users, error } = await admin.from('users').select('id, name').in('id', userIds);
+  if (error) throw error;
+  return new Map((users ?? []).map((user) => [user.id, user.name]));
+}
 
 /**
  * POST /api/documents/[id]/apply-comments
@@ -23,12 +47,21 @@ export async function POST(
 ) {
   try {
     const { id: documentId } = await params;
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json({ success: false, error: 'AI 서비스가 설정되지 않았습니다.' }, { status: 503 });
+    }
 
     const supabase = await createServerSupabaseClient();
     if (!supabase) return NextResponse.json({ success: false, error: '서버 오류' }, { status: 503 });
 
     const authUserId = await getAuthUserId(supabase);
     if (!authUserId) return NextResponse.json({ success: false, error: '인증 필요' }, { status: 401 });
+
+    const roleInfo = await getUserRoleInfo(supabase, authUserId);
+    if (!roleInfo) return NextResponse.json({ success: false, error: '사용자 정보 없음' }, { status: 403 });
+
+    const canManage = await canManageDocument(supabase, authUserId, roleInfo.role, documentId);
+    if (!canManage) return NextResponse.json({ success: false, error: '문서 수정 권한이 없습니다.' }, { status: 403 });
 
     const body = await req.json();
     const { mode, selectedCommentIds } = body as {
@@ -47,39 +80,32 @@ export async function POST(
     // 문서 조회
     const { data: doc } = await admin
       .from('documents')
-      .select('id, title, content, status, parent_id, version_number, created_by, storage_path')
+      .select('id, title, content, status, parent_id, version_number, created_by, storage_path, template_id, source_file_ids, instructions')
       .eq('id', documentId)
       .single();
 
     if (!doc) return NextResponse.json({ success: false, error: '문서를 찾을 수 없습니다.' }, { status: 404 });
     if (!doc.content) return NextResponse.json({ success: false, error: '문서 내용이 없습니다.' }, { status: 400 });
+    const versionedDoc = doc as VersionedDocumentRow;
 
     // 적용 전 현재 버전 스냅샷 저장
-    const currentVersionNumber = doc.version_number ?? 1;
-    const rootId = doc.parent_id ?? documentId;
-
-    await admin.from('documents').insert({
-      title: doc.title,
-      content: doc.content,
-      status: 'completed',
-      parent_id: rootId,
-      version_number: currentVersionNumber,
-      created_by: doc.created_by,
-      storage_path: doc.storage_path ?? null,
-    });
+    const snapshotPayload = buildSnapshotInsertPayload(versionedDoc);
+    const { error: snapshotError } = await admin.from('documents').insert(snapshotPayload);
+    if (snapshotError) throw snapshotError;
 
     // 선택된 댓글 조회
     const { data: comments } = await admin
       .from('document_comments')
-      .select('content, users:user_id(name)')
+      .select('id, content, user_id')
       .in('id', selectedCommentIds);
 
     if (!comments || comments.length === 0) {
       return NextResponse.json({ success: false, error: '선택된 댓글을 찾을 수 없습니다.' }, { status: 404 });
     }
+    const userNameMap = await loadCommentUserNames(admin, comments);
 
     const feedbackList = comments
-      .map((c, i) => `${i + 1}. ${(c.users as { name: string } | null)?.name ?? '익명'}: ${c.content}`)
+      .map((c, i) => `${i + 1}. ${userNameMap.get(c.user_id ?? '') ?? '익명'}: ${c.content}`)
       .join('\n');
 
     let updatedContent: string;
@@ -122,7 +148,7 @@ ${feedbackList}
 
 섹션 내용만 출력하세요. 헤더(## 등)는 포함하지 마세요.`;
 
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAI().chat.completions.create({
         model: 'gpt-4o',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.3,
@@ -158,7 +184,7 @@ ${feedbackList}
 
 단락 내용만 출력하세요. 헤더(## 등)는 포함하지 마세요.`;
 
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAI().chat.completions.create({
         model: 'gpt-4o',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.3,
@@ -174,16 +200,22 @@ ${feedbackList}
     }
 
     // 문서 content + version_number 업데이트
-    const { error: updateError } = await admin
-      .from('documents')
-      .update({
-        content: updatedContent,
-        version_number: currentVersionNumber + 1,
-        parent_id: rootId === documentId ? null : rootId,
-      })
-      .eq('id', documentId);
+    const { updatePayload, nextVersionNumber } = buildCurrentDocumentUpdate(versionedDoc, updatedContent);
+    const { error: updateError } = await admin.from('documents').update(updatePayload).eq('id', documentId);
 
     if (updateError) throw updateError;
+
+    const { error: commentUpdateError } = await admin
+      .from('document_comments')
+      .update({
+        status: 'applied',
+        applied_at: new Date().toISOString(),
+        applied_by: authUserId,
+        applied_version_number: nextVersionNumber,
+      })
+      .in('id', selectedCommentIds);
+
+    if (commentUpdateError) throw commentUpdateError;
 
     return NextResponse.json({ success: true, updatedContent });
   } catch (e) {

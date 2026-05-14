@@ -41,31 +41,19 @@ function extractWords(text: string): string[] {
   return Array.from(words);
 }
 
-/** 두 단어가 의미적으로 매칭되는지 — 완전 일치 또는 짧은 단어(≤3자)가 긴 복합어 앞에 포함 */
 function wordMatches(wa: string, wb: string): boolean {
   if (wa === wb) return true;
-  // "메모" → "메모기능을" 처럼 짧은 단어가 복합어 시작에 포함된 경우만 허용
   if (wa.length <= 3 && wb.length > wa.length && wb.startsWith(wa)) return true;
   if (wb.length <= 3 && wa.length > wb.length && wa.startsWith(wb)) return true;
   return false;
 }
 
-/** 제목 간 공통 단어 수 */
 function titleOverlapScore(titleA: string, titleB: string): number {
   const wordsA = extractWords(titleA);
   if (wordsA.length === 0) return 0;
   const wordsB = extractWords(titleB);
   const matches = wordsA.filter((wa) => wordsB.some((wb) => wordMatches(wa, wb))).length;
   return matches / Math.max(wordsA.length, wordsB.length);
-}
-
-/** A 제목 단어가 B 내용에 포함되는지 */
-function titleInContentScore(titleA: string, contentB: string | null): number {
-  const wordsA = extractWords(titleA);
-  if (wordsA.length === 0 || !contentB) return 0;
-  const contentWords = extractWords(contentB);
-  const matches = wordsA.filter((wa) => contentWords.some((wc) => wordMatches(wa, wc))).length;
-  return matches / wordsA.length;
 }
 
 const TITLE_THRESHOLD = 0.15;

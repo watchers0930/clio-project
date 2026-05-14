@@ -16,7 +16,7 @@ import {
   BorderStyle,
   ShadingType,
 } from 'docx';
-import type { ContractRiskAnalysis, RiskItem } from '../types/contract-risk';
+import type { ContractRiskAnalysis } from '../types/contract-risk';
 import {
   CONTRACT_TYPE_LABELS,
   PERSPECTIVE_LABELS,

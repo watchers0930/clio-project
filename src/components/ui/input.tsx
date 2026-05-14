@@ -34,12 +34,12 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             className={cn(
-              'flex h-10 w-full rounded-lg border bg-white px-3 text-sm text-clio-text',
+              'flex h-11 w-full rounded-xl border bg-white px-4 text-sm text-clio-text',
               'placeholder:text-clio-text-secondary/60',
               'focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent',
               'disabled:opacity-50 disabled:cursor-not-allowed',
               'transition-all',
-              leftIcon && 'pl-10',
+              leftIcon && 'pl-11',
               error
                 ? 'border-danger focus:ring-danger/30 focus:border-danger'
                 : 'border-clio-border',

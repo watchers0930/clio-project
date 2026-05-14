@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+import type { DbUser } from '@/lib/supabase/types';
 import { getUserRoleInfo, isAdmin, isManagerOrAbove } from '@/lib/permissions';
 
 /**
@@ -34,8 +35,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: '사용자 목록 조회 실패' }, { status: 500 });
     }
 
-    const users = (data ?? []).map((u) => {
-      const deptJoin = (u as Record<string, unknown>).departments as { id: string; name: string } | null;
+    const userRows = ((data ?? []) as Array<DbUser & { departments?: { id: string; name: string } | null }>);
+    const users = userRows.map((u) => {
+      const deptJoin = u.departments ?? null;
       return {
         id: u.id,
         email: u.email,

@@ -35,7 +35,7 @@ export default function DocumentsPage() {
   }
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-[25px] pb-10">
       <DocumentsPageHeader
         onOpenStt={() => state.setSttModalOpen(true)}
         onOpenCreate={state.openCreateModal}
@@ -84,6 +84,14 @@ export default function DocumentsPage() {
         onChangeContent={state.setEditContent}
         onToggleComments={() => state.setShowViewerComments((value: boolean) => !value)}
         onRequestClose={state.handleViewerClose}
+        onOpenShare={(doc) => {
+          state.setShareDocId(doc.id);
+          state.setShareDocTitle(doc.title);
+        }}
+        onOpenVersions={state.openVersionPanel}
+        onReuseDocument={state.startReuseDocument}
+        onSearchRelated={state.openSearchFromDocument}
+        onOpenMemo={(doc) => state.router.push(`/memos?documentId=${encodeURIComponent(doc.id)}&documentTitle=${encodeURIComponent(doc.title)}`)}
         onSave={state.handleSave}
         onComplete={state.handleComplete}
         onRevertToDraft={state.handleRevertToDraft}
@@ -111,6 +119,9 @@ export default function DocumentsPage() {
         selectedFiles={state.selectedFiles}
         instructions={state.instructions}
         customStructure={state.customStructure}
+        documentInputs={state.documentInputs}
+        aiAssistEnabled={state.aiAssistEnabled}
+        aiAssistPrompt={state.aiAssistPrompt}
         generating={state.generating}
         generatedDoc={state.generatedDoc}
         outputFormat={state.outputFormat}
@@ -123,6 +134,9 @@ export default function DocumentsPage() {
         fileTypeFilter={state.fileTypeFilter}
         templates={state.templates}
         sourceFiles={state.sourceFiles}
+        originDocumentId={state.originDocumentId}
+        originContext={state.originContext}
+        creationContextTitle={state.creationContextTitle}
         onClose={state.resetModal}
         onBack={() => {
           if (state.step === 1 || state.step === 5) state.resetModal();
@@ -140,6 +154,9 @@ export default function DocumentsPage() {
         onClearSelectedFiles={() => state.setSelectedFiles(new Set())}
         onSetInstructions={state.setInstructions}
         onSetCustomStructure={state.setCustomStructure}
+        onSetDocumentInputs={state.setDocumentInputs}
+        onSetAiAssistEnabled={state.setAiAssistEnabled}
+        onSetAiAssistPrompt={state.setAiAssistPrompt}
         onSetOutputFormat={state.setOutputFormat}
         onSetContractFormData={(updater) => state.setContractFormData(updater)}
         onHandleDateInput={state.handleDateInput}
@@ -152,8 +169,9 @@ export default function DocumentsPage() {
 
       {state.shareDocId && (
         <ShareLinkModal
-          docId={state.shareDocId}
-          docTitle={state.shareDocTitle}
+          resourceId={state.shareDocId}
+          resourceTitle={state.shareDocTitle}
+          resourceType="document"
           onClose={() => state.setShareDocId(null)}
         />
       )}
@@ -180,9 +198,9 @@ export default function DocumentsPage() {
       <SttModal
         isOpen={state.sttModalOpen}
         onClose={() => state.setSttModalOpen(false)}
-        onDocumentCreated={() => {
+        onDocumentCreated={(docId) => {
           state.setSttModalOpen(false);
-          state.loadDocs();
+          state.router.push(`/documents?openDoc=${encodeURIComponent(docId)}`);
         }}
       />
 

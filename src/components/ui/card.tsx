@@ -5,14 +5,14 @@ import { cn } from '@/lib/utils';
 /*  Card                                                               */
 /* ------------------------------------------------------------------ */
 
-interface CardProps extends HTMLAttributes<HTMLDivElement> {}
+type CardProps = HTMLAttributes<HTMLDivElement>;
 
 const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
       className={cn(
-        'rounded-xl border border-clio-border bg-white shadow-sm',
+        'rounded-2xl border border-clio-border bg-white shadow-sm',
         className
       )}
       {...props}
@@ -25,13 +25,13 @@ Card.displayName = 'Card';
 /*  CardHeader                                                         */
 /* ------------------------------------------------------------------ */
 
-interface CardHeaderProps extends HTMLAttributes<HTMLDivElement> {}
+type CardHeaderProps = HTMLAttributes<HTMLDivElement>;
 
 const CardHeader = forwardRef<HTMLDivElement, CardHeaderProps>(
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('px-6 py-4 border-b border-clio-border', className)}
+      className={cn('border-b border-clio-border px-7 py-7 sm:px-8 sm:py-8', className)}
       {...props}
     />
   )
@@ -42,7 +42,7 @@ CardHeader.displayName = 'CardHeader';
 /*  CardTitle                                                          */
 /* ------------------------------------------------------------------ */
 
-interface CardTitleProps extends HTMLAttributes<HTMLHeadingElement> {}
+type CardTitleProps = HTMLAttributes<HTMLHeadingElement>;
 
 const CardTitle = forwardRef<HTMLHeadingElement, CardTitleProps>(
   ({ className, ...props }, ref) => (
@@ -59,11 +59,11 @@ CardTitle.displayName = 'CardTitle';
 /*  CardContent                                                        */
 /* ------------------------------------------------------------------ */
 
-interface CardContentProps extends HTMLAttributes<HTMLDivElement> {}
+type CardContentProps = HTMLAttributes<HTMLDivElement>;
 
 const CardContent = forwardRef<HTMLDivElement, CardContentProps>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('px-6 py-4', className)} {...props} />
+    <div ref={ref} className={cn('px-7 py-7 sm:px-8 sm:py-8', className)} {...props} />
   )
 );
 CardContent.displayName = 'CardContent';

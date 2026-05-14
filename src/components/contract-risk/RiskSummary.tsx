@@ -69,9 +69,9 @@ export function RiskSummary({
       </div>
 
       {/* 리스크 카운트 그리드 */}
-      <div className="grid grid-cols-4 gap-[10px] p-[10px]">
+      <div className="grid grid-cols-1 gap-[10px] p-[10px] sm:grid-cols-2 xl:grid-cols-4">
         {STAT_CARDS.map(s => (
-          <div key={s.key} className={`px-4 py-4 ${s.bg}`}>
+          <div key={s.key} className={`px-4 py-4 rounded-xl ${s.bg}`}>
             <p className={`text-[11px] font-semibold ${s.color} mb-1`}>{s.label}</p>
             <p className={`text-[28px] font-bold leading-none ${s.color}`}>
               {riskCount[s.key]}
@@ -87,7 +87,7 @@ export function RiskSummary({
           </div>
         ))}
         {/* 총 탐지 */}
-        <div className="px-4 py-4 bg-[#F7F8FA]">
+        <div className="rounded-xl bg-[#F7F8FA] px-4 py-4">
           <p className="text-[11px] font-semibold text-[#888] mb-1">총 탐지</p>
           <p className="text-[28px] font-bold text-[#1B1F2B] leading-none">
             {total}

@@ -97,7 +97,7 @@ export function DiffViewer({
   return (
     <div className="flex flex-col gap-4">
       {/* 버전 선택 바 */}
-      <div className="flex flex-col sm:flex-row gap-3 p-4 bg-white border border-[#E2E5EA] rounded-xl">
+      <div className="flex flex-col gap-3 p-3 sm:flex-row sm:p-4 bg-white border border-[#E2E5EA] rounded-xl">
         <div className="flex-1">
           <VersionSelector
             label="기준 버전 (구)"
@@ -123,45 +123,45 @@ export function DiffViewer({
 
       {/* 통계 바 + 뷰 토글 */}
       {diffResult && (
-        <div className="flex items-center justify-between px-4 py-3 bg-white border border-[#E2E5EA] rounded-xl flex-wrap gap-2">
-          <div className="flex items-center gap-3 text-[13px]">
+        <div className="flex flex-col gap-3.5 px-4 py-4 sm:px-5 bg-white border border-[#E2E5EA] rounded-xl lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[13px]">
             <span className="font-semibold text-[#1B1F2B]">변경 통계</span>
-            <span className="flex items-center gap-1 text-green-700 bg-green-50 px-2 py-0.5 rounded-full text-[12px]">
+            <span className="flex items-center gap-1.5 text-green-700 bg-green-50 px-2.5 py-1 rounded-full text-[12px]">
               <span>+{diffResult.stats.added}</span>
             </span>
-            <span className="flex items-center gap-1 text-red-700 bg-red-50 px-2 py-0.5 rounded-full text-[12px]">
+            <span className="flex items-center gap-1.5 text-red-700 bg-red-50 px-2.5 py-1 rounded-full text-[12px]">
               <span>-{diffResult.stats.removed}</span>
             </span>
-            <span className="flex items-center gap-1 text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded-full text-[12px]">
+            <span className="flex items-center gap-1.5 text-yellow-700 bg-yellow-50 px-2.5 py-1 rounded-full text-[12px]">
               <span>~{diffResult.stats.changed}</span>
             </span>
             {diffResult.truncated && (
-              <span className="flex items-center gap-1 text-orange-600 text-[11px]">
+              <span className="flex items-center gap-1.5 rounded-full bg-orange-50 px-2.5 py-1 text-orange-600 text-[11px]">
                 <AlertTriangle size={12} />
                 50,000자 초과 — 일부만 표시
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             {/* 변경 네비게이션 */}
             {totalChanges > 0 && (
-              <div className="flex items-center gap-1 border border-[#E2E5EA] rounded-lg overflow-hidden">
+              <div className="flex w-full items-center gap-1 border border-[#E2E5EA] rounded-lg overflow-hidden sm:w-auto">
                 <button
                   onClick={() => navigateChange(-1)}
                   disabled={currentChangeIdx === 0}
-                  className="px-2 py-1.5 hover:bg-[#F7F8FA] disabled:opacity-30 transition-colors"
+                  className="px-2.5 py-2 hover:bg-[#F7F8FA] disabled:opacity-30 transition-colors"
                   aria-label="이전 변경"
                 >
                   <ChevronUp size={14} />
                 </button>
-                <span className="px-2 text-[12px] text-[#555] min-w-[60px] text-center">
+                <span className="px-3 text-[12px] text-[#555] min-w-[72px] text-center">
                   {currentChangeIdx + 1} / {totalChanges}
                 </span>
                 <button
                   onClick={() => navigateChange(1)}
                   disabled={currentChangeIdx >= totalChanges - 1}
-                  className="px-2 py-1.5 hover:bg-[#F7F8FA] disabled:opacity-30 transition-colors"
+                  className="px-2.5 py-2 hover:bg-[#F7F8FA] disabled:opacity-30 transition-colors"
                   aria-label="다음 변경"
                 >
                   <ChevronDown size={14} />
@@ -174,7 +174,7 @@ export function DiffViewer({
               <button
                 onClick={() => setViewMode('side-by-side')}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 text-[12px] transition-colors',
+                  'flex items-center gap-2 px-3.5 py-2 text-[12px] transition-colors',
                   viewMode === 'side-by-side'
                     ? 'bg-[#2E6FF2] text-white'
                     : 'text-[#555] hover:bg-[#F7F8FA]',
@@ -186,7 +186,7 @@ export function DiffViewer({
               <button
                 onClick={() => setViewMode('inline')}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 text-[12px] transition-colors',
+                  'flex items-center gap-2 px-3.5 py-2 text-[12px] transition-colors',
                   viewMode === 'inline'
                     ? 'bg-[#2E6FF2] text-white'
                     : 'text-[#555] hover:bg-[#F7F8FA]',
@@ -236,14 +236,18 @@ export function DiffViewer({
         <div className="bg-white border border-[#E2E5EA] rounded-xl overflow-hidden">
           {/* 버전 헤더 */}
           {diffResult.from && diffResult.to && (
-            <div className="grid grid-cols-2 border-b border-[#E2E5EA] text-[12px]">
-              <div className="px-4 py-2 text-[#555] font-medium border-r border-[#E2E5EA]">
-                v{diffResult.from.versionNumber} — {diffResult.from.createdAt}
-                <span className="ml-1.5 text-[#aaa] font-normal truncate">{diffResult.from.title}</span>
+            <div className="grid grid-cols-1 border-b border-[#E2E5EA] text-[12px] sm:grid-cols-2">
+              <div className="px-3 py-2 text-[#555] font-medium border-b border-[#E2E5EA] sm:px-4 sm:border-b-0 sm:border-r">
+                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                  <span>v{diffResult.from.versionNumber} — {diffResult.from.createdAt}</span>
+                  <span className="text-[#aaa] font-normal break-all">{diffResult.from.title}</span>
+                </div>
               </div>
-              <div className="px-4 py-2 text-[#555] font-medium">
-                v{diffResult.to.versionNumber} — {diffResult.to.createdAt}
-                <span className="ml-1.5 text-[#aaa] font-normal truncate">{diffResult.to.title}</span>
+              <div className="px-3 py-2 text-[#555] font-medium sm:px-4">
+                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                  <span>v{diffResult.to.versionNumber} — {diffResult.to.createdAt}</span>
+                  <span className="text-[#aaa] font-normal break-all">{diffResult.to.title}</span>
+                </div>
               </div>
             </div>
           )}

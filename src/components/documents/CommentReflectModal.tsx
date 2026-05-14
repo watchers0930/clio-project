@@ -68,15 +68,15 @@ export function CommentReflectModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/30 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl w-[420px] overflow-hidden">
+    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/30 backdrop-blur-sm sm:items-center">
+      <div className="bg-white rounded-t-[28px] shadow-xl w-full max-w-[440px] overflow-hidden sm:mx-4 sm:rounded-[24px]">
 
         {/* 헤더 */}
-        <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center gap-3">
+        <div className="flex items-center gap-3 border-b border-[#e5e5e7] px-5 py-5 sm:px-6 sm:py-6">
           {step !== 'select' && (
             <button
               onClick={() => setStep('select')}
-              className="p-1 rounded-lg hover:bg-[#f5f5f7] transition-colors"
+              className="rounded-lg p-1.5 hover:bg-[#f5f5f7] transition-colors"
             >
               <ArrowLeft size={16} className="text-[#6e6e73]" />
             </button>
@@ -88,15 +88,15 @@ export function CommentReflectModal({
         </div>
 
         {/* 본문 */}
-        <div className="px-6 py-5">
+        <div className="px-5 py-5 sm:px-6 sm:py-6">
 
           {/* Step 1: 모드 선택 */}
           {step === 'select' && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <p className="text-[13px] text-[#3a3a3c] mb-4">어떻게 반영할까요?</p>
               <button
                 onClick={() => setStep('insert')}
-                className="w-full flex items-start gap-4 p-4 rounded-xl border border-[#e5e5e7] hover:border-[#2E6FF2] hover:bg-[#f0f5ff] transition-all text-left"
+                className="w-full flex items-start gap-4 rounded-2xl border border-[#e5e5e7] px-5 py-5 hover:border-[#2E6FF2] hover:bg-[#f0f5ff] transition-all text-left"
               >
                 <div className="w-9 h-9 rounded-xl bg-[#2E6FF2]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <Layers size={17} className="text-[#2E6FF2]" />
@@ -108,7 +108,7 @@ export function CommentReflectModal({
               </button>
               <button
                 onClick={() => setStep('append')}
-                className="w-full flex items-start gap-4 p-4 rounded-xl border border-[#e5e5e7] hover:border-[#2E6FF2] hover:bg-[#f0f5ff] transition-all text-left"
+                className="w-full flex items-start gap-4 rounded-2xl border border-[#e5e5e7] px-5 py-5 hover:border-[#2E6FF2] hover:bg-[#f0f5ff] transition-all text-left"
               >
                 <div className="w-9 h-9 rounded-xl bg-[#30d158]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <PlusCircle size={17} className="text-[#30d158]" />
@@ -128,12 +128,12 @@ export function CommentReflectModal({
               {sections.length === 0 ? (
                 <p className="text-[12px] text-[#a1a1a6]">원문에서 섹션을 찾을 수 없습니다.</p>
               ) : (
-                <div className="space-y-2 max-h-48 overflow-y-auto">
+                <div className="max-h-48 space-y-3 overflow-y-auto">
                   {sections.map((section) => (
                     <button
                       key={section}
                       onClick={() => setTargetSection(section)}
-                      className={`w-full text-left px-4 py-2.5 rounded-xl border text-[13px] transition-all ${
+                      className={`w-full text-left px-4 py-3 rounded-xl border text-[13px] transition-all ${
                         targetSection === section
                           ? 'border-[#2E6FF2] bg-[#2E6FF2]/6 text-[#2E6FF2] font-medium'
                           : 'border-[#e5e5e7] text-[#1B1F2B] hover:border-[#2E6FF2]/40 hover:bg-[#f5f5f7]'
@@ -157,7 +157,7 @@ export function CommentReflectModal({
                 onChange={(e) => setNewSectionTitle(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && newSectionTitle.trim()) handleApply(); }}
                 placeholder="예: 해결방안, 조치사항, 의견 종합"
-                className="w-full rounded-xl border border-[#e5e5e7] px-4 py-2.5 text-[13px] text-[#1B1F2B] placeholder:text-[#a1a1a6] focus:outline-none focus:border-[#2E6FF2] transition-colors"
+                className="w-full rounded-xl border border-[#e5e5e7] px-4 py-3 text-[13px] text-[#1B1F2B] placeholder:text-[#a1a1a6] focus:outline-none focus:border-[#2E6FF2] transition-colors"
                 autoFocus
               />
             </div>
@@ -165,11 +165,11 @@ export function CommentReflectModal({
         </div>
 
         {/* 버튼 */}
-        <div className="px-6 py-4 border-t border-[#e5e5e7] flex justify-end gap-3">
+        <div className="border-t border-[#e5e5e7] px-5 py-5 flex flex-col-reverse justify-end gap-3 sm:px-6 sm:flex-row sm:gap-3.5">
           <button
             onClick={onClose}
             disabled={loading}
-            className="px-5 py-2 rounded-xl border border-[#e5e5e7] text-[13px] text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors disabled:opacity-40"
+            className="w-full px-5 py-3 rounded-xl border border-[#e5e5e7] text-[13px] text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors disabled:opacity-40 sm:w-auto"
           >
             취소
           </button>
@@ -177,7 +177,7 @@ export function CommentReflectModal({
             <button
               onClick={handleApply}
               disabled={!targetSection || loading}
-              className="px-5 py-2 rounded-xl bg-[#2E6FF2] text-white text-[13px] font-medium hover:bg-[#1a5ad9] transition-colors disabled:opacity-40 flex items-center gap-2"
+              className="w-full px-5 py-3 rounded-xl bg-[#2E6FF2] text-white text-[13px] font-medium hover:bg-[#1a5ad9] transition-colors disabled:opacity-40 flex items-center justify-center gap-2 sm:w-auto"
             >
               {loading && <Spinner size="sm" variant="white" />}
               적용하기
@@ -187,7 +187,7 @@ export function CommentReflectModal({
             <button
               onClick={handleApply}
               disabled={!newSectionTitle.trim() || loading}
-              className="px-5 py-2 rounded-xl bg-[#2E6FF2] text-white text-[13px] font-medium hover:bg-[#1a5ad9] transition-colors disabled:opacity-40 flex items-center gap-2"
+              className="w-full px-5 py-3 rounded-xl bg-[#2E6FF2] text-white text-[13px] font-medium hover:bg-[#1a5ad9] transition-colors disabled:opacity-40 flex items-center justify-center gap-2 sm:w-auto"
             >
               {loading && <Spinner size="sm" variant="white" />}
               AI로 생성하기

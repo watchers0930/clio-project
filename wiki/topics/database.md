@@ -16,7 +16,7 @@ CLIO는 Supabase PostgreSQL을 사용한다. pgvector 확장으로 파일 청크
 
 ## 테이블 구조 (전체) [coverage: high]
 
-### 현재 유효한 테이블 목록 (v6.9.0 기준)
+### 현재 유효한 테이블 목록 (v7.7.0 기준)
 
 | 테이블 | 생성 위치 | 설명 |
 |--------|-----------|------|
@@ -45,6 +45,7 @@ CLIO는 Supabase PostgreSQL을 사용한다. pgvector 확장으로 파일 청크
 | `work_log_attachments` | migration 020 | 업무일지 첨부파일 (문서 또는 파일 참조) |
 | `memo_embeddings` | migration 021 | 메모 pgvector 임베딩 (코사인 유사도 검색) |
 | `memo_groups`     | migration 021 | 메모 클러스터 그룹 캐시 (TTL 1시간) |
+| `document_embeddings` | migration 022 | 생성 문서 pgvector 임베딩 (코사인 유사도 검색) |
 
 > `approvals` 테이블은 **migration 015에서 DROP** (v6.3.0). `DocumentStatus`에서 `submitted | approved | rejected` 상태도 `completed`로 일괄 변환됨.
 
@@ -388,6 +389,24 @@ CREATE INDEX idx_memo_groups_user ON memo_groups(user_id, expires_at);
 
 RLS: `user_id = auth.uid()` — 본인 그룹 ALL.
 
+### document_embeddings (migration 022)
+
+생성 문서 임베딩 저장. document_id 유니크 — 동일 문서 재생성 시 UPSERT.
+
+```sql
+CREATE TABLE IF NOT EXISTS document_embeddings (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+  embedding   vector(1536) NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(document_id)
+);
+-- ivfflat index intentionally commented out (sequential scan for small datasets)
+```
+
+RLS: SELECT는 인증 사용자 전체 허용. INSERT/UPDATE/DELETE는 service_role 전용.
+
 ### events (schema.sql + migration 012 컬럼 추가)
 
 migration 012는 `schedules` 테이블에 컬럼을 추가한다. CLIO의 실제 일정 테이블은 schema.sql의 `events`이며, `schedules`는 별도 테이블일 가능성이 있다. migration 012 원문 기준으로 정리:
@@ -509,6 +528,7 @@ CREATE TABLE public.audit_logs (
 | `019_law_chunks.sql` | law_chunks 테이블 생성 + match_law_chunks RPC 함수 (법령 pgvector RAG) |
 | `020_work_logs.sql` | work_logs + work_log_attachments 테이블 생성 (업무일지 + 첨부) |
 | `021_memo_embeddings.sql` | memo_embeddings + memo_groups 테이블 생성 + match_memo_embeddings RPC (메모 pgvector 인사이트) |
+| `022_document_embeddings.sql` | document_embeddings 테이블 생성 + match_document_embeddings RPC (생성 문서 pgvector 유사도 검색) |
 
 ---
 
@@ -541,6 +561,7 @@ CREATE TABLE public.audit_logs (
 | `work_log_attachments` | 본인 일지 첨부 | 본인 일지 첨부 | 본인 일지 첨부 | 본인 일지 첨부 |
 | `memo_embeddings` | 메모 소유자만 (EXISTS memos subquery) | 동일 | 동일 | 동일 |
 | `memo_groups`     | `user_id = auth.uid()` | 동일 | 동일 | 동일 |
+| `document_embeddings` | 인증 사용자 전체 | service_role 전용 | service_role 전용 | service_role 전용 |
 
 **files_select 주의**: migration 014에서 기존 정책이 교체됨. `scope = 'company'` 조건이 앞에 추가되어 전사 공개 파일은 모든 인증 사용자가 열람 가능하다.
 
@@ -618,6 +639,21 @@ FUNCTION match_memo_embeddings(
 
 연관 메모 검색 (`/api/memos/[id]/related`)에서 호출. 코사인 유사도 기반, exclude_memo_id로 자기 자신 제외.
 
+### match_document_embeddings (migration 022)
+
+```sql
+FUNCTION match_document_embeddings(
+  query_embedding   vector(1536),
+  match_count       INT DEFAULT 10,
+  match_threshold   FLOAT DEFAULT 0.3
+) RETURNS TABLE (
+  document_id UUID,
+  similarity  FLOAT
+);
+```
+
+생성 문서 유사도 검색. 코사인 유사도(`1 - (embedding <=> query_embedding)`) 기준, `match_threshold` 이상인 문서만 반환. AI 검색 기능에서 문서 내용 유사도 매칭 시 호출.
+
 ### handle_updated_at (schema.sql 공통)
 
 `files`, `templates`, `events`, `todos` 테이블의 BEFORE UPDATE 트리거로 `updated_at` 자동 갱신.
@@ -665,6 +701,7 @@ DB 문자열 컬럼에서 PostgreSQL CHECK 제약으로 관리되며, TypeScript
 - **DocumentStatus 정리**: migration 015에서 DB는 `submitted/approved/rejected → completed`로 업데이트됐으나, 앱 레벨 타입에 `ApprovalStatus` 잔재가 있으면 제거 필요.
 - **files_select 정책 교체**: migration 014가 기존 `files_select` 정책을 DROP 후 재생성함. 이전 정책(본인 OR 같은 부서)에서 `scope = 'company'` 조건이 추가됨.
 - **contract_risk_analyses 스키마 한정자**: migration 011에서 `public.` 접두사 없이 생성됨. Supabase CLI 기본 search_path가 `public`이면 문제없으나, 확인 권장.
+- **document_embeddings ivfflat 인덱스 주석 처리**: `document_embeddings`의 ivfflat 인덱스는 의도적으로 주석 처리되어 있음. 행 수가 1000개 미만인 소규모 데이터셋에서는 `lists=100`으로 설정한 ivfflat이 결과 0건을 반환하는 문제가 발생함. 소규모 데이터셋에서는 순차 스캔(sequential scan)이 올바른 방식이며, 행 수가 충분히 증가할 때까지 인덱스를 활성화하지 말 것.
 
 ---
 

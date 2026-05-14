@@ -2,36 +2,21 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/toast';
-import { SkeletonCard, EmptyState, Tabs, ConfirmDialog } from '@/components/ui';
-
-/* ────────────────────────── types ────────────────────────── */
-interface TemplateFile {
-  id: string;
-  name: string;
-  type: string;
-  size: string;
-}
-
-interface Template {
-  id: string;
-  name: string;
-  icon: string;
-  description: string;
-  content: string;
-  department: string;
-  departmentId: string;
-  scope: '전사 공용' | '부서 전용';
-  usageCount: number;
-  lastUpdated: string;
-  placeholders: string[];
-  templateFile: TemplateFile | null;
-}
-
-/* DEPARTMENTS: API에서 동적 로드 */
+import { SkeletonCard, ConfirmDialog } from '@/components/ui';
+import { TemplateAutoRegisterModal, TemplateEditModal } from '@/components/templates/template-modals';
+import { TemplatePreviewModal } from '@/components/templates/template-preview-modal';
+import { TemplatesGrid, TemplatesHeader, TemplatesTabs } from '@/components/templates/templates-sections';
+import type { AutoPlaceholder, Template, TemplateFile } from '@/components/templates/types';
+import { createTemplateBundle } from '@/lib/templates/template-schema';
+import {
+  analyzeAutoRegFile,
+  getTemplateUploadError,
+  readApiError,
+  submitAutoRegTemplate,
+} from '@/components/templates/template-page-actions';
 
 const ICON_OPTIONS = ['📊', '📝', '💡', '📋', '📈', '✉️', '👥', '🎯', '📄', '🔧', '🗂️', '📌'];
 
-/* ────────────────────────── page ─────────────────────────── */
 export default function TemplatesPage() {
   const toast = useToast();
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -41,8 +26,8 @@ export default function TemplatesPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectMode, setSelectMode] = useState(false);
 
-  // Create/Edit modal state
   const [showModal, setShowModal] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [formName, setFormName] = useState('');
   const [formDescription, setFormDescription] = useState('');
@@ -53,21 +38,23 @@ export default function TemplatesPage() {
   const [formFile, setFormFile] = useState<File | null>(null);
   const [formExistingFile, setFormExistingFile] = useState<TemplateFile | null>(null);
   const [formRemoveFile, setFormRemoveFile] = useState(false);
+  const [formTemplateHtml, setFormTemplateHtml] = useState('');
+  const [formTemplateFields, setFormTemplateFields] = useState<Template['templateFields']>([]);
+  const [formTemplateSections, setFormTemplateSections] = useState<Template['templateSections']>([]);
   const [saving, setSaving] = useState(false);
 
-  // 확인 다이얼로그
   const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; description?: string; onConfirm: () => void }>({ open: false, title: '', onConfirm: () => {} });
   const openConfirm = (title: string, description: string | undefined, onConfirm: () => void) => setConfirmState({ open: true, title, description, onConfirm });
   const closeConfirm = () => setConfirmState((s) => ({ ...s, open: false }));
 
-  // 자가등록 모달 상태
   const [showAutoReg, setShowAutoReg] = useState(false);
   const [autoRegStep, setAutoRegStep] = useState(1);
   const [autoRegFile, setAutoRegFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
-  const [detectedPlaceholders, setDetectedPlaceholders] = useState<Array<{ key: string; label: string; type: string; location: string; context?: string; selected: boolean }>>([]);
+  const [detectedPlaceholders, setDetectedPlaceholders] = useState<AutoPlaceholder[]>([]);
   const [autoRegFileId, setAutoRegFileId] = useState<string | null>(null);
   const [autoRegPreview, setAutoRegPreview] = useState('');
+  const [autoRegPreviewHtml, setAutoRegPreviewHtml] = useState('');
   const [autoRegName, setAutoRegName] = useState('');
   const [autoRegDesc, setAutoRegDesc] = useState('');
   const [autoRegDeptId, setAutoRegDeptId] = useState('');
@@ -86,6 +73,11 @@ export default function TemplatesPage() {
             name: t.name as string,
             icon: getIconForName(t.name as string),
             description: t.description as string,
+            content: (t.content as string) ?? '',
+            templateMode: (t.templateMode as 'html-template' | undefined) ?? 'html-template',
+            templateHtml: (t.templateHtml as string | undefined) ?? '',
+            templateFields: (t.templateFields as Template['templateFields']) ?? [],
+            templateSections: (t.templateSections as Template['templateSections']) ?? [],
             department: t.department as string,
             departmentId: t.departmentId as string,
             scope: t.scope as '전사 공용' | '부서 전용',
@@ -105,7 +97,6 @@ export default function TemplatesPage() {
 
   useEffect(() => {
     loadTemplates();
-    // 부서 목록 로드
     fetch('/api/departments').then(r => r.json()).then(json => {
       const depts = (json.data ?? [])
         .filter((d: { is_active: boolean }) => d.is_active !== false)
@@ -113,7 +104,7 @@ export default function TemplatesPage() {
       setDeptList(depts);
       if (depts.length > 0 && !formDepartmentId) setFormDepartmentId(depts[0].id);
     }).catch(() => {});
-  }, [loadTemplates]);
+  }, [loadTemplates, formDepartmentId]);
 
   function getIconForName(name: string): string {
     const map: Record<string, string> = {
@@ -140,19 +131,24 @@ export default function TemplatesPage() {
     setFormFile(null);
     setFormExistingFile(null);
     setFormRemoveFile(false);
+    const bundle = createTemplateBundle({ name: '', description: '', outline: '' });
+    setFormTemplateHtml(bundle.layoutHtml);
+    setFormTemplateFields(bundle.fields);
+    setFormTemplateSections(bundle.sections);
     setSaving(false);
   };
 
-  const openCreate = () => {
-    resetForm();
-    setShowModal(true);
-  };
+  const openCreate = () => { resetForm(); setShowModal(true); };
 
   const openEdit = (t: Template) => {
+    setPreviewTemplate(null);
     setEditId(t.id);
     setFormName(t.name);
     setFormDescription(t.description);
     setFormContent(t.content ?? '');
+    setFormTemplateHtml(t.templateHtml ?? '');
+    setFormTemplateFields(t.templateFields ?? []);
+    setFormTemplateSections(t.templateSections ?? []);
     setFormDepartmentId(t.departmentId);
     setFormScope(t.scope);
     setFormIcon(t.icon);
@@ -164,7 +160,21 @@ export default function TemplatesPage() {
 
   const handleSave = async () => {
     if (!formName.trim()) return;
+    const fileError = getTemplateUploadError(formFile);
+    if (fileError) {
+      toast.error(fileError);
+      return;
+    }
     setSaving(true);
+
+    const templateBundle = createTemplateBundle({
+      name: formName.trim(),
+      description: formDescription,
+      outline: formContent,
+    });
+    const templateHtml = formTemplateHtml.trim() || templateBundle.layoutHtml;
+    const templateFields = formTemplateFields?.length ? formTemplateFields : templateBundle.fields;
+    const templateSections = formTemplateSections?.length ? formTemplateSections : templateBundle.sections;
 
     try {
       const hasFile = formFile !== null;
@@ -178,6 +188,9 @@ export default function TemplatesPage() {
           fd.append('name', formName);
           fd.append('description', formDescription);
           fd.append('content', formContent);
+          fd.append('templateHtml', templateHtml);
+          fd.append('templateFields', JSON.stringify(templateFields));
+          fd.append('templateSections', JSON.stringify(templateSections));
           fd.append('departmentId', formDepartmentId);
           fd.append('scope', formScope);
           if (formFile) fd.append('file', formFile);
@@ -190,6 +203,9 @@ export default function TemplatesPage() {
             body: JSON.stringify({
               id: editId, name: formName, description: formDescription,
               content: formContent, departmentId: formDepartmentId, scope: formScope,
+              templateHtml,
+              templateFields,
+              templateSections,
               removeFile: formRemoveFile || undefined,
             }),
           });
@@ -200,13 +216,27 @@ export default function TemplatesPage() {
           setTemplates((prev) =>
             prev.map((t) =>
               t.id === editId
-                ? { ...t, name: updated.name, description: updated.description, content: updated.content ?? '', department: updated.department, departmentId: updated.departmentId, scope: updated.scope, lastUpdated: updated.lastUpdated, icon: formIcon, templateFile: updated.templateFile ?? null }
+                ? {
+                    ...t,
+                    name: updated.name,
+                    description: updated.description,
+                    content: updated.content ?? '',
+                    templateMode: updated.templateMode ?? 'html-template',
+                    templateHtml: updated.templateHtml ?? '',
+                    templateFields: updated.templateFields ?? [],
+                    templateSections: updated.templateSections ?? [],
+                    department: updated.department,
+                    departmentId: updated.departmentId,
+                    scope: updated.scope,
+                    lastUpdated: updated.lastUpdated,
+                    icon: formIcon,
+                    templateFile: updated.templateFile ?? null,
+                  }
                 : t
             )
           );
         } else {
-          const errData = await res.json().catch(() => ({}));
-          toast.error(errData.error || '템플릿 수정에 실패했습니다.');
+          toast.error(await readApiError(res, '템플릿 수정에 실패했습니다.'));
           setSaving(false);
           return;
         }
@@ -217,6 +247,9 @@ export default function TemplatesPage() {
           fd.append('name', formName);
           fd.append('description', formDescription);
           fd.append('content', formContent);
+          fd.append('templateHtml', templateHtml);
+          fd.append('templateFields', JSON.stringify(templateFields));
+          fd.append('templateSections', JSON.stringify(templateSections));
           fd.append('departmentId', formDepartmentId);
           fd.append('scope', formScope);
           if (formFile) fd.append('file', formFile);
@@ -225,7 +258,7 @@ export default function TemplatesPage() {
           res = await fetch('/api/templates', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: formName, description: formDescription, content: formContent, departmentId: formDepartmentId, scope: formScope }),
+            body: JSON.stringify({ name: formName, description: formDescription, content: formContent, departmentId: formDepartmentId, scope: formScope, templateHtml, templateFields, templateSections }),
           });
         }
         if (res.ok) {
@@ -236,6 +269,10 @@ export default function TemplatesPage() {
             {
               id: newTmpl.id, name: newTmpl.name, icon: formIcon,
               description: newTmpl.description, content: newTmpl.content ?? '',
+              templateMode: newTmpl.templateMode ?? 'html-template',
+              templateHtml: newTmpl.templateHtml ?? '',
+              templateFields: newTmpl.templateFields ?? [],
+              templateSections: newTmpl.templateSections ?? [],
               department: newTmpl.department,
               departmentId: newTmpl.departmentId, scope: newTmpl.scope,
               usageCount: 0, lastUpdated: newTmpl.lastUpdated, placeholders: [],
@@ -243,15 +280,14 @@ export default function TemplatesPage() {
             },
           ]);
         } else {
-          const errData = await res.json().catch(() => ({}));
-          toast.error(errData.error || '템플릿 생성에 실패했습니다.');
+          toast.error(await readApiError(res, '템플릿 생성에 실패했습니다.'));
           setSaving(false);
           return;
         }
       }
       resetForm();
       loadTemplates();
-    } catch (e) {
+    } catch {
       toast.error('저장 중 오류가 발생했습니다.');
     } finally {
       setSaving(false);
@@ -317,8 +353,12 @@ export default function TemplatesPage() {
         body: JSON.stringify({
           name: `${t.name} (복사본)`,
           description: t.description,
+          content: t.content,
           departmentId: t.departmentId,
           scope: t.scope,
+          templateHtml: t.templateHtml,
+          templateFields: t.templateFields,
+          templateSections: t.templateSections,
           templateFileId: t.templateFile?.id || undefined,
         }),
       });
@@ -336,584 +376,115 @@ export default function TemplatesPage() {
   if (loading) return <SkeletonCard count={6} />;
 
   return (
-    <div className="space-y-6 pb-10">
-      {/* header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1d1d1f]">템플릿 관리</h1>
-          <p className="text-[#6e6e73] mt-1" style={{ marginBottom: 10 }}>문서 생성에 사용할 템플릿을 관리하세요</p>
-        </div>
-        <div className="flex gap-2">
-          {selectMode ? (
-            <>
-              <button
-                onClick={toggleSelectAll}
-                className="px-4 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors"
-              >
-                {selectedIds.size === filtered.length ? '전체 해제' : '전체 선택'}
-              </button>
-              <button
-                onClick={handleBulkDelete}
-                disabled={selectedIds.size === 0}
-                className="px-4 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#2d2d2f] transition-colors disabled:opacity-40"
-              >
-                {selectedIds.size}개 삭제
-              </button>
-              <button
-                onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}
-                className="px-4 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
-              >
-                취소
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => setSelectMode(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                선택
-              </button>
-              <button
-                onClick={() => { setShowAutoReg(true); setAutoRegStep(1); setAutoRegFile(null); setDetectedPlaceholders([]); setAutoRegFileId(null); setAutoRegPreview(''); setAutoRegName(''); setAutoRegDesc(''); }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[#2E6FF2] text-[#2E6FF2] text-sm font-medium hover:bg-[#2E6FF2]/5 transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
-                파일에서 등록
-              </button>
-              <button
-                onClick={openCreate}
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors shadow-sm"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                새 템플릿
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+    <div className="space-y-[25px] pb-10">
+      <TemplatesHeader
+        selectMode={selectMode}
+        selectedCount={selectedIds.size}
+        allSelected={selectedIds.size === filtered.length && filtered.length > 0}
+        onToggleSelectAll={toggleSelectAll}
+        onBulkDelete={handleBulkDelete}
+        onCancelSelect={() => { setSelectMode(false); setSelectedIds(new Set()); }}
+        onEnterSelectMode={() => setSelectMode(true)}
+        onOpenAutoRegister={() => { setShowAutoReg(true); setAutoRegStep(1); setAutoRegFile(null); setDetectedPlaceholders([]); setAutoRegFileId(null); setAutoRegPreview(''); setAutoRegPreviewHtml(''); setAutoRegName(''); setAutoRegDesc(''); }}
+        onOpenCreate={openCreate}
+      />
 
-      {/* tabs */}
-      <div style={{ marginBottom: 20 }}>
-        <Tabs
-          variant="underline"
-          tabs={[
-            { id: '전사 공용', label: `전사 공용 (${templates.filter((tmpl) => tmpl.scope === '전사 공용').length})` },
-            { id: '부서 전용', label: `부서 전용 (${templates.filter((tmpl) => tmpl.scope === '부서 전용').length})` },
-          ]}
-          activeTab={tab}
-          onChange={(id) => setTab(id as '전사 공용' | '부서 전용')}
-        />
-      </div>
+      <TemplatesTabs tab={tab} templates={templates} onChange={setTab} />
 
-      {/* grid */}
-      {filtered.length === 0 ? (
-        <EmptyState
-          iconType="template"
-          title={`${tab} 템플릿이 없습니다`}
-          description="새 템플릿을 만들어 보세요"
-          action={{ label: '새 템플릿', onClick: openCreate }}
-        />
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {filtered.map((t) => {
-            const isSelected = selectedIds.has(t.id);
-            return (
-              <div
-                key={t.id}
-                onClick={selectMode ? () => toggleSelect(t.id) : undefined}
-                className="bg-white rounded-xl border overflow-hidden transition-all hover:shadow-lg group"
-                style={{
-                  borderColor: isSelected ? '#2E6FF2' : '#E2E5EA',
-                  boxShadow: isSelected ? '0 0 0 1px #2E6FF2' : '0 1px 3px rgba(0,0,0,0.04)',
-                  cursor: selectMode ? 'pointer' : undefined,
-                }}
-              >
-                {/* 상단 컬러 바 */}
-                <div style={{ height: 3, backgroundColor: '#2E6FF2' }} />
+      <TemplatesGrid
+        filtered={filtered}
+        tab={tab}
+        selectMode={selectMode}
+        selectedIds={selectedIds}
+        onToggleSelect={toggleSelect}
+        onOpenCreate={openCreate}
+        onPreview={setPreviewTemplate}
+        onEdit={openEdit}
+        onDuplicate={(template) => { void handleDuplicate(template); }}
+        onDelete={handleDelete}
+      />
 
-                {/* 카드 본문 */}
-                <div style={{ padding: '18px 20px 14px' }}>
-                  {/* 아이콘 + 체크박스 */}
-                  <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
-                    <div className="flex items-center gap-2.5">
-                      {selectMode && (
-                        <div
-                          className="w-[16px] h-[16px] rounded flex items-center justify-center border-2 transition-colors"
-                          style={{
-                            borderColor: isSelected ? '#2E6FF2' : '#E2E5EA',
-                            backgroundColor: isSelected ? '#2E6FF2' : 'transparent',
-                          }}
-                        >
-                          {isSelected && (
-                            <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                          )}
-                        </div>
-                      )}
-                      <span className="text-2xl">{t.icon}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      {t.templateFile && (
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md" style={{ backgroundColor: '#2E6FF2' + '12', color: '#2E6FF2' }}>
-                          {t.templateFile.type}
-                        </span>
-                      )}
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-md" style={{ backgroundColor: '#2E6FF2' + '12', color: '#2E6FF2' }}>
-                        {t.scope === '전사 공용' ? '전사' : '부서'}
-                      </span>
-                    </div>
-                  </div>
+      <TemplateEditModal
+        open={showModal}
+        editId={editId}
+        formName={formName}
+        formDescription={formDescription}
+        formDepartmentId={formDepartmentId}
+        formScope={formScope}
+        formIcon={formIcon}
+        formContent={formContent}
+        formTemplateHtml={formTemplateHtml}
+        formTemplateFields={formTemplateFields ?? []}
+        formTemplateSections={formTemplateSections ?? []}
+        formFile={formFile}
+        formExistingFile={formExistingFile}
+        formRemoveFile={formRemoveFile}
+        saving={saving}
+        deptList={deptList}
+        iconOptions={ICON_OPTIONS}
+        onClose={resetForm}
+        onNameChange={setFormName}
+        onDescriptionChange={setFormDescription}
+        onDepartmentChange={setFormDepartmentId}
+        onScopeChange={setFormScope}
+        onIconChange={setFormIcon}
+        onContentChange={setFormContent}
+        onTemplateHtmlChange={setFormTemplateHtml}
+        onFileChange={(file) => {
+          const fileError = getTemplateUploadError(file);
+          if (fileError) {
+            toast.error(fileError);
+            return;
+          }
+          setFormFile(file);
+          setFormRemoveFile(false);
+        }}
+        onRemoveExistingFile={() => setFormRemoveFile(true)}
+        onClearNewFile={() => { setFormFile(null); setFormRemoveFile(false); }}
+        onSave={() => { void handleSave(); }}
+      />
 
-                  {/* 제목 + 설명 */}
-                  <h3 className="text-[13px] font-semibold text-[#1B1F2B] truncate" style={{ marginBottom: 4 }}>{t.name}</h3>
-                  <p className="text-[11px] text-[#7C8494] line-clamp-2" style={{ marginBottom: 12 }}>{t.description}</p>
+      <TemplatePreviewModal
+        open={previewTemplate !== null}
+        template={previewTemplate}
+        onClose={() => setPreviewTemplate(null)}
+        onEdit={openEdit}
+      />
 
-                  {/* 메타 정보 */}
-                  <div className="flex items-center gap-3 text-[10px] text-[#7C8494]">
-                    <span>{t.department}</span>
-                    <span>사용 {t.usageCount}회</span>
-                    <span className="font-num">{t.lastUpdated}</span>
-                  </div>
-                </div>
+      <TemplateAutoRegisterModal
+        open={showAutoReg}
+        step={autoRegStep}
+        autoRegFile={autoRegFile}
+        analyzing={analyzing}
+        detectedPlaceholders={detectedPlaceholders}
+        autoRegPreview={autoRegPreview}
+        autoRegPreviewHtml={autoRegPreviewHtml}
+        autoRegName={autoRegName}
+        autoRegDesc={autoRegDesc}
+        autoRegDeptId={autoRegDeptId}
+        autoRegScope={autoRegScope}
+        autoRegSaving={autoRegSaving}
+        deptList={deptList}
+        onClose={() => setShowAutoReg(false)}
+        onStepChange={setAutoRegStep}
+        onFileChange={(file) => {
+          const fileError = getTemplateUploadError(file);
+          if (fileError) {
+            toast.error(fileError);
+            return;
+          }
+          setAutoRegFile(file);
+        }}
+        onTogglePlaceholder={(index) => setDetectedPlaceholders((prev) => prev.map((placeholder, placeholderIndex) => placeholderIndex === index ? { ...placeholder, selected: !placeholder.selected } : placeholder))}
+        onRenamePlaceholder={(index, value) => setDetectedPlaceholders((prev) => prev.map((placeholder, placeholderIndex) => placeholderIndex === index ? { ...placeholder, label: value } : placeholder))}
+        onNameChange={setAutoRegName}
+        onDescChange={setAutoRegDesc}
+        onDeptChange={setAutoRegDeptId}
+        onScopeChange={setAutoRegScope}
+        onAnalyze={() => { void analyzeAutoRegFile({ autoRegFile, setAnalyzing, setAutoRegFileId, setAutoRegPreview, setAutoRegPreviewHtml, setAutoRegName, setDetectedPlaceholders, setAutoRegStep, toast }); }}
+        onSubmit={() => { void submitAutoRegTemplate({ autoRegName, autoRegDesc, autoRegDeptId, autoRegScope, autoRegFileId, detectedPlaceholders, setAutoRegSaving, setShowAutoReg, loadTemplates, toast }); }}
+      />
 
-                {/* 액션 버튼 */}
-                <div className="flex items-center border-t border-[#E2E5EA]/60">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); openEdit(t); }}
-                    className="flex-1 py-2.5 text-[12px] font-medium text-[#1B1F2B] hover:bg-[#f5f5f7] transition-colors border-r border-[#E2E5EA]/60"
-                  >
-                    편집
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDuplicate(t); }}
-                    className="flex-1 py-2.5 text-[12px] font-medium text-[#1B1F2B] hover:bg-[#f5f5f7] transition-colors border-r border-[#E2E5EA]/60"
-                  >
-                    복제
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }}
-                    className="flex-1 py-2.5 text-[12px] font-medium text-[#1d1d1f]/70 hover:bg-[#1d1d1f]/5 hover:text-[#1d1d1f] transition-colors"
-                  >
-                    삭제
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── Create/Edit Modal ── */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="tmpl-modal-title" onKeyDown={(e) => { if (e.key === 'Escape') resetForm(); }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[85vh] overflow-y-auto">
-            <div className="px-8 py-6 border-b border-[#e5e5e7] flex items-center justify-between">
-              <h2 id="tmpl-modal-title" className="text-lg font-semibold text-[#1d1d1f]">
-                {editId ? '템플릿 편집' : '새 템플릿 만들기'}
-              </h2>
-              <button onClick={resetForm} className="p-1 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-            <div className="px-8 py-6 space-y-6">
-              {/* Icon selector */}
-              <div>
-                <label className="block text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>아이콘</label>
-                <div className="flex flex-wrap gap-2.5">
-                  {ICON_OPTIONS.map((icon) => (
-                    <button
-                      key={icon}
-                      onClick={() => setFormIcon(icon)}
-                      className={`w-11 h-11 rounded-lg flex items-center justify-center text-xl border transition-colors ${formIcon === icon ? 'border-[#0071e3] bg-[#f5f5f7] ring-2 ring-[#0071e3]/30' : 'border-[#e5e5e7] hover:border-[#0071e3]'}`}
-                    >
-                      {icon}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Name */}
-              <div style={{ marginTop: 20 }}>
-                <label className="block text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>이름 *</label>
-                <input
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  placeholder="템플릿 이름을 입력하세요"
-                  className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3]"
-                />
-              </div>
-
-              {/* Description */}
-              <div style={{ marginTop: 20 }}>
-                <label className="block text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>설명</label>
-                <textarea
-                  value={formDescription}
-                  onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="템플릿에 대한 설명을 입력하세요"
-                  rows={3}
-                  className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none"
-                />
-              </div>
-
-              {/* Content (문서 구조) */}
-              <div style={{ marginTop: 20 }}>
-                <label className="block text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>문서 구조</label>
-                <p className="text-xs text-[#6e6e73]" style={{ marginBottom: 8 }}>AI가 이 구조를 따라 문서를 생성합니다. 섹션/항목을 정의하세요.</p>
-                <textarea
-                  value={formContent}
-                  onChange={(e) => setFormContent(e.target.value)}
-                  placeholder={"예:\n# 업무일지\n## 오늘의 업무\n- 주요 업무 내용 1\n- 주요 업무 내용 2\n## 문제점 및 해결 방안\n## 내일의 계획"}
-                  rows={6}
-                  className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none font-mono"
-                />
-              </div>
-
-              {/* Department */}
-              <div style={{ marginTop: 20 }}>
-                <label className="block text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>부서</label>
-                <select
-                  value={formDepartmentId}
-                  onChange={(e) => setFormDepartmentId(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] text-sm text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3]"
-                >
-                  {deptList.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Scope */}
-              <div style={{ marginTop: 20 }}>
-                <label className="block text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>범위</label>
-                <div className="flex gap-3">
-                  {(['전사 공용', '부서 전용'] as const).map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => setFormScope(s)}
-                      className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors ${formScope === s ? 'border-[#1d1d1f] bg-[#1d1d1f] text-white' : 'border-[#e5e5e7] text-[#6e6e73] hover:border-[#1d1d1f]'}`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {/* Template File */}
-              <div style={{ marginTop: 20 }}>
-                <label className="block text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>표준양식 파일</label>
-                <p className="text-xs text-[#6e6e73] mb-3">HWP, HWPX, DOCX, XLSX, PPTX, PDF 등 표준양식 파일을 첨부하세요</p>
-
-                {/* 기존 파일 표시 */}
-                {formExistingFile && !formRemoveFile && !formFile && (
-                  <div className="flex items-center gap-3 p-3 rounded-xl border border-[#e5e5e7] bg-[#f5f5f7]">
-                    <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">{formExistingFile.type}</span>
-                    <span className="text-sm text-[#1d1d1f] flex-1 truncate">{formExistingFile.name}</span>
-                    <span className="text-xs text-[#6e6e73]">{formExistingFile.size}</span>
-                    <button
-                      type="button"
-                      onClick={() => setFormRemoveFile(true)}
-                      className="p-1 rounded hover:bg-white text-[#ff3b30]"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                  </div>
-                )}
-
-                {/* 새 파일 선택됨 */}
-                {formFile && (
-                  <div className="flex items-center gap-3 p-3 rounded-xl border border-[#0071e3] bg-[#f0f5ff]">
-                    <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">
-                      {formFile.name.split('.').pop()?.toUpperCase() ?? 'FILE'}
-                    </span>
-                    <span className="text-sm text-[#1d1d1f] flex-1 truncate">{formFile.name}</span>
-                    <span className="text-xs text-[#6e6e73]">
-                      {formFile.size < 1024 * 1024 ? `${(formFile.size / 1024).toFixed(0)} KB` : `${(formFile.size / (1024 * 1024)).toFixed(1)} MB`}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => { setFormFile(null); setFormRemoveFile(false); }}
-                      className="p-1 rounded hover:bg-white text-[#ff3b30]"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                  </div>
-                )}
-
-                {/* 파일 선택 버튼 */}
-                {!formFile && (!formExistingFile || formRemoveFile) && (
-                  <label className="flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-[#e5e5e7] cursor-pointer hover:border-[#0071e3] hover:bg-[#f5f5f7] transition-colors">
-                    <svg className="w-5 h-5 text-[#6e6e73]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                    </svg>
-                    <span className="text-sm text-[#6e6e73]">파일 선택</span>
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept=".hwp,.hwpx,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf,.md"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) { setFormFile(file); setFormRemoveFile(false); }
-                        e.target.value = '';
-                      }}
-                    />
-                  </label>
-                )}
-              </div>
-            </div>
-            <div className="px-8 py-5 border-t border-[#e5e5e7] flex justify-end gap-3">
-              <button onClick={resetForm} className="px-6 py-3 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">취소</button>
-              <button
-                onClick={handleSave}
-                disabled={!formName.trim() || saving}
-                className="px-6 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {saving ? '저장 중...' : editId ? '수정' : '생성'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* ────── 자가등록 모달 ────── */}
-      {showAutoReg && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4" style={{ padding: '28px 32px' }}>
-            {/* 스텝 인디케이터 */}
-            <div className="flex items-center gap-3 mb-6">
-              {[1, 2, 3].map((s) => (
-                <div key={s} className="flex items-center gap-2">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-semibold ${
-                    autoRegStep >= s ? 'bg-[#2E6FF2] text-white' : 'bg-[#f5f5f7] text-[#7C8494]'
-                  }`}>{s}</div>
-                  <span className={`text-[12px] ${autoRegStep >= s ? 'text-[#1B1F2B] font-medium' : 'text-[#7C8494]'}`}>
-                    {s === 1 ? '파일 업로드' : s === 2 ? '빈칸 확인' : '정보 입력'}
-                  </span>
-                  {s < 3 && <div className="w-6 h-px bg-[#E2E5EA]" />}
-                </div>
-              ))}
-            </div>
-
-            {/* Step 1: 파일 업로드 */}
-            {autoRegStep === 1 && (
-              <div>
-                <div
-                  className="border-2 border-dashed border-[#E2E5EA] rounded-xl p-8 text-center hover:border-[#2E6FF2] transition-colors cursor-pointer"
-                  onClick={() => document.getElementById('auto-reg-file')?.click()}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const f = e.dataTransfer.files[0];
-                    if (f) setAutoRegFile(f);
-                  }}
-                >
-                  <input
-                    id="auto-reg-file"
-                    type="file"
-                    accept=".docx,.hwpx"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) setAutoRegFile(f);
-                    }}
-                  />
-                  {autoRegFile ? (
-                    <div>
-                      <svg className="w-10 h-10 mx-auto mb-2 text-[#30d158]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      <p className="text-[14px] font-medium text-[#1B1F2B]">{autoRegFile.name}</p>
-                      <p className="text-[12px] text-[#7C8494] mt-1">{(autoRegFile.size / 1024).toFixed(1)} KB</p>
-                    </div>
-                  ) : (
-                    <div>
-                      <svg className="w-10 h-10 mx-auto mb-2 text-[#7C8494]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
-                      <p className="text-[14px] text-[#1B1F2B]">DOCX 또는 HWPX 파일을 드래그하거나 클릭</p>
-                      <p className="text-[12px] text-[#7C8494] mt-1">양식 문서의 빈칸을 자동으로 감지합니다</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-2 justify-end mt-5">
-                  <button onClick={() => setShowAutoReg(false)} className="px-4 py-2 text-[13px] text-[#7C8494]">취소</button>
-                  <button
-                    onClick={async () => {
-                      if (!autoRegFile) return;
-                      setAnalyzing(true);
-                      try {
-                        const fd = new FormData();
-                        fd.append('file', autoRegFile);
-                        const res = await fetch('/api/templates/analyze', { method: 'POST', body: fd });
-                        const d = await res.json();
-                        if (d.success) {
-                          setAutoRegFileId(d.data.fileId);
-                          setAutoRegPreview(d.data.preview);
-                          setAutoRegName(autoRegFile.name.replace(/\.(docx|hwpx)$/i, ''));
-                          setDetectedPlaceholders(
-                            (d.data.placeholders ?? []).map((p: { key: string; label: string; type: string; location: string; context?: string }) => ({ ...p, selected: true }))
-                          );
-                          setAutoRegStep(2);
-                        } else {
-                          toast.error(d.error ?? '분석 실패');
-                        }
-                      } catch { toast.error('서버 오류'); }
-                      setAnalyzing(false);
-                    }}
-                    disabled={!autoRegFile || analyzing}
-                    className="px-5 py-2 text-[13px] font-medium text-white bg-[#2E6FF2] rounded-lg hover:bg-[#1a5ad9] disabled:opacity-40 transition-colors"
-                  >
-                    {analyzing ? '분석 중...' : '분석 시작'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Step 2: 플레이스홀더 확인 */}
-            {autoRegStep === 2 && (
-              <div>
-                <p className="text-[13px] text-[#7C8494] mb-3">감지된 빈칸/플레이스홀더 ({detectedPlaceholders.length}개)</p>
-
-                {detectedPlaceholders.length === 0 ? (
-                  <div className="text-center py-8 text-[#7C8494] text-[13px]">
-                    <p>감지된 빈칸이 없습니다.</p>
-                    <p className="text-[12px] mt-1">이 파일을 그대로 템플릿으로 등록할 수 있습니다.</p>
-                  </div>
-                ) : (
-                  <div className="max-h-[280px] overflow-y-auto border border-[#E2E5EA] rounded-lg">
-                    {detectedPlaceholders.map((p, i) => (
-                      <div key={p.key} className="flex items-center gap-3 px-4 py-2.5 border-b border-[#E2E5EA] last:border-0">
-                        <input
-                          type="checkbox"
-                          checked={p.selected}
-                          onChange={() => setDetectedPlaceholders(prev => prev.map((pp, ii) => ii === i ? { ...pp, selected: !pp.selected } : pp))}
-                          className="accent-[#2E6FF2]"
-                        />
-                        <input
-                          type="text"
-                          value={p.label}
-                          onChange={(e) => setDetectedPlaceholders(prev => prev.map((pp, ii) => ii === i ? { ...pp, label: e.target.value } : pp))}
-                          className="flex-1 text-[13px] text-[#1B1F2B] border-0 border-b border-transparent hover:border-[#E2E5EA] focus:border-[#2E6FF2] focus:outline-none py-0.5"
-                        />
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                          p.type === 'blank' ? 'bg-[#ff9f0a]/10 text-[#ff9f0a]' :
-                          p.type === 'placeholder' ? 'bg-[#2E6FF2]/10 text-[#2E6FF2]' :
-                          p.type === 'underline' ? 'bg-[#7C8494]/10 text-[#7C8494]' :
-                          'bg-[#30d158]/10 text-[#30d158]'
-                        }`}>
-                          {p.type === 'blank' ? '빈칸' : p.type === 'placeholder' ? '변수' : p.type === 'underline' ? '밑줄' : '괄호'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {autoRegPreview && (
-                  <details className="mt-3">
-                    <summary className="text-[12px] text-[#7C8494] cursor-pointer">미리보기</summary>
-                    <pre className="mt-1 p-3 bg-[#f9fafb] rounded-lg text-[11px] text-[#7C8494] max-h-[120px] overflow-y-auto whitespace-pre-wrap">{autoRegPreview}</pre>
-                  </details>
-                )}
-
-                <div className="flex gap-2 justify-end mt-5">
-                  <button onClick={() => setAutoRegStep(1)} className="px-4 py-2 text-[13px] text-[#7C8494]">이전</button>
-                  <button
-                    onClick={() => setAutoRegStep(3)}
-                    className="px-5 py-2 text-[13px] font-medium text-white bg-[#2E6FF2] rounded-lg hover:bg-[#1a5ad9] transition-colors"
-                  >
-                    다음
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: 정보 입력 */}
-            {autoRegStep === 3 && (
-              <div>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-[13px] text-[#7C8494] mb-1.5">템플릿 이름</label>
-                    <input
-                      type="text"
-                      value={autoRegName}
-                      onChange={(e) => setAutoRegName(e.target.value)}
-                      className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/30 focus:border-[#2E6FF2]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[13px] text-[#7C8494] mb-1.5">설명</label>
-                    <textarea
-                      value={autoRegDesc}
-                      onChange={(e) => setAutoRegDesc(e.target.value)}
-                      rows={2}
-                      className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/30 focus:border-[#2E6FF2] resize-none"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[13px] text-[#7C8494] mb-1.5">부서</label>
-                      <select
-                        value={autoRegDeptId}
-                        onChange={(e) => setAutoRegDeptId(e.target.value)}
-                        className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/30"
-                      >
-                        <option value="">전사</option>
-                        {deptList.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[13px] text-[#7C8494] mb-1.5">공개 범위</label>
-                      <select
-                        value={autoRegScope}
-                        onChange={(e) => setAutoRegScope(e.target.value as '전사 공용' | '부서 전용')}
-                        className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/30"
-                      >
-                        <option value="전사 공용">전사 공용</option>
-                        <option value="부서 전용">부서 전용</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 justify-end mt-6">
-                  <button onClick={() => setAutoRegStep(2)} className="px-4 py-2 text-[13px] text-[#7C8494]">이전</button>
-                  <button
-                    onClick={async () => {
-                      if (!autoRegName.trim()) { toast.error('이름을 입력해주세요.'); return; }
-                      setAutoRegSaving(true);
-                      try {
-                        const selectedPhs = detectedPlaceholders.filter(p => p.selected).map(({ key, label, type, location, context }) => ({ key, label, type, location, context }));
-                        const res = await fetch('/api/templates', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            name: autoRegName.trim(),
-                            description: autoRegDesc.trim(),
-                            departmentId: autoRegDeptId || null,
-                            scope: autoRegScope,
-                            content: '',
-                            templateFileId: autoRegFileId,
-                            placeholders: selectedPhs,
-                          }),
-                        });
-                        const d = await res.json();
-                        if (d.template) {
-                          setShowAutoReg(false);
-                          loadTemplates();
-                        } else {
-                          toast.error(d.error ?? '등록 실패');
-                        }
-                      } catch { toast.error('서버 오류'); }
-                      setAutoRegSaving(false);
-                    }}
-                    disabled={autoRegSaving || !autoRegName.trim()}
-                    className="px-5 py-2 text-[13px] font-medium text-white bg-[#2E6FF2] rounded-lg hover:bg-[#1a5ad9] disabled:opacity-40 transition-colors"
-                  >
-                    {autoRegSaving ? '등록 중...' : '템플릿 등록'}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 삭제 확인 다이얼로그 */}
       <ConfirmDialog
         open={confirmState.open}
         title={confirmState.title}

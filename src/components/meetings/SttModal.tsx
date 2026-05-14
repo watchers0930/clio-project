@@ -3,8 +3,6 @@
 import { useState, useRef } from 'react';
 import { X, Upload, Mic, FileAudio } from 'lucide-react';
 import { AudioRecorder } from '@/components/common/AudioRecorder';
-import { TodoExtractModal } from '@/components/meetings/TodoExtractModal';
-import type { ExtractedTodo } from '@/lib/ai/extract-todos';
 
 interface SttModalProps {
   isOpen: boolean;
@@ -26,12 +24,6 @@ export function SttModal({ isOpen, onClose, onDocumentCreated }: SttModalProps) 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // 성공 후 TodoExtractModal
-  const [todoModalOpen, setTodoModalOpen] = useState(false);
-  const [createdDocId, setCreatedDocId] = useState('');
-  const [createdDocTitle, setCreatedDocTitle] = useState('');
-  const [extractedTodos, setExtractedTodos] = useState<ExtractedTodo[]>([]);
 
   if (!isOpen) return null;
 
@@ -68,22 +60,14 @@ export function SttModal({ isOpen, onClose, onDocumentCreated }: SttModalProps) 
         return;
       }
 
-      const { document: doc, extractedTodos: todos = [] } = data.data;
-
-      if (doc) {
-        setCreatedDocId(doc.id);
-        setCreatedDocTitle(doc.title);
-        setExtractedTodos(todos);
-        onDocumentCreated?.(doc.id, doc.title);
-
-        // 할일이 있으면 TodoExtractModal 표시
-        if (todos.length > 0) {
-          setTodoModalOpen(true);
-        } else {
-          // 할일 없으면 바로 닫기 (회의록은 이미 생성됨)
-          onClose();
-        }
+      const { document: doc } = data.data;
+      if (!doc?.id) {
+        setTranscribeError('음성 변환은 완료됐지만 회의록 저장이 완료되지 않았습니다.');
+        return;
       }
+
+      onDocumentCreated?.(doc.id, doc.title);
+      onClose();
     } catch {
       setTranscribeError('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
     } finally {
@@ -106,8 +90,8 @@ export function SttModal({ isOpen, onClose, onDocumentCreated }: SttModalProps) 
   // ── 변환 중 화면 ──
   if (isTranscribing) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 px-8 py-10 flex flex-col items-center gap-5">
+      <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center">
+        <div className="bg-white rounded-t-[28px] shadow-xl w-full max-w-md px-6 py-8 flex flex-col items-center gap-5 sm:mx-4 sm:rounded-2xl sm:px-8 sm:py-10">
           <div className="w-14 h-14 rounded-full bg-[#f0f5ff] flex items-center justify-center">
             <svg className="w-6 h-6 text-[#2E6FF2] animate-spin" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -123,50 +107,33 @@ export function SttModal({ isOpen, onClose, onDocumentCreated }: SttModalProps) 
     );
   }
 
-  // ── TodoExtractModal ──
-  if (todoModalOpen) {
-    return (
-      <TodoExtractModal
-        isOpen={todoModalOpen}
-        onClose={() => { setTodoModalOpen(false); onClose(); }}
-        documentId={createdDocId}
-        documentTitle={createdDocTitle}
-        initialTodos={extractedTodos}
-        onSuccess={(count) => {
-          setTodoModalOpen(false);
-          onClose();
-          alert(`회의록이 생성되었고 ${count}개의 할일이 등록되었습니다.`);
-        }}
-      />
-    );
-  }
-
   // ── 메인 모달 ──
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
     >
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4">
+      <div className="flex min-h-full items-end justify-center p-0 sm:items-center sm:p-4">
+      <div className="bg-white rounded-t-[28px] shadow-xl w-full max-w-lg sm:rounded-2xl">
         {/* 헤더 */}
-        <div className="px-6 py-5 border-b border-[#e5e5e7] flex items-center justify-between">
+        <div className="px-4 py-4 border-b border-[#e5e5e7] flex items-start justify-between gap-3 sm:px-6 sm:py-5">
           <div>
             <h2 className="text-[15px] font-semibold text-[#1B1F2B]">음성으로 회의록 생성</h2>
             <p className="text-xs text-[#6e6e73] mt-0.5">음성을 텍스트로 변환하여 회의록을 자동 생성합니다</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* 탭 */}
-        <div className="px-6 pt-5">
-          <div className="flex gap-1 p-1 bg-[#f5f5f7] rounded-xl">
+        <div className="px-4 pt-4 sm:px-6 sm:pt-5">
+          <div className="flex gap-1.5 p-1.5 bg-[#f5f5f7] rounded-xl">
             <button
               onClick={() => setInputMode('record')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-[13px] sm:text-sm font-medium transition-all ${
                 inputMode === 'record'
                   ? 'bg-white text-[#1d1d1f] shadow-sm'
                   : 'text-[#6e6e73] hover:text-[#1d1d1f]'
@@ -177,7 +144,7 @@ export function SttModal({ isOpen, onClose, onDocumentCreated }: SttModalProps) 
             </button>
             <button
               onClick={() => setInputMode('upload')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-[13px] sm:text-sm font-medium transition-all ${
                 inputMode === 'upload'
                   ? 'bg-white text-[#1d1d1f] shadow-sm'
                   : 'text-[#6e6e73] hover:text-[#1d1d1f]'
@@ -190,7 +157,8 @@ export function SttModal({ isOpen, onClose, onDocumentCreated }: SttModalProps) 
         </div>
 
         {/* 탭 콘텐츠 */}
-        <div className="px-6 pb-5">
+        <div className="px-4 pb-4 sm:px-6 sm:pb-5">
+          <p className="mt-4 text-[12px] text-[#6e6e73]">녹음 또는 업로드 후 회의록 초안이 바로 열립니다.</p>
           {/* 에러 */}
           {transcribeError && (
             <div className="mt-4 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-600 flex items-start gap-2">
@@ -252,7 +220,7 @@ export function SttModal({ isOpen, onClose, onDocumentCreated }: SttModalProps) 
               <button
                 onClick={handleUploadSubmit}
                 disabled={!selectedFile}
-                className="w-full py-2 rounded-xl bg-[#2E6FF2] text-white text-[13px] font-medium hover:bg-[#1a5ad9] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-2.5 rounded-xl bg-[#2E6FF2] text-white text-[13px] font-medium hover:bg-[#1a5ad9] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -262,6 +230,7 @@ export function SttModal({ isOpen, onClose, onDocumentCreated }: SttModalProps) 
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

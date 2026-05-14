@@ -2,7 +2,7 @@
 
 import { isSameMonth, isToday } from 'date-fns';
 import type { CalendarEvent, EventType } from '@/lib/supabase/types';
-import { getEventTypeColor, getEventTypeLabel } from '@/lib/schedule-utils';
+import { getEventTypeColor } from '@/lib/schedule-utils';
 import { format } from 'date-fns';
 
 interface CalendarCellProps {
@@ -31,14 +31,14 @@ export default function CalendarCell({
   return (
     <div
       onClick={() => onClick(date)}
-      className="min-h-[120px] p-2 border-b border-r border-[#E2E5EA]/60 cursor-pointer transition-colors hover:bg-[#f9fafb]"
+      className="min-h-[124px] p-2.5 border-b border-r border-[#E2E5EA]/60 cursor-pointer transition-colors hover:bg-[#f9fafb]"
       style={{
         backgroundColor: isSelected ? 'rgba(46,111,242,0.06)' : !inMonth ? '#fafafa' : undefined,
         boxShadow: isSelected ? 'inset 0 0 0 1.5px rgba(46,111,242,0.35)' : undefined,
       }}
     >
       {/* 날짜 */}
-      <div className="mb-1.5">
+      <div className="mb-2">
         <span
           className={`text-[12px] w-6 h-6 flex items-center justify-center rounded-full font-num ${today ? 'font-bold' : 'font-normal'}`}
           style={{
@@ -59,7 +59,7 @@ export default function CalendarCell({
       </div>
 
       {/* 일정 목록 */}
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         {events.slice(0, 3).map((evt) => {
           const color = getEventTypeColor(evt.event_type as EventType);
           const timeStr = evt.all_day ? '종일' : format(new Date(evt.start_at), 'HH:mm');
@@ -67,14 +67,14 @@ export default function CalendarCell({
             <button
               key={evt.id}
               onClick={(e) => { e.stopPropagation(); onEventClick(evt); }}
-              className="w-full text-left rounded-md hover:brightness-95 transition-all"
+              className="w-full rounded-md text-left hover:brightness-95 transition-all"
               style={{
                 backgroundColor: color + '28',
                 borderLeft: `3px solid ${color}`,
-                padding: '4px 6px',
+                padding: '5px 7px',
               }}
             >
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <span className="text-[10px] font-num flex-shrink-0" style={{ color: color + 'cc' }}>
                   {timeStr}
                 </span>
@@ -89,9 +89,9 @@ export default function CalendarCell({
           );
         })}
         {events.length > 3 && (
-          <span className="text-[10px] text-[#2E6FF2] font-medium pl-1 cursor-pointer hover:underline">
-            +{events.length - 3}개 더
-          </span>
+            <span className="pl-1.5 text-[10px] font-medium text-[#2E6FF2] cursor-pointer hover:underline">
+              +{events.length - 3}개 더
+            </span>
         )}
       </div>
     </div>

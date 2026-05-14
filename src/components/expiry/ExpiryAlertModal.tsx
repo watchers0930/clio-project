@@ -24,46 +24,46 @@ function formatExpiryDate(dateStr: string): string {
 export function ExpiryAlertModal({ items, onDismissToday, onClose }: ExpiryAlertModalProps) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
       style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="bg-card rounded-2xl border border-border shadow-xl w-full max-w-md mx-4"
+        className="bg-card rounded-t-[28px] border border-border shadow-xl w-full max-w-md mx-0 sm:mx-4 sm:rounded-[24px]"
         style={{ maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
       >
         {/* 헤더 */}
-        <div className="px-6 py-5 border-b border-border flex items-center justify-between">
+        <div className="px-5 py-5 border-b border-border flex items-start justify-between gap-3 sm:px-6 sm:py-6">
           <div className="flex items-center gap-2">
             <AlertTriangle size={18} className="text-orange-500" strokeWidth={2} />
             <h2 className="text-[15px] font-semibold text-foreground">만료 임박 문서 알림</h2>
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-muted hover:text-foreground hover:bg-page-bg transition-colors"
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-muted hover:text-foreground hover:bg-page-bg transition-colors"
           >
             <X size={16} />
           </button>
         </div>
 
         {/* 본문 */}
-        <div className="px-6 py-5" style={{ overflowY: 'auto', flex: 1 }}>
+        <div className="px-5 py-5 sm:px-6 sm:py-6" style={{ overflowY: 'auto', flex: 1 }}>
           <p className="text-[14px] text-muted mb-4">
             D-30 이내 만료 예정인 문서가 있습니다.
           </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {items.map((item) => {
               const badge = getDayBadgeStyle(item.days_remaining);
               return (
                 <div
                   key={item.schedule_id}
-                  className="flex items-center justify-between rounded-xl border border-border bg-page-bg"
-                  style={{ padding: '12px 16px', gap: 12 }}
+                  className="flex flex-col items-start justify-between rounded-xl border border-border bg-page-bg sm:flex-row sm:items-center"
+                  style={{ padding: '14px 18px', gap: 14 }}
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <span
-                      className={`flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md ${badge.bg} ${badge.text}`}
+                      className={`flex-shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-md ${badge.bg} ${badge.text}`}
                     >
                       {badge.label}
                     </span>
@@ -87,16 +87,16 @@ export function ExpiryAlertModal({ items, onDismissToday, onClose }: ExpiryAlert
         </div>
 
         {/* 푸터 */}
-        <div className="px-6 py-4 border-t border-border flex items-center justify-between gap-3">
+        <div className="px-5 py-5 border-t border-border flex flex-col-reverse items-stretch gap-3 sm:px-6 sm:flex-row sm:items-center sm:justify-between sm:gap-3.5">
           <button
             onClick={onDismissToday}
-            className="text-[13px] text-muted hover:text-foreground transition-colors"
+            className="text-[13px] text-muted hover:text-foreground transition-colors sm:text-left"
           >
             오늘 다시 보지 않기
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-primary text-white text-[13px] font-medium hover:bg-primary-dark transition-colors"
+            className="w-full px-4 py-3 rounded-xl bg-primary text-white text-[13px] font-medium hover:bg-primary-dark transition-colors sm:w-auto"
           >
             확인
           </button>

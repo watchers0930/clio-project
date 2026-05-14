@@ -105,7 +105,7 @@ export function VoiceInputButton({ onTranscript, className, disabled }: VoiceInp
       <button
         disabled
         title="음성 변환 중..."
-        className={`p-2 rounded-lg text-[#2E6FF2] ${className ?? ''}`}
+        className={`p-2.5 rounded-lg text-[#2E6FF2] ${className ?? ''}`}
       >
         <Loader2 className="w-4 h-4 animate-spin" />
       </button>
@@ -117,7 +117,7 @@ export function VoiceInputButton({ onTranscript, className, disabled }: VoiceInp
       <button
         onClick={handleClick}
         title="클릭하여 녹음 종료"
-        className={`p-2 rounded-lg bg-red-50 text-red-500 animate-pulse ${className ?? ''}`}
+        className={`p-2.5 rounded-lg bg-red-50 text-red-500 animate-pulse ${className ?? ''}`}
       >
         <MicOff className="w-4 h-4" />
       </button>
@@ -129,7 +129,7 @@ export function VoiceInputButton({ onTranscript, className, disabled }: VoiceInp
       onClick={handleClick}
       disabled={disabled}
       title={error ?? '음성으로 입력'}
-      className={`p-2 rounded-lg text-[#6e6e73] hover:text-[#2E6FF2] hover:bg-[#f0f5ff] transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${className ?? ''}`}
+      className={`p-2.5 rounded-lg text-[#6e6e73] hover:text-[#2E6FF2] hover:bg-[#f0f5ff] transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${className ?? ''}`}
     >
       <Mic className="w-4 h-4" />
     </button>

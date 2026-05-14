@@ -8,6 +8,8 @@ import { renderPdf } from '@/lib/renderers/pdf-renderer';
 import type { CorporateTheme } from '@/lib/renderers/types';
 import { DEFAULT_THEME } from '@/lib/renderers/types';
 import { injectSignatureDocx, injectSignatureHwpx } from '@/lib/utils/inject-signature';
+import { parseTemplateBundle, type TemplateBundle } from '@/lib/templates/template-schema';
+import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
 
 /* ── 한국어 순서 표현(첫째/둘째 등)이 문장 중간에 있으면 앞에 줄바꿈 삽입 ── */
 function normalizeOrdinals(text: string): string {
@@ -226,16 +228,23 @@ export async function GET(
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
     }
 
-    // 본인 문서 조회, 없으면 결재자인지 확인 후 admin으로 조회
-    let doc: { id: string; title: string; content: string | null; storage_path: string | null; parent_id: string | null } | null = null;
-    const { data: ownDoc } = await supabase
-      .from('documents')
-      .select('id, title, content, storage_path, parent_id')
-      .eq('id', id)
-      .single();
+    const roleInfo = await getUserRoleInfo(supabase, authUserId);
+    if (!roleInfo) {
+      return NextResponse.json({ error: '사용자 정보가 없습니다.' }, { status: 403 });
+    }
 
-    if (ownDoc) {
-      doc = ownDoc;
+    const canAccess = await canAccessDocument(supabase, authUserId, roleInfo.role, roleInfo.department_id, id);
+
+    // 본인 문서 조회, 없으면 결재자인지 확인 후 admin으로 조회
+    let doc: { id: string; title: string; content: string | null; storage_path: string | null; parent_id: string | null; template_id?: string | null } | null = null;
+    if (canAccess) {
+      const admin = createAdminSupabaseClient();
+      const { data: accessibleDoc } = await admin
+        .from('documents')
+        .select('id, title, content, storage_path, parent_id, template_id')
+        .eq('id', id)
+        .single();
+      doc = accessibleDoc;
     } else {
       const admin = createAdminSupabaseClient();
       const { data: approval } = await admin
@@ -248,7 +257,7 @@ export async function GET(
       if (approval) {
         const { data: adminDoc } = await admin
           .from('documents')
-          .select('id, title, content, storage_path, parent_id')
+          .select('id, title, content, storage_path, parent_id, template_id')
           .eq('id', id)
           .single();
         doc = adminDoc;
@@ -281,6 +290,7 @@ export async function GET(
     // 서명 이미지 가져오기 — 다운로드 전용 (inline 미리보기는 서명 제외), 이름은 항상 가져옴
     let signatureBuffer: Buffer | null = null;
     let signerName = '';
+    let templateBundle: TemplateBundle | null = null;
     try {
       const adminClient = createAdminSupabaseClient();
       const { data: docMeta } = await adminClient
@@ -289,6 +299,20 @@ export async function GET(
       const { data: nameData } = await adminClient
         .from('users').select('name').eq('id', signatureOwnerId).maybeSingle();
       signerName = nameData?.name ?? '';
+      if (doc.template_id) {
+        const { data: templateData } = await adminClient
+          .from('templates')
+          .select('name, description, content, placeholders')
+          .eq('id', doc.template_id)
+          .maybeSingle();
+        if (templateData) {
+          templateBundle = parseTemplateBundle(templateData.content, {
+            name: templateData.name,
+            description: templateData.description,
+            placeholders: templateData.placeholders,
+          });
+        }
+      }
     } catch { /* 이름 없으면 그냥 진행 */ }
     if (!inline) {
       try {
@@ -344,7 +368,10 @@ export async function GET(
           if (!isLabel && content.length > 50) {
             // 마크다운 content → PDF 렌더
             const theme: CorporateTheme = { ...DEFAULT_THEME, fontFamily: fontParam, fontFamilyEn: fontFamily };
-            let rendered = await renderPdf(content, doc.title, theme);
+            let rendered = await renderPdf(content, doc.title, theme, {
+              templateBundle,
+              documentInputs: { author: signerName },
+            });
             if (signatureBuffer) {
               const sigBase64 = signatureBuffer.toString('base64');
               const sigImg = `<div style="text-align:right;margin-top:32px;padding-right:40px;"><img src="data:image/png;base64,${sigBase64}" style="width:120px;height:60px;object-fit:contain;" alt="서명" /></div>`;
@@ -352,7 +379,7 @@ export async function GET(
               rendered = { ...rendered, buffer: Buffer.from(htmlStr.replace('</body>', `${sigImg}</body>`), 'utf-8') };
             }
             const fileName = encodeURIComponent(rendered.fileName);
-            return new NextResponse(rendered.buffer, {
+            return new NextResponse(new Uint8Array(rendered.buffer), {
               headers: {
                 'Content-Type': 'text/html; charset=utf-8',
                 'Content-Disposition': `inline; filename*=UTF-8''${fileName}`,
@@ -365,7 +392,7 @@ export async function GET(
           try {
             if (ext === 'docx') {
               const mammoth = await import('mammoth');
-              const result = await mammoth.convertToHtml({ buffer: fileBuffer.buffer as ArrayBuffer });
+              const result = await mammoth.convertToHtml({ buffer: fileBuffer });
               extractedHtml = result.value;
             } else if (ext === 'hwpx') {
               const PizZip = (await import('pizzip')).default;
@@ -399,7 +426,7 @@ export async function GET(
             : '';
 
           const fileHtml = Buffer.from(`<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><style>body{font-family:'맑은 고딕',sans-serif;max-width:800px;margin:40px auto;padding:0 40px;font-size:13px;line-height:1.8;color:#1d1d1f;}h1{font-size:18px;font-weight:700;margin-bottom:24px;border-bottom:1px solid #e5e5e7;padding-bottom:12px;}p{margin:4px 0;}table{border-collapse:collapse;width:100%;margin:12px 0;}td,th{border:1px solid #ccc;padding:6px 10px;}</style></head><body><h1>${doc.title}</h1>${bodyContent}${signatureBlock}</body></html>`, 'utf-8');
-          return new NextResponse(fileHtml, {
+          return new NextResponse(new Uint8Array(fileHtml), {
             headers: {
               'Content-Type': 'text/html; charset=utf-8',
               'Content-Length': String(fileHtml.length),
@@ -408,13 +435,13 @@ export async function GET(
         }
 
         // 다운로드: 서명 주입 후 파일 서빙
-        let finalBuffer = fileBuffer;
+        let finalBuffer: Buffer = Buffer.from(fileBuffer);
         if (!inline && signatureBuffer) {
-          if (ext === 'docx') finalBuffer = injectSignatureDocx(fileBuffer, signatureBuffer);
-          else if (ext === 'hwpx') finalBuffer = injectSignatureHwpx(fileBuffer, signatureBuffer, signerName);
+          if (ext === 'docx') finalBuffer = Buffer.from(injectSignatureDocx(fileBuffer as unknown as Buffer, signatureBuffer as unknown as Buffer));
+          else if (ext === 'hwpx') finalBuffer = Buffer.from(injectSignatureHwpx(fileBuffer as unknown as Buffer, signatureBuffer as unknown as Buffer, signerName));
         }
         const fileName = encodeURIComponent(`${doc.title}.${ext}`);
-        return new NextResponse(finalBuffer, {
+        return new NextResponse(new Uint8Array(finalBuffer), {
           headers: {
             'Content-Type': mimeMap[ext] ?? 'application/octet-stream',
             'Content-Disposition': `attachment; filename*=UTF-8''${fileName}`,
@@ -440,12 +467,15 @@ export async function GET(
           `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"></head><body style="font-family:'맑은 고딕',sans-serif;color:#6e6e73;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">파일을 불러올 수 없습니다.</body></html>`,
           'utf-8'
         );
-        return new NextResponse(errHtml, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+        return new NextResponse(new Uint8Array(errHtml), { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
       }
       // 실제 content → PDF(HTML) 렌더
-      const pdfRendered = await renderPdf(content, doc.title, theme);
+      const pdfRendered = await renderPdf(content, doc.title, theme, {
+        templateBundle,
+        documentInputs: { author: signerName },
+      });
       const pdfFileName = encodeURIComponent(pdfRendered.fileName);
-      return new NextResponse(pdfRendered.buffer, {
+      return new NextResponse(new Uint8Array(pdfRendered.buffer), {
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
           'Content-Disposition': `inline; filename*=UTF-8''${pdfFileName}`,
@@ -462,7 +492,10 @@ export async function GET(
         if (signatureBuffer) rendered = { ...rendered, buffer: injectSignatureHwpx(rendered.buffer, signatureBuffer, signerName) };
         break;
       case 'pdf':
-        rendered = await renderPdf(content, doc.title, theme);
+        rendered = await renderPdf(content, doc.title, theme, {
+          templateBundle,
+          documentInputs: { author: signerName },
+        });
         if (signatureBuffer) {
           const sigBase64 = signatureBuffer.toString('base64');
           const sigImg = `<div style="text-align:right;margin-top:32px;padding-right:40px;"><img src="data:image/png;base64,${sigBase64}" style="width:120px;height:60px;object-fit:contain;" alt="서명" /></div>`;
@@ -472,14 +505,17 @@ export async function GET(
         break;
       case 'docx':
       default:
-        rendered = await renderDocx(content, doc.title, theme);
+        rendered = await renderDocx(content, doc.title, theme, {
+          templateBundle,
+          documentInputs: { author: signerName },
+        });
         if (signatureBuffer) rendered = { ...rendered, buffer: injectSignatureDocx(rendered.buffer, signatureBuffer) };
         break;
     }
 
     const fileName = encodeURIComponent(rendered.fileName);
 
-    return new NextResponse(rendered.buffer, {
+    return new NextResponse(new Uint8Array(rendered.buffer), {
       headers: {
         'Content-Type': rendered.mimeType,
         'Content-Disposition': inline

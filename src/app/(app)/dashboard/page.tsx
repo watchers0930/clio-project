@@ -3,26 +3,33 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAuthStore } from '@/store/auth-store';
 import Link from 'next/link';
+import { format, isToday, startOfMonth, endOfMonth } from 'date-fns';
+import { ko } from 'date-fns/locale';
 import {
-  FolderOpen, FileText, Users, Search,
-  Upload, Sparkles, FilePlus, LayoutTemplate,
-  ArrowUpRight, Clock
+  ChevronRight,
+  FolderOpen,
+  Users,
+  Sparkles,
+  FilePlus,
+  StickyNote,
+  CalendarDays,
+  ShieldAlert,
 } from 'lucide-react';
-import { Spinner } from '@/components/ui';
-import { FILE_TYPE_BADGE, FILE_STATUS_COLOR, ACTION_LABELS, CHART_COLORS } from '@/lib/constants/ui';
-import { formatTimeAgo } from '@/lib/utils/format';
-import { ExpiryDashboardWidget } from '@/components/expiry/ExpiryDashboardWidget';
-
-interface UserInfo {
-  name: string;
-  department_id?: string;
-}
+import { DashboardBottomSection, DashboardMidSection } from '@/components/dashboard/dashboard-sections';
+import { getCalendarDays, getEventTypeColor, WEEKDAY_LABELS } from '@/lib/schedule-utils';
+import { DAILY_QUOTES, PLATFORM_HERO_LABEL } from '@/lib/constants/ui';
+import type { CalendarEvent } from '@/lib/supabase/types';
 
 interface DashboardData {
   total_files: number;
   total_documents: number;
   total_users: number;
   total_templates: number;
+  role?: string;
+  department_name?: string;
+  scope_label?: string;
+  scope_hint?: string;
+  accessible_department_count?: number;
   recent_activity: Array<{
     id: string;
     user_id: string;
@@ -43,14 +50,59 @@ interface RecentFile {
   status: string;
 }
 
-const quickActions = [
-  { label: '파일 업로드', href: '/files', icon: Upload },
-  { label: 'AI 검색', href: '/search', icon: Sparkles },
-  { label: '문서 생성', href: '/documents', icon: FilePlus },
-  { label: '템플릿 관리', href: '/templates', icon: LayoutTemplate },
-];
+const WEEKDAY_COLORS = ['#ff3b30', '#1B1F2B', '#1B1F2B', '#1B1F2B', '#1B1F2B', '#1B1F2B', '#2E6FF2'];
 
-// 공통 상수 사용: FILE_TYPE_BADGE, FILE_STATUS_COLOR, ACTION_LABELS, CHART_COLORS (from @/lib/constants/ui)
+const quickActions = [
+  {
+    label: '문서허브',
+    href: '/files',
+    icon: FolderOpen,
+    description: '저장과 공유 시작',
+    priority: 'primary' as const,
+  },
+  {
+    label: 'AI 검색',
+    href: '/search',
+    icon: Sparkles,
+    description: '근거 문서 찾기',
+    priority: 'primary' as const,
+  },
+  {
+    label: '새 문서 생성',
+    href: '/documents?create=true',
+    icon: FilePlus,
+    description: '초안 바로 작성',
+    priority: 'primary' as const,
+  },
+  {
+    label: '계약 리스크',
+    href: '/contract-risk',
+    icon: ShieldAlert,
+    description: '전문 검토 시작',
+    priority: 'primary' as const,
+  },
+  {
+    label: '메모',
+    href: '/memos',
+    icon: StickyNote,
+    description: '아이디어 정리',
+    priority: 'secondary' as const,
+  },
+  {
+    label: '회의',
+    href: '/meetings',
+    icon: Users,
+    description: '회의 흐름 보기',
+    priority: 'secondary' as const,
+  },
+  {
+    label: '일정',
+    href: '/schedule',
+    icon: CalendarDays,
+    description: '일정 확인',
+    priority: 'secondary' as const,
+  },
+];
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -59,19 +111,38 @@ function getGreeting() {
   return '좋은 저녁이에요';
 }
 
-// formatTimeAgo → @/lib/utils/format 에서 import
-// CHART_COLORS → CHART_COLORS from @/lib/constants/ui
+function isEventOnDate(event: CalendarEvent, date: Date) {
+  const start = new Date(event.start_at);
+  const end = new Date(event.end_at);
+  const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const endDate = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  const currentDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  return currentDate >= startDate && currentDate <= endDate;
+}
+
+function getDailyQuote(date: Date) {
+  const key = format(date, 'yyyy-MM-dd');
+  const hash = key.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return DAILY_QUOTES[hash % DAILY_QUOTES.length];
+}
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const [data, setData] = useState<DashboardData | null>(null);
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
+
   const fetchData = useCallback(async () => {
     try {
-      const [statsRes, filesRes] = await Promise.all([
+      const now = new Date();
+      const monthStart = startOfMonth(now).toISOString();
+      const monthEnd = endOfMonth(now).toISOString();
+
+      const [statsRes, filesRes, eventsRes] = await Promise.all([
         fetch('/api/dashboard/stats'),
         fetch('/api/files?limit=5'),
+        fetch(`/api/events?start=${encodeURIComponent(monthStart)}&end=${encodeURIComponent(monthEnd)}`),
       ]);
 
       if (statsRes.ok) {
@@ -87,6 +158,13 @@ export default function DashboardPage() {
           setRecentFiles(filesJson.files.slice(0, 5));
         }
       }
+
+      if (eventsRes.ok) {
+        const eventsJson = await eventsRes.json();
+        if (eventsJson.success && Array.isArray(eventsJson.data)) {
+          setEvents(eventsJson.data);
+        }
+      }
     } catch {
       /* 조용히 실패 */
     } finally {
@@ -98,343 +176,202 @@ export default function DashboardPage() {
     fetchData();
   }, [fetchData]);
 
-  const stats = [
-    { label: '전체 파일', value: data?.total_files ?? 0, icon: FolderOpen },
-    { label: '생성 문서', value: data?.total_documents ?? 0, icon: FileText },
-    { label: '활성 사용자', value: data?.total_users ?? 0, icon: Users },
-    { label: '검색 횟수', value: data?.recent_activity?.filter(a => a.action === 'search').length ?? 0, icon: Search },
-  ];
-
-  // 파일 유형 분포 계산
-  const breakdown = data?.file_type_breakdown ?? {};
-  const totalFileCount = Object.values(breakdown).reduce((a, b) => a + b, 0);
-  const typeEntries = Object.entries(breakdown)
-    .sort(([, a], [, b]) => b - a)
+  const primaryActions = quickActions.filter((action) => action.priority === 'primary');
+  const secondaryActions = quickActions.filter((action) => action.priority === 'secondary');
+  const now = new Date();
+  const calendarDays = getCalendarDays(now.getFullYear(), now.getMonth());
+  const todayEvents = events.filter((event) => isEventOnDate(event, now));
+  const upcomingEvents = [...events]
+    .filter((event) => new Date(event.end_at) >= new Date(now.getFullYear(), now.getMonth(), now.getDate()))
+    .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
     .slice(0, 4);
-  const otherCount = totalFileCount - typeEntries.reduce((a, [, v]) => a + v, 0);
-  if (otherCount > 0) typeEntries.push(['기타', otherCount]);
-
-  // 활동 로그
-  const activities = (data?.recent_activity ?? []).slice(0, 5);
+  const dailyQuote = getDailyQuote(now);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-      {/* Greeting */}
-      <div style={{ paddingBottom: 12, borderBottom: '1px solid #e5e5e7' }}>
-        <h1 className="text-[24px] font-bold text-foreground">
-          {getGreeting()}, <span className="text-primary">{user?.name || '관리자'}님</span>
-        </h1>
-        <p className="text-[14px] text-muted" style={{ marginTop: 8 }}>
-          {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
-        </p>
-      </div>
-
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4" style={{ gap: 20 }}>
-        {stats.map((s) => {
-          const Icon = s.icon;
-          return (
-            <div key={s.label} className="bg-card rounded-2xl border border-border card-hover" style={{ padding: 30 }}>
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#f5f5f7] text-[#1d1d1f]">
-                  <Icon size={20} strokeWidth={1.5} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 25 }}>
+      <section className="rounded-[28px] border border-border bg-card overflow-hidden">
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,7fr)_minmax(280px,3fr)]">
+          <div className="px-4 py-5 sm:px-6 sm:py-6 xl:px-[30px] xl:py-[30px]">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">{PLATFORM_HERO_LABEL}</p>
+              <h1 className="text-[24px] font-bold leading-[1.2] text-foreground sm:text-[30px]">
+                {getGreeting()}, <span className="text-primary">{user?.name || '관리자'}님</span>
+              </h1>
+              <div className="flex flex-wrap items-center gap-3 text-[12px] text-muted">
+                <span>{new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}</span>
+                <span className="text-[#B2B8C2]">|</span>
+                <span className="text-[#6B7280]">{dailyQuote}</span>
+              </div>
+              <p className="max-w-[720px] text-[14px] leading-6 text-[#6B7280]">
+                문서를 저장하고 공유한 뒤, 검색과 생성, 계약 검토까지 오늘의 흐름을 바로 이어갈 수 있습니다.
+              </p>
+              <div className="flex flex-wrap gap-2.5">
+                <Link
+                  href="/files"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#1d1d1f] px-4 py-2.5 text-[12px] font-semibold text-white transition-colors hover:bg-[#0071e3]"
+                >
+                  <FolderOpen size={15} strokeWidth={1.8} />
+                  문서허브 가기
+                </Link>
+                <Link
+                  href="/search"
+                  className="inline-flex items-center gap-2 rounded-full border border-[#D7E7FF] bg-white px-4 py-2.5 text-[12px] font-semibold text-[#2E6FF2] transition-colors hover:bg-[#F3F8FF]"
+                >
+                  <Sparkles size={15} strokeWidth={1.8} />
+                  AI 검색 시작
+                </Link>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center rounded-full bg-[#F3F8FF] px-2.5 py-1 text-[10px] font-semibold text-[#2E6FF2]">
+                    오늘 바로가기
+                  </span>
+                  <span className="text-[12px] text-[#6B7280]">저장 → 검색 → 생성 → 계약 검토</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  {primaryActions.map((action) => {
+                    const Icon = action.icon;
+                    return (
+                      <Link
+                        key={action.label}
+                        href={action.href}
+                        className="group flex h-full min-h-[74px] rounded-[20px] border border-[#D9DEE7] bg-white text-[#1d1d1f] transition-all hover:border-[#0071e3]/35 hover:shadow-[0_10px_24px_rgba(15,23,42,0.06)]"
+                        style={{ padding: '12px 14px' }}
+                      >
+                        <div className="flex h-full w-full items-center gap-3">
+                          <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[12px] bg-[#F3F8FF] text-[#2E6FF2] transition-colors group-hover:bg-[#EAF3FF]">
+                            <Icon size={16} strokeWidth={1.8} />
+                          </div>
+                          <div className="flex min-w-0 flex-1 flex-col">
+                            <div className="min-w-0 w-full">
+                              <p className="text-[13px] font-semibold leading-4 text-[#1B1F2B]">
+                                {action.label}
+                              </p>
+                              <p className="mt-1 text-[10px] leading-4 text-[#6B7280]">
+                                {action.description}
+                              </p>
+                            </div>
+                          </div>
+                          <ChevronRight size={16} className="shrink-0 text-[#B2B8C2] transition-colors group-hover:text-[#2E6FF2]" />
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {secondaryActions.map((action) => {
+                    const Icon = action.icon;
+                    return (
+                      <Link
+                        key={action.label}
+                        href={action.href}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-[#F5F6F8] px-3 py-1.5 text-[11px] font-medium text-[#596273] hover:bg-[#EEF4FF] hover:text-[#2E6FF2] transition-colors"
+                      >
+                        <Icon size={13} strokeWidth={1.8} />
+                        <span>{action.label}</span>
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
-              {loading ? (
-                <div className="flex items-center gap-2">
-                  <Spinner size="sm" />
-                </div>
-              ) : (
-                <>
-                  <p className="text-[28px] font-bold text-foreground font-num leading-none">{s.value.toLocaleString()}</p>
-                  <p className="text-[13px] text-muted mt-2">{s.label}</p>
-                </>
-              )}
             </div>
-          );
-        })}
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 lg:grid-cols-4" style={{ gap: 12 }}>
-        {quickActions.map((a) => {
-          const Icon = a.icon;
-          return (
-            <Link
-              key={a.label}
-              href={a.href}
-              className="flex items-center justify-center gap-3 rounded-xl bg-card border border-border text-[14px] font-medium text-foreground hover:border-primary hover:text-primary transition-all duration-200"
-              style={{ padding: '16px 24px' }}
-            >
-              <Icon size={17} strokeWidth={1.5} />
-              {a.label}
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* Recent Files */}
-      <div className="bg-card rounded-2xl border border-border overflow-hidden">
-        <div className="flex items-center justify-between" style={{ padding: '22px 24px', borderBottom: '1px solid #e5e5e7' }}>
-          <h2 className="text-[16px] font-semibold text-foreground">최근 파일</h2>
-          <Link href="/files" className="text-[13px] font-medium text-primary hover:text-primary-dark flex items-center gap-1 transition-colors">
-            전체 보기 <ArrowUpRight size={14} />
-          </Link>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-page-bg">
-                <th className="text-left px-6 py-4 text-[12px] font-semibold text-muted uppercase tracking-wider">파일명</th>
-                <th className="text-left px-6 py-4 text-[12px] font-semibold text-muted uppercase tracking-wider">유형</th>
-                <th className="text-left px-6 py-4 text-[12px] font-semibold text-muted uppercase tracking-wider">부서</th>
-                <th className="text-left px-6 py-4 text-[12px] font-semibold text-muted uppercase tracking-wider">날짜</th>
-                <th className="text-left px-6 py-4 text-[12px] font-semibold text-muted uppercase tracking-wider">상태</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={5} className="px-6 py-8 text-center text-muted"><Spinner size="sm" /></td></tr>
-              ) : recentFiles.length === 0 ? (
-                <tr><td colSpan={5} className="px-6 py-8 text-center text-[14px] text-muted">등록된 파일이 없습니다.</td></tr>
-              ) : recentFiles.map((f) => (
-                <tr key={f.id} className="hover:bg-page-bg/50 transition-colors border-b border-border last:border-b-0">
-                  <td className="px-6 py-4 text-[14px] font-medium text-foreground">{f.name}</td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex px-2.5 py-0.5 rounded-md text-[11px] font-bold ${FILE_TYPE_BADGE[f.type] || 'bg-gray-100 text-gray-600'}`}>
-                      {f.type}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-[14px] text-muted">{f.department}</td>
-                  <td className="px-6 py-4 text-[13px] text-muted font-num">{f.uploadDate}</td>
-                  <td className={`px-6 py-4 text-[13px] font-semibold ${FILE_STATUS_COLOR[f.status] || ''}`}>{f.status}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Bottom Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr]" style={{ gap: 20 }}>
-        {/* Activity */}
-        <div className="bg-card rounded-2xl border border-border overflow-hidden">
-          <div style={{ padding: '22px 24px', borderBottom: '1px solid #e5e5e7' }}>
-            <h2 className="text-[16px] font-semibold text-foreground">최근 활동</h2>
           </div>
-          <div style={{ padding: '8px 0' }}>
-            {loading ? (
-              <div className="flex justify-center py-6"><Spinner size="sm" /></div>
-            ) : activities.length === 0 ? (
-              <p className="text-[13px] text-muted text-center py-6">활동 기록이 없습니다.</p>
-            ) : activities.map((a) => {
-              const detail = a.details as Record<string, string>;
-              const label = ACTION_LABELS[a.action] ?? a.action;
-              const target = detail?.file_name ?? detail?.title ?? detail?.name ?? detail?.query ?? '';
-              return (
-                <div key={a.id} className="flex items-center" style={{ gap: 16, padding: '12px 24px' }}>
-                  <div className="w-8 h-8 rounded-full bg-page-bg flex items-center justify-center flex-shrink-0">
-                    <Clock size={14} strokeWidth={1.5} className="text-muted" />
-                  </div>
-                  <p className="flex-1 text-[13px] text-foreground truncate">
-                    {target ? `"${target}" ${label}` : label}
-                  </p>
-                  <span className="text-[12px] text-muted font-num flex-shrink-0" style={{ marginLeft: 16 }}>
-                    {formatTimeAgo(a.created_at)}
+
+          <aside className="border-t border-[#e5e5e7] bg-[#fbfbfc] px-4 py-5 sm:px-6 sm:py-6 xl:border-t-0 xl:border-l xl:px-[22px] xl:py-[22px]">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7C8494]">Schedule View</p>
+                  <h2 className="mt-1 text-[18px] font-semibold text-[#1B1F2B]">이번 달 일정</h2>
+                </div>
+                <Link href="/schedule" className="inline-flex items-center gap-1 text-[12px] font-medium text-[#2E6FF2] hover:text-[#0071e3]">
+                  전체 보기
+                  <ChevronRight size={14} />
+                </Link>
+              </div>
+
+              <div className="rounded-[22px] border border-[#E5E7EB] bg-white p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-[13px] font-semibold text-[#1B1F2B]">{format(now, 'yyyy년 M월', { locale: ko })}</p>
+                  <span className="rounded-full bg-[#F3F8FF] px-2.5 py-1 text-[10px] font-semibold text-[#2E6FF2]">
+                    오늘 {todayEvents.length}건
                   </span>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* File Type Distribution */}
-        <div className="bg-card rounded-2xl border border-border overflow-hidden">
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e5e7' }}>
-            <h2 className="text-[16px] font-semibold text-foreground">파일 유형 분포</h2>
-          </div>
-          <div className="flex items-center justify-center" style={{ gap: 24, padding: '24px' }}>
-            <div className="relative flex-shrink-0" style={{ width: 150, height: 150 }}>
-              <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e5e7" strokeWidth="20" />
-                {totalFileCount > 0 && (() => {
-                  let offset = 0;
-                  return typeEntries.map(([label, count], i) => {
-                    const pct = count / totalFileCount;
-                    const dash = pct * 251.3;
-                    const el = (
-                      <circle
-                        key={label}
-                        cx="50" cy="50" r="40" fill="none"
-                        stroke={CHART_COLORS[i % CHART_COLORS.length]}
-                        strokeWidth="20"
-                        strokeDasharray={`${dash} ${251.3 - dash}`}
-                        strokeDashoffset={-offset}
-                        strokeLinecap="round"
-                      />
-                    );
-                    offset += dash;
-                    return el;
-                  });
-                })()}
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-[18px] font-bold text-foreground font-num">{totalFileCount}</span>
-                <span className="text-[10px] text-muted">전체</span>
-              </div>
-            </div>
-            <div className="space-y-2.5">
-              {typeEntries.map(([label, count], i) => {
-                const pct = totalFileCount > 0 ? Math.round((count / totalFileCount) * 100) : 0;
-                return (
-                  <div key={label} className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
-                    <span className="text-[12px] text-foreground w-12 font-medium uppercase">{label}</span>
-                    <span className="text-[12px] text-muted font-num">{pct}%</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── 차트 섹션 ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: 20 }}>
-
-        {/* 차트 1: 파일 업로드 추이 (8주 바 차트) */}
-        <div className="lg:col-span-2 bg-card rounded-2xl border border-border overflow-hidden">
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e5e7' }}>
-            <h2 className="text-[16px] font-semibold text-foreground">파일 업로드 추이</h2>
-            <p className="text-[12px] text-muted mt-0.5">최근 8주</p>
-          </div>
-          <div style={{ padding: '24px' }}>
-            {loading ? (
-              <div className="flex justify-center py-8"><Spinner size="sm" /></div>
-            ) : (() => {
-              const trend = data?.upload_trend ?? [];
-              const maxCount = Math.max(...trend.map(t => t.count), 1);
-              const chartH = 120;
-              const barW = 28;
-              const gap = 8;
-              const totalW = trend.length * (barW + gap) - gap;
-              return (
-                <div style={{ overflowX: 'auto' }}>
-                  <svg width={totalW} height={chartH + 32} style={{ display: 'block', minWidth: '100%' }}>
-                    {trend.map((t, i) => {
-                      const barH = maxCount > 0 ? Math.max((t.count / maxCount) * chartH, t.count > 0 ? 4 : 0) : 0;
-                      const x = i * (barW + gap);
-                      const y = chartH - barH;
-                      return (
-                        <g key={t.week}>
-                          <rect x={x} y={y} width={barW} height={barH}
-                            rx={4} fill={t.count > 0 ? '#0071e3' : '#e5e5e7'} />
-                          {t.count > 0 && (
-                            <text x={x + barW / 2} y={y - 4} textAnchor="middle" fontSize={10} fill="#1d1d1f" fontWeight="600">{t.count}</text>
-                          )}
-                          <text x={x + barW / 2} y={chartH + 18} textAnchor="middle" fontSize={10} fill="#a1a1a6">{t.label}</text>
-                        </g>
-                      );
-                    })}
-                  </svg>
-                </div>
-              );
-            })()}
-          </div>
-        </div>
-
-        {/* 차트 2: 부서별 파일 현황 (도넛) */}
-        <div className="bg-card rounded-2xl border border-border overflow-hidden">
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e5e7' }}>
-            <h2 className="text-[16px] font-semibold text-foreground">부서별 파일 현황</h2>
-            <p className="text-[12px] text-muted mt-0.5">전체 파일 부서 분포</p>
-          </div>
-          <div className="flex flex-col items-center" style={{ padding: '24px', gap: 16 }}>
-            {loading ? (
-              <div className="flex justify-center py-8"><Spinner size="sm" /></div>
-            ) : (() => {
-              const dept = data?.department_breakdown ?? {};
-              const entries = Object.entries(dept).sort(([, a], [, b]) => b - a).slice(0, 4);
-              const total = entries.reduce((a, [, v]) => a + v, 0) || 1;
-              const colors = ['#0071e3', '#34c759', '#ff9f0a', '#ff3b30'];
-              const r = 40; const circ = 2 * Math.PI * r;
-              let offset = 0;
-              return (
-                <>
-                  <div className="relative" style={{ width: 140, height: 140 }}>
-                    <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                      <circle cx="50" cy="50" r={r} fill="none" stroke="#e5e5e7" strokeWidth="18" />
-                      {entries.map(([label, count], i) => {
-                        const dash = (count / total) * circ;
-                        const el = (
-                          <circle key={label} cx="50" cy="50" r={r} fill="none"
-                            stroke={colors[i % colors.length]} strokeWidth="18"
-                            strokeDasharray={`${dash} ${circ - dash}`}
-                            strokeDashoffset={-offset} strokeLinecap="round" />
-                        );
-                        offset += dash;
-                        return el;
-                      })}
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-[20px] font-bold text-foreground font-num">{entries.reduce((a, [, v]) => a + v, 0)}</span>
-                      <span className="text-[10px] text-muted">전체</span>
+                <div className="grid grid-cols-7 gap-2">
+                  {WEEKDAY_LABELS.map((label, index) => (
+                    <div key={label} className="pb-1 text-center text-[10px] font-semibold" style={{ color: WEEKDAY_COLORS[index] }}>
+                      {label}
                     </div>
-                  </div>
-                  <div className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {entries.map(([label, count], i) => (
-                      <div key={label} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: colors[i % colors.length] }} />
-                          <span className="text-[12px] text-foreground">{label}</span>
-                        </div>
-                        <span className="text-[12px] font-semibold font-num text-foreground">{count}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </div>
-      </div>
-
-      {/* 만료 임박 문서 위젯 */}
-      <ExpiryDashboardWidget />
-
-      {/* 차트 3: 부서별 문서 생성량 */}
-      <div className="bg-card rounded-2xl border border-border overflow-hidden">
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e5e7' }}>
-          <h2 className="text-[16px] font-semibold text-foreground">부서별 문서 생성량</h2>
-          <p className="text-[12px] text-muted mt-0.5">전체 생성 문서 기준</p>
-        </div>
-        <div style={{ padding: '24px' }}>
-          {loading ? (
-            <div className="flex justify-center py-6"><Spinner size="sm" /></div>
-          ) : (() => {
-            const breakdown = data?.doc_dept_breakdown ?? {};
-            const entries = Object.entries(breakdown).sort(([, a], [, b]) => b - a).slice(0, 6);
-            const maxVal = Math.max(...entries.map(([, v]) => v), 1);
-            if (entries.length === 0) return <p className="text-sm text-muted text-center py-4">데이터가 없습니다.</p>;
-            return (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {entries.map(([dept, count], i) => (
-                  <div key={dept} className="flex items-center gap-3">
-                    <span className="text-[12px] text-muted w-20 truncate text-right shrink-0">{dept}</span>
-                    <div className="flex-1 bg-[#f5f5f7] rounded-full h-2 overflow-hidden">
+                  ))}
+                  {calendarDays.map((day) => {
+                    const dayEvents = events.filter((event) => isEventOnDate(event, day));
+                    const inCurrentMonth = day.getMonth() === now.getMonth();
+                    return (
                       <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${(count / maxVal) * 100}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
-                      />
-                    </div>
-                    <span className="text-[12px] font-semibold font-num text-foreground w-6 text-right shrink-0">{count}</span>
-                  </div>
-                ))}
+                        key={day.toISOString()}
+                        className={`relative flex h-10 items-center justify-center rounded-xl border text-[11px] font-medium transition-colors ${
+                          isToday(day)
+                            ? 'border-[#2E6FF2] bg-[#F3F8FF] text-[#2E6FF2]'
+                            : inCurrentMonth
+                              ? 'border-transparent bg-[#F8F9FB] text-[#1B1F2B]'
+                              : 'border-transparent bg-transparent text-[#B2B8C2]'
+                        }`}
+                      >
+                        <span>{format(day, 'd')}</span>
+                        {dayEvents.length > 0 && (
+                          <span
+                            className="absolute bottom-1 h-1.5 w-1.5 rounded-full"
+                            style={{ backgroundColor: getEventTypeColor(dayEvents[0].event_type) }}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            );
-          })()}
+
+              <div className="rounded-[22px] border border-[#E5E7EB] bg-white p-5">
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-[13px] font-semibold text-[#1B1F2B]">다가오는 일정</p>
+                  <span className="text-[11px] text-[#6B7280]">{upcomingEvents.length}개 표시</span>
+                </div>
+                <div className="flex flex-col gap-2.5">
+                  {upcomingEvents.length > 0 ? (
+                    upcomingEvents.map((event) => {
+                      const eventDate = new Date(event.start_at);
+                      return (
+                        <Link
+                          key={event.id}
+                          href="/schedule"
+                          className="flex items-start gap-3.5 rounded-2xl border border-[#EEF1F5] bg-[#FBFBFC] px-4 py-3.5 transition-colors hover:border-[#D7E7FF] hover:bg-[#F7FBFF]"
+                        >
+                          <div
+                            className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: getEventTypeColor(event.event_type) }}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[12px] font-semibold text-[#1B1F2B]">{event.title}</p>
+                            <p className="mt-0.5 text-[11px] text-[#6B7280]">
+                              {format(eventDate, 'M월 d일 (EEE) HH:mm', { locale: ko })}
+                            </p>
+                          </div>
+                        </Link>
+                      );
+                    })
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-[#D9DEE7] bg-[#FBFBFC] px-4 py-5 text-[12px] text-[#6B7280]">
+                      이번 달에 표시할 일정이 없습니다. 일정/할일 화면에서 새 일정을 추가해 보세요.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </aside>
         </div>
-      </div>
+      </section>
+
+      <DashboardMidSection recentFiles={recentFiles} data={data as never} loading={loading} />
+      <DashboardBottomSection data={data as never} loading={loading} />
     </div>
   );
 }

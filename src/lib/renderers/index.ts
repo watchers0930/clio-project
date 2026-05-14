@@ -52,7 +52,10 @@ export async function renderDocument(
       }
       // 새로 생성
       if (!result.markdown) throw new Error('DOCX 렌더링에 마크다운 콘텐츠가 필요합니다.');
-      return renderDocx(result.markdown, result.title, theme);
+      return renderDocx(result.markdown, result.title, theme, {
+        templateBundle: result.templateBundle,
+        documentInputs: result.documentInputs,
+      });
 
     case 'xlsx':
       // 템플릿 기반: 기존 파일 로드 → 셀 값 주입
@@ -83,7 +86,10 @@ export async function renderDocument(
 
     case 'pdf':
       if (!result.markdown) throw new Error('PDF 렌더링에 마크다운 콘텐츠가 필요합니다.');
-      return renderPdf(result.markdown, result.title, theme);
+      return renderPdf(result.markdown, result.title, theme, {
+        templateBundle: result.templateBundle,
+        documentInputs: result.documentInputs,
+      });
 
     default:
       throw new Error(`지원하지 않는 출력 포맷: ${result.format}`);

@@ -13,6 +13,7 @@ import {
   saveTodoExtractionHistory,
   type ExtractedTodo,
 } from '@/lib/ai/extract-todos';
+import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
 
 export const maxDuration = 30;
 
@@ -33,6 +34,11 @@ export async function POST(request: NextRequest) {
   const authUserId = await getAuthUserId(supabase);
   if (!authUserId) {
     return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
+  }
+
+  const roleInfo = await getUserRoleInfo(supabase, authUserId);
+  if (!roleInfo) {
+    return NextResponse.json({ error: '사용자 정보가 없습니다.' }, { status: 403 });
   }
 
   let body: { documentId?: string; selectedTodos?: ExtractedTodo[]; reExtract?: boolean };
@@ -66,7 +72,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '문서를 찾을 수 없습니다.' }, { status: 404 });
   }
 
-  if (doc.created_by !== authUserId) {
+  const canAccess = await canAccessDocument(supabase, authUserId, roleInfo.role, roleInfo.department_id, documentId);
+  if (!canAccess) {
     return NextResponse.json({ error: '접근 권한이 없습니다.' }, { status: 403 });
   }
 

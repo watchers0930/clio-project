@@ -46,7 +46,10 @@ class ApiClient {
       });
 
       const data = await res.json();
-      return data as ApiResponse<T>;
+      return {
+        ...(data as ApiResponse<T>),
+        status: res.status,
+      };
     } catch (error) {
       return {
         success: false,

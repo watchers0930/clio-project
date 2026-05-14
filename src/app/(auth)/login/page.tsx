@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
+import {
+  PLATFORM_LABEL,
+} from '@/lib/constants/ui';
 
 const INPUT_BASE: React.CSSProperties = {
   width: '100%',
@@ -50,7 +53,17 @@ export default function LoginPage() {
 
     try {
       const success = await login(emailVal, passwordVal);
-      if (success) router.push('/dashboard');
+      if (success) {
+        let redirectTo = '/';
+        if (typeof window !== 'undefined') {
+          const params = new URLSearchParams(window.location.search);
+          const redirectPath = params.get('redirect') || '/';
+          params.delete('redirect');
+          const rest = params.toString();
+          redirectTo = rest ? `${redirectPath}?${rest}` : redirectPath;
+        }
+        router.push(redirectTo);
+      }
     } catch {
       setLocalError('서버에 연결할 수 없습니다.');
     }
@@ -65,25 +78,33 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ width: isMobile ? '80vw' : '100%', maxWidth: 740 }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-page-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? 16 : 20 }}>
+      <div style={{ width: isMobile ? '100%' : '100%', maxWidth: 740 }}>
 
         {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <h1 style={{ fontSize: 44, fontWeight: 300, letterSpacing: '0.3em', fontFamily: '"Times New Roman", Times, serif', color: '#1d1d1f' }}>
+        <div style={{ textAlign: 'center', marginBottom: isMobile ? 28 : 36 }}>
+          <h1 style={{ fontSize: isMobile ? 36 : 44, fontWeight: 300, letterSpacing: isMobile ? '0.24em' : '0.3em', fontFamily: '"Times New Roman", Times, serif', color: '#1d1d1f' }}>
             CLIO
           </h1>
           <p style={{ marginTop: 12, fontSize: 15, color: '#6e6e73' }}>
-            AI 문서관리 시스템
+            {PLATFORM_LABEL}
+          </p>
+          <p style={{ marginTop: 10, fontSize: 13, color: '#8e8e93', lineHeight: '20px', maxWidth: 520, marginInline: 'auto' }}>
+            CLIO는 기업 문서를 한곳에 저장한 뒤, 공유하고, 코멘트를 반영하고,
+            {!isMobile && <br />}
+            다시 검색해 재활용하는 문서 운영 플랫폼입니다.
           </p>
         </div>
 
         {/* Login Card */}
-        <div style={{ backgroundColor: '#fff', borderRadius: 16, border: '1px solid #e5e5e7', padding: isMobile ? '36px 20px' : '56px 144px' }}>
+        <div style={{ backgroundColor: '#fff', borderRadius: 16, border: '1px solid #e5e5e7', padding: isMobile ? '28px 18px' : '56px 144px' }}>
 
-          <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 36, color: '#1d1d1f' }}>
+          <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: isMobile ? 28 : 36, color: '#1d1d1f' }}>
             로그인
           </h2>
+          <p style={{ marginTop: -18, marginBottom: 28, fontSize: 13, color: '#6e6e73', lineHeight: 1.7 }}>
+            로그인 후 첫 진입점은 문서허브이며, 저장한 문서를 기준으로 공유, 검색, 생성 흐름을 이어갈 수 있습니다.
+          </p>
 
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             {/* Email */}
@@ -157,9 +178,7 @@ export default function LoginPage() {
         {/* Demo hint */}
         <div style={{ marginTop: 16, padding: '14px 20px', backgroundColor: '#fff', border: '1px solid #e5e5e7', borderRadius: 12, textAlign: 'center' }}>
           <p style={{ fontSize: 12, color: '#6e6e73' }}>
-            데모 계정: <span style={{ fontWeight: 600, color: '#1d1d1f', fontFamily: 'Verdana, sans-serif' }}>admin@clio.kr</span>
-            {' / '}
-            <span style={{ fontWeight: 600, color: '#1d1d1f' }}>password</span>
+            테스트 계정이 필요한 경우 관리자에게 발급을 요청하세요.
           </p>
         </div>
 

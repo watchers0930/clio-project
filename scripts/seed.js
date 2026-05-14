@@ -5,13 +5,11 @@
  * 실행: node scripts/seed.js
  */
 
-const { createClient } = require('@supabase/supabase-js');
-
 const SUPABASE_URL = 'https://jbvofhxoupujtuazzphk.supabase.co';
 const SERVICE_ROLE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impidm9maHhvdXB1anR1YXp6cGhrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDUxNzYwMSwiZXhwIjoyMDkwMDkzNjAxfQ.K7syTqX7r0VQ5swmsEnXqHODLuBWFpORbAhr0k6zPWA';
 
-const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+let supabase;
 
 // ── 실제 DB에 있는 ID ──────────────────────────────────────────────────
 const DEPT = {
@@ -157,7 +155,7 @@ async function seedFiles(userIds) {
   return Object.fromEntries(data.map((f) => [f.name, f.id]));
 }
 
-async function seedDocuments(userIds, fileIds) {
+async function seedDocuments(userIds) {
   console.log('\n── documents 테이블 시딩 ──');
 
   const docs = [
@@ -296,6 +294,11 @@ async function seedAuditLogs(userIds) {
 async function main() {
   console.log('CLIO 시드 스크립트 시작\n');
 
+  if (!supabase) {
+    const { createClient } = await import('@supabase/supabase-js');
+    supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+  }
+
   // 1. Auth 사용자 생성
   const userIds = await createAuthUsers();
   console.log(`\n총 사용자 ID: ${Object.keys(userIds).length}명`);
@@ -304,10 +307,10 @@ async function main() {
   await seedUsers(userIds);
 
   // 3. files
-  const fileIds = await seedFiles(userIds);
+  await seedFiles(userIds);
 
   // 4. documents
-  await seedDocuments(userIds, fileIds);
+  await seedDocuments(userIds);
 
   // 5. channel_members
   await seedChannelMembers(userIds);

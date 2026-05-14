@@ -42,11 +42,8 @@ export async function POST(request: NextRequest) {
 아이디어:
 ${ideaText}
 
-다음 JSON 배열 형식으로만 응답하세요:
-[
-  { "title": "할일 제목", "priority": "high" | "medium" | "low" },
-  ...
-]`;
+반드시 다음 JSON 객체 형식으로만 응답하세요:
+{ "items": [ { "title": "할일 제목", "priority": "high" | "medium" | "low" }, ... ] }`;
 
     const res = await openai.chat.completions.create({
       model: 'gpt-4o',

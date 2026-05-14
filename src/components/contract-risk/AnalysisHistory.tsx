@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ShieldCheck, Trash2, FileText, ChevronRight } from 'lucide-react';
-import { CONTRACT_TYPE_LABELS, PERSPECTIVE_LABELS } from '@/lib/contract-risk-items';
+import { CONTRACT_TYPE_LABELS } from '@/lib/contract-risk-items';
 import type { ContractRiskListItem } from '@/lib/types/contract-risk';
 
 export function AnalysisHistory() {
@@ -33,7 +33,7 @@ export function AnalysisHistory() {
 
   if (loading) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-3">
         {[...Array(3)].map((_, i) => (
           <div key={i} className="bg-white border border-[#E2E5EA] rounded-xl h-[72px] animate-pulse" />
         ))}
@@ -54,7 +54,7 @@ export function AnalysisHistory() {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {items.map(item => {
         const total = item.risk_count.high + item.risk_count.medium + item.risk_count.low;
         const dateStr = new Date(item.created_at).toLocaleDateString('ko-KR', {
@@ -66,7 +66,7 @@ export function AnalysisHistory() {
           <Link
             key={item.id}
             href={`/contract-risk/${item.id}`}
-            className="group flex items-center gap-3 bg-white border border-[#E2E5EA] rounded-xl px-3.5 py-3 hover:border-[#2E6FF2]/50 hover:shadow-sm transition-all"
+            className="group flex items-center gap-3.5 bg-white border border-[#E2E5EA] rounded-xl px-4 py-3.5 hover:border-[#2E6FF2]/50 hover:shadow-sm transition-all"
           >
             {/* 아이콘 */}
             <div className="w-8 h-8 bg-[#EEF3FE] rounded-lg flex items-center justify-center shrink-0">
@@ -78,25 +78,25 @@ export function AnalysisHistory() {
               <p className="text-[12px] font-semibold text-[#1B1F2B] truncate group-hover:text-[#2E6FF2] transition-colors leading-tight">
                 {item.file_name}
               </p>
-              <p className="text-[10px] text-[#aaa] mt-0.5 truncate">
+              <p className="mt-1 text-[10px] text-[#aaa] truncate">
                 {CONTRACT_TYPE_LABELS[item.contract_type] ?? item.contract_type} · {dateStr}
               </p>
             </div>
 
             {/* 리스크 배지 */}
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0">
               {item.risk_count.high > 0 && (
-                <span className="text-[10px] font-bold bg-red-50 text-red-600 border border-red-200 rounded-lg px-1.5 py-0.5">
+                <span className="text-[10px] font-bold bg-red-50 text-red-600 border border-red-200 rounded-lg px-2 py-1">
                   {item.risk_count.high}상
                 </span>
               )}
               {item.risk_count.medium > 0 && (
-                <span className="text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-200 rounded-lg px-1.5 py-0.5">
+                <span className="text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-200 rounded-lg px-2 py-1">
                   {item.risk_count.medium}중
                 </span>
               )}
               {item.risk_count.low > 0 && (
-                <span className="text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg px-1.5 py-0.5">
+                <span className="text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg px-2 py-1">
                   {item.risk_count.low}하
                 </span>
               )}
@@ -108,7 +108,7 @@ export function AnalysisHistory() {
             {/* 삭제 */}
             <button
               onClick={e => handleDelete(item.id, e)}
-              className="w-6 h-6 rounded-lg flex items-center justify-center text-[#ddd] hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-[#ddd] hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
               title="삭제"
             >
               <Trash2 size={12} />

@@ -8,12 +8,19 @@ import OpenAI from 'openai';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import type { DiffResult, DiffLine } from '@/lib/utils/myers-diff';
+import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
 
 export const maxDuration = 60;
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 // ── 프롬프트 빌더 ──────────────────────────────────────────────────────────
+
+function getOpenAI() {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY가 설정되지 않았습니다.');
+  }
+  return new OpenAI({ apiKey });
+}
 
 function buildSystemPrompt(contractType?: string): string {
   const contractSection = contractType
@@ -108,6 +115,15 @@ export async function POST(
   }
 
   const { id } = await params;
+  const roleInfo = await getUserRoleInfo(supabase, authUserId);
+  if (!roleInfo) {
+    return new Response('Forbidden', { status: 403 });
+  }
+
+  const canAccess = await canAccessDocument(supabase, authUserId, roleInfo.role, roleInfo.department_id, id);
+  if (!canAccess) {
+    return new Response('Forbidden', { status: 403 });
+  }
 
   let body: { diffResult?: DiffResult; contractType?: string; perspective?: 'buyer' | 'seller'; title?: string };
   try {
@@ -142,7 +158,7 @@ export async function POST(
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        const completion = await openai.chat.completions.create({
+        const completion = await getOpenAI().chat.completions.create({
           model: 'gpt-4o',
           stream: true,
           max_tokens: 2000,

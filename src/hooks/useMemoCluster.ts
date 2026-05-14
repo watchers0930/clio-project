@@ -3,6 +3,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { ClusterInfo, GraphLink, ForceGraphNode } from '@/types/memo-graph';
 
+const clusterNameCache = new Map<string, ClusterInfo[]>();
+const pendingClusterRequests = new Map<string, Promise<ClusterInfo[]>>();
+
 function detectClusters(
   nodes: { id: string }[],
   links: GraphLink[],
@@ -38,46 +41,117 @@ function detectClusters(
     .map((clusterIds) => ({ clusterIds }));
 }
 
+function normalizeClusters(clusters: ClusterInfo[]): ClusterInfo[] {
+  return clusters
+    .map((cluster) => ({
+      ...cluster,
+      clusterIds: [...new Set(cluster.clusterIds.filter(Boolean))].sort(),
+    }))
+    .filter((cluster) => cluster.clusterIds.length >= 2);
+}
+
+function getClusterKey(clusters: ClusterInfo[]): string {
+  return clusters.map((c) => c.clusterIds.join(',')).sort().join('|');
+}
+
+function sanitizeClusterName(name: string | null | undefined): string | undefined {
+  const trimmed = name?.trim();
+  if (!trimmed) return undefined;
+  return trimmed.length > 18 ? `${trimmed.slice(0, 18)}…` : trimmed;
+}
+
+async function fetchClusterNames(
+  clusters: ClusterInfo[],
+): Promise<ClusterInfo[]> {
+  const normalizedClusters = normalizeClusters(clusters);
+  const requestKey = getClusterKey(normalizedClusters);
+  if (!requestKey) return [];
+  if (normalizedClusters.length > 20) return normalizedClusters;
+
+  const cached = clusterNameCache.get(requestKey);
+  if (cached) return cached;
+
+  const pending = pendingClusterRequests.get(requestKey);
+  if (pending) return pending;
+
+  const request = fetch('/api/memos/graph/clusters', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      clusters: normalizedClusters.map((cluster) => ({ memoIds: cluster.clusterIds })),
+    }),
+  })
+    .then(async (response) => ({
+      ok: response.ok,
+      body: await response.json().catch(() => null) as
+        | { success: boolean; data?: { name: string | null; memoIds: string[] }[] }
+        | null,
+    }))
+    .then(({ ok, body }) => {
+      if (!ok || !body?.success || !body.data) return normalizedClusters;
+
+      const namesByKey = new Map(
+        body.data.map((item) => [
+          [...new Set(item.memoIds.filter(Boolean))].sort().join(','),
+          sanitizeClusterName(item.name),
+        ] as const),
+      );
+
+      const named = normalizedClusters.map((cluster) => ({
+        ...cluster,
+        name: namesByKey.get(cluster.clusterIds.join(',')) ?? undefined,
+      }));
+
+      clusterNameCache.set(requestKey, named);
+      return named;
+    })
+    .catch(() => normalizedClusters)
+    .finally(() => {
+      pendingClusterRequests.delete(requestKey);
+    });
+
+  pendingClusterRequests.set(requestKey, request);
+  return request;
+}
+
 export function useMemoCluster(
   nodes: { id: string }[],
   links: GraphLink[],
 ): ClusterInfo[] {
-  const rawClusters = useMemo(() => detectClusters(nodes, links), [nodes, links]);
+  const rawClusters = useMemo(() => normalizeClusters(detectClusters(nodes, links)), [nodes, links]);
 
   // 직렬화 키 — rawClusters 참조 변경 없이 내용 변화만 감지
-  const clusterKey = useMemo(
-    () => rawClusters.map((c) => [...c.clusterIds].sort().join(',')).sort().join('|'),
-    [rawClusters],
-  );
+  const clusterKey = useMemo(() => getClusterKey(rawClusters), [rawClusters]);
 
-  const [namedClusters, setNamedClusters] = useState<ClusterInfo[]>([]);
+  const [namedClusters, setNamedClusters] = useState<ClusterInfo[] | null>(null);
+
+  const visibleClusters = useMemo(() => {
+    if (!namedClusters) return rawClusters;
+    return getClusterKey(namedClusters) === clusterKey ? namedClusters : rawClusters;
+  }, [clusterKey, namedClusters, rawClusters]);
 
   useEffect(() => {
-    if (rawClusters.length === 0) { setNamedClusters([]); return; }
+    if (rawClusters.length === 0) {
+      return;
+    }
 
-    // 이름 없이 즉시 표시 (헐 먼저 그리기)
-    setNamedClusters(rawClusters);
+    let isActive = true;
 
-    fetch('/api/memos/graph/clusters', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        clusters: rawClusters.map((c) => ({ memoIds: c.clusterIds })),
-      }),
-    })
-      .then((r) => r.json())
-      .then((res: { success: boolean; data?: { index: number; name: string | null; memoIds: string[] }[] }) => {
-        if (!res.success || !res.data) return;
-        setNamedClusters((prev) =>
-          prev.map((c, i) => ({
-            ...c,
-            name: res.data![i]?.name ?? undefined,
-          })),
-        );
+    fetchClusterNames(rawClusters)
+      .then((clusters) => {
+        if (!isActive) return;
+        if (getClusterKey(clusters) !== clusterKey) return;
+        setNamedClusters(clusters);
       })
-      .catch(() => {}); // 실패 시 이름 없는 헐만 표시
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clusterKey]);
+      .catch(() => {
+        if (!isActive) return;
+        setNamedClusters(rawClusters);
+      });
 
-  return namedClusters;
+    return () => {
+      isActive = false;
+    };
+  }, [clusterKey, rawClusters]);
+
+  return visibleClusters;
 }

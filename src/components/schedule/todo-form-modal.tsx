@@ -59,7 +59,7 @@ export default function TodoFormModal({ open, onClose, onSubmit, todo }: TodoFor
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
           <h3 className="text-[16px] font-semibold text-[#1B1F2B]">
             {isEdit ? '할일 수정' : '할일 추가'}
           </h3>
@@ -68,7 +68,7 @@ export default function TodoFormModal({ open, onClose, onSubmit, todo }: TodoFor
           </button>
         </div>
 
-        <div className="space-y-4">
+        <div className="flex flex-col gap-[10px]">
           <div>
             <label className="block text-[12px] font-medium text-[#7C8494] mb-1.5">제목</label>
             <input
@@ -125,7 +125,7 @@ export default function TodoFormModal({ open, onClose, onSubmit, todo }: TodoFor
         </div>
 
         {/* 버튼 */}
-        <div className="flex justify-end gap-2 mt-6">
+        <div className="flex justify-end gap-2" style={{ marginTop: 10 }}>
           <button
             onClick={onClose}
             className="px-4 py-2 text-[13px] text-[#7C8494] hover:text-[#1B1F2B] transition-colors"

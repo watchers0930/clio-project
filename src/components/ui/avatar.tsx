@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 type AvatarSize = 'sm' | 'md' | 'lg';
@@ -17,6 +18,12 @@ const sizeStyles: Record<AvatarSize, string> = {
   lg: 'h-12 w-12 text-base',
 };
 
+const sizePixels: Record<AvatarSize, number> = {
+  sm: 28,
+  md: 36,
+  lg: 48,
+};
+
 function getInitials(name: string): string {
   return name
     .split(' ')
@@ -31,9 +38,12 @@ function Avatar({ src, name, size = 'md', className }: AvatarProps) {
 
   if (src) {
     return (
-      <img
+      <Image
         src={src}
         alt={name}
+        width={sizePixels[size]}
+        height={sizePixels[size]}
+        unoptimized
         className={cn(
           'rounded-full object-cover flex-shrink-0',
           sizeStyles[size],

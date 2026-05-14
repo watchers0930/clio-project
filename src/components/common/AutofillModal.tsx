@@ -264,7 +264,7 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
                 )}
               </div>
 
-              <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+              <div className="flex items-start gap-2.5 p-4 bg-amber-50 rounded-lg border border-amber-200">
                 <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
                 <p className="text-[12px] text-amber-700">
                   HWP 바이너리 파일은 패턴 감지만 가능하며 신뢰도가 낮을 수 있습니다.
@@ -276,8 +276,8 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
 
           {/* Step 2: 필드 입력 */}
           {step === 2 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between mb-2">
+            <div className="space-y-4">
+              <div className="mb-3 flex items-center justify-between">
                 <p className="text-[13px] text-[#6B7280]">
                   총 <span className="font-semibold text-[#1B1F2B]">{fields.length}</span>개 필드 감지
                   {fields.filter(f => f.autoMapped).length > 0 && (
@@ -295,14 +295,14 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
                 const badge = CONFIDENCE_BADGE[field.confidence];
                 const displayName = field.inferredName ?? field.label;
                 return (
-                  <div key={field.key} className="border border-[#E2E5EA] rounded-xl p-4 space-y-2">
-                    <div className="flex items-center gap-2">
+                  <div key={field.key} className="border border-[#E2E5EA] rounded-xl p-4 space-y-3">
+                    <div className="flex items-center gap-2.5">
                       <span className="text-[13px] font-medium text-[#1B1F2B]">{displayName}</span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${badge.cls}`}>
+                      <span className={`text-[10px] px-2 py-1 rounded-full font-medium ${badge.cls}`}>
                         {badge.label}
                       </span>
                       {field.autoMapped && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-blue-50 text-blue-600 border border-blue-200">
+                        <span className="text-[10px] px-2 py-1 rounded-full font-medium bg-blue-50 text-blue-600 border border-blue-200">
                           자동
                         </span>
                       )}
@@ -315,7 +315,7 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
                       value={values[field.key] ?? ''}
                       onChange={e => setValues(prev => ({ ...prev, [field.key]: e.target.value }))}
                       placeholder={field.confidence === 'low' ? '내용을 직접 입력해 주세요' : `${displayName} 입력`}
-                      className="w-full text-[13px] px-3 py-2 border border-[#E2E5EA] rounded-lg focus:outline-none focus:border-[#2E6FF2] bg-[#F7F8FA] placeholder:text-[#C0C4CC]"
+                      className="w-full text-[13px] px-3.5 py-2.5 border border-[#E2E5EA] rounded-lg focus:outline-none focus:border-[#2E6FF2] bg-[#F7F8FA] placeholder:text-[#C0C4CC]"
                     />
                   </div>
                 );
@@ -355,7 +355,7 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
           <button
             onClick={step === 1 ? handleClose : () => setStep(s => (s - 1) as 1 | 2 | 3)}
             disabled={analyzing || generating}
-            className="px-4 py-2 text-[13px] text-[#6B7280] hover:text-[#1B1F2B] disabled:opacity-40 transition-colors"
+            className="px-4 py-2.5 text-[13px] text-[#6B7280] hover:text-[#1B1F2B] disabled:opacity-40 transition-colors"
           >
             {step === 1 ? '취소' : '← 이전'}
           </button>

@@ -1,6 +1,6 @@
 # AI 기능
 
-[coverage: high -- sources: clio-contract-risk.design.md, clio-contract-suggest.design.md, clio-recording-stt.design.md, clio-meeting-todo.design.md, clio-expiry-alert.design.md, contract-risk-analyzer.ts, extract-todos.ts, extract-expiry.ts, transcribe/route.ts, quality-check/route.ts, suggest/route.ts, apply/route.ts, clause-extractor.ts, clause-replacer.ts, memo-insight.plan.md, memo-graph.plan.md, memo-clustering.ts, memos/graph/route.ts, memos/groups/route.ts, memos/groups/suggest/route.ts, memos/[id]/embed/route.ts, memos/[id]/related/route.ts]
+[coverage: high -- sources: clio-contract-risk.design.md, clio-contract-suggest.design.md, clio-recording-stt.design.md, clio-meeting-todo.design.md, clio-expiry-alert.design.md, contract-risk-analyzer.ts, extract-todos.ts, extract-expiry.ts, transcribe/route.ts, quality-check/route.ts, suggest/route.ts, apply/route.ts, clause-extractor.ts, clause-replacer.ts, memo-insight.plan.md, memo-graph.plan.md, memo-clustering.ts, memos/graph/route.ts, memos/groups/route.ts, memos/groups/suggest/route.ts, memos/[id]/embed/route.ts, memos/[id]/related/route.ts, embed-document.ts, 022_document_embeddings.sql, search/route.ts, documents/route.ts, documents/[id]/route.ts, documents/embed-all/route.ts]
 
 ---
 
@@ -30,6 +30,7 @@ src/lib/ai/
 ├── contract-risk-analyzer.ts  GPT-4o 계약서 25개 항목 리스크 분석
 ├── generate-document.ts   GPT-4o 문서 생성
 ├── embeddings.ts          text-embedding-3-small 벡터화 → file_chunks
+├── embed-document.ts      text-embedding-3-small 벡터화 → document_embeddings (AI 생성 문서용)
 ├── chunk-text.ts          텍스트 청킹
 ├── extract-text.ts        파일에서 텍스트 추출 (PDF/DOCX/XLSX/HTML)
 └── analyze-template.ts    템플릿 플레이스홀더 분석
@@ -459,25 +460,82 @@ RLS: 본인 세션만 접근.
 
 ---
 
-## 벡터 검색 [coverage: medium -- 2 sources]
+## 벡터 검색 [coverage: high -- 4 sources]
 
+### 파이프라인 개요 (v7.7.0 통합 검색)
+
+**파일 임베딩 파이프라인** (기존):
 ```
-파일 업로드 파이프라인:
-  extract-text.ts → chunk-text.ts → embeddings.ts
-    → OpenAI text-embedding-3-small
-    → file_chunks 테이블 (pgvector) 저장
-
-검색:
-  POST /api/search
-    → 검색어 embedding 변환
-    → match_file_chunks(query_embedding, match_count, match_threshold) DB 함수
-    → 코사인 유사도 검색
-    → 폴백: 텍스트 LIKE 검색
-    → GPT-4o로 결과 요약 생성
+extract-text.ts → chunk-text.ts → embeddings.ts
+  → OpenAI text-embedding-3-small
+  → file_chunks 테이블 (pgvector) 저장
 ```
 
-- `match_threshold`: 유사도 임계값 (0~1)
+**문서 임베딩 파이프라인** (v7.7.0 신규):
+```
+embed-document.ts
+  → content 최대 8,000자 truncate
+  → OpenAI text-embedding-3-small → vector(1536)
+  → document_embeddings 테이블 UPSERT (onConflict: document_id)
+  → admin 클라이언트 사용 (RLS bypass)
+
+트리거:
+  POST /api/documents       (신규 문서 생성 후 fire-and-forget)
+  PATCH /api/documents/[id] (content 변경 시에만 재임베딩)
+```
+
+### 통합 검색 (`POST /api/search`) — v7.7.0
+
+```
+1. Promise.all 병렬 조회:
+   ├── documents: title.ilike.%keyword%  (admin 클라이언트)
+   ├── work_logs: done/plan/note/log_date 필드 매칭  (admin 클라이언트)
+   ├── file_chunks: name.ilike.%keyword%  (텍스트 폴백)
+   └── document_embeddings: match_document_embeddings RPC
+
+2. 벡터 검색:
+   ├── file_chunks     → match_file_chunks RPC     threshold: 0.3
+   └── document_embeddings → match_document_embeddings RPC  threshold: 0.15
+
+3. 결과 병합 → GPT-4o 요약 생성
+```
+
+**검색 소스별 세부 사항**
+
+| 소스 | 텍스트 검색 방식 | 벡터 검색 | fileType |
+|------|-----------------|----------|---------|
+| 파일 (`file_chunks`) | `name.ilike` | `match_file_chunks` (0.3) | 확장자 기반 |
+| 문서 (`documents`) | `title.ilike` only — content 제외 | `match_document_embeddings` (0.15) | 문서 유형 |
+| 업무일지 (`work_logs`) | `done`, `plan`, `note`, `log_date` | — | `'업무일지'` |
+
+- **title-only 텍스트 검색**: 이전 버전은 `content.ilike`도 포함하여 보고서 검색 시 회의록이 오탐되는 문제 발생 → v7.7.0에서 title만 검색하도록 수정
+- **문서 벡터 threshold 0.15**: 문서는 파일 청크보다 내용이 압축적 — 광범위한 키워드의 유사도 상한이 ~0.29 수준이므로 0.3으로 설정하면 결과가 없음. 0.15 사용
+- **work_log ID**: 검색 결과에서 `id = "wl-{id}"` 형태로 prefix 처리 (문서 ID와 충돌 방지)
+- **admin 클라이언트**: `documents` RLS가 동일 부서만 SELECT 허용 → 검색은 전 부서 대상이므로 service_role 클라이언트로 bypass. work_logs도 동일
 - AI Q&A 채팅 (`POST /api/chat`): fileIds 있으면 해당 파일 범위, 없으면 전체 파일 대상 검색 → GPT-4o-mini 컨텍스트 기반 답변
+
+### DB 스키마 (`document_embeddings`, migration 022)
+
+```sql
+document_id UUID UNIQUE,   -- documents.id 참조
+embedding   vector(1536)   -- text-embedding-3-small
+```
+
+RLS:
+- SELECT: `authenticated` 역할 허용
+- INSERT / UPDATE / DELETE: `service_role` 전용
+
+ivfflat 인덱스: **의도적으로 주석 처리** — 행 수가 적을 때 인덱스 생성 시 오류 발생. 데이터가 충분히 쌓인 후 수동 생성 필요.
+
+RPC `match_document_embeddings`: `document_id` + `similarity` (코사인) 반환.
+
+### 백필 API (`POST /api/documents/embed-all`)
+
+기존 문서에 임베딩이 없는 경우를 위한 일회성 백필 엔드포인트.
+
+- 헤더 `x-internal-secret` 필수 (미포함 시 401)
+- 임베딩 없는 문서 조회 → 200ms 딜레이를 두며 순차 임베딩
+- 운영 안정성을 위해 병렬 처리 아닌 순차 처리 사용
 
 ---
 
@@ -577,7 +635,8 @@ GET /api/memos/graph
 | PATCH | `/api/files/[id]/expiry` | 만료일 수동 수정 | — |
 | POST | `/api/quality-check` | 문서 품질 검수 | GPT-4o |
 | GET | `/api/quality-check` | 검수 결과 캐시 조회 | — |
-| POST | `/api/search` | 시맨틱 검색 | text-embedding-3-small + GPT-4o |
+| POST | `/api/search` | 통합 시맨틱 검색 (파일+문서+업무일지, title-only 텍스트, 병렬 조회, admin client) | text-embedding-3-small + GPT-4o |
+| POST | `/api/documents/embed-all` | 기존 문서 임베딩 일회성 백필 (x-internal-secret 필수) | text-embedding-3-small |
 | POST | `/api/generate` | 문서 생성 | GPT-4o |
 | POST | `/api/chat` | AI Q&A 채팅 | GPT-4o-mini |
 | POST | `/api/documents/[id]/apply-comments` | 댓글 부분 반영 | GPT-4o |
@@ -610,6 +669,9 @@ GET /api/memos/graph
 | groups API 제거 → memoIds 직접 전달 | 서버 클러스터 캐시 없이 그래프에서 직접 선택. 단순성·유연성 향상 |
 | 아이디어 제안 SSE 방식 | GPT-4o 응답 대기 시간이 길므로 스트리밍으로 UX 개선 |
 | todos/from-idea 즉시 INSERT | 아이디어 텍스트에서 할일 추출 후 바로 DB 저장. UI에서 결과 표시 후 완료 안내 |
+| 문서 벡터 threshold 0.15 | 문서 임베딩은 파일 청크보다 내용이 압축적 — 광범위한 키워드의 유사도 상한이 ~0.29. 0.3 사용 시 결과 없음 |
+| title-only 텍스트 검색 | content.ilike 포함 시 보고서 검색에 회의록이 오탐됨. v7.7.0에서 title 필드만 검색으로 수정 |
+| 검색에 admin 클라이언트 사용 | documents RLS가 동일 부서만 허용하나 검색은 전 부서 대상이어야 함 → service_role 클라이언트로 bypass |
 
 ---
 
@@ -624,6 +686,9 @@ GET /api/memos/graph
 - **admin 클라이언트 사용 위치**: 할일 INSERT(담당자 user_id 직접 지정), 품질 검수 문서 조회(RLS bypass) — 의도적 패턴
 - **만료일 D-30 기준은 `schedules.end_date`**: `source_type = 'document_expiry'` 필터링 필수. 수동 일정과 혼용 방지
 - **Safari 녹음 포맷**: `MediaRecorder.isTypeSupported('audio/webm;codecs=opus')` 런타임 감지로 webm/mp4 분기. 파일명 확장자 명시 필수(Whisper MIME 감지용)
+- **ivfflat 인덱스 주석 처리**: `document_embeddings` 테이블의 ivfflat 인덱스는 의도적으로 주석 처리되어 있음 — 행 수가 적을 때 `CREATE INDEX ... USING ivfflat` 실행 시 오류 발생. 프로덕션에서 데이터가 충분히 쌓인 후 수동으로 인덱스 생성 필요
+- **embed-all 백필 API 인증**: `POST /api/documents/embed-all`는 `x-internal-secret` 헤더가 없으면 401 반환. 일회성 백필 목적이므로 일반 auth 미사용
+- **문서 재임베딩 조건**: `PATCH /api/documents/[id]`에서 content가 변경된 경우에만 재임베딩 호출 — title만 바뀌면 임베딩 갱신 없음
 
 ---
 

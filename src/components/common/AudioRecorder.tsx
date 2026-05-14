@@ -100,7 +100,7 @@ export function AudioRecorder({ onComplete, onSwitchToUpload, className }: Audio
             {onSwitchToUpload && (
               <button
                 onClick={onSwitchToUpload}
-                className="px-4 py-2 rounded-lg text-sm text-[#2E6FF2] border border-[#2E6FF2] hover:bg-blue-50 transition-colors"
+                className="px-4 py-2.5 rounded-lg text-sm text-[#2E6FF2] border border-[#2E6FF2] hover:bg-blue-50 transition-colors"
               >
                 파일 업로드로 전환
               </button>
@@ -131,7 +131,7 @@ export function AudioRecorder({ onComplete, onSwitchToUpload, className }: Audio
   // ── recording / paused ──
   if (status === 'recording' || status === 'paused') {
     return (
-      <div className={`flex flex-col items-center gap-5 py-8 ${className ?? ''}`}>
+      <div className={`flex flex-col items-center gap-6 py-8 ${className ?? ''}`}>
         {/* 상태 표시 */}
         <div className="flex items-center gap-2.5">
           <span
@@ -159,10 +159,10 @@ export function AudioRecorder({ onComplete, onSwitchToUpload, className }: Audio
         )}
 
         {/* 컨트롤 버튼 */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3.5">
           <button
             onClick={status === 'recording' ? pauseRecording : resumeRecording}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-3 rounded-xl border border-[#e5e5e7] text-sm text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors"
           >
             {status === 'recording' ? (
               <><Pause className="w-4 h-4" /> 일시정지</>
@@ -172,7 +172,7 @@ export function AudioRecorder({ onComplete, onSwitchToUpload, className }: Audio
           </button>
           <button
             onClick={stopRecording}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-red-600 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-red-600 transition-colors"
           >
             <Square className="w-4 h-4" />
             정지
@@ -184,7 +184,7 @@ export function AudioRecorder({ onComplete, onSwitchToUpload, className }: Audio
 
   // ── stopped ──
   return (
-    <div className={`flex flex-col items-center gap-5 py-8 ${className ?? ''}`}>
+    <div className={`flex flex-col items-center gap-6 py-8 ${className ?? ''}`}>
       {/* 완료 뱃지 */}
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center">
@@ -208,17 +208,17 @@ export function AudioRecorder({ onComplete, onSwitchToUpload, className }: Audio
       )}
 
       {/* 버튼 */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3.5">
         <button
           onClick={resetRecording}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-3 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           다시 녹음
         </button>
         <button
           onClick={handleComplete}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#2E6FF2] text-white text-sm font-medium hover:bg-[#1a5ad9] transition-colors"
+          className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-[#2E6FF2] text-white text-sm font-medium hover:bg-[#1a5ad9] transition-colors"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />

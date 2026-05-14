@@ -4,6 +4,7 @@ export function mimeToType(mime: string | null, name: string): string {
   const map: Record<string, string> = {
     'application/pdf': 'PDF',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.template': 'DOTX',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'XLSX',
     'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PPTX',
     'application/haansofthwp': 'HWP',
@@ -47,6 +48,6 @@ export function formatDate(iso: string): string {
 /** 파일 확장자 추출 */
 export function getFileType(name: string): string {
   const ext = name.split('.').pop()?.toUpperCase() ?? '';
-  if (['PDF', 'DOCX', 'PPTX', 'XLSX', 'MD', 'HWP'].includes(ext)) return ext;
+  if (['PDF', 'DOCX', 'DOTX', 'PPTX', 'XLSX', 'MD', 'HWP'].includes(ext)) return ext;
   return ext || 'FILE';
 }

@@ -11,25 +11,23 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
-import { extractText, extractXlsxStructured } from '@/lib/ai/extract-text';
 import { generateForFormat } from '@/lib/ai/generate-document';
+import { applyFormDataRuntimeOverrides } from '@/lib/ai/generate-document-helpers';
 import { renderDocument } from '@/lib/renderers';
-import type { OutputFormat, CorporateTheme } from '@/lib/renderers/types';
-import { DEFAULT_THEME } from '@/lib/renderers/types';
-import { injectSignatureDocx, injectSignatureHwpx } from '@/lib/utils/inject-signature';
-
-const FONT_MAP: Record<string, string> = {
-  '맑은 고딕': 'Malgun Gothic',
-  '나눔고딕': 'NanumGothic',
-  '바탕': 'Batang',
-  '돋움': 'Dotum',
-  '굴림': 'Gulim',
-  '나눔명조': 'NanumMyeongjo',
-  'Arial': 'Arial',
-  'Times New Roman': 'Times New Roman',
-};
+import { collapseWorklogNextPlanRows } from '@/lib/renderers/docx-renderer';
+import type { DocxFormData, DocxTableStructure, OutputFormat } from '@/lib/renderers/types';
+import {
+  buildInstructionMeta,
+  buildDocumentInsertPayload,
+  buildTheme,
+  loadSourceChunks,
+  loadTemplateContext,
+  loadUserGenerationContext,
+  persistCompletedRender,
+  resolveVersionFields,
+} from './route-helpers';
+import { getWorklogDocumentTitle, isWorklogTemplateName } from '@/lib/templates/worklog';
 
 export const maxDuration = 60;
 
@@ -71,20 +69,146 @@ function consolidateSectionCells(
   }
 }
 
+function applyWorklogTemplateOverrides(
+  formData: DocxFormData,
+  structure: DocxTableStructure,
+  documentInputs: Record<string, string>,
+) {
+  const noteValue = documentInputs.note?.trim() ?? '';
+  const tomorrowValue = documentInputs.tomorrow_work?.trim() ?? '';
+
+  for (const table of structure.tables) {
+    const normalizedHeaders = table.headers.map((header) => header.replace(/\s+/g, ''));
+    const isNextPlanTable = normalizedHeaders.includes('번호') && normalizedHeaders.includes('작업내용');
+    const isTodayTable = normalizedHeaders.includes('업무내용') && normalizedHeaders.includes('비고');
+
+    if (isTodayTable) {
+      const bigoColIndex = normalizedHeaders.findIndex((header) => header === '비고');
+      if (bigoColIndex >= 0) {
+        for (const row of table.rows.slice(1)) {
+          const bigoCell = row[bigoColIndex];
+          if (bigoCell?.isEmpty) formData[bigoCell.fieldId] = '';
+        }
+      }
+
+      for (const row of table.rows) {
+        const labelCell = row[0];
+        if (!labelCell) continue;
+        const normalizedLabel = labelCell.text.replace(/\s+/g, '');
+        if (!normalizedLabel.includes('특이사항') && !normalizedLabel.includes('건의사항')) continue;
+
+        const targetCells = row.filter((cell, index) => index > 0 && cell.isEmpty);
+        if (targetCells.length === 0) continue;
+
+        formData[targetCells[0].fieldId] = noteValue;
+        for (const cell of targetCells.slice(1)) {
+          formData[cell.fieldId] = '';
+        }
+      }
+    }
+
+    if (isNextPlanTable) {
+      const contentColIndex = normalizedHeaders.findIndex((header) => header === '작업내용');
+      if (contentColIndex >= 0) {
+        const contentCells = table.rows
+          .slice(1)
+          .map((row) => row[contentColIndex])
+          .filter((cell) => cell?.isEmpty);
+
+        if (contentCells.length > 0) {
+          formData[contentCells[0].fieldId] = tomorrowValue;
+          for (const cell of contentCells.slice(1)) {
+            formData[cell.fieldId] = '';
+          }
+        }
+      }
+
+      const bigoColIndex = normalizedHeaders.findIndex((header) => header === '비고');
+      if (bigoColIndex >= 0) {
+        for (const row of table.rows.slice(1)) {
+          const bigoCell = row[bigoColIndex];
+          if (bigoCell?.isEmpty) formData[bigoCell.fieldId] = '';
+        }
+      }
+    }
+  }
+
+  return formData;
+}
+
 const VALID_FORMATS: OutputFormat[] = ['docx', 'pdf', 'hwpx', 'xlsx', 'pptx'];
+
+function buildDocumentSummary(params: {
+  id?: string;
+  title: string;
+  templateName: string;
+  createdAt: string;
+  status: '초안' | '완료';
+  sourceCount: number;
+  content: string;
+  versionNumber?: number | null;
+  parentId?: string | null;
+  originDocumentId?: string | null;
+  originContext?: string | null;
+}) {
+  return {
+    id: params.id,
+    title: params.title,
+    template: params.templateName,
+    createdAt: params.createdAt,
+    status: params.status,
+    sourceCount: params.sourceCount,
+    content: params.content,
+    versionNumber: params.versionNumber ?? 1,
+    parentId: params.parentId ?? null,
+    originDocumentId: params.originDocumentId ?? null,
+    originContext: params.originContext ?? null,
+  };
+}
+
+function buildDocumentInputInstructions(documentInputs: Record<string, string>) {
+  const lines: string[] = [];
+
+  const pushLine = (label: string, value: string | undefined) => {
+    const trimmed = value?.trim();
+    if (trimmed) lines.push(`${label}: ${trimmed}`);
+  };
+
+  pushLine('제목', documentInputs.report_title);
+  pushLine('부제목', documentInputs.subtitle);
+  pushLine('금일업무내용', documentInputs.today_work);
+  pushLine('특이사항', documentInputs.note);
+  pushLine('차일업무계획', documentInputs.tomorrow_work);
+
+  for (const [key, value] of Object.entries(documentInputs)) {
+    if (!value?.trim()) continue;
+    if (['report_title', 'subtitle', 'today_work', 'tomorrow_work', 'note'].includes(key)) continue;
+    lines.push(`${key}: ${value.trim()}`);
+  }
+
+  return lines.length > 0 ? `## 기본 입력값\n${lines.join('\n')}` : '';
+}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { templateId, sourceFileIds, instructions, outputFormat = 'docx', font, customStructure, contractFormData, parentId } = body;
+    const {
+      templateId,
+      sourceFileIds,
+      instructions,
+      outputFormat = 'docx',
+      font,
+      customStructure,
+      contractFormData,
+      parentId,
+      originDocumentId,
+      originContext,
+      documentInputs,
+      aiAssist = false,
+      aiAssistPrompt,
+    } = body;
 
-    // 폰트 테마 생성
-    const fontParam = typeof font === 'string' ? font : '맑은 고딕';
-    const theme: CorporateTheme = {
-      ...DEFAULT_THEME,
-      fontFamily: fontParam,
-      fontFamilyEn: FONT_MAP[fontParam] ?? 'Malgun Gothic',
-    };
+    const theme = buildTheme(font);
 
     if (!templateId && !customStructure) {
       return NextResponse.json({ error: '템플릿을 선택하거나 문서 구조를 입력해주세요.' }, { status: 400 });
@@ -105,140 +229,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
     }
 
-    // 버전 정보 계산 (parentId가 있는 경우) — supabase 초기화 이후에 실행
-    let versionFields: { parent_id?: string; version_number?: number } = {};
-    if (parentId) {
-      const { data: parentDoc } = await supabase
-        .from('documents')
-        .select('parent_id, version_number')
-        .eq('id', parentId)
-        .single();
-      const rootId: string = parentDoc?.parent_id ?? parentId;
-      const { data: siblings } = await supabase
-        .from('documents')
-        .select('version_number')
-        .or(`id.eq.${rootId},parent_id.eq.${rootId}`)
-        .order('version_number', { ascending: false })
-        .limit(1);
-      versionFields = {
-        parent_id: rootId,
-        version_number: (siblings?.[0]?.version_number ?? 1) + 1,
-      };
-    }
+    const versionFields = await resolveVersionFields(supabase, parentId);
+    const { userName, userPosition, userDept } = await loadUserGenerationContext(supabase, authUserId);
+    const sourceContext = await loadSourceChunks(supabase, sourceFileIds);
+    const { sourceChunks, sourceFileNames, sourceFileSummary, sourceFileCount } = sourceContext;
+    const templateContext = await loadTemplateContext(supabase, templateId, customStructure, format);
+    const { tmpl, templateBundle, templateName, templateFileText, templateBuffer, templateFileName } = templateContext;
+    format = templateContext.format;
 
-    // 사용자 정보 조회 (이름, 부서, 직급, 서명 경로)
-    const { data: userData } = await supabase
-      .from('users')
-      .select('name, position, signature_path, departments:department_id(name)')
-      .eq('id', authUserId)
-      .single();
-    const userName = (userData as Record<string, unknown>)?.name as string ?? '';
-    const userPosition = (userData as Record<string, unknown>)?.position as string ?? '';
-    const userDept = ((userData as Record<string, unknown>)?.departments as { name: string } | null)?.name ?? '';
-    const signaturePath = (userData as Record<string, unknown>)?.signature_path as string | null ?? null;
+    if (templateFileName) {
+      const ext = templateFileName.split('.').pop()?.toLowerCase() ?? '';
+      const allowedFormats = ext === 'docx' || ext === 'dotx'
+        ? ['docx', 'pdf']
+        : ext === 'hwpx' || ext === 'hwp'
+        ? ['hwpx', 'pdf']
+        : ext === 'xlsx' || ext === 'xls'
+        ? ['xlsx']
+        : ext === 'pptx' || ext === 'ppt'
+        ? ['pptx']
+        : null;
 
-    // 서명 이미지 버퍼 다운로드 (없으면 null — 이후 단계 스킵)
-    let signatureBuffer: Buffer | null = null;
-    if (signaturePath) {
-      try {
-        const adminClient = createAdminSupabaseClient();
-        const { data: sigBlob } = await adminClient.storage.from('files').download(signaturePath);
-        if (sigBlob) signatureBuffer = Buffer.from(await sigBlob.arrayBuffer());
-      } catch (e) {
-        console.error('[generate] signature download error:', e);
-        // 실패해도 계속 진행 (서명 없이 생성)
+      if (allowedFormats && !allowedFormats.includes(format)) {
+        return NextResponse.json({
+          error: `선택한 템플릿 파일(${templateFileName})은 ${allowedFormats.map((item) => item.toUpperCase()).join(', ')} 포맷으로만 생성할 수 있습니다.`,
+        }, { status: 400 });
       }
     }
 
-    // 템플릿 조회 (직접 작성 모드에서는 건너뜀)
-    let tmpl: { name: string; content: string | null; description: string | null; placeholders: string[] | null; template_file_id: string | null } | null = null;
-    if (templateId) {
-      const { data } = await supabase
-        .from('templates')
-        .select('name, content, description, placeholders, template_file_id')
-        .eq('id', templateId)
-        .single();
-      tmpl = data as typeof tmpl;
-    }
-
-    const templateName = tmpl?.name ?? (customStructure ? '직접 작성 문서' : '문서');
-
-    // 소스 파일 텍스트 추출
-    const sourceChunks: string[] = [];
-    if (sourceFileIds?.length) {
-      const { data: srcFiles } = await supabase
-        .from('files')
-        .select('id, name, type, storage_path')
-        .in('id', sourceFileIds);
-
-      for (const sf of (srcFiles ?? [])) {
-        if (!sf.storage_path) continue;
-        try {
-          const { data: blob } = await supabase.storage.from('files').download(sf.storage_path);
-          if (blob) {
-            const buf = await blob.arrayBuffer();
-            const text = await extractText(buf, sf.type ?? '', sf.name);
-            if (text.trim()) sourceChunks.push(text.slice(0, 8000));
-          }
-        } catch (e) {
-          console.error(`[generate] extract source ${sf.name}:`, e);
-        }
-      }
-    }
-
-    // 템플릿 양식 파일 텍스트 추출 + 바이너리 보존
-    let templateFileText: string | null = null;
-    let templateBuffer: Buffer | null = null;
-    if (tmpl?.template_file_id) {
-      const { data: tplFile } = await supabase
-        .from('files')
-        .select('name, type, storage_path')
-        .eq('id', tmpl.template_file_id)
-        .single();
-
-      if (tplFile?.storage_path) {
-        try {
-          const { data: blob } = await supabase.storage.from('files').download(tplFile.storage_path);
-          if (blob) {
-            const buf = await blob.arrayBuffer();
-            // 바이너리 원본을 깊은 복사로 보존 (Uint8Array로 독립 메모리 확보)
-            templateBuffer = Buffer.from(new Uint8Array(buf));
-            // 텍스트 추출용 별도 복사본
-            const extractBuf = new Uint8Array(buf).buffer;
-            const ext = tplFile.name.split('.').pop()?.toLowerCase() ?? '';
-            if (ext === 'xlsx' && format === 'xlsx') {
-              templateFileText = await extractXlsxStructured(extractBuf);
-            } else {
-              templateFileText = await extractText(extractBuf, tplFile.type ?? '', tplFile.name);
-            }
-          }
-        } catch (e) {
-          console.error(`[generate] extract template:`, e);
-        }
-      }
-    }
-
-    // 템플릿 파일 확장자와 출력 포맷 불일치 시 자동 보정
-    if (tmpl?.template_file_id && templateBuffer) {
-      const { data: tplFileCheck } = await supabase.from('files').select('name').eq('id', tmpl.template_file_id).single();
-      const tplExt = tplFileCheck?.name?.split('.').pop()?.toLowerCase() ?? '';
-      if (tplExt === 'hwpx' && format === 'docx') {
-        format = 'hwpx';
-        console.log('[generate] 포맷 자동 보정: docx → hwpx (템플릿 파일이 HWPX)');
-      } else if (tplExt === 'docx' && format === 'hwpx') {
-        format = 'docx';
-        console.log('[generate] 포맷 자동 보정: hwpx → docx (템플릿 파일이 DOCX)');
-      }
-    }
-
-    // 자동 채울 메타데이터 생성
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const reportNo = `${todayStr.replace(/-/g, '')}-${String(Math.floor(Math.random() * 90) + 10)}-001`;
-    const userMeta = `작성일자: ${todayStr}\n보고번호: ${reportNo}\n작성자: ${userName}\n부서명: ${userDept}`;
-    const enrichedInstructions = instructions
-      ? `${userMeta}\n\n${instructions}`
-      : userMeta;
+    const { todayStr, timeStr, reportNo, enrichedInstructions } = buildInstructionMeta(userName, userDept, instructions);
 
     // ── 계약서 직접 치환 경로 (AI 미사용) ──
     if (contractFormData && typeof contractFormData === 'object' && Object.keys(contractFormData).length > 0 && templateBuffer) {
@@ -257,70 +275,90 @@ export async function POST(request: NextRequest) {
           console.error('[generate] 계약서 렌더링 에러:', renderErr instanceof Error ? renderErr.message : renderErr, renderErr instanceof Error ? renderErr.stack : '');
           return NextResponse.json({ error: '계약서 생성 실패: ' + (renderErr instanceof Error ? renderErr.message : '알 수 없는 오류') }, { status: 500 });
         }
-        const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
-
-        const { error: uploadErr } = await supabase.storage
-          .from('files')
-          .upload(storagePath, rendered.buffer, { contentType: rendered.mimeType, upsert: false });
-
-        if (uploadErr) {
-          console.error('[generate] Contract upload error:', uploadErr.message);
-          return NextResponse.json({ error: '파일 업로드 실패' }, { status: 500 });
-        }
-
-        const { data: urlData } = await supabase.storage.from('files').createSignedUrl(storagePath, 3600);
-
-        const { data: newDoc } = await supabase.from('documents').insert({
-          title,
-          content: `[계약서 자동 작성] ${templateName}`,
-          template_id: templateId,
-          source_file_ids: sourceFileIds ?? [],
-          instructions: JSON.stringify(contractFormData),
-          status: 'completed',
-          storage_path: storagePath,
-          created_by: authUserId,
-          ...versionFields,
-        }).select().single();
-
-        await supabase.from('audit_logs').insert({
-          user_id: authUserId,
-          action: 'document.create',
-          target_type: 'document',
-          target_id: newDoc?.id ?? '',
-          details: { title, format: 'hwpx', mode: 'contract-direct' },
-        }).then(() => {}, () => {});
-
-        return NextResponse.json({
-          document: {
-            id: newDoc?.id,
+        try {
+          const content = `[계약서 자동 작성] ${templateName}`;
+          const { newDoc, signedUrl } = await persistCompletedRender({
+            supabase,
+            authUserId,
+            rendered,
             title,
-            template: templateName,
+            content,
+            templateId,
+            sourceFileIds,
+            instructions: JSON.stringify(contractFormData),
+            versionFields,
+            originDocumentId,
+            originContext,
+            auditDetails: { format: 'hwpx', mode: 'contract-direct' },
+          });
+          return NextResponse.json({
+            document: buildDocumentSummary({
+              id: newDoc?.id,
+              title,
+              templateName,
             createdAt: dateStr,
             status: '완료',
             sourceCount: 0,
-            content: `[계약서 자동 작성] ${templateName}`,
-          },
-          format: 'hwpx',
-          mode: 'contract-direct',
-          downloadUrl: urlData?.signedUrl ?? null,
-        }, { status: 201 });
+            content,
+            versionNumber: (newDoc as { version_number?: number | null } | null)?.version_number ?? 1,
+            parentId: (newDoc as { parent_id?: string | null } | null)?.parent_id ?? null,
+            originDocumentId: (newDoc as { origin_document_id?: string | null } | null)?.origin_document_id ?? null,
+            originContext: (newDoc as { origin_context?: string | null } | null)?.origin_context ?? null,
+          }),
+            format: 'hwpx',
+            mode: 'contract-direct',
+            downloadUrl: signedUrl,
+          }, { status: 201 });
+        } catch (e) {
+          console.error('[generate] Contract upload error:', e);
+          return NextResponse.json({ error: '파일 업로드 실패' }, { status: 500 });
+        }
       }
     }
     console.log('[generate] 계약서 경로 미진입. contractFormData:', !!contractFormData, 'templateBuffer:', !!templateBuffer, 'templateName:', templateName);
 
     // AI 콘텐츠 생성 (포맷별 분기)
+    const resolvedDocumentInputs = {
+      ...(typeof documentInputs === 'object' && documentInputs ? documentInputs : {}),
+      author: userName,
+      author_department: userDept,
+      author_position: userPosition,
+      report_date: todayStr,
+      report_time: timeStr,
+      report_no: reportNo,
+      source_file_names: sourceFileNames.join(', '),
+      source_file_count: String(sourceFileCount),
+      source_file_summary: sourceFileSummary || (sourceFileCount > 0 ? `${sourceFileNames.join(', ')} 참조` : ''),
+    };
+    const documentInputInstructions = buildDocumentInputInstructions(resolvedDocumentInputs);
+    const generationInstructions = [
+      enrichedInstructions,
+      documentInputInstructions,
+      aiAssist ? '## AI 보강 요청\n사용자가 직접 입력하지 않은 항목은 참조 자료와 템플릿 문맥을 바탕으로 자연스럽게 보강합니다. 사실이 불명확한 값은 [확인필요]로 남깁니다.' : '',
+      aiAssistPrompt ? `## 추가 AI 보강 지시\n${String(aiAssistPrompt)}` : '',
+    ].filter(Boolean).join('\n\n');
+
     const generationResult = await generateForFormat({
       format,
       templateName,
-      templateContent: customStructure ? customStructure : (typeof tmpl?.content === 'string' && tmpl.content.trim()) ? tmpl.content : (typeof tmpl?.description === 'string' && tmpl.description.trim()) ? tmpl.description : null,
+      templateContent: customStructure ? customStructure : templateBundle?.outline ?? ((typeof tmpl?.description === 'string' && tmpl.description.trim()) ? tmpl.description : null),
+      templateBundle,
       templateFileText,
       templateBuffer,
       sourceChunks,
-      instructions: enrichedInstructions,
+      instructions: generationInstructions,
+      documentInputs: resolvedDocumentInputs,
     });
 
     const dateStr = todayStr;
-    const title = `${templateName} (${dateStr} 생성)`;
+    const preferredTitle = typeof resolvedDocumentInputs.report_title === 'string' && resolvedDocumentInputs.report_title.trim()
+      ? resolvedDocumentInputs.report_title.trim()
+      : isWorklogTemplateName(templateName)
+      ? getWorklogDocumentTitle(dateStr, templateName)
+      : templateName;
+    const title = isWorklogTemplateName(templateName) && !resolvedDocumentInputs.report_title?.trim()
+      ? preferredTitle
+      : `${preferredTitle} (${dateStr} 생성)`;
     generationResult.title = title;
 
     // DOCX 폼 데이터 기반: 빈 셀에 내용 주입 → Storage 업로드
@@ -332,80 +370,60 @@ export async function POST(request: NextRequest) {
       consolidateSectionCells(fd, cells);
 
       // ── 2단계: 메타데이터 강제 보정 (통합 결과를 덮어씀) ──
-      let dangdangFilled = false;
-      for (const cell of cells) {
-        const label = cell.contextLabel;
-        if (/작성자\s*명/.test(label)) fd[cell.fieldId] = userName;
-        if (/작성자\s*직급/.test(label)) fd[cell.fieldId] = userPosition;
-        if (/작성자\s*소속/.test(label)) fd[cell.fieldId] = userDept;
-        if (/회의\s*(일시|일자)/.test(label)) fd[cell.fieldId] = todayStr;
-        if (/^(소속|성명|연락처|서명|참석자)$/.test(label)) fd[cell.fieldId] = '';
-        if (/보고처/.test(label)) fd[cell.fieldId] = userDept;
-        if (/보고서명/.test(label)) fd[cell.fieldId] = templateName;
-        if (/^담당$/.test(label)) fd[cell.fieldId] = '';
-        if (/보고서\s*\(/.test(label)) {
-          if (cell.rowIndex === 1 && cell.colIndex === 0 && !dangdangFilled) {
-            fd[cell.fieldId] = userName; dangdangFilled = true;
-          } else {
-            fd[cell.fieldId] = '';
-          }
+      applyFormDataRuntimeOverrides(fd, cells, { userName, userPosition, userDept, todayStr, templateName });
+      if (isWorklogTemplateName(templateName)) {
+        applyWorklogTemplateOverrides(fd, generationResult.tableStructure, resolvedDocumentInputs);
+      }
+
+      let rendered;
+      try {
+        rendered = await renderDocument(generationResult, theme);
+        if (isWorklogTemplateName(templateName) && rendered.extension === 'docx') {
+          rendered = { ...rendered, buffer: collapseWorklogNextPlanRows(rendered.buffer) };
+        }
+      } catch (e) {
+        console.error('[generate] DOCX FormData render error:', e);
+        return NextResponse.json({ error: 'DOCX 템플릿 구조에 맞춘 렌더링에 실패했습니다. 템플릿 필드 또는 양식 구조를 확인해주세요.' }, { status: 500 });
+      }
+      {
+        try {
+          const content = generationResult.markdown?.trim() || `[DOCX 양식 채우기] ${templateName}`;
+          const { newDoc, signedUrl } = await persistCompletedRender({
+            supabase,
+            authUserId,
+            rendered,
+            title,
+            content,
+            templateId,
+            sourceFileIds,
+            instructions: instructions ?? null,
+            versionFields,
+            originDocumentId,
+            originContext,
+            auditDetails: { format },
+          });
+          return NextResponse.json({
+            document: buildDocumentSummary({
+              id: newDoc?.id,
+              title,
+              templateName,
+              createdAt: dateStr,
+              status: '완료',
+              sourceCount: (sourceFileIds ?? []).length,
+              content,
+              versionNumber: (newDoc as { version_number?: number | null } | null)?.version_number ?? 1,
+              parentId: (newDoc as { parent_id?: string | null } | null)?.parent_id ?? null,
+              originDocumentId: (newDoc as { origin_document_id?: string | null } | null)?.origin_document_id ?? null,
+              originContext: (newDoc as { origin_context?: string | null } | null)?.origin_context ?? null,
+            }),
+            format,
+            downloadUrl: signedUrl,
+          }, { status: 201 });
+        } catch (e) {
+          console.error('[generate] DOCX FormData Storage upload error:', e);
+          return NextResponse.json({ error: '템플릿 기반 DOCX 파일 업로드에 실패했습니다.' }, { status: 500 });
         }
       }
-
-      let rendered = await renderDocument(generationResult, theme);
-      // P2-2: 서명 주입 (DOCX 폼 기반)
-      if (signatureBuffer) rendered = { ...rendered, buffer: injectSignatureDocx(rendered.buffer, signatureBuffer) };
-      const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
-
-      const { error: uploadErr } = await supabase.storage
-        .from('files')
-        .upload(storagePath, rendered.buffer, {
-          contentType: rendered.mimeType,
-          upsert: false,
-        });
-
-      if (uploadErr) {
-        console.error('[generate] DOCX FormData Storage upload error:', uploadErr.message);
-        return NextResponse.json({ error: '파일 업로드 실패' }, { status: 500 });
-      }
-
-      const { data: urlData } = await supabase.storage
-        .from('files')
-        .createSignedUrl(storagePath, 3600);
-
-      const { data: newDoc } = await supabase.from('documents').insert({
-        title,
-        content: `[DOCX 양식 채우기] ${templateName}`,
-        template_id: templateId,
-        source_file_ids: sourceFileIds ?? [],
-        instructions: instructions ?? null,
-        status: 'completed',
-        storage_path: storagePath,
-        created_by: authUserId,
-        ...versionFields,
-      }).select().single();
-
-      await supabase.from('audit_logs').insert({
-        user_id: authUserId,
-        action: 'document.create',
-        target_type: 'document',
-        target_id: newDoc?.id ?? '',
-        details: { title, format, storagePath },
-      }).then(() => {}, () => {});
-
-      return NextResponse.json({
-        document: {
-          id: newDoc?.id,
-          title,
-          template: templateName,
-          createdAt: dateStr,
-          status: '완료',
-          sourceCount: (sourceFileIds ?? []).length,
-          content: `[DOCX 양식 채우기] ${templateName}`,
-        },
-        format,
-        downloadUrl: urlData?.signedUrl ?? null,
-      }, { status: 201 });
     }
 
     // HWPX 폼 데이터 기반: 빈 셀에 내용 주입 → Storage 업로드
@@ -417,152 +435,116 @@ export async function POST(request: NextRequest) {
       consolidateSectionCells(hfd, hcells);
 
       // ── 2단계: 메타데이터 강제 보정 (통합 결과를 덮어씀) ──
-      let hdangFilled = false;
-      for (const cell of hcells) {
-        const label = cell.contextLabel;
-        if (/작성자\s*명/.test(label)) hfd[cell.fieldId] = userName;
-        if (/작성자\s*직급/.test(label)) hfd[cell.fieldId] = userPosition;
-        if (/작성자\s*소속/.test(label)) hfd[cell.fieldId] = userDept;
-        if (/회의\s*(일시|일자)/.test(label)) hfd[cell.fieldId] = todayStr;
-        if (/^(소속|성명|연락처|서명|참석자)$/.test(label)) hfd[cell.fieldId] = '';
-        if (/보고처/.test(label)) hfd[cell.fieldId] = userDept;
-        if (/보고서명/.test(label)) hfd[cell.fieldId] = templateName;
-        if (/^담당$/.test(label)) hfd[cell.fieldId] = '';
-        if (/보고서\s*\(/.test(label)) {
-          if (cell.rowIndex === 1 && cell.colIndex === 0 && !hdangFilled) {
-            hfd[cell.fieldId] = userName; hdangFilled = true;
-          } else {
-            hfd[cell.fieldId] = '';
-          }
-        }
+      applyFormDataRuntimeOverrides(hfd, hcells, { userName, userPosition, userDept, todayStr, templateName });
+      if (isWorklogTemplateName(templateName)) {
+        applyWorklogTemplateOverrides(hfd, generationResult.hwpxTableStructure, resolvedDocumentInputs);
       }
 
-      let rendered = await renderDocument(generationResult, theme);
-      // P2-2: 서명 주입 (HWPX 폼 기반)
-      if (signatureBuffer) rendered = { ...rendered, buffer: injectSignatureHwpx(rendered.buffer, signatureBuffer, userName) };
-      const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
-
-      const { error: uploadErr } = await supabase.storage
-        .from('files')
-        .upload(storagePath, rendered.buffer, {
-          contentType: rendered.mimeType,
-          upsert: false,
+      const rendered = await renderDocument(generationResult, theme);
+        try {
+          const content = generationResult.markdown?.trim() || `[HWPX 양식 채우기] ${templateName}`;
+          const { newDoc, signedUrl } = await persistCompletedRender({
+          supabase,
+          authUserId,
+          rendered,
+          title,
+          content,
+          templateId,
+          sourceFileIds,
+          instructions: instructions ?? null,
+          versionFields,
+          originDocumentId,
+          originContext,
+          auditDetails: { format },
         });
-
-      if (uploadErr) {
-        console.error('[generate] HWPX FormData Storage upload error:', uploadErr.message);
+        return NextResponse.json({
+          document: buildDocumentSummary({
+            id: newDoc?.id,
+            title,
+            templateName,
+            createdAt: dateStr,
+            status: '완료',
+            sourceCount: (sourceFileIds ?? []).length,
+            content,
+            versionNumber: (newDoc as { version_number?: number | null } | null)?.version_number ?? 1,
+            parentId: (newDoc as { parent_id?: string | null } | null)?.parent_id ?? null,
+            originDocumentId: (newDoc as { origin_document_id?: string | null } | null)?.origin_document_id ?? null,
+            originContext: (newDoc as { origin_context?: string | null } | null)?.origin_context ?? null,
+          }),
+          format,
+          downloadUrl: signedUrl,
+        }, { status: 201 });
+      } catch (e) {
+        console.error('[generate] HWPX FormData Storage upload error:', e);
         return NextResponse.json({ error: '파일 업로드 실패' }, { status: 500 });
       }
-
-      const { data: urlData } = await supabase.storage
-        .from('files')
-        .createSignedUrl(storagePath, 3600);
-
-      const { data: newDoc } = await supabase.from('documents').insert({
-        title,
-        content: `[HWPX 양식 채우기] ${templateName}`,
-        template_id: templateId,
-        source_file_ids: sourceFileIds ?? [],
-        instructions: instructions ?? null,
-        status: 'completed',
-        storage_path: storagePath,
-        created_by: authUserId,
-        ...versionFields,
-      }).select().single();
-
-      await supabase.from('audit_logs').insert({
-        user_id: authUserId,
-        action: 'document.create',
-        target_type: 'document',
-        target_id: newDoc?.id ?? '',
-        details: { title, format, storagePath },
-      }).then(() => {}, () => {});
-
-      return NextResponse.json({
-        document: {
-          id: newDoc?.id,
-          title,
-          template: templateName,
-          createdAt: dateStr,
-          status: '완료',
-          sourceCount: (sourceFileIds ?? []).length,
-          content: `[HWPX 양식 채우기] ${templateName}`,
-        },
-        format,
-        downloadUrl: urlData?.signedUrl ?? null,
-      }, { status: 201 });
     }
 
     // DOCX 템플릿 기반: 파일 렌더링 → Storage 업로드 (XLSX/PPTX와 동일 흐름)
     if (generationResult.docxReplacements && generationResult.templateBuffer) {
-      let rendered = await renderDocument(generationResult, theme);
-      // P2-2: 서명 주입 (DOCX 템플릿 기반)
-      if (signatureBuffer) rendered = { ...rendered, buffer: injectSignatureDocx(rendered.buffer, signatureBuffer) };
-      const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
-
-      const { error: uploadErr } = await supabase.storage
-        .from('files')
-        .upload(storagePath, rendered.buffer, {
-          contentType: rendered.mimeType,
-          upsert: false,
-        });
-
-      if (uploadErr) {
-        console.error('[generate] DOCX Storage upload error:', uploadErr.message);
-        return NextResponse.json({ error: '파일 업로드 실패' }, { status: 500 });
+      let rendered;
+      try {
+        rendered = await renderDocument(generationResult, theme);
+      } catch (e) {
+        console.error('[generate] DOCX template render error:', e);
+        return NextResponse.json({ error: 'DOCX 템플릿 구조에 맞춘 렌더링에 실패했습니다. 템플릿 필드 또는 양식 구조를 확인해주세요.' }, { status: 500 });
       }
-
-      const { data: urlData } = await supabase.storage
-        .from('files')
-        .createSignedUrl(storagePath, 3600);
-
-      const { data: newDoc } = await supabase.from('documents').insert({
-        title,
-        content: `[DOCX 템플릿 기반] ${templateName}`,
-        template_id: templateId,
-        source_file_ids: sourceFileIds ?? [],
-        instructions: instructions ?? null,
-        status: 'completed',
-        storage_path: storagePath,
-        created_by: authUserId,
-        ...versionFields,
-      }).select().single();
-
-      await supabase.from('audit_logs').insert({
-        user_id: authUserId,
-        action: 'document.create',
-        target_type: 'document',
-        target_id: newDoc?.id ?? '',
-        details: { title, format, storagePath },
-      }).then(() => {}, () => {});
-
-      return NextResponse.json({
-        document: {
-          id: newDoc?.id,
-          title,
-          template: templateName,
-          createdAt: dateStr,
-          status: '완료',
-          sourceCount: (sourceFileIds ?? []).length,
-          content: `[DOCX 템플릿 기반] ${templateName}`,
-        },
-        format,
-        downloadUrl: urlData?.signedUrl ?? null,
-      }, { status: 201 });
+      {
+        try {
+          const content = generationResult.markdown?.trim() || `[DOCX 템플릿 기반] ${templateName}`;
+          const { newDoc, signedUrl } = await persistCompletedRender({
+            supabase,
+            authUserId,
+            rendered,
+            title,
+            content,
+            templateId,
+            sourceFileIds,
+            instructions: instructions ?? null,
+            versionFields,
+            originDocumentId,
+            originContext,
+            auditDetails: { format },
+          });
+          return NextResponse.json({
+            document: buildDocumentSummary({
+              id: newDoc?.id,
+              title,
+              templateName,
+              createdAt: dateStr,
+              status: '완료',
+              sourceCount: (sourceFileIds ?? []).length,
+              content,
+              versionNumber: (newDoc as { version_number?: number | null } | null)?.version_number ?? 1,
+              parentId: (newDoc as { parent_id?: string | null } | null)?.parent_id ?? null,
+              originDocumentId: (newDoc as { origin_document_id?: string | null } | null)?.origin_document_id ?? null,
+              originContext: (newDoc as { origin_context?: string | null } | null)?.origin_context ?? null,
+            }),
+            format,
+            downloadUrl: signedUrl,
+          }, { status: 201 });
+        } catch (e) {
+          console.error('[generate] DOCX Storage upload error:', e);
+          return NextResponse.json({ error: '템플릿 기반 DOCX 파일 업로드에 실패했습니다.' }, { status: 500 });
+        }
+      }
     }
 
     // 마크다운 기반 포맷(DOCX새로생성/HWPX/PDF)은 기존처럼 documents 테이블에도 저장
     if (generationResult.markdown) {
-      const { data: newDoc, error } = await supabase.from('documents').insert({
+      const payload = buildDocumentInsertPayload({
         title,
         content: generationResult.markdown,
-        template_id: templateId,
-        source_file_ids: sourceFileIds ?? [],
-        instructions: instructions ?? null,
+        templateId,
+        sourceFileIds,
+        instructions,
         status: 'draft',
-        created_by: authUserId,
-        ...versionFields,
-      }).select().single();
+        createdBy: authUserId,
+        versionFields,
+        originDocumentId,
+        originContext,
+      });
+      const { data: newDoc, error } = await supabase.from('documents').insert(payload).select().single();
 
       if (error) {
         console.error('[generate] DB insert error:', error.message);
@@ -582,15 +564,19 @@ export async function POST(request: NextRequest) {
       if (format === 'pdf') {
         const rendered = await renderDocument(generationResult, theme);
         return NextResponse.json({
-          document: {
+          document: buildDocumentSummary({
             id: newDoc.id,
             title,
-            template: templateName,
+            templateName,
             createdAt: dateStr,
             status: '초안',
             sourceCount: (sourceFileIds ?? []).length,
             content: generationResult.markdown,
-          },
+            versionNumber: (newDoc as { version_number?: number | null }).version_number ?? 1,
+            parentId: (newDoc as { parent_id?: string | null }).parent_id ?? null,
+            originDocumentId: (newDoc as { origin_document_id?: string | null }).origin_document_id ?? null,
+            originContext: (newDoc as { origin_context?: string | null }).origin_context ?? null,
+          }),
           format,
           htmlContent: rendered.buffer.toString('utf-8'),
         }, { status: 201 });
@@ -598,12 +584,7 @@ export async function POST(request: NextRequest) {
 
       // DOCX/HWPX 마크다운 → 파일 렌더링 → Storage 업로드
       if (format === 'hwpx' || format === 'docx') {
-        let rendered = await renderDocument(generationResult, theme);
-        // P2-2: 서명 주입 (마크다운 기반 새 문서)
-        if (signatureBuffer) {
-          if (rendered.extension === 'docx') rendered = { ...rendered, buffer: injectSignatureDocx(rendered.buffer, signatureBuffer) };
-          else if (rendered.extension === 'hwpx') rendered = { ...rendered, buffer: injectSignatureHwpx(rendered.buffer, signatureBuffer, userName) };
-        }
+        const rendered = await renderDocument(generationResult, theme);
         const filePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
         const { error: upErr } = await supabase.storage
           .from('files')
@@ -618,96 +599,84 @@ export async function POST(request: NextRequest) {
           .createSignedUrl(filePath, 3600);
 
         return NextResponse.json({
-          document: {
+          document: buildDocumentSummary({
             id: newDoc.id,
             title,
-            template: templateName,
+            templateName,
             createdAt: dateStr,
             status: '초안',
             sourceCount: (sourceFileIds ?? []).length,
             content: generationResult.markdown,
-          },
+            versionNumber: (newDoc as { version_number?: number | null }).version_number ?? 1,
+            parentId: (newDoc as { parent_id?: string | null }).parent_id ?? null,
+            originDocumentId: (newDoc as { origin_document_id?: string | null }).origin_document_id ?? null,
+            originContext: (newDoc as { origin_context?: string | null }).origin_context ?? null,
+          }),
           format,
           downloadUrl: fileUrl?.signedUrl ?? null,
         }, { status: 201 });
       }
 
       return NextResponse.json({
-        document: {
+        document: buildDocumentSummary({
           id: newDoc.id,
           title,
-          template: templateName,
+          templateName,
           createdAt: dateStr,
           status: '초안',
           sourceCount: (sourceFileIds ?? []).length,
           content: generationResult.markdown,
-        },
+          versionNumber: (newDoc as { version_number?: number | null }).version_number ?? 1,
+          parentId: (newDoc as { parent_id?: string | null }).parent_id ?? null,
+          originDocumentId: (newDoc as { origin_document_id?: string | null }).origin_document_id ?? null,
+          originContext: (newDoc as { origin_context?: string | null }).origin_context ?? null,
+        }),
         format,
       }, { status: 201 });
     }
 
-    // XLSX/PPTX → 파일 렌더링 → Storage 업로드
     const rendered = await renderDocument(generationResult, theme);
-    const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
-
-    const { error: uploadErr } = await supabase.storage
-      .from('files')
-      .upload(storagePath, rendered.buffer, {
-        contentType: rendered.mimeType,
-        upsert: false,
-      });
-
-    if (uploadErr) {
-      console.error('[generate] Storage upload error:', uploadErr.message);
-      return NextResponse.json({ error: '파일 업로드 실패' }, { status: 500 });
-    }
-
-    // 공개 URL 생성 (1시간 유효)
-    const { data: urlData } = await supabase.storage
-      .from('files')
-      .createSignedUrl(storagePath, 3600);
-
-    // documents 테이블에 메타 저장
     const contentSummary = format === 'xlsx'
       ? `[Excel] ${generationResult.excelSheets?.map(s => s.sheetName).join(', ')} (${generationResult.excelSheets?.reduce((sum, s) => sum + s.rows.length, 0)}행)`
       : `[PPT] ${generationResult.pptxSlides?.length}개 슬라이드`;
 
-    const { data: newDoc } = await supabase.from('documents').insert({
-      title,
-      content: contentSummary,
-      template_id: templateId,
-      source_file_ids: sourceFileIds ?? [],
-      instructions: instructions ?? null,
-      status: 'completed',
-      storage_path: storagePath,
-      created_by: authUserId,
-      ...versionFields,
-    }).select().single();
-
-    await supabase.from('audit_logs').insert({
-      user_id: authUserId,
-      action: 'document.create',
-      target_type: 'document',
-      target_id: newDoc?.id ?? '',
-      details: { title, format, storagePath },
-    }).then(() => {}, () => {});
-
-    return NextResponse.json({
-      document: {
-        id: newDoc?.id,
+    try {
+      const { newDoc, signedUrl } = await persistCompletedRender({
+        supabase,
+        authUserId,
+        rendered,
         title,
-        template: templateName,
-        createdAt: dateStr,
-        status: '완료',
-        sourceCount: (sourceFileIds ?? []).length,
         content: contentSummary,
-      },
-      format,
-      downloadUrl: urlData?.signedUrl ?? null,
-      outline: format === 'xlsx'
-        ? { sheets: generationResult.excelSheets }
-        : { slides: generationResult.pptxSlides },
-    }, { status: 201 });
+        templateId,
+        sourceFileIds,
+        instructions: instructions ?? null,
+        versionFields,
+        originDocumentId,
+        originContext,
+        auditDetails: { format },
+      });
+      return NextResponse.json({
+        document: buildDocumentSummary({
+          id: newDoc?.id,
+          title,
+          templateName,
+          createdAt: dateStr,
+          status: '완료',
+          sourceCount: (sourceFileIds ?? []).length,
+          content: contentSummary,
+          versionNumber: (newDoc as { version_number?: number | null } | null)?.version_number ?? 1,
+          parentId: (newDoc as { parent_id?: string | null } | null)?.parent_id ?? null,
+          originDocumentId: (newDoc as { origin_document_id?: string | null } | null)?.origin_document_id ?? null,
+          originContext: (newDoc as { origin_context?: string | null } | null)?.origin_context ?? null,
+        }),
+        format,
+        downloadUrl: signedUrl,
+        outline: format === 'xlsx' ? { sheets: generationResult.excelSheets } : { slides: generationResult.pptxSlides },
+      }, { status: 201 });
+    } catch (e) {
+      console.error('[generate] Storage upload error:', e);
+      return NextResponse.json({ error: '파일 업로드 실패' }, { status: 500 });
+    }
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : '문서 생성 실패';
     const errStack = err instanceof Error ? err.stack?.split('\n').slice(0, 5).join('\n') : '';

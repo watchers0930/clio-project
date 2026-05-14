@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
+import type { DbFileRecord, DbSchedule, DbUser } from '@/lib/supabase/types';
 import type { ExpiryItem, ExpirySummaryResponse } from '@/types/expiry';
 
 export async function GET(request: NextRequest) {
@@ -27,21 +28,18 @@ export async function GET(request: NextRequest) {
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split('T')[0];
-
     const limitDate = new Date(today);
     limitDate.setDate(limitDate.getDate() + days);
     const limitDateStr = limitDate.toISOString().split('T')[0];
 
     // schedules에서 만료 임박 문서 조회 (source_type = 'document_expiry')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: schedules, error } = await (supabase as any)
+    const { data: schedules, error } = await supabase
       .from('schedules')
       .select(`id, title, end_date, source_id, expiry_confidence`)
       .eq('source_type', 'document_expiry')
       .lte('end_date', limitDateStr)
       .order('end_date', { ascending: true })
-      .limit(limit) as { data: Array<{ id: string; title: string; end_date: string; source_id: string | null; expiry_confidence: string | null }> | null; error: unknown };
+      .limit(limit);
 
     if (error) {
       console.error('[expiry-summary] schedules query error:', error);
@@ -57,27 +55,32 @@ export async function GET(request: NextRequest) {
     }
 
     // source_id(file_id) 목록으로 파일 정보 조회
-    const fileIds = schedules.map((s) => s.source_id).filter(Boolean) as string[];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: files } = await (supabase as any)
+    const scheduleRows = (schedules ?? []) as DbSchedule[];
+    const fileIds = scheduleRows
+      .map((s) => s.source_id)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0);
+    const { data: files } = await supabase
       .from('files')
       .select('id, name, user_id')
-      .in('id', fileIds) as { data: Array<{ id: string; name: string; user_id: string }> | null };
+      .in('id', fileIds);
 
     // 사용자 이름 조회
-    const userIds = [...new Set((files ?? []).map((f) => f.user_id).filter(Boolean))];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fileRows = (files ?? []) as DbFileRecord[];
+    const userIds = [...new Set(fileRows
+      .map((f) => f.user_id)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0))];
     const { data: users } = userIds.length > 0
-      ? await (supabase as any).from('users').select('id, name').in('id', userIds) as { data: Array<{ id: string; name: string }> | null }
-      : { data: [] as Array<{ id: string; name: string }> };
+      ? await supabase.from('users').select('id, name').in('id', userIds)
+      : { data: [] as DbUser[] };
 
-    const fileMap = new Map((files ?? []).map((f) => [f.id, f]));
-    const userMap = new Map((users ?? []).map((u: { id: string; name: string }) => [u.id, u.name]));
+    const userRows = (users ?? []) as DbUser[];
+    const fileMap = new Map(fileRows.map((f) => [f.id, f]));
+    const userMap = new Map(userRows.map((u) => [u.id, u.name]));
 
     const todayMs = today.getTime();
     let hasExpired = false;
 
-    const items: ExpiryItem[] = schedules.map((s) => {
+    const items: ExpiryItem[] = scheduleRows.map((s) => {
       const file = fileMap.get(s.source_id ?? '');
       const expiryMs = new Date(s.end_date).setHours(0, 0, 0, 0);
       const daysRemaining = Math.round((expiryMs - todayMs) / 86400000);

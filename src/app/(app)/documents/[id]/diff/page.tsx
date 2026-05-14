@@ -22,7 +22,6 @@ export default function DocumentDiffPage() {
 
   const [compareId, setCompareId] = useState<string | null>(compareParam);
   const [docInfo, setDocInfo] = useState<DocInfo | null>(null);
-  const [latestVersionId, setLatestVersionId] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
 
   // 문서 기본 정보 + 버전 목록 조회 → compareId 초기값 결정
@@ -53,7 +52,6 @@ export default function DocumentDiffPage() {
             );
             if (latest && latest.id !== baseId) {
               setCompareId(latest.id);
-              setLatestVersionId(latest.id);
             } else if (versions.length >= 2) {
               // 최신이 자기 자신인 경우 두 번째 버전 선택
               const other = versions.find((v) => v.id !== baseId);
@@ -63,8 +61,6 @@ export default function DocumentDiffPage() {
         } catch {
           // 버전 조회 실패 시 compareId는 null 유지
         }
-      } else {
-        setLatestVersionId(compareParam);
       }
 
       setInitialized(true);
@@ -94,10 +90,10 @@ export default function DocumentDiffPage() {
 
   return (
     <div className="min-h-screen bg-[#F7F8FA]">
-      <div className="max-w-screen-xl mx-auto px-4 py-6">
+      <div className="mx-auto max-w-screen-xl px-4 py-4 sm:py-6">
         {/* 헤더 */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
+        <div className="mb-4 flex items-center justify-between sm:mb-6">
+          <div className="flex min-w-0 items-center gap-3">
             <Link
               href="/documents"
               className="p-2 rounded-lg hover:bg-white border border-transparent hover:border-[#E2E5EA] transition-colors"

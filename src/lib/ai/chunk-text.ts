@@ -21,7 +21,6 @@ export function chunkText(
 ): TextChunk[] {
   const maxTokens = options?.maxTokens ?? 500;
   const overlap = options?.overlap ?? 50;
-  const maxChars = maxTokens * 3; // 토큰 → 글자수 근사
   const overlapChars = overlap * 3;
 
   if (!text.trim()) return [];
@@ -34,7 +33,7 @@ export function chunkText(
   let chunkIndex = 0;
 
   for (const para of paragraphs) {
-    // 단락 자체가 maxChars보다 크면 문장 단위로 분할
+    // 단락 자체가 maxTokens보다 크면 문장 단위로 분할
     if (estimateTokens(para) > maxTokens) {
       // 현재 버퍼가 있으면 먼저 flush
       if (currentChunk.trim()) {

@@ -9,11 +9,23 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+type FileAccessRow = {
+  id: string;
+  uploaded_by: string | null;
+  department_id: string | null;
+};
+
+type DocumentAccessRow = {
+  id: string;
+  created_by: string | null;
+};
+
 export type Permission =
   | 'dept.create' | 'dept.edit' | 'dept.edit.own' | 'dept.delete'
   | 'user.edit' | 'user.role' | 'user.edit.own_dept'
   | 'file.upload' | 'file.delete.any' | 'file.delete.own_dept' | 'file.delete.own'
   | 'file.share' | 'file.share.own'
+  | 'document.edit.any' | 'document.edit.own' | 'document.share'
   | 'template.edit.any' | 'template.edit.own_dept' | 'template.use';
 
 const ROLE_PERMISSIONS: Record<string, Permission[]> = {
@@ -21,16 +33,19 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'dept.create', 'dept.edit', 'dept.delete',
     'user.edit', 'user.role',
     'file.upload', 'file.delete.any', 'file.share',
+    'document.edit.any', 'document.share',
     'template.edit.any',
   ],
   manager: [
     'dept.edit.own',
     'user.edit.own_dept',
     'file.upload', 'file.delete.own_dept', 'file.share',
+    'document.share',
     'template.edit.own_dept', 'template.use',
   ],
   user: [
     'file.upload', 'file.delete.own', 'file.share.own',
+    'document.edit.own',
     'template.use',
   ],
 };
@@ -115,6 +130,162 @@ export async function canAccessFile(
     .or(`granted_to_user.eq.${userId}${userDeptId ? `,granted_to_dept.eq.${userDeptId}` : ''}`);
 
   return (count ?? 0) > 0;
+}
+
+export async function getAccessibleFileIds(
+  supabase: SupabaseClient,
+  userId: string,
+  userRole: string,
+  userDeptId: string | null,
+  fileRows: FileAccessRow[],
+): Promise<Set<string>> {
+  if (userRole === 'admin') return new Set(fileRows.map((file) => file.id));
+  if (fileRows.length === 0) return new Set();
+
+  const accessibleIds = new Set<string>();
+  const permissionTargetIds: string[] = [];
+
+  for (const file of fileRows) {
+    if (file.uploaded_by === userId || (userDeptId && file.department_id === userDeptId)) {
+      accessibleIds.add(file.id);
+    } else {
+      permissionTargetIds.push(file.id);
+    }
+  }
+
+  if (permissionTargetIds.length === 0) return accessibleIds;
+
+  let permissionQuery = supabase
+    .from('file_permissions')
+    .select('file_id')
+    .in('file_id', permissionTargetIds)
+    .eq('granted_to_user', userId);
+
+  if (userDeptId) {
+    permissionQuery = supabase
+      .from('file_permissions')
+      .select('file_id')
+      .in('file_id', permissionTargetIds)
+      .or(`granted_to_user.eq.${userId},granted_to_dept.eq.${userDeptId}`);
+  }
+
+  const { data: permissionRows } = await permissionQuery;
+  for (const row of ((permissionRows ?? []) as Array<{ file_id: string | null }>)) {
+    if (row.file_id) accessibleIds.add(row.file_id);
+  }
+
+  return accessibleIds;
+}
+
+export async function filterAccessibleFileRows<T extends FileAccessRow>(
+  supabase: SupabaseClient,
+  userId: string,
+  userRole: string,
+  userDeptId: string | null,
+  fileRows: T[],
+): Promise<T[]> {
+  const accessibleIds = await getAccessibleFileIds(supabase, userId, userRole, userDeptId, fileRows);
+  return fileRows.filter((file) => accessibleIds.has(file.id));
+}
+
+export async function canAccessDocument(
+  supabase: SupabaseClient,
+  userId: string,
+  userRole: string,
+  userDeptId: string | null,
+  documentId: string,
+): Promise<boolean> {
+  if (userRole === 'admin') return true;
+
+  const { data: document } = await supabase
+    .from('documents')
+    .select('created_by')
+    .eq('id', documentId)
+    .single();
+
+  if (!document) return false;
+  if (document.created_by === userId) return true;
+
+  const { count } = await supabase
+    .from('document_permissions')
+    .select('id', { count: 'exact', head: true })
+    .eq('document_id', documentId)
+    .or(`granted_to_user.eq.${userId}${userDeptId ? `,granted_to_dept.eq.${userDeptId}` : ''}`);
+
+  return (count ?? 0) > 0;
+}
+
+export async function getAccessibleDocumentIds(
+  supabase: SupabaseClient,
+  userId: string,
+  userRole: string,
+  userDeptId: string | null,
+  documentRows: DocumentAccessRow[],
+): Promise<Set<string>> {
+  if (userRole === 'admin') return new Set(documentRows.map((doc) => doc.id));
+  if (documentRows.length === 0) return new Set();
+
+  const accessibleIds = new Set<string>();
+  const permissionTargetIds: string[] = [];
+
+  for (const document of documentRows) {
+    if (document.created_by === userId) {
+      accessibleIds.add(document.id);
+    } else {
+      permissionTargetIds.push(document.id);
+    }
+  }
+
+  if (permissionTargetIds.length === 0) return accessibleIds;
+
+  let permissionQuery = supabase
+    .from('document_permissions')
+    .select('document_id')
+    .in('document_id', permissionTargetIds)
+    .eq('granted_to_user', userId);
+
+  if (userDeptId) {
+    permissionQuery = supabase
+      .from('document_permissions')
+      .select('document_id')
+      .in('document_id', permissionTargetIds)
+      .or(`granted_to_user.eq.${userId},granted_to_dept.eq.${userDeptId}`);
+  }
+
+  const { data: permissionRows } = await permissionQuery;
+  for (const row of ((permissionRows ?? []) as Array<{ document_id: string | null }>)) {
+    if (row.document_id) accessibleIds.add(row.document_id);
+  }
+
+  return accessibleIds;
+}
+
+export async function filterAccessibleDocumentRows<T extends DocumentAccessRow>(
+  supabase: SupabaseClient,
+  userId: string,
+  userRole: string,
+  userDeptId: string | null,
+  documentRows: T[],
+): Promise<T[]> {
+  const accessibleIds = await getAccessibleDocumentIds(supabase, userId, userRole, userDeptId, documentRows);
+  return documentRows.filter((document) => accessibleIds.has(document.id));
+}
+
+export async function canManageDocument(
+  supabase: SupabaseClient,
+  userId: string,
+  userRole: string,
+  documentId: string,
+): Promise<boolean> {
+  if (userRole === 'admin') return true;
+
+  const { data: document } = await supabase
+    .from('documents')
+    .select('created_by')
+    .eq('id', documentId)
+    .single();
+
+  return !!document && document.created_by === userId;
 }
 
 /**

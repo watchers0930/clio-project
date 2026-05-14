@@ -78,13 +78,13 @@ export function RiskCard({ item }: RiskCardProps) {
 
         {/* 내용 */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className={cn('text-[11px] font-bold px-2 py-0.5 rounded-lg border leading-none', cfg.badgeCls)}>
+          <div className="mb-1.5 flex items-center gap-2.5 flex-wrap">
+            <span className={cn('text-[11px] font-bold px-2.5 py-1 rounded-lg border leading-none', cfg.badgeCls)}>
               {cfg.label}위 리스크
             </span>
             <span className="text-[11px] font-mono text-[#aaa]">{item.id}</span>
             {def && (
-              <span className="text-[10px] text-[#888] bg-[#F0F2F5] rounded-md px-1.5 py-0.5">
+              <span className="text-[10px] text-[#888] bg-[#F0F2F5] rounded-md px-2 py-1">
                 {CATEGORY_LABELS[def.category] ?? ''}
               </span>
             )}
@@ -95,15 +95,15 @@ export function RiskCard({ item }: RiskCardProps) {
         </div>
 
         {/* 액션 */}
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={e => { e.stopPropagation(); handleCopy(); }}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-[#ccc] hover:text-[#1B1F2B] hover:bg-[#F0F2F5] transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#ccc] hover:text-[#1B1F2B] hover:bg-[#F0F2F5] transition-colors"
             title="복사"
           >
             {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
           </button>
-          <div className={cn('w-6 h-6 rounded-lg flex items-center justify-center transition-transform', expanded && 'rotate-180')}>
+          <div className={cn('flex h-7 w-7 items-center justify-center rounded-lg transition-transform', expanded && 'rotate-180')}>
             <ChevronDown size={15} className="text-[#aaa]" />
           </div>
         </div>

@@ -65,14 +65,14 @@ export function VersionSelector({
   const selectedVersion = versions.find((v) => v.id === selectedVersionId);
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1.5">
       <span className="text-[11px] font-medium text-[#888] uppercase tracking-wide">{label}</span>
       <div ref={ref} className="relative">
         <button
           onClick={() => !error && !loading && setIsOpen((p) => !p)}
           disabled={loading || error}
           className={cn(
-            'flex items-center gap-2 px-3 py-2 rounded-lg border text-[13px] w-full text-left transition-colors',
+            'flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-[13px] w-full text-left transition-colors',
             error
               ? 'border-red-200 bg-red-50 text-red-600 cursor-not-allowed'
               : 'border-[#E2E5EA] bg-white hover:border-[#2E6FF2]/60 text-[#1B1F2B]',
@@ -89,7 +89,7 @@ export function VersionSelector({
         </button>
 
         {isOpen && versions.length > 0 && (
-          <div className="absolute top-full mt-1 left-0 right-0 z-10 bg-white border border-[#E2E5EA] rounded-lg shadow-lg overflow-hidden">
+          <div className="absolute top-full mt-1.5 left-0 right-0 z-10 bg-white border border-[#E2E5EA] rounded-lg shadow-lg overflow-hidden">
             {versions.map((v) => {
               const isDisabled = v.id === disabledVersionId;
               const isSelected = v.id === selectedVersionId;
@@ -104,7 +104,7 @@ export function VersionSelector({
                     }
                   }}
                   className={cn(
-                    'flex items-center gap-2 w-full px-3 py-2.5 text-left text-[13px] transition-colors',
+                    'flex items-center gap-2.5 w-full px-3.5 py-3 text-left text-[13px] transition-colors',
                     isDisabled
                       ? 'text-[#ccc] cursor-not-allowed bg-[#FAFAFA]'
                       : isSelected

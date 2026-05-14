@@ -39,3 +39,26 @@ export const ACTION_LABELS: Record<string, string> = {
 
 /** 차트 기본 색상 팔레트 */
 export const CHART_COLORS = ['#1d1d1f', '#6e6e73', '#0071e3', '#a1a1a6', '#d2d2d7'] as const;
+
+/** 제품 공통 메시지 */
+export const PLATFORM_LABEL = '기업 문서 운영 플랫폼';
+export const PLATFORM_HERO_LABEL = 'Enterprise Document Platform';
+export const PLATFORM_CORE_FLOW = '저장 · 공유 · 검색 · 반영';
+export const PLATFORM_SHORT_GUIDE =
+  '문서를 저장하고, 공유하고, 코멘트를 반영하고, 다시 찾는 일상 업무 흐름에 맞춰 이동하세요.';
+
+/** 대시보드 오늘의 명언 */
+export const DAILY_QUOTES = [
+  '성공은 반복된 작은 노력의 합이다.',
+  '기회는 준비된 사람에게 보인다.',
+  '행동이 생각을 완성한다.',
+  '꾸준함은 재능을 이긴다.',
+  '오늘의 선택이 내일의 방향을 만든다.',
+  '완벽보다 실행이 먼저다.',
+  '집중은 복잡한 일을 단순하게 만든다.',
+  '가장 큰 진전은 멈추지 않는 데서 나온다.',
+  '작은 개선이 큰 변화를 만든다.',
+  '명확함은 속도를 만든다.',
+  '지속하는 사람이 결국 도착한다.',
+  '좋은 결과는 좋은 습관에서 시작된다.',
+] as const;

@@ -10,6 +10,11 @@ interface MemoIdeaPanelProps {
   memoCount: number;
   onClose: () => void;
   onMemoSaved?: () => void;
+  onSaveMemo: (text: string) => Promise<void>;
+  onExtractTodos: (text: string) => Promise<ExtractedTodo[]>;
+  onCreateDocument: () => Promise<void>;
+  creatingDocument?: boolean;
+  createDocumentError?: string | null;
 }
 
 export default function MemoIdeaPanel({
@@ -17,18 +22,27 @@ export default function MemoIdeaPanel({
   memoCount,
   onClose,
   onMemoSaved,
+  onSaveMemo,
+  onExtractTodos,
+  onCreateDocument,
+  creatingDocument = false,
+  createDocumentError = null,
 }: MemoIdeaPanelProps) {
   const { text, loading, done, error, generate, reset } = useMemoIdea();
   const [savingMemo, setSavingMemo] = useState(false);
   const [extractingTodos, setExtractingTodos] = useState(false);
   const [extractedTodos, setExtractedTodos] = useState<ExtractedTodo[]>([]);
   const [todoModalOpen, setTodoModalOpen] = useState(false);
+  const [todoError, setTodoError] = useState<string | null>(null);
   const textRef = useRef<HTMLDivElement>(null);
 
   // memoIds가 바뀌면 새 아이디어 자동 생성
-  const memoKey = memoIds.join(',');
+  const memoKey = [...memoIds].sort().join(',');
   useEffect(() => {
     reset();
+    setExtractedTodos([]);
+    setTodoModalOpen(false);
+    setTodoError(null);
     if (memoIds.length >= 2) generate(memoIds);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memoKey]);
@@ -44,19 +58,8 @@ export default function MemoIdeaPanel({
     if (!text || savingMemo) return;
     setSavingMemo(true);
     try {
-      const res = await fetch('/api/memos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: '💡 AI 아이디어', content: text, color: 'blue' }),
-      });
-      const result = await res.json() as { success: boolean; data?: { id: string } };
-      if (result.success) {
-        if (result.data?.id) {
-          fetch(`/api/memos/${result.data.id}/embed`, { method: 'POST' }).catch(() => {});
-        }
-        onMemoSaved?.();
-        onClose();
-      }
+      await onSaveMemo(text);
+      onMemoSaved?.();
     } finally {
       setSavingMemo(false);
     }
@@ -65,24 +68,26 @@ export default function MemoIdeaPanel({
   const handleExtractTodos = async () => {
     if (!text || extractingTodos) return;
     setExtractingTodos(true);
+    setTodoError(null);
     try {
-      const res = await fetch('/api/todos/from-idea', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ideaText: text }),
-      });
-      const result = await res.json() as {
-        success: boolean;
-        data?: ExtractedTodo[];
-        error?: string;
-      };
-      if (result.success && result.data) {
-        setExtractedTodos(result.data);
+      const todos = await onExtractTodos(text);
+      if (todos.length === 0) {
+        setExtractedTodos([]);
         setTodoModalOpen(true);
+        return;
       }
+      setExtractedTodos(todos);
+      setTodoModalOpen(true);
+    } catch (error) {
+      setTodoError(error instanceof Error ? error.message : '할일 추출에 실패했습니다');
     } finally {
       setExtractingTodos(false);
     }
+  };
+
+  const handleCreateDocument = async () => {
+    if (!actionsEnabled || creatingDocument) return;
+    await onCreateDocument();
   };
 
   const actionsEnabled = done && !loading;
@@ -148,36 +153,44 @@ export default function MemoIdeaPanel({
         {/* 액션 버튼 (스트리밍 완료 후 활성화) */}
         {(done || !!text) && (
           <div
-            className="px-5 py-4 border-t flex gap-2 flex-shrink-0"
+            className="px-5 py-4 border-t flex flex-col gap-2 flex-shrink-0"
             style={{ borderColor: '#E2E8F0' }}
           >
-            <button
-              onClick={handleSaveMemo}
-              disabled={!actionsEnabled || savingMemo}
-              className="flex items-center gap-1.5 flex-1 justify-center py-2.5 text-[12px] font-medium rounded-xl border transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-[#6366F1]/5"
-              style={{ borderColor: '#6366F1', color: '#6366F1' }}
-            >
-              {savingMemo ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-              메모로 저장
-            </button>
-            <button
-              onClick={handleExtractTodos}
-              disabled={!actionsEnabled || extractingTodos}
-              className="flex items-center gap-1.5 flex-1 justify-center py-2.5 text-[12px] font-medium rounded-xl border transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-[#22C55E]/5"
-              style={{ borderColor: '#22C55E', color: '#22C55E' }}
-            >
-              {extractingTodos ? <Loader2 size={12} className="animate-spin" /> : <CheckSquare size={12} />}
-              할일 추출
-            </button>
-            <button
-              disabled={true}
-              className="flex items-center gap-1.5 flex-1 justify-center py-2.5 text-[12px] font-medium rounded-xl border opacity-40 cursor-not-allowed"
-              style={{ borderColor: '#94A3B8', color: '#94A3B8' }}
-              title="Phase 4 — 추후 지원"
-            >
-              <FileText size={12} />
-              문서 생성
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleSaveMemo}
+                disabled={!actionsEnabled || savingMemo}
+                className="flex items-center gap-1.5 flex-1 justify-center py-2.5 text-[12px] font-medium rounded-xl border transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-[#6366F1]/5"
+                style={{ borderColor: '#6366F1', color: '#6366F1' }}
+              >
+                {savingMemo ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                메모로 저장
+              </button>
+              <button
+                onClick={handleExtractTodos}
+                disabled={!actionsEnabled || extractingTodos}
+                className="flex items-center gap-1.5 flex-1 justify-center py-2.5 text-[12px] font-medium rounded-xl border transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-[#22C55E]/5"
+                style={{ borderColor: '#22C55E', color: '#22C55E' }}
+              >
+                {extractingTodos ? <Loader2 size={12} className="animate-spin" /> : <CheckSquare size={12} />}
+                할일 추출
+              </button>
+              <button
+                onClick={handleCreateDocument}
+                disabled={!actionsEnabled || creatingDocument}
+                className="flex items-center gap-1.5 flex-1 justify-center py-2.5 text-[12px] font-medium rounded-xl border transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-[#2563EB]/5"
+                style={{ borderColor: '#2563EB', color: '#2563EB' }}
+              >
+                {creatingDocument ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
+                문서 생성
+              </button>
+            </div>
+            {todoError && (
+              <p className="text-center text-[11px] text-red-500">{todoError}</p>
+            )}
+            {createDocumentError && (
+              <p className="text-center text-[11px] text-red-500">{createDocumentError}</p>
+            )}
           </div>
         )}
       </div>

@@ -20,7 +20,6 @@ export async function renderPptx(
   pres.layout = 'LAYOUT_16x9';
 
   // 기업 테마 색상
-  const primary = `#${theme.primaryColor}`;
   const bgColor = '#F7F8FA';
   const textDark = '#1B1F2B';
 

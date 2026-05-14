@@ -28,8 +28,12 @@
   --color-card: #ffffff;
   --color-border: #e5e5e7;
   --color-muted: #6e6e73;
-  --color-page-bg: #f5f5f7;
+  --color-page-bg: #f2f2f2;
   --font-sans: 'Paperlogy', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --space-control-y: 0.75rem;
+  --space-control-x: 1rem;
+  --space-block-gap: 1.5rem;
+  --space-surface-padding: 1.5rem;
 }
 
 * { box-sizing: border-box; margin: 0; }
@@ -101,14 +105,40 @@ input[type="text"],
 input[type="email"],
 input[type="password"],
 input[type="search"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+input[type="tel"],
+input[type="url"],
+input[type="file"],
 select,
 textarea {
   font-family: inherit;
   font-size: 14px;
+  min-height: 46px;
+  padding: var(--space-control-y) var(--space-control-x);
 }
 
 /* Buttons */
 button { font-family: inherit; }
+button:not([class*="p-"]):not([class*="px-"]):not([class*="py-"]):not([class*="h-"]) {
+  min-height: 44px;
+  padding: 0.7rem 1rem;
+}
+
+textarea {
+  min-height: 120px;
+  line-height: 1.65;
+}
+
+label {
+  display: inline-block;
+  margin-bottom: 0.45rem;
+}
+
+main > div > * + * {
+  margin-top: var(--space-block-gap);
+}
 
 /* Card hover */
 .card-hover {

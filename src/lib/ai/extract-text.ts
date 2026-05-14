@@ -17,7 +17,9 @@ export async function extractText(
     text = await extractPdf(buffer);
   } else if (
     mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-    ext === 'docx'
+    mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.template' ||
+    ext === 'docx' ||
+    ext === 'dotx'
   ) {
     text = await extractDocx(buffer);
   } else if (
@@ -54,15 +56,20 @@ export async function extractText(
 
 // ─── PDF ───────────────────────────────────────────────────
 async function extractPdf(buffer: ArrayBuffer): Promise<string> {
-  const pdfParse = (await import('pdf-parse')).default;
-  const result = await pdfParse(Buffer.from(buffer));
-  return result.text;
+  const { PDFParse } = await import('pdf-parse');
+  const parser = new PDFParse({ data: Buffer.from(buffer) });
+  try {
+    const result = await parser.getText();
+    return result.text;
+  } finally {
+    await parser.destroy().catch(() => {});
+  }
 }
 
 // ─── DOCX ──────────────────────────────────────────────────
 async function extractDocx(buffer: ArrayBuffer): Promise<string> {
   const mammoth = await import('mammoth');
-  const result = await mammoth.extractRawText({ buffer });
+  const result = await mammoth.extractRawText({ buffer: Buffer.from(buffer) });
   return result.value;
 }
 
@@ -202,8 +209,8 @@ async function extractHwp(buffer: ArrayBuffer, fileName: string): Promise<string
   fs.writeFileSync(tmpPath, Buffer.from(buffer));
 
   try {
-    const doc = await new Promise<Record<string, unknown>>((resolve, reject) => {
-      hwp.open(tmpPath, (err: Error | null, doc: Record<string, unknown>) => {
+    const doc = await new Promise<{ _hml?: Record<string, unknown> }>((resolve, reject) => {
+      hwp.open(tmpPath, (err: Error | null, doc) => {
         if (err) reject(err);
         else resolve(doc);
       });

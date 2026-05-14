@@ -1,40 +1,55 @@
 'use client';
 
-import { useState } from 'react';
 import { Search, Plus, Network, List } from 'lucide-react';
 import MemoCard from './memo-card';
 import type { MemoItem } from '@/lib/supabase/types';
 import { useMemoGraph } from '@/hooks/useMemoGraph';
 import { Spinner } from '@/components/ui';
 import dynamic from 'next/dynamic';
+import type { ExtractedTodo } from './memo-todo-confirm-modal';
 
 const MemoGraphView = dynamic(() => import('./MemoGraphView'), { ssr: false });
 
 interface MemoListProps {
   memos: MemoItem[];
   search: string;
+  viewMode: 'list' | 'graph';
+  selectedMemoIds: Set<string>;
+  ideaPanelOpen: boolean;
   onSearchChange: (value: string) => void;
+  onViewModeChange: (value: 'list' | 'graph') => void;
+  onSelectedMemoIdsChange: (value: Set<string>) => void;
+  onIdeaPanelOpenChange: (open: boolean) => void;
   onAdd: () => void;
   onPin: (id: string) => void;
   onView: (memo: MemoItem) => void;
   onEdit: (memo: MemoItem) => void;
   onDelete: (id: string) => void;
   onMemoSaved?: () => void;
+  onSaveIdeaMemo: (text: string) => Promise<void>;
+  onExtractIdeaTodos: (text: string) => Promise<ExtractedTodo[]>;
 }
 
 export default function MemoList({
   memos,
   search,
+  viewMode,
+  selectedMemoIds,
+  ideaPanelOpen,
   onSearchChange,
+  onViewModeChange,
+  onSelectedMemoIdsChange,
+  onIdeaPanelOpenChange,
   onAdd,
   onPin,
   onView,
   onEdit,
   onDelete,
   onMemoSaved,
+  onSaveIdeaMemo,
+  onExtractIdeaTodos,
 }: MemoListProps) {
-  const [tab, setTab] = useState<'list' | 'graph'>('list');
-  const graph = useMemoGraph({ enabled: tab === 'graph' });
+  const graph = useMemoGraph({ enabled: viewMode === 'graph' });
 
   const handleEditById = (id: string) => {
     const memo = memos.find((m) => m.id === id);
@@ -44,7 +59,7 @@ export default function MemoList({
   return (
     <div>
       {/* 검색 + 새 메모 + 탭 */}
-      <div className="flex items-center gap-3 mb-[40px]">
+      <div className="flex items-center gap-3 mb-[40px]" style={{ paddingBottom: 10 }}>
         <div className="relative flex-1">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A0A7B5]" />
           <input
@@ -59,24 +74,24 @@ export default function MemoList({
         {/* 탭 토글 */}
         <div className="flex items-center gap-1 p-1 rounded-lg bg-[#F1F5F9] border border-[#E2E8F0] flex-shrink-0">
           <button
-            onClick={() => setTab('list')}
+            onClick={() => onViewModeChange('list')}
             className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-md transition-all"
             style={{
-              background: tab === 'list' ? 'white' : 'transparent',
-              color: tab === 'list' ? '#1E293B' : '#94A3B8',
-              boxShadow: tab === 'list' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+              background: viewMode === 'list' ? 'white' : 'transparent',
+              color: viewMode === 'list' ? '#1E293B' : '#94A3B8',
+              boxShadow: viewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
             }}
           >
             <List size={13} />
             목록
           </button>
           <button
-            onClick={() => setTab('graph')}
+            onClick={() => onViewModeChange('graph')}
             className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-md transition-all"
             style={{
-              background: tab === 'graph' ? 'white' : 'transparent',
-              color: tab === 'graph' ? '#6366F1' : '#94A3B8',
-              boxShadow: tab === 'graph' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+              background: viewMode === 'graph' ? 'white' : 'transparent',
+              color: viewMode === 'graph' ? '#6366F1' : '#94A3B8',
+              boxShadow: viewMode === 'graph' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
             }}
           >
             <Network size={13} />
@@ -94,7 +109,7 @@ export default function MemoList({
         </button>
       </div>
 
-      {tab === 'list' ? (
+      {viewMode === 'list' ? (
         <>
           <p className="text-[12px] text-[#A0A7B5]" style={{ marginTop: 20, marginBottom: 5 }}>
             총 {memos.length}건{search && ` (검색: "${search}")`}
@@ -136,7 +151,17 @@ export default function MemoList({
               </button>
             </div>
           ) : graph.data ? (
-            <MemoGraphView data={graph.data} onEdit={handleEditById} onMemoSaved={onMemoSaved} />
+            <MemoGraphView
+              data={graph.data}
+              selectedIds={selectedMemoIds}
+              ideaPanelOpen={ideaPanelOpen}
+              onSelectedIdsChange={onSelectedMemoIdsChange}
+              onIdeaPanelOpenChange={onIdeaPanelOpenChange}
+              onEdit={handleEditById}
+              onMemoSaved={onMemoSaved}
+              onSaveIdeaMemo={onSaveIdeaMemo}
+              onExtractIdeaTodos={onExtractIdeaTodos}
+            />
           ) : null}
         </div>
       )}

@@ -26,24 +26,45 @@ export async function GET() {
       return NextResponse.json({ success: true, total: 0, channels: {} });
     }
 
+    const membershipMap = new Map(
+      memberships.map((membership) => [
+        membership.channel_id,
+        membership.last_read_at ?? '1970-01-01T00:00:00Z',
+      ]),
+    );
+    const channelIds = memberships.map((membership) => membership.channel_id);
+    const oldestLastReadAt = memberships.reduce((minValue, membership) => {
+      const currentValue = membership.last_read_at ?? '1970-01-01T00:00:00Z';
+      return currentValue < minValue ? currentValue : minValue;
+    }, '1970-01-01T00:00:00Z');
+
+    const { data: messages } = await admin
+      .from('messages')
+      .select('channel_id, created_at, sender_id')
+      .in('channel_id', channelIds)
+      .gt('created_at', oldestLastReadAt)
+      .neq('sender_id', authUserId)
+      .order('created_at', { ascending: false })
+      .limit(1000);
+
     const channelUnread: Record<string, number> = {};
+    for (const message of (messages ?? []) as Array<{ channel_id: string | null; created_at: string; sender_id: string | null }>) {
+      if (!message.channel_id) continue;
+      const lastRead = membershipMap.get(message.channel_id);
+      if (!lastRead || message.created_at <= lastRead) continue;
+      channelUnread[message.channel_id] = (channelUnread[message.channel_id] ?? 0) + 1;
+    }
+
     let total = 0;
+    for (const unread of Object.values(channelUnread)) {
+      total += unread;
+    }
 
-    for (const m of memberships) {
-      const lastRead = m.last_read_at ?? '1970-01-01T00:00:00Z';
-
-      // 해당 채널에서 last_read_at 이후 + 내가 보내지 않은 메시지 수
-      const { count } = await admin
-        .from('messages')
-        .select('id', { count: 'exact', head: true })
-        .eq('channel_id', m.channel_id)
-        .gt('created_at', lastRead)
-        .neq('sender_id', authUserId);
-
-      const unread = count ?? 0;
-      if (unread > 0) {
-        channelUnread[m.channel_id] = unread;
-        total += unread;
+    if ((messages ?? []).length === 1000) {
+      for (const channelId of channelIds) {
+        if (!channelUnread[channelId]) {
+          channelUnread[channelId] = 0;
+        }
       }
     }
 

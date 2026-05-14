@@ -79,6 +79,9 @@ export async function GET(
         .single();
 
       if (!file) return NextResponse.json({ error: '파일을 찾을 수 없습니다.' }, { status: 404 });
+      if (!file.storage_path) {
+        return NextResponse.json({ error: '파일 경로 정보가 없습니다.' }, { status: 404 });
+      }
 
       // 다운로드 URL 생성 (1시간 유효)
       const { data: urlData } = await admin.storage

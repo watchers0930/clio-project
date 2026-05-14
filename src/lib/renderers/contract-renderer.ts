@@ -154,7 +154,7 @@ export function renderSystemContract(
 
       // 1단계: 중도금 행(row 2) 복제 — progCount 행으로
       if (progCount > 1) {
-        let rs = getRows(tblXml);
+        const rs = getRows(tblXml);
         const origRow = getRowXml(tblXml, rs, 2);
         const clones: string[] = [];
         let idCounter = Date.now(); // 고유 ID 생성용

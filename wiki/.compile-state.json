@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "compiled_at": "2026-04-21T00:00:00.000Z",
-  "project_version": "7.4.0",
+  "compiled_at": "2026-04-24T12:00:00.000Z",
+  "project_version": "7.7.0",
   "mode": "codebase",
   "sources_read": [
     "README.md",
@@ -15,6 +15,12 @@
     "supabase/migrations/019_law_chunks.sql",
     "supabase/migrations/020_work_logs.sql",
     "supabase/migrations/021_memo_embeddings.sql",
+    "supabase/migrations/022_document_embeddings.sql",
+    "src/lib/ai/embed-document.ts",
+    "src/app/api/documents/embed-all/route.ts",
+    "src/app/api/search/route.ts",
+    "src/app/api/documents/route.ts",
+    "src/app/api/documents/[id]/route.ts",
     "docs/01-plan/features/clio.plan.md",
     "docs/01-plan/features/memo-graph.plan.md",
     "docs/01-plan/features/memo-insight.plan.md",
@@ -32,7 +38,13 @@
     "src/components/memos/memo-idea-panel.tsx",
     "src/components/memos/memo-todo-confirm-modal.tsx",
     "src/hooks/useMemoIdea.ts",
-    "src/app/api/todos/from-idea/route.ts"
+    "src/app/api/todos/from-idea/route.ts",
+    "src/app/api/files/[id]/reprocess/route.ts",
+    "src/app/api/files/process/route.ts",
+    "src/app/(app)/files/page.tsx",
+    "src/components/memos/MemoGraphView.tsx",
+    "src/components/memos/MemoGraphSidePanel.tsx",
+    "src/components/memos/memo-view-modal.tsx"
   ],
   "articles": [
     {
@@ -67,15 +79,15 @@
       "file": "topics/database.md",
       "title": "데이터베이스 스키마 및 RLS 정책",
       "coverage": "high",
-      "sources": 10,
-      "last_updated": "2026-04-20"
+      "sources": 11,
+      "last_updated": "2026-04-24"
     },
     {
       "file": "topics/ai-features.md",
       "title": "AI 기능",
       "coverage": "high",
-      "sources": 18,
-      "last_updated": "2026-04-20"
+      "sources": 24,
+      "last_updated": "2026-04-24"
     },
     {
       "file": "topics/messaging.md",
@@ -95,8 +107,8 @@
       "file": "topics/file-management.md",
       "title": "파일 관리",
       "coverage": "high",
-      "sources": 4,
-      "last_updated": "2026-04-13"
+      "sources": 10,
+      "last_updated": "2026-04-24"
     },
     {
       "file": "topics/work-logs.md",

@@ -59,13 +59,17 @@ export function OnboardingModal() {
   const [step, setStep] = useState(0);
 
   useEffect(() => {
+    let timer: number | null = null;
     try {
       if (!localStorage.getItem('clio_onboarding_done')) {
-        setOpen(true);
+        timer = window.setTimeout(() => setOpen(true), 0);
       }
     } catch {
       // localStorage 접근 불가 환경
     }
+    return () => {
+      if (timer != null) window.clearTimeout(timer);
+    };
   }, []);
 
   const handleClose = () => {
@@ -83,7 +87,7 @@ export function OnboardingModal() {
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={handleClose} />
 
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+      <div className="relative mx-4 w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
         {/* 닫기 */}
         <button
           onClick={handleClose}
@@ -112,7 +116,7 @@ export function OnboardingModal() {
         </div>
 
         {/* 본문 */}
-        <div className="px-8 pt-6 pb-4">
+        <div className="px-5 pb-4 pt-6 sm:px-8">
           <h2 className="text-[18px] font-bold text-[#1B1F2B] mb-2">{slide.title}</h2>
           <p className="text-[13px] text-[#6B7280] leading-relaxed">{slide.desc}</p>
         </div>
@@ -134,7 +138,7 @@ export function OnboardingModal() {
         </div>
 
         {/* 푸터 */}
-        <div className="flex items-center justify-between px-8 py-5 border-t border-[#E2E5EA] bg-[#F7F8FA]">
+        <div className="flex items-center justify-between border-t border-[#E2E5EA] bg-[#F7F8FA] px-5 py-4 sm:px-8 sm:py-5">
           <button
             onClick={() => setStep(s => s - 1)}
             disabled={step === 0}

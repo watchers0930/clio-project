@@ -90,14 +90,14 @@ export function QualityCheckPanel({ documentId, onClose, autoRequest }: QualityC
       )}
 
       {/* 카테고리 탭 */}
-      <div className="px-3 py-2 border-b border-[#e5e5e7] flex gap-1 flex-wrap shrink-0">
+      <div className="px-4 py-3 border-b border-[#e5e5e7] flex gap-2 flex-wrap shrink-0">
         {TABS.map((tab) => {
           const count = tab.id !== 'all' ? countByCategory(tab.id) : (result?.items.length ?? 0);
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
+              className={`px-3.5 py-2 rounded-lg text-[11px] font-medium transition-colors ${
                 activeTab === tab.id
                   ? 'bg-[#1d1d1f] text-white'
                   : 'text-[#6e6e73] hover:bg-[#f5f5f7]'
@@ -115,7 +115,7 @@ export function QualityCheckPanel({ documentId, onClose, autoRequest }: QualityC
       </div>
 
       {/* 콘텐츠 */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto p-5 space-y-4">
         {/* 로딩 */}
         {status === 'loading' && (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
@@ -165,7 +165,7 @@ export function QualityCheckPanel({ documentId, onClose, autoRequest }: QualityC
       </div>
 
       {/* 하단 액션 */}
-      <div className="px-4 py-4 border-t border-[#e5e5e7] shrink-0 space-y-3">
+      <div className="px-5 py-4 border-t border-[#e5e5e7] shrink-0 space-y-3.5">
         <p className="text-[10px] text-[#8e8e93] leading-relaxed">
           ※ AI 검수는 참고용입니다. 최종 확인은 담당자가 직접 수행하세요.
         </p>
@@ -174,7 +174,7 @@ export function QualityCheckPanel({ documentId, onClose, autoRequest }: QualityC
             <button
               onClick={() => requestCheck(true)}
               disabled={status === 'loading'}
-              className="flex-1 px-3 py-2.5 rounded-xl border border-[#e5e5e7] text-xs text-[#6e6e73] hover:bg-[#f5f5f7] disabled:opacity-40 transition-colors"
+            className="flex-1 px-4 py-2.5 rounded-xl border border-[#e5e5e7] text-xs text-[#6e6e73] hover:bg-[#f5f5f7] disabled:opacity-40 transition-colors"
             >
               재검수
             </button>
@@ -182,7 +182,7 @@ export function QualityCheckPanel({ documentId, onClose, autoRequest }: QualityC
           <button
             onClick={() => requestCheck(false)}
             disabled={status === 'loading'}
-            className="flex-1 px-3 py-2.5 rounded-xl bg-[#0071e3] text-white text-xs font-medium hover:bg-[#0077ed] disabled:opacity-40 transition-colors"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-[#0071e3] text-white text-xs font-medium hover:bg-[#0077ed] disabled:opacity-40 transition-colors"
           >
             {status === 'loading' ? '검수 중...' : 'AI 검수 요청'}
           </button>

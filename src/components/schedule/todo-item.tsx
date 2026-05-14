@@ -62,7 +62,7 @@ export default function TodoItemRow({ todo, onToggle, onEdit, onDelete }: TodoIt
 
       {/* 우선순위 뱃지 */}
       <span
-        className="text-[10px] font-medium px-2 py-0.5 rounded-full flex-shrink-0"
+        className="text-[10px] font-medium px-2.5 py-1 rounded-full flex-shrink-0"
         style={{
           backgroundColor: getPriorityColor(todo.priority as TodoPriority) + '14',
           color: getPriorityColor(todo.priority as TodoPriority),
@@ -72,11 +72,11 @@ export default function TodoItemRow({ todo, onToggle, onEdit, onDelete }: TodoIt
       </span>
 
       {/* 액션 */}
-      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-        <button onClick={() => onEdit(todo)} className="p-1 rounded hover:bg-[#f5f5f7]">
+      <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+        <button onClick={() => onEdit(todo)} className="p-1.5 rounded hover:bg-[#f5f5f7]">
           <Pencil size={13} className="text-[#7C8494]" />
         </button>
-        <button onClick={() => onDelete(todo.id)} className="p-1 rounded hover:bg-[#1d1d1f]/5">
+        <button onClick={() => onDelete(todo.id)} className="p-1.5 rounded hover:bg-[#1d1d1f]/5">
           <Trash2 size={13} className="text-[#ff3b30]/60" />
         </button>
       </div>

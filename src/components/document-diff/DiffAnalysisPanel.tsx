@@ -170,7 +170,7 @@ export function DiffAnalysisPanel({
 
           {!started && !error && (
             <p className="text-[13px] text-[#888] py-4 text-center">
-              "분석 시작" 버튼을 눌러 변경 내용을 AI로 해석하세요.
+              &quot;분석 시작&quot; 버튼을 눌러 변경 내용을 AI로 해석하세요.
             </p>
           )}
 

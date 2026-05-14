@@ -7,7 +7,7 @@ import { getAuthUserId } from '@/lib/auth-helper';
  * POST /api/messages/share-file
  * 메신저에서 파일 읽기 권한을 공유하는 메시지 전송
  *
- * body: { channelId, fileId, expiresInDays }
+ * body: { channelId, fileId, expiresInDays, message? }
  * - 파일은 원래 위치에 그대로 유지
  * - 상대방에게 기간 제한 읽기 권한만 부여
  */
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     const authUserId = await getAuthUserId(supabase);
     if (!authUserId) return NextResponse.json({ success: false, error: '인증 필요' }, { status: 401 });
 
-    const { channelId, fileId, expiresInDays } = await request.json();
+    const { channelId, fileId, expiresInDays, message } = await request.json();
 
     if (!channelId || !fileId) {
       return NextResponse.json({ success: false, error: '채널 ID와 파일 ID가 필요합니다.' }, { status: 400 });
@@ -62,11 +62,15 @@ export async function POST(request: NextRequest) {
       ? `${(sizeNum / 1024).toFixed(0)} KB`
       : `${(sizeNum / (1024 * 1024)).toFixed(1)} MB`;
 
+    const messageContent = typeof message === 'string' && message.trim().length > 0
+      ? message.trim()
+      : `📎 파일을 공유했습니다: ${file.name}`;
+
     // 메시지 생성 (shared_file_id 포함)
     const { data: msg, error: msgErr } = await admin.from('messages').insert({
       channel_id: channelId,
       sender_id: authUserId,
-      content: `📎 파일을 공유했습니다: ${file.name}`,
+      content: messageContent,
       shared_file_id: fileId,
       attachment_name: file.name,
       attachment_size: sizeStr,
@@ -105,6 +109,7 @@ export async function POST(request: NextRequest) {
         shared_with: members.map(m => m.user_id),
         expires_at: expiresAt,
         expires_in_days: days,
+        message: messageContent,
       },
     }).then(() => {}, () => {});
 

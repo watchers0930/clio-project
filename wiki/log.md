@@ -1,5 +1,49 @@
 # Wiki Compile Log
 
+## 2026-04-24 — v7.7.0 갱신 (v14)
+
+**프로젝트 버전:** v7.7.0
+
+**업데이트된 토픽:**
+- `ai-features` — embed-document.ts 신규, document_embeddings 파이프라인, 통합 검색 알고리즘(title-only + work_logs + 벡터 threshold 0.15), embed-all 백필 API, admin client bypass 결정
+- `database` — document_embeddings 테이블(migration 022) + match_document_embeddings RPC + RLS 정책 추가
+- `file-management` — 파일관리 UI에서 AI 생성 문서 병합 표시, sourceType 구분, 문서 항목 클릭 동작 차이 설명
+
+**변경된 소스:**
+- `supabase/migrations/022_document_embeddings.sql` (신규)
+- `src/lib/ai/embed-document.ts` (신규)
+- `src/app/api/documents/embed-all/route.ts` (신규)
+- `src/app/api/search/route.ts` (title-only 검색, work_logs, document_embeddings 통합)
+- `src/app/api/documents/route.ts` (embedDocument fire-and-forget 추가)
+- `src/app/api/documents/[id]/route.ts` (content 변경 시 재임베딩)
+- `src/app/(app)/files/page.tsx` (AI 생성 문서 병합 로드)
+
+**소스 스캔:** 7개
+**변경된 소스:** 7개
+
+---
+
+## 2026-04-24 — v7.5.0 갱신 (v13)
+
+**프로젝트 버전:** v7.5.0
+
+**업데이트된 토픽:**
+- `file-management` — 재처리 API(`POST /api/files/[id]/reprocess`) 신규, `maxDuration=60` 파이프라인 확장, `isOwner` UI 가드, process 내부 엔드포인트 API Surface 추가
+- `memos` — 그래프 튕김 버그 수정 원인/해법 Gotchas 추가, 버전 v7.5.0 반영
+
+**변경된 소스:**
+- `src/app/api/files/[id]/reprocess/route.ts` (신규)
+- `src/app/api/files/process/route.ts` (maxDuration=60 추가)
+- `src/app/(app)/files/page.tsx` (isOwner 조건 + reprocess 버튼)
+- `src/components/memos/MemoGraphView.tsx` (absolute overlay 레이아웃)
+- `src/components/memos/MemoGraphSidePanel.tsx` (스타일 개선)
+- `src/components/memos/memo-view-modal.tsx` (FormModal 디자인 통일)
+
+**소스 스캔:** 6개
+**변경된 소스:** 6개
+
+---
+
 ## 2026-04-21 — GAP 분석 후 소스 확인 등록 (v12)
 
 **업데이트된 토픽:** 없음 (memos 토픽 내용 이미 정확)

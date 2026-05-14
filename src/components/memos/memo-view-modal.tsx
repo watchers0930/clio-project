@@ -20,14 +20,18 @@ interface MemoViewModalProps {
   open: boolean;
   onClose: () => void;
   onEdit: (memo: MemoItem) => void;
+  onSearch: (memo: MemoItem) => void;
+  onCreateDocument: (memo: MemoItem) => void;
 }
 
-export default function MemoViewModal({ memo, open, onClose, onEdit }: MemoViewModalProps) {
+export default function MemoViewModal({ memo, open, onClose, onEdit, onSearch, onCreateDocument }: MemoViewModalProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (!open) { setVisible(false); return; }
-    setTimeout(() => setVisible(true), 10);
+    const timer = window.setTimeout(() => {
+      setVisible(open);
+    }, open ? 10 : 0);
+    return () => window.clearTimeout(timer);
   }, [open]);
 
   useEffect(() => {
@@ -72,7 +76,7 @@ export default function MemoViewModal({ memo, open, onClose, onEdit }: MemoViewM
         <div style={{ height: 5, background: `linear-gradient(90deg, ${accentColor}, ${accentColor}99)`, flexShrink: 0 }} />
 
         {/* 헤더 */}
-        <div className="flex items-start justify-between gap-4 border-b border-[#E2E8F0] flex-shrink-0" style={{ padding: '34px 38px 30px' }}>
+        <div className="flex items-start justify-between gap-4 flex-shrink-0 px-[38px] pt-[34px] pb-[24px]">
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
             {memo.is_pinned && (
               <Pin size={14} className="text-[#6366F1] flex-shrink-0" style={{ transform: 'rotate(45deg)' }} />
@@ -81,10 +85,10 @@ export default function MemoViewModal({ memo, open, onClose, onEdit }: MemoViewM
               {memo.title}
             </h3>
           </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={() => { onClose(); onEdit(memo); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-[#64748B] border border-[#E2E8F0] rounded-lg hover:bg-[#F8FAFC] hover:text-[#1E293B] transition-colors"
+              className="flex items-center gap-1.5 px-3.5 py-2 text-[12px] font-medium text-[#64748B] border border-[#E2E8F0] rounded-lg hover:bg-[#F8FAFC] hover:text-[#1E293B] transition-colors"
             >
               <Pencil size={12} />
               수정
@@ -99,7 +103,28 @@ export default function MemoViewModal({ memo, open, onClose, onEdit }: MemoViewM
         </div>
 
         {/* 내용 */}
-        <div className="overflow-y-auto px-8 py-6 flex-1">
+        <div className="overflow-y-auto px-[38px] pb-[38px] flex-1 flex flex-col gap-4">
+          <div className="h-[3px] rounded-full" style={{ background: `linear-gradient(90deg, ${accentColor}, ${accentColor}99)` }} />
+          <div className="rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">Document Connection</p>
+            <p className="mt-1 text-[12px] leading-5 text-[#475569]">
+              메모는 독립 기록이 아니라 문서 작성과 검색으로 이어지는 초안 자산입니다.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2.5">
+              <button
+                onClick={() => onSearch(memo)}
+                className="rounded-lg border border-[#D7E7FF] bg-white px-3.5 py-2.5 text-[12px] font-medium text-[#2E6FF2] hover:bg-[#F3F8FF] transition-colors"
+              >
+                관련 문서 검색
+              </button>
+              <button
+                onClick={() => onCreateDocument(memo)}
+                className="rounded-lg border border-[#D7EFDE] bg-white px-3 py-2 text-[12px] font-medium text-[#258A4E] hover:bg-[#F4FBF6] transition-colors"
+              >
+                메모로 문서 작성
+              </button>
+            </div>
+          </div>
           {memo.content ? (
             <p className="text-[14px] text-[#334155] leading-[1.85] whitespace-pre-wrap">
               {memo.content}
@@ -107,11 +132,7 @@ export default function MemoViewModal({ memo, open, onClose, onEdit }: MemoViewM
           ) : (
             <p className="text-[13px] text-[#94A3B8] italic">내용 없음</p>
           )}
-        </div>
-
-        {/* 날짜 */}
-        <div className="px-8 py-5 border-t border-[#E2E8F0] flex-shrink-0">
-          <p className="text-[11px] text-[#94A3B8]">
+          <p className="text-[11px] text-[#94A3B8] mt-auto pt-4">
             {format(new Date(memo.updated_at), 'yyyy년 M월 d일 HH:mm', { locale: ko })} 수정
           </p>
         </div>

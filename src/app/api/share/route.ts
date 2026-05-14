@@ -15,7 +15,7 @@ function generateToken(): string {
 /**
  * GET /api/share — 내 공유 링크 목록
  */
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createServerSupabaseClient();
     if (!supabase) return NextResponse.json({ error: 'DB 미설정' }, { status: 503 });

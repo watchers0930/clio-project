@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
 
 export async function POST(
   request: NextRequest,
@@ -22,6 +23,16 @@ export async function POST(
   const authUserId = await getAuthUserId(supabase);
   if (!authUserId) {
     return NextResponse.json({ error: '인증 필요' }, { status: 401 });
+  }
+
+  const roleInfo = await getUserRoleInfo(supabase, authUserId);
+  if (!roleInfo) {
+    return NextResponse.json({ error: '사용자 정보 없음' }, { status: 403 });
+  }
+
+  const canAccess = await canAccessDocument(supabase, authUserId, roleInfo.role, roleInfo.department_id, id);
+  if (!canAccess) {
+    return NextResponse.json({ error: '문서 접근 권한이 없습니다.' }, { status: 403 });
   }
 
   const { data: doc } = await supabase

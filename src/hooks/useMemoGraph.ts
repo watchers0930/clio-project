@@ -36,7 +36,12 @@ export function useMemoGraph({ enabled = true }: UseMemoGraphOptions = {}): UseM
   }, []);
 
   useEffect(() => {
-    if (enabled && !data) fetch_();
+    if (enabled && !data) {
+      const timer = window.setTimeout(() => {
+        fetch_();
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
   }, [fetch_, enabled, data]);
 
   return { data, loading, error, refresh: fetch_ };

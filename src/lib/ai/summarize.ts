@@ -29,7 +29,7 @@ ${transcript.slice(0, 15000)}
   "keyPoints": ["주요 논의사항 1", "주요 논의사항 2", ...],
   "actionItems": ["후속 조치 1 (담당자 포함)", "후속 조치 2", ...]
 }`,
-    maxTokens: 2000,
+    maxOutputTokens: 2000,
     temperature: 0.2,
   });
 
@@ -50,7 +50,7 @@ export async function summarizeText(text: string): Promise<string> {
   const { text: summary } = await generateText({
     model: openai('gpt-4o-mini'),
     prompt: `다음 내용을 한국어 2문장으로 간결하게 요약하세요:\n\n${text.slice(0, 3000)}`,
-    maxTokens: 200,
+    maxOutputTokens: 200,
     temperature: 0.2,
   });
   return summary;

@@ -35,13 +35,13 @@ export function RiskFilter({ filter, onChange, counts }: RiskFilterProps) {
   return (
     <div className="bg-white border border-[#E2E5EA] rounded-2xl p-4 space-y-3">
       {/* 리스크 수준 */}
-      <div className="flex items-center gap-2 flex-wrap mb-[5px] pb-[5px]">
+      <div className="mb-[5px] flex flex-wrap items-center gap-2 pb-[5px]">
         {levels.map(btn => (
           <button
             key={btn.key}
             onClick={() => onChange({ ...filter, level: btn.key })}
             className={cn(
-              'inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-[12px] font-medium border transition-all m-[5px]',
+              'inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[12px] font-medium transition-all sm:px-3.5',
               filter.level === btn.key
                 ? 'bg-[#2E6FF2] text-white border-[#2E6FF2] shadow-sm'
                 : 'bg-white text-[#555] border-[#E2E5EA] hover:border-[#2E6FF2]/60',
@@ -63,13 +63,13 @@ export function RiskFilter({ filter, onChange, counts }: RiskFilterProps) {
 
 
       {/* 유형 */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex flex-wrap items-center gap-2">
         {categories.map(btn => (
           <button
             key={btn.key}
             onClick={() => onChange({ ...filter, category: btn.key })}
             className={cn(
-              'inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-[12px] font-medium border transition-all m-[5px]',
+              'inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[12px] font-medium transition-all sm:px-3.5',
               filter.category === btn.key
                 ? 'bg-[#1B1F2B] text-white border-[#1B1F2B] shadow-sm'
                 : 'bg-white text-[#555] border-[#E2E5EA] hover:border-[#1B1F2B]/40',

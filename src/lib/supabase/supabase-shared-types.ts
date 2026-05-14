@@ -1,0 +1,12 @@
+export type UserRole = 'admin' | 'manager' | 'user';
+export type FileStatus = 'uploading' | 'processing' | 'completed' | 'indexed' | 'error';
+export type TemplateScope = 'department' | 'company';
+export type TemplateType = TemplateScope;
+export type DocumentStatus = 'draft' | 'completed';
+export type ChannelType = 'department' | 'direct' | 'group';
+export type EventType = 'meeting' | 'deadline' | 'personal' | 'company' | 'other';
+export type TodoPriority = 'high' | 'medium' | 'low';
+export type TodoStatus = 'active' | 'completed';
+export type MemoColor = 'default' | 'blue' | 'green' | 'yellow' | 'red' | 'purple';
+export type QualityCategory = 'spelling' | 'format' | 'logic' | 'missing';
+export type QualitySeverity = 'error' | 'warning' | 'suggestion';

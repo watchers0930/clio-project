@@ -8,18 +8,14 @@ import {
   Packer,
   Paragraph,
   TextRun,
-  HeadingLevel,
-  AlignmentType,
-  TableRow,
-  TableCell,
-  Table,
-  WidthType,
-  BorderStyle,
 } from 'docx';
 import Docxtemplater from 'docxtemplater';
 import PizZip from 'pizzip';
+import type { TemplateBundle } from '@/lib/templates/template-schema';
 import type { RenderOutput, CorporateTheme, DocxReplacement, DocxFormData, DocxTableCell, DocxTableStructure } from './types';
 import { DEFAULT_THEME } from './types';
+import { markdownToDocxElements } from './docx-markdown';
+import { buildTemplateRenderData } from './template-render-data';
 
 const FONT_MAP: Record<string, string> = {
   '맑은 고딕': 'Malgun Gothic',
@@ -32,14 +28,40 @@ const FONT_MAP: Record<string, string> = {
   'Times New Roman': 'Times New Roman',
 };
 
+function normalizeDocxPackage(zip: PizZip) {
+  const contentTypesPath = '[Content_Types].xml';
+  const contentTypesXml = zip.file(contentTypesPath)?.asText();
+  if (!contentTypesXml) return;
+
+  const normalizedXml = contentTypesXml
+    .replace(
+      /application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.template\.main\+xml/g,
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml',
+    )
+    .replace(
+      /application\/vnd\.ms-word\.template\.macroEnabled\.main\+xml/g,
+      'application/vnd.ms-word.document.macroEnabled.main+xml',
+    );
+
+  if (normalizedXml !== contentTypesXml) {
+    zip.file(contentTypesPath, normalizedXml);
+  }
+}
+
 export async function renderDocx(
   markdown: string,
   title: string,
   theme: CorporateTheme = DEFAULT_THEME,
+  options?: {
+    templateBundle?: TemplateBundle | null;
+    documentInputs?: Record<string, string>;
+  },
 ): Promise<RenderOutput> {
   const fontFamily = FONT_MAP[theme.fontFamily] ?? theme.fontFamilyEn;
   const fontSize = theme.fontSize * 2; // half-point 단위
-  const children = markdownToDocxElements(markdown, fontFamily, fontSize);
+  const children = options?.templateBundle
+    ? buildTemplateDocxChildren(markdown, title, fontFamily, fontSize, options.templateBundle, options.documentInputs)
+    : markdownToDocxElements(markdown, fontFamily, fontSize);
 
   const doc = new Document({
     sections: [{ properties: {}, children }],
@@ -71,6 +93,55 @@ export async function renderDocx(
   };
 }
 
+function buildTemplateDocxChildren(
+  markdown: string,
+  title: string,
+  fontFamily: string,
+  fontSize: number,
+  templateBundle: TemplateBundle,
+  documentInputs?: Record<string, string>,
+) {
+  const data = buildTemplateRenderData({ markdown, title, templateBundle, documentInputs });
+  const children: Paragraph[] = [];
+  const titleText = data.replacements.report_title || title;
+  const metaParts = [
+    data.replacements.author ? `작성자 ${data.replacements.author}` : '',
+    data.replacements.report_date ? `작성일 ${data.replacements.report_date}` : '',
+  ].filter(Boolean);
+
+  children.push(new Paragraph({
+    spacing: { after: 200 },
+    children: [new TextRun({ text: titleText, bold: true, size: fontSize + 12, font: fontFamily })],
+  }));
+
+  if (!data.isWorklog && data.replacements.subtitle) {
+    children.push(new Paragraph({
+      spacing: { after: 160 },
+      children: [new TextRun({ text: data.replacements.subtitle, italics: true, size: fontSize, font: fontFamily })],
+    }));
+  }
+
+  if (metaParts.length > 0) {
+    children.push(new Paragraph({
+      spacing: { after: 240 },
+      children: [new TextRun({ text: metaParts.join('  |  '), size: fontSize - 2, font: fontFamily })],
+    }));
+  }
+
+  for (const section of data.sections) {
+    children.push(new Paragraph({
+      spacing: { before: 240, after: 120 },
+      children: [new TextRun({ text: section.title, bold: true, size: fontSize + 4, font: fontFamily })],
+    }));
+
+    const body = section.bodyMarkdown.trim() || '[내용 없음]';
+    const bodyChildren = markdownToDocxElements(body, fontFamily, fontSize) as Paragraph[];
+    children.push(...bodyChildren);
+  }
+
+  return children;
+}
+
 export async function renderDocxFromTemplate(
   templateBuffer: Buffer,
   replacements: DocxReplacement,
@@ -92,6 +163,7 @@ export async function renderDocxFromTemplate(
 
   // 2단계: XML 직접 텍스트 치환 (빈칸, _____, ( ) 등)
   const zipAfter = doc.getZip();
+  normalizeDocxPackage(zipAfter);
   const xmlFiles = ['word/document.xml', 'word/header1.xml', 'word/header2.xml', 'word/footer1.xml', 'word/footer2.xml'];
 
   for (const xmlPath of xmlFiles) {
@@ -175,6 +247,37 @@ function extractCellText(cellXml: string): string {
   return texts.join('').trim();
 }
 
+function escapeXmlText(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function replaceParagraphsByContains(xmlContent: string, needle: string, replacement: string) {
+  if (!needle) return xmlContent;
+  const paragraphs = findTopLevelBlocks(xmlContent, 'w:p');
+  let nextXml = xmlContent;
+
+  for (let i = paragraphs.length - 1; i >= 0; i--) {
+    const paragraph = paragraphs[i];
+    const plainText = extractCellText(paragraph.content).replace(/\s+/g, ' ').trim();
+    if (!plainText.includes(needle)) continue;
+
+    const pPrMatch = paragraph.content.match(/<w:pPr[\s\S]*?<\/w:pPr>/);
+    const pPr = pPrMatch ? pPrMatch[0] : '';
+    const runXml = `<w:r><w:t xml:space="preserve">${escapeXmlText(replacement)}</w:t></w:r>`;
+    const newParagraph = paragraph.content.replace(/<w:p[^>]*>[\s\S]*<\/w:p>/, (fullMatch) => {
+      const openMatch = fullMatch.match(/^<w:p[^>]*>/)?.[0] ?? '<w:p>';
+      return `${openMatch}${pPr}${runXml}</w:p>`;
+    });
+
+    nextXml = nextXml.slice(0, paragraph.start) + newParagraph + nextXml.slice(paragraph.end);
+  }
+
+  return nextXml;
+}
+
 /** w:tc 셀에서 gridSpan 추출 */
 function extractGridSpan(cellXml: string): number {
   const m = cellXml.match(/<w:gridSpan\s+w:val="(\d+)"/);
@@ -253,6 +356,49 @@ export function extractDocxTableStructure(templateBuffer: Buffer): DocxTableStru
 
   result.hasEmptyCells = result.emptyCells.length > 0;
   return result;
+}
+
+export function collapseWorklogNextPlanRows(docxBuffer: Buffer): Buffer {
+  try {
+    const zip = new PizZip(docxBuffer);
+    const documentPath = 'word/document.xml';
+    const docXml = zip.file(documentPath)?.asText();
+    if (!docXml) return docxBuffer;
+
+    const paragraphs = findTopLevelBlocks(docXml, 'w:p');
+    const nextPlanParagraph = paragraphs.find((paragraph) => {
+      const text = extractCellText(paragraph.content).replace(/\s+/g, '');
+      return text.includes('차일업무계획');
+    });
+    if (!nextPlanParagraph) return docxBuffer;
+
+    const tables = findTopLevelBlocks(docXml, 'w:tbl');
+    const targetTable = tables.find((table) => {
+      if (table.start < nextPlanParagraph.end) return false;
+      const rows = findTopLevelBlocks(table.content, 'w:tr');
+      if (rows.length < 3) return false;
+      const firstRowTexts = findTopLevelBlocks(rows[0].content, 'w:tc')
+        .map((cell) => extractCellText(cell.content).replace(/\s+/g, ''));
+      return firstRowTexts.includes('번호') && firstRowTexts.includes('작업내용');
+    });
+    if (!targetTable) return docxBuffer;
+
+    const rows = findTopLevelBlocks(targetTable.content, 'w:tr');
+    if (rows.length <= 2) return docxBuffer;
+
+    let nextTableXml = targetTable.content;
+    for (let index = rows.length - 1; index >= 2; index--) {
+      const row = rows[index];
+      nextTableXml = nextTableXml.slice(0, row.start) + nextTableXml.slice(row.end);
+    }
+
+    const nextDocXml = docXml.slice(0, targetTable.start) + nextTableXml + docXml.slice(targetTable.end);
+    zip.file(documentPath, nextDocXml);
+    return Buffer.from(zip.generate({ type: 'nodebuffer' }));
+  } catch (error) {
+    console.error('[collapseWorklogNextPlanRows]', error);
+    return docxBuffer;
+  }
 }
 
 // ─── Placeholder 주입 ───────────────────────────────────────
@@ -364,14 +510,19 @@ export async function renderDocxFromFormData(
   if (extraReplacements && Object.keys(extraReplacements).length > 0) {
     const zipAfter = doc.getZip();
     const xmlFiles = ['word/document.xml', 'word/header1.xml', 'word/header2.xml', 'word/footer1.xml', 'word/footer2.xml'];
+    const paragraphReplacements = Object.entries(extraReplacements).filter(([key, value]) => key.startsWith('__paragraph__:') && value);
+    const textReplacements = Object.entries(extraReplacements).filter(([key, value]) => !key.startsWith('__paragraph__:') && key && value);
     for (const xmlPath of xmlFiles) {
       const file = zipAfter.file(xmlPath);
       if (!file) continue;
       let xmlContent = file.asText();
-      for (const [oldText, newText] of Object.entries(extraReplacements)) {
+      for (const [oldText, newText] of textReplacements) {
         if (!oldText || !newText) continue;
         const escaped = oldText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         xmlContent = xmlContent.replace(new RegExp(escaped, 'g'), newText);
+      }
+      for (const [key, newText] of paragraphReplacements) {
+        xmlContent = replaceParagraphsByContains(xmlContent, key.replace('__paragraph__:', ''), newText);
       }
       zipAfter.file(xmlPath, xmlContent);
     }
@@ -455,6 +606,7 @@ export async function renderDocxFromFormData(
 
   // 폰트를 페이퍼로지로 변경 (document.xml + styles.xml + theme)
   const zipFinal = doc.getZip();
+  normalizeDocxPackage(zipFinal);
   const fontTargets = ['word/document.xml', 'word/styles.xml', 'word/theme/theme1.xml'];
   for (const xmlPath of fontTargets) {
     const f = zipFinal.file(xmlPath);
@@ -479,83 +631,4 @@ export async function renderDocxFromFormData(
     extension: 'docx',
     fileName: `${title}.docx`,
   };
-}
-
-/** 마크다운 → docx Paragraph[] */
-function markdownToDocxElements(md: string, fontFamily: string, fontSize: number): (Paragraph | Table)[] {
-  const lines = md.split('\n');
-  const elements: (Paragraph | Table)[] = [];
-  let i = 0;
-
-  while (i < lines.length) {
-    const line = lines[i];
-
-    // 테이블
-    if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
-      const tableLines: string[] = [];
-      while (i < lines.length && lines[i].trim().startsWith('|') && lines[i].trim().endsWith('|')) {
-        if (!/^\|[\s\-:|]+\|$/.test(lines[i].trim())) {
-          tableLines.push(lines[i]);
-        }
-        i++;
-      }
-      if (tableLines.length > 0) elements.push(parseTable(tableLines, fontFamily, fontSize));
-      continue;
-    }
-
-    if (line.startsWith('### ')) {
-      elements.push(new Paragraph({ children: [new TextRun({ text: line.slice(4).trim(), font: fontFamily, bold: true })], heading: HeadingLevel.HEADING_3, spacing: { before: 240, after: 120 } }));
-    } else if (line.startsWith('## ')) {
-      elements.push(new Paragraph({ children: [new TextRun({ text: line.slice(3).trim(), font: fontFamily, bold: true })], heading: HeadingLevel.HEADING_2, spacing: { before: 360, after: 120 } }));
-    } else if (line.startsWith('# ')) {
-      elements.push(new Paragraph({ children: [new TextRun({ text: line.slice(2).trim(), font: fontFamily, bold: true })], heading: HeadingLevel.HEADING_1, spacing: { before: 480, after: 200 } }));
-    } else if (/^[-*]\s/.test(line.trim())) {
-      elements.push(new Paragraph({ children: parseInlineFormatting(line.trim().slice(2).trim(), fontFamily, fontSize), bullet: { level: 0 }, spacing: { after: 60 } }));
-    } else if (/^\d+\.\s/.test(line.trim())) {
-      const text = line.trim().replace(/^\d+\.\s/, '');
-      elements.push(new Paragraph({ children: parseInlineFormatting(text, fontFamily, fontSize), spacing: { after: 60 } }));
-    } else if (/^---+$/.test(line.trim())) {
-      elements.push(new Paragraph({ children: [new TextRun({ text: '', font: fontFamily })], border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'CCCCCC' } }, spacing: { before: 200, after: 200 } }));
-    } else if (line.trim() === '') {
-      elements.push(new Paragraph({ children: [new TextRun({ text: '', font: fontFamily })] }));
-    } else {
-      elements.push(new Paragraph({ children: parseInlineFormatting(line, fontFamily, fontSize), spacing: { after: 60 } }));
-    }
-
-    i++;
-  }
-
-  return elements;
-}
-
-function parseInlineFormatting(text: string, fontFamily: string, fontSize: number): TextRun[] {
-  const runs: TextRun[] = [];
-  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|([^*`]+))/g;
-  let match;
-
-  while ((match = regex.exec(text)) !== null) {
-    if (match[2]) runs.push(new TextRun({ text: match[2], bold: true, font: fontFamily, size: fontSize }));
-    else if (match[3]) runs.push(new TextRun({ text: match[3], italics: true, font: fontFamily, size: fontSize }));
-    else if (match[4]) runs.push(new TextRun({ text: match[4], font: 'Consolas', size: fontSize }));
-    else if (match[5]) runs.push(new TextRun({ text: match[5], font: fontFamily, size: fontSize }));
-  }
-
-  if (runs.length === 0) runs.push(new TextRun({ text, font: fontFamily, size: fontSize }));
-  return runs;
-}
-
-function parseTable(tableLines: string[], fontFamily: string, fontSize: number): Table {
-  const rows = tableLines.map((line, rowIdx) => {
-    const cells = line.split('|').filter(c => c.trim() !== '').map(c => c.trim());
-    return new TableRow({
-      children: cells.map(cellText =>
-        new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: cellText, bold: rowIdx === 0, size: fontSize, font: fontFamily })], alignment: AlignmentType.CENTER })],
-          width: { size: Math.floor(9000 / Math.max(cells.length, 1)), type: WidthType.DXA },
-        }),
-      ),
-    });
-  });
-
-  return new Table({ rows, width: { size: 9000, type: WidthType.DXA } });
 }

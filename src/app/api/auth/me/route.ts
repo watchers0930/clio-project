@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import type { ApiResponse, User } from '@/lib/supabase/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
 
@@ -13,10 +13,17 @@ export async function GET() {
       );
     }
 
+    const authHeader = request.headers.get('authorization');
+    const bearerToken = authHeader?.startsWith('Bearer ')
+      ? authHeader.slice('Bearer '.length).trim()
+      : null;
+
     const {
       data: { user: authUser },
       error: authError,
-    } = await supabase.auth.getUser();
+    } = bearerToken
+      ? await supabase.auth.getUser(bearerToken)
+      : await supabase.auth.getUser();
 
     if (authError || !authUser) {
       return NextResponse.json<ApiResponse>(
@@ -37,6 +44,7 @@ export async function GET() {
           id: profile.id,
           email: profile.email,
           name: profile.name,
+          position: profile.position ?? '',
           department_id: profile.department_id,
           role: profile.role as User['role'],
           avatar_url: profile.avatar_url,
@@ -46,6 +54,7 @@ export async function GET() {
           id: authUser.id,
           email: authUser.email!,
           name: authUser.user_metadata?.name ?? authUser.email!.split('@')[0],
+          position: '',
           department_id: null,
           role: 'user',
           avatar_url: null,

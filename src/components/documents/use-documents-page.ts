@@ -12,19 +12,30 @@ import type {
 } from '@/components/documents/page-types';
 import type { ExtractedTodo } from '@/lib/ai/extract-todos';
 import { useToast } from '@/components/ui/toast';
+import { formatDateInput, validateDateInput } from '@/components/documents/date-input';
+import { isWorklogTemplateName, WORKLOG_FIELDS } from '@/lib/templates/worklog';
+import type { TemplateFieldDefinition } from '@/lib/templates/template-schema';
+import { useDocumentViewerActions } from '@/components/documents/use-document-viewer-actions';
+export {
+  statusColor,
+  statusDot,
+  FONT_OPTIONS,
+  DOWNLOAD_FORMAT_OPTIONS,
+} from '@/components/documents/document-page-constants';
 
-export const statusColor: Record<string, string> = {
-  초안: 'bg-[#2E6FF2]/8 text-[#2E6FF2]',
-  완료: 'bg-[#1A5AD9]/8 text-[#1A5AD9]',
-};
+type AllowedOutputFormat = 'docx' | 'hwpx' | 'pdf' | 'xlsx' | 'pptx';
 
-export const statusDot: Record<string, string> = {
-  초안: '#2E6FF2',
-  완료: '#1A5AD9',
-};
+function getAllowedOutputFormats(templateFile: Template['templateFile'] | null | undefined, isContract: boolean): AllowedOutputFormat[] {
+  if (isContract) return ['hwpx'];
+  if (!templateFile?.name) return ['docx', 'pdf', 'xlsx', 'pptx'];
 
-export const FONT_OPTIONS = ['맑은 고딕', '나눔고딕', '바탕', '돋움', '굴림', '나눔명조', 'Arial', 'Times New Roman'];
-export const DOWNLOAD_FORMAT_OPTIONS = ['docx', 'hwpx', 'pdf'] as const;
+  const ext = templateFile.name.split('.').pop()?.toLowerCase() ?? '';
+  if (ext === 'docx' || ext === 'dotx') return ['docx', 'pdf'];
+  if (ext === 'hwpx' || ext === 'hwp') return ['hwpx', 'pdf'];
+  if (ext === 'xlsx' || ext === 'xls') return ['xlsx'];
+  if (ext === 'pptx' || ext === 'ppt') return ['pptx'];
+  return ['docx', 'pdf', 'xlsx', 'pptx'];
+}
 
 export function useDocumentsPage() {
   const toast = useToast();
@@ -37,6 +48,9 @@ export function useDocumentsPage() {
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [instructions, setInstructions] = useState('');
   const [customStructure, setCustomStructure] = useState('');
+  const [documentInputs, setDocumentInputs] = useState<Record<string, string>>({});
+  const [aiAssistEnabled, setAiAssistEnabled] = useState(false);
+  const [aiAssistPrompt, setAiAssistPrompt] = useState('');
   const [generating, setGenerating] = useState(false);
   const [generatedDoc, setGeneratedDoc] = useState<Document | null>(null);
   const [outputFormat, setOutputFormat] = useState<string>('docx');
@@ -50,70 +64,65 @@ export function useDocumentsPage() {
   const [shareDocId, setShareDocId] = useState<string | null>(null);
   const [shareDocTitle, setShareDocTitle] = useState('');
   const [selectedDocIds, setSelectedDocIds] = useState<Set<string>>(new Set());
-  const [viewDoc, setViewDoc] = useState<Document | null>(null);
-  const [editContent, setEditContent] = useState('');
-  const [editTitle, setEditTitle] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [qualityCheckDocId, setQualityCheckDocId] = useState<string | null>(null);
   const [todoExtractOpen, setTodoExtractOpen] = useState(false);
   const [todoExtractInitial, setTodoExtractInitial] = useState<ExtractedTodo[]>([]);
   const [sttModalOpen, setSttModalOpen] = useState(false);
-  const [showViewerComments, setShowViewerComments] = useState(false);
   const [versionPanelDocId, setVersionPanelDocId] = useState<string | null>(null);
   const [versionItems, setVersionItems] = useState<VersionItem[]>([]);
   const [versionLoading, setVersionLoading] = useState(false);
   const [newVersionDocId, setNewVersionDocId] = useState<string | null>(null);
+  const [originDocumentId, setOriginDocumentId] = useState<string | null>(null);
+  const [originContext, setOriginContext] = useState<string | null>(null);
+  const [creationContextTitle, setCreationContextTitle] = useState('');
   const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; description?: string; onConfirm: () => void }>({ open: false, title: '', onConfirm: () => {} });
   const [templates, setTemplates] = useState<Template[]>([]);
   const [sourceFiles, setSourceFiles] = useState<SourceFile[]>([]);
   const [selectedFont, setSelectedFont] = useState('맑은 고딕');
   const [downloadFormat, setDownloadFormat] = useState<string>('docx');
-  const [designPrompt, setDesignPrompt] = useState<string | null>(null);
-  const [designPromptLang, setDesignPromptLang] = useState<'ko' | 'en'>('ko');
-  const [loadingDesignPrompt, setLoadingDesignPrompt] = useState(false);
-  const [copiedDesignPrompt, setCopiedDesignPrompt] = useState(false);
+  const [initializedFromQuery, setInitializedFromQuery] = useState(false);
 
   const openConfirm = (title: string, description: string | undefined, onConfirm: () => void) => setConfirmState({ open: true, title, description, onConfirm });
   const closeConfirm = () => setConfirmState((state) => ({ ...state, open: false }));
-
-  const validateDate = (key: string, value: string) => {
-    if (!value) {
-      setDateErrors((prev) => {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
-      return;
-    }
-    const match = value.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
-    if (!match) {
-      if (value.replace(/[\d/]/g, '').length > 0 || value.length >= 10) {
-        setDateErrors((prev) => ({ ...prev, [key]: 'yyyy/mm/dd 형식으로 입력하세요' }));
-      }
-      return;
-    }
-    const [, y, m, d] = match;
-    const year = parseInt(y, 10);
-    const month = parseInt(m, 10);
-    const day = parseInt(d, 10);
-    if (month < 1 || month > 12) return void setDateErrors((prev) => ({ ...prev, [key]: '월은 01~12 사이여야 합니다' }));
-    const lastDay = new Date(year, month, 0).getDate();
-    if (day < 1 || day > lastDay) return void setDateErrors((prev) => ({ ...prev, [key]: `${month}월은 ${lastDay}일까지입니다` }));
-    if (year < 2000 || year > 2099) return void setDateErrors((prev) => ({ ...prev, [key]: '연도는 2000~2099 사이여야 합니다' }));
-    setDateErrors((prev) => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
-  };
+  const {
+    viewDoc,
+    editContent,
+    editTitle,
+    saving,
+    qualityCheckDocId,
+    showViewerComments,
+    designPrompt,
+    designPromptLang,
+    loadingDesignPrompt,
+    copiedDesignPrompt,
+    isEdited,
+    isDraft,
+    setEditContent,
+    setEditTitle,
+    setQualityCheckDocId,
+    setShowViewerComments,
+    openDocModal,
+    handleSave,
+    handleComplete,
+    handleRevertToDraft,
+    handleDesignPrompt,
+    handleCopyDesignPrompt,
+    handleDownload,
+    handleDownloadAiContext,
+    handleViewerClose,
+  } = useDocumentViewerActions({
+    docs,
+    setDocs,
+    selectedFont,
+    downloadFormat,
+    toast,
+    openConfirm,
+    closeConfirm,
+  });
 
   const handleDateInput = (key: string, raw: string) => {
-    const digits = raw.replace(/[^\d]/g, '').slice(0, 8);
-    let formatted = digits;
-    if (digits.length > 4) formatted = `${digits.slice(0, 4)}/${digits.slice(4)}`;
-    if (digits.length > 6) formatted = `${digits.slice(0, 4)}/${digits.slice(4, 6)}/${digits.slice(6)}`;
+    const formatted = formatDateInput(raw);
     setContractFormData((prev) => ({ ...prev, [key]: formatted }));
-    validateDate(key, formatted);
+    validateDateInput(key, formatted, setDateErrors);
   };
 
   const loadDocs = useCallback(async () => {
@@ -139,7 +148,11 @@ export function useDocumentsPage() {
           id: template.id as string,
           name: template.name as string,
           description: template.description as string,
+          templateMode: (template.templateMode as Template['templateMode']) ?? 'html-template',
+          templateHtml: (template.templateHtml as string | undefined) ?? '',
           templateFile: (template.templateFile as TemplateFile | null) ?? null,
+          templateFields: (template.templateFields as Template['templateFields']) ?? [],
+          templateSections: (template.templateSections as Template['templateSections']) ?? [],
         })));
       }
     } catch {
@@ -172,6 +185,74 @@ export function useDocumentsPage() {
     loadFiles();
   }, [loadDocs, loadTemplates, loadFiles]);
 
+  useEffect(() => {
+    if (initializedFromQuery || typeof window === 'undefined' || sourceFiles.length === 0) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const shouldOpenCreate = params.get('create') === 'true';
+    const selectedFileIds = params.get('files');
+    const templateId = params.get('template');
+    const initialInstructions = params.get('instructions');
+    const versionOf = params.get('versionOf');
+    const requestedOpenDocId = params.get('openDoc');
+    const requestedOriginDocumentId = params.get('originDocumentId');
+    const requestedOriginContext = params.get('originContext');
+    const contextTitle = params.get('contextTitle');
+
+    if (templateId) setSelectedTemplate(templateId);
+    if (initialInstructions) setInstructions(initialInstructions);
+    if (versionOf) setNewVersionDocId(versionOf);
+    if (requestedOriginDocumentId) setOriginDocumentId(requestedOriginDocumentId);
+    if (requestedOriginContext) setOriginContext(requestedOriginContext);
+
+    if (selectedFileIds) {
+      const nextSelectedFiles = new Set(
+        selectedFileIds
+          .split(',')
+          .map((id) => id.trim())
+          .filter((id) => sourceFiles.some((file) => file.id === id)),
+      );
+      if (nextSelectedFiles.size > 0) setSelectedFiles(nextSelectedFiles);
+    }
+
+    if (shouldOpenCreate) {
+      setShowModal(true);
+      if (templateId && selectedFileIds) setStep(3);
+      else if (templateId) setStep(2);
+      else setStep(1);
+    }
+
+    if (requestedOpenDocId) {
+      const targetDoc = docs.find((doc) => doc.id === requestedOpenDocId);
+      if (targetDoc) {
+        openDocModal(targetDoc);
+        params.delete('openDoc');
+        const nextQuery = params.toString();
+        router.replace(nextQuery ? `/documents?${nextQuery}` : '/documents');
+      }
+    }
+
+    const relatedDocId = versionOf || requestedOriginDocumentId;
+    if (contextTitle) {
+      setCreationContextTitle(contextTitle);
+    } else if (relatedDocId) {
+      const relatedDoc = docs.find((doc) => doc.id === relatedDocId);
+      if (relatedDoc) setCreationContextTitle(relatedDoc.title);
+    }
+
+    setInitializedFromQuery(true);
+  }, [initializedFromQuery, sourceFiles, docs, router, openDocModal]);
+
+  useEffect(() => {
+    const selectedTemplateItem = templates.find((template) => template.id === selectedTemplate);
+    const isContract = selectedTemplateItem ? isContractTemplate(selectedTemplateItem.name) : false;
+    const allowedFormats = getAllowedOutputFormats(selectedTemplateItem?.templateFile, isContract);
+
+    if (!allowedFormats.includes(outputFormat as AllowedOutputFormat)) {
+      setOutputFormat(allowedFormats[0]);
+    }
+  }, [selectedTemplate, templates, outputFormat]);
+
   const resetModal = () => {
     setShowModal(false);
     setStep(1);
@@ -179,7 +260,14 @@ export function useDocumentsPage() {
     setSelectedFiles(new Set());
     setInstructions('');
     setCustomStructure('');
+    setAiAssistEnabled(false);
+    setAiAssistPrompt('');
     const now = new Date();
+    setDocumentInputs({
+      report_title: '',
+      subtitle: '',
+      report_date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
+    });
     setContractFormData({ signDate: `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}` });
     setGenerating(false);
     setGeneratedDoc(null);
@@ -189,6 +277,10 @@ export function useDocumentsPage() {
     setFileSearch('');
     setFileDeptFilter('전체');
     setFileTypeFilter('전체');
+    setNewVersionDocId(null);
+    setOriginDocumentId(null);
+    setOriginContext(null);
+    setCreationContextTitle('');
   };
 
   const openCreateModal = () => { resetModal(); setShowModal(true); };
@@ -198,7 +290,22 @@ export function useDocumentsPage() {
     else next.add(id);
     return next;
   });
-  const canNext = () => step === 1 ? !!selectedTemplate : !(step === 3 && selectedTemplate === '__none__' && !customStructure.trim());
+  const canNext = () => {
+    if (step === 1) return !!selectedTemplate;
+    if (step === 3) {
+      if (selectedTemplate === '__none__' && !customStructure.trim()) return false;
+      const selectedTemplateItem = templates.find((template) => template.id === selectedTemplate);
+      if (isWorklogTemplateName(selectedTemplateItem?.name)) {
+        return ((selectedTemplateItem?.templateFields ?? [...WORKLOG_FIELDS]) as TemplateFieldDefinition[])
+          .filter((field) => field.required)
+          .filter((field) => !field.autoFill && !field.aiAssist)
+          .every((field) => Boolean(documentInputs[field.key]?.trim()));
+      }
+      const hasTitle = Boolean(documentInputs.report_title?.trim());
+      return hasTitle;
+    }
+    return true;
+  };
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -209,8 +316,9 @@ export function useDocumentsPage() {
       const finalInstructions = isCustom ? `## 문서 구조:\n${customStructure.trim()}\n\n${instructions.trim() ? `## 추가 지시사항:\n${instructions.trim()}` : ''}` : instructions.trim() || undefined;
       const selectedTemplateItem = templates.find((template) => template.id === selectedTemplate);
       const isContract = selectedTemplateItem ? isContractTemplate(selectedTemplateItem.name) : false;
-      if (isContract) setOutputFormat('hwpx');
-      const actualFormat = isContract ? 'hwpx' : outputFormat;
+      const allowedFormats = getAllowedOutputFormats(selectedTemplateItem?.templateFile, isContract);
+      const actualFormat = allowedFormats.includes(outputFormat as AllowedOutputFormat) ? outputFormat : allowedFormats[0];
+      if (actualFormat !== outputFormat) setOutputFormat(actualFormat);
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -221,8 +329,13 @@ export function useDocumentsPage() {
           outputFormat: actualFormat,
           font: selectedFont,
           customStructure: isCustom ? customStructure.trim() : undefined,
+          documentInputs,
+          aiAssist: aiAssistEnabled,
+          aiAssistPrompt: aiAssistPrompt.trim() || undefined,
           ...(isContract && Object.keys(contractFormData).length > 0 ? { contractFormData } : {}),
           ...(newVersionDocId ? { parentId: newVersionDocId } : {}),
+          ...(originDocumentId ? { originDocumentId } : {}),
+          ...(originContext ? { originContext } : {}),
         }),
       });
       if (!res.ok) {
@@ -302,169 +415,6 @@ export function useDocumentsPage() {
     setVersionLoading(false);
   };
 
-  const openDocModal = (doc: Document) => {
-    setViewDoc(doc);
-    setEditContent(doc.content ?? '');
-    setEditTitle(doc.title);
-    setShowViewerComments(false);
-    setDesignPrompt(null);
-    setCopiedDesignPrompt(false);
-  };
-
-  const handleSave = async () => {
-    if (!viewDoc) return;
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/documents/${viewDoc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: editContent, title: editTitle }) });
-      if (!res.ok) throw new Error();
-      const updated = { ...viewDoc, content: editContent, title: editTitle };
-      setViewDoc(updated);
-      setDocs((prev) => prev.map((doc) => doc.id === viewDoc.id ? updated : doc));
-    } catch {
-      toast.error('저장에 실패했습니다.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleComplete = () => {
-    if (!viewDoc) return;
-    openConfirm('문서 완료', '문서를 최종 완료 상태로 변경합니다. 완료 후에도 초안으로 되돌릴 수 있습니다.', async () => {
-      closeConfirm();
-      if (!viewDoc) return;
-      setSaving(true);
-      try {
-        const body: Record<string, string> = { status: 'completed' };
-        if (editContent !== viewDoc.content) body.content = editContent;
-        if (editTitle !== viewDoc.title) body.title = editTitle;
-        const res = await fetch(`/api/documents/${viewDoc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        if (!res.ok) throw new Error();
-        const updated = { ...viewDoc, ...body, status: '완료' as const, content: editContent, title: editTitle };
-        setViewDoc(updated);
-        setDocs((prev) => prev.map((doc) => doc.id === viewDoc.id ? updated : doc));
-      } catch {
-        toast.error('상태 변경에 실패했습니다.');
-      } finally {
-        setSaving(false);
-      }
-    });
-  };
-
-  const handleRevertToDraft = () => {
-    if (!viewDoc) return;
-    openConfirm('초안으로 되돌리기', '문서를 초안 상태로 되돌립니다.', async () => {
-      closeConfirm();
-      if (!viewDoc) return;
-      setSaving(true);
-      try {
-        const res = await fetch(`/api/documents/${viewDoc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'draft' }) });
-        if (!res.ok) throw new Error();
-        const updated = { ...viewDoc, status: '초안' as const };
-        setViewDoc(updated);
-        setDocs((prev) => prev.map((doc) => doc.id === viewDoc.id ? updated : doc));
-      } catch {
-        toast.error('상태 변경에 실패했습니다.');
-      } finally {
-        setSaving(false);
-      }
-    });
-  };
-
-  const isEdited = viewDoc ? editContent !== (viewDoc.content ?? '') || editTitle !== viewDoc.title : false;
-  const isDraft = viewDoc?.status === '초안';
-
-  const handleDesignPrompt = async (lang: 'ko' | 'en') => {
-    if (!viewDoc) return;
-    setLoadingDesignPrompt(true);
-    setDesignPrompt(null);
-    setDesignPromptLang(lang);
-    setCopiedDesignPrompt(false);
-    try {
-      const res = await fetch(`/api/documents/${viewDoc.id}/design-prompt`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lang }) });
-      if (res.ok) {
-        const data = await res.json();
-        setDesignPrompt(data.prompt);
-      } else {
-        const err = await res.json().catch(() => null);
-        toast.error(err?.error ?? '프롬프트 생성 실패');
-      }
-    } catch {
-      toast.error('네트워크 오류');
-    } finally {
-      setLoadingDesignPrompt(false);
-    }
-  };
-
-  const handleCopyDesignPrompt = async () => {
-    if (!designPrompt) return;
-    await navigator.clipboard.writeText(designPrompt);
-    setCopiedDesignPrompt(true);
-    setTimeout(() => setCopiedDesignPrompt(false), 2000);
-  };
-
-  const handleDownload = async (doc: Document) => {
-    try {
-      if (downloadFormat === 'pdf') {
-        const res = await fetch(`/api/documents/${doc.id}/download?font=${encodeURIComponent(selectedFont)}&format=pdf`);
-        if (!res.ok) throw new Error('다운로드 실패');
-        const htmlContent = await res.text();
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-          printWindow.document.write(htmlContent);
-          printWindow.document.close();
-          printWindow.onload = () => { setTimeout(() => printWindow.print(), 300); };
-        }
-        return;
-      }
-      const res = await fetch(`/api/documents/${doc.id}/download?font=${encodeURIComponent(selectedFont)}&format=${downloadFormat}`);
-      if (!res.ok) throw new Error('다운로드 실패');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${doc.title}.${downloadFormat}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch {
-      toast.error('다운로드에 실패했습니다.');
-    }
-  };
-
-  const handleDownloadAiContext = async (docId: string, lang: 'ko' | 'en') => {
-    try {
-      const res = await fetch(`/api/documents/${docId}/ai-context`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lang }) });
-      if (!res.ok) {
-        toast.error(lang === 'ko' ? '다운로드 실패' : 'Download failed');
-        return;
-      }
-      const { context, fileName } = await res.json();
-      const blob = new Blob([context], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      toast.error(lang === 'ko' ? '다운로드 실패' : 'Download failed');
-    }
-  };
-
-  const handleViewerClose = () => {
-    if (isEdited) {
-      openConfirm('저장하지 않고 닫기', '수정 내용이 저장되지 않았습니다. 닫으시겠습니까?', () => {
-        closeConfirm();
-        setViewDoc(null);
-        setShowViewerComments(false);
-      });
-      return;
-    }
-    setViewDoc(null);
-    setShowViewerComments(false);
-  };
-
   const handleDownloadGeneratedFile = async () => {
     if (!generatedDoc || !generatedDownloadUrl) return;
     try {
@@ -485,9 +435,25 @@ export function useDocumentsPage() {
     }
   };
 
+  const startReuseDocument = (doc: Document) => {
+    const params = new URLSearchParams({ create: 'true' });
+    if (doc.templateId) params.set('template', doc.templateId);
+    if ((doc.sourceFileIds ?? []).length > 0) params.set('files', (doc.sourceFileIds ?? []).join(','));
+    params.set('instructions', `${doc.title} 문서를 참고해서 후속 문서를 작성하세요.`);
+    params.set('originDocumentId', doc.id);
+    params.set('originContext', 'document_followup');
+    params.set('contextTitle', doc.title);
+    router.push(`/documents?${params.toString()}`);
+  };
+
+  const openSearchFromDocument = (doc: Document) => {
+    const params = new URLSearchParams({ q: doc.title });
+    router.push(`/search?${params.toString()}`);
+  };
+
   return {
-    router, loading, docs, showModal, step, selectedTemplate, selectedFiles, instructions, customStructure, generating, generatedDoc, outputFormat, generatedDownloadUrl, generatedOutline, contractFormData, dateErrors, fileSearch, fileDeptFilter, fileTypeFilter, shareDocId, shareDocTitle, selectedDocIds, viewDoc, editContent, editTitle, saving, qualityCheckDocId, todoExtractOpen, todoExtractInitial, sttModalOpen, showViewerComments, versionPanelDocId, versionItems, versionLoading, confirmState, templates, sourceFiles, selectedFont, downloadFormat, designPrompt, designPromptLang, loadingDesignPrompt, copiedDesignPrompt, isEdited, isDraft,
-    loadDocs, setShareDocId, setShareDocTitle, setTodoExtractOpen, setTodoExtractInitial, setSttModalOpen, setShowViewerComments, setQualityCheckDocId, setVersionPanelDocId, setStep, setSelectedTemplate, setSelectedFiles, setInstructions, setCustomStructure, setOutputFormat, setContractFormData, setFileSearch, setFileDeptFilter, setFileTypeFilter, setEditContent, setEditTitle, setDownloadFormat, setSelectedFont, resetModal, openCreateModal, toggleFile, canNext, handleGenerate, handleDelete, handleBulkDelete, handleDeleteAll, toggleDocSelect, toggleSelectAll, openVersionPanel, openDocModal, handleSave, handleComplete, handleRevertToDraft, handleDesignPrompt, handleCopyDesignPrompt, handleDownload, handleDownloadAiContext, handleViewerClose, handleDownloadGeneratedFile, handleDateInput, closeConfirm,
+    router, loading, docs, showModal, step, selectedTemplate, selectedFiles, instructions, customStructure, documentInputs, aiAssistEnabled, aiAssistPrompt, generating, generatedDoc, outputFormat, generatedDownloadUrl, generatedOutline, contractFormData, dateErrors, fileSearch, fileDeptFilter, fileTypeFilter, shareDocId, shareDocTitle, selectedDocIds, viewDoc, editContent, editTitle, saving, qualityCheckDocId, todoExtractOpen, todoExtractInitial, sttModalOpen, showViewerComments, versionPanelDocId, versionItems, versionLoading, confirmState, templates, sourceFiles, selectedFont, downloadFormat, designPrompt, designPromptLang, loadingDesignPrompt, copiedDesignPrompt, isEdited, isDraft, originDocumentId, originContext, creationContextTitle,
+    loadDocs, setShareDocId, setShareDocTitle, setTodoExtractOpen, setTodoExtractInitial, setSttModalOpen, setShowViewerComments, setQualityCheckDocId, setVersionPanelDocId, setStep, setSelectedTemplate, setSelectedFiles, setInstructions, setCustomStructure, setDocumentInputs, setAiAssistEnabled, setAiAssistPrompt, setOutputFormat, setContractFormData, setFileSearch, setFileDeptFilter, setFileTypeFilter, setEditContent, setEditTitle, setDownloadFormat, setSelectedFont, resetModal, openCreateModal, toggleFile, canNext, handleGenerate, handleDelete, handleBulkDelete, handleDeleteAll, toggleDocSelect, toggleSelectAll, openVersionPanel, openDocModal, handleSave, handleComplete, handleRevertToDraft, handleDesignPrompt, handleCopyDesignPrompt, handleDownload, handleDownloadAiContext, handleViewerClose, handleDownloadGeneratedFile, handleDateInput, closeConfirm, startReuseDocument, openSearchFromDocument,
     handleVersionNew: (docId: string) => { setNewVersionDocId(docId); setVersionPanelDocId(null); openCreateModal(); },
   };
 }

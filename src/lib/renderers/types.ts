@@ -2,6 +2,8 @@
  * 멀티포맷 문서 생성 엔진 — 공통 타입
  */
 
+import type { TemplateBundle } from '@/lib/templates/template-schema';
+
 export type OutputFormat = 'docx' | 'pdf' | 'hwpx' | 'xlsx' | 'pptx';
 
 /** AI가 반환하는 XLSX 구조 (템플릿 없을 때) */
@@ -82,6 +84,10 @@ export interface GenerationResult {
   hwpxTableStructure?: DocxTableStructure;
   /** 템플릿 바이너리 (렌더러에 전달) */
   templateBuffer?: Buffer;
+  /** HTML 템플릿 번들 */
+  templateBundle?: TemplateBundle | null;
+  /** 템플릿 필드 입력값 */
+  documentInputs?: Record<string, string>;
   /** 서명 이미지 바이너리 (없으면 삽입 스킵) */
   signatureBuffer?: Buffer;
   /** 서명 이미지 확장자 ('png' | 'jpg' | 'webp') */

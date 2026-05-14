@@ -52,19 +52,19 @@ export function RiskItemSidebar({
   return (
     <div className="flex flex-col h-full">
       {/* 헤더 */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-[#E2E5EA]">
+      <div className="flex flex-col gap-2.5 px-4 py-4 border-b border-[#E2E5EA] sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-5">
         <span className="text-[14px] font-semibold text-[#1B1F2B]">조항 목록</span>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           <button
             onClick={onSelectAll}
-            className="text-[12px] text-[#2E6FF2] hover:underline"
+            className="rounded-lg px-2.5 py-1.5 text-[12px] text-[#2E6FF2] hover:bg-[#EEF6FF]"
           >
             전체선택
           </button>
           <span className="text-[#E2E5EA]">|</span>
           <button
             onClick={onClearAll}
-            className="text-[12px] text-[#888] hover:underline"
+            className="rounded-lg px-2.5 py-1.5 text-[12px] text-[#888] hover:bg-[#F7F8FA]"
           >
             해제
           </button>
@@ -72,9 +72,9 @@ export function RiskItemSidebar({
       </div>
 
       {/* 항목 목록 */}
-      <div className="flex-1 overflow-y-auto flex flex-col gap-[10px] p-[10px]">
+      <div className="flex-1 overflow-y-auto flex flex-col gap-3 p-3 sm:gap-3 sm:p-3">
         {foundItems.length === 0 && (
-          <p className="px-5 py-4 text-[12px] text-[#888]">탐지된 리스크 항목이 없습니다.</p>
+          <p className="px-4 py-4 text-[12px] text-[#888] sm:px-5">탐지된 리스크 항목이 없습니다.</p>
         )}
         {foundItems.map((item) => {
           const def = CONTRACT_RISK_ITEMS.find((d) => d.id === item.id);
@@ -100,7 +100,7 @@ export function RiskItemSidebar({
               key={item.id}
               onClick={() => onActivate(item.id)}
               className={cn(
-                'flex items-start gap-2.5 p-3 rounded-2xl border cursor-pointer transition-all',
+                'flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl border cursor-pointer transition-all',
                 rowBg,
               )}
             >
@@ -120,21 +120,21 @@ export function RiskItemSidebar({
 
               {/* 항목 정보 */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-mono text-[#888] bg-[#F7F8FA] border border-[#E2E5EA] px-1 rounded">{item.id}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-mono text-[#888] bg-[#F7F8FA] border border-[#E2E5EA] px-1.5 py-0.5 rounded-md">{item.id}</span>
                   <span className={cn('text-[12px] font-medium leading-snug truncate', textCls)}>
                     {def?.name ?? item.id}
                   </span>
                 </div>
                 {/* 결정 상태 */}
                 {decision === 'accepted' && (
-                  <div className="flex items-center gap-0.5 mt-1">
+                  <div className="mt-1.5 flex items-center gap-1">
                     <CheckCircle className="w-3 h-3 text-green-600" />
                     <span className="text-[11px] text-green-600">적용됨</span>
                   </div>
                 )}
                 {decision === 'skipped' && (
-                  <div className="flex items-center gap-0.5 mt-1">
+                  <div className="mt-1.5 flex items-center gap-1">
                     <SkipForward className="w-3 h-3 text-[#888]" />
                     <span className="text-[11px] text-[#888]">건너뜀</span>
                   </div>
@@ -146,7 +146,7 @@ export function RiskItemSidebar({
       </div>
 
       {/* 하단 버튼 */}
-      <div className="border-t border-[#E2E5EA] px-4 py-4">
+      <div className="border-t border-[#E2E5EA] px-4 py-4 sm:px-5 sm:py-5">
         <button
           onClick={onSuggestStart}
           disabled={selectedKeys.size === 0 || isSuggesting}

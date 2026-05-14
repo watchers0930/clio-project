@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { filterAccessibleFileRows, getUserRoleInfo } from '@/lib/permissions';
 import { mimeToType, formatSize } from '@/lib/utils/format';
 import { validateFile } from '@/lib/utils/sanitize';
 
@@ -9,6 +11,7 @@ import { validateFile } from '@/lib/utils/sanitize';
 const EXTENSION_MIME_MAP: Record<string, string> = {
   pdf: 'application/pdf',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  dotx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   doc: 'application/msword',
@@ -49,6 +52,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: '인증이 필요합니다.' }, { status: 401 });
     }
 
+    const roleInfo = await getUserRoleInfo(supabase, authUserId);
+    if (!roleInfo) {
+      return NextResponse.json({ success: false, error: '사용자 정보가 없습니다.' }, { status: 403 });
+    }
+
     const scopeFilter = searchParams.get('scope'); // 'company' | 'department' | null
 
     // 부서명 매핑
@@ -56,7 +64,7 @@ export async function GET(request: NextRequest) {
     const deptMap = new Map((depts ?? []).map((d) => [d.id, d.name]));
     const deptIdByName = new Map((depts ?? []).map((d) => [d.name, d.id]));
 
-    let query = supabase.from('files').select('*', { count: 'exact' });
+    let query = createAdminSupabaseClient().from('files').select('*');
 
     if (department && department !== '전체') {
       const deptId = deptIdByName.get(department);
@@ -77,16 +85,23 @@ export async function GET(request: NextRequest) {
       query = query.ilike('name', `%${escaped}%`);
     }
 
-    const from = (page - 1) * limit;
-    query = query.order('created_at', { ascending: false }).range(from, from + limit - 1);
+    query = query.order('created_at', { ascending: false }).limit(500);
 
-    const { data: rows, count, error } = await query;
+    const { data: rows, error } = await query;
     if (error) {
       console.error('[files/GET]', error.message);
       return NextResponse.json({ success: false, error: '파일 목록 조회 중 오류가 발생했습니다.' }, { status: 500 });
     }
 
-    let files = (rows ?? []).map((f) => ({
+    const accessibleRows = await filterAccessibleFileRows(
+      supabase,
+      authUserId,
+      roleInfo.role,
+      roleInfo.department_id,
+      rows ?? [],
+    );
+
+    let files = accessibleRows.map((f) => ({
       id: f.id,
       name: f.name,
       type: mimeToType(f.type, f.name),
@@ -102,10 +117,14 @@ export async function GET(request: NextRequest) {
       files = files.filter((f) => f.type === type);
     }
 
+    const total = files.length;
+    const from = (page - 1) * limit;
+    files = files.slice(from, from + limit);
+
     return NextResponse.json({
       success: true,
       files,
-      total: type && type !== '전체' ? files.length : (count ?? 0),
+      total,
       page,
       limit,
     });

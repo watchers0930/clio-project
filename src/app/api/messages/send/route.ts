@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+import type { DbMessage } from '@/lib/supabase/types';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,12 +22,12 @@ export async function POST(request: NextRequest) {
     // adminClient로 INSERT (RLS bypass — sender_id가 auth.uid()와 다를 수 있으므로)
     const admin = createAdminSupabaseClient();
 
-    const insertData: Record<string, unknown> = {
+    const insertData: Pick<DbMessage, 'channel_id' | 'sender_id' | 'content' | 'document_id'> = {
       channel_id: channelId,
       sender_id: authUserId,
       content: content.trim(),
+      document_id: documentId ?? null,
     };
-    if (documentId) insertData.document_id = documentId;
 
     const { data, error } = await admin.from('messages').insert(insertData).select().single();
 

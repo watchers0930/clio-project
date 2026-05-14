@@ -24,9 +24,10 @@ interface MemoFormModalProps {
   onClose: () => void;
   onSubmit: (data: MemoFormData) => Promise<void>;
   memo?: MemoItem | null;
+  initialData?: Partial<MemoFormData> | null;
 }
 
-export default function MemoFormModal({ open, onClose, onSubmit, memo }: MemoFormModalProps) {
+export default function MemoFormModal({ open, onClose, onSubmit, memo, initialData = null }: MemoFormModalProps) {
   const isEdit = !!memo;
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState('');
@@ -42,15 +43,15 @@ export default function MemoFormModal({ open, onClose, onSubmit, memo }: MemoFor
       setContent(memo.content ?? '');
       setColor(memo.color);
     } else {
-      setTitle('');
-      setContent('');
-      setColor('default');
+      setTitle(initialData?.title ?? '');
+      setContent(initialData?.content ?? '');
+      setColor(initialData?.color ?? 'default');
     }
     setTimeout(() => {
       setVisible(true);
       setTimeout(() => titleRef.current?.focus(), 80);
     }, 10);
-  }, [memo, open]);
+  }, [memo, open, initialData]);
 
   useEffect(() => {
     if (!open) return;
@@ -156,7 +157,7 @@ export default function MemoFormModal({ open, onClose, onSubmit, memo }: MemoFor
           </div>
 
           {/* 제목 입력 */}
-          <div style={{ marginTop: 25, marginBottom: 10 }}>
+          <div style={{ marginTop: 10, marginBottom: 10 }}>
             <input
               ref={titleRef}
               type="text"

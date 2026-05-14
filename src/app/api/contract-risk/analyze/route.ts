@@ -61,8 +61,7 @@ export async function POST(request: NextRequest) {
   const admin = createAdminSupabaseClient();
 
   // ── DB에 pending 레코드 INSERT ────────────────────────────────────────────
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: record, error: insertError } = await (admin as any)
+  const { data: record, error: insertError } = await admin
     .from('contract_risk_analyses')
     .insert({
       user_id: userId,
@@ -90,7 +89,7 @@ export async function POST(request: NextRequest) {
   try {
     rawText = await extractText(buffer, file.type, file.name);
   } catch (err) {
-    await (admin as any)
+    await admin
       .from('contract_risk_analyses')
       .update({ status: 'error' })
       .eq('id', recordId);
@@ -102,7 +101,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!rawText.trim()) {
-    await (admin as any)
+    await admin
       .from('contract_risk_analyses')
       .update({ status: 'error' })
       .eq('id', recordId);
@@ -117,7 +116,7 @@ export async function POST(request: NextRequest) {
   try {
     ({ risk_result, risk_count } = await analyzeContractRisk(rawText, contractType, perspective));
   } catch (err) {
-    await (admin as any)
+    await admin
       .from('contract_risk_analyses')
       .update({ status: 'error' })
       .eq('id', recordId);
@@ -131,8 +130,7 @@ export async function POST(request: NextRequest) {
   // ── 원본 파일 Storage 업로드 (apply 라우트에서 조항 교체 시 필요) ─────────────
   // 파일명 대신 recordId를 경로에 사용 → 한글/특수문자 인코딩 문제 방지
   const uploadPath = `contract-risk/${userId}/${recordId}.${ext}`;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: uploadError } = await (admin as any)
+  const { error: uploadError } = await admin
     .storage
     .from('files')
     .upload(uploadPath, Buffer.from(buffer), {
@@ -146,14 +144,13 @@ export async function POST(request: NextRequest) {
   }
 
   // ── DB UPDATE: done ───────────────────────────────────────────────────────
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin as any)
+  await admin
     .from('contract_risk_analyses')
     .update({
       status: 'done',
       raw_text: rawText.slice(0, 200_000), // 최대 200K자 저장
-      risk_result,
-      risk_count,
+      risk_result: risk_result as unknown as Record<string, unknown>,
+      risk_count: risk_count as unknown as Record<string, unknown>,
     })
     .eq('id', recordId);
 
