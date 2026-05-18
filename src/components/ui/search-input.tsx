@@ -20,9 +20,9 @@ interface SearchInputProps {
 }
 
 const sizeMap = {
-  sm: { wrapper: 'h-10', input: 'pl-10 pr-4 text-sm', icon: 'left-3 w-4 h-4' },
-  md: { wrapper: 'h-12', input: 'pl-11 pr-4 text-sm', icon: 'left-3 w-4.5 h-4.5' },
-  lg: { wrapper: 'h-14', input: 'pl-12 pr-5 text-base', icon: 'left-4 w-5 h-5' },
+  sm: { wrapper: 'h-10', input: 'pl-10 pr-4 text-sm', icon: 'left-3 top-1/2 h-4 w-4 -translate-y-1/2' },
+  md: { wrapper: 'h-12', input: 'pl-11 pr-4 text-sm', icon: 'left-3 top-1/2 h-4.5 w-4.5 -translate-y-1/2' },
+  lg: { wrapper: 'h-14', input: 'pl-12 pr-5 text-base', icon: 'left-4 top-1/2 h-5 w-5 -translate-y-1/2' },
 };
 
 export function SearchInput({
@@ -49,6 +49,7 @@ export function SearchInput({
       {/* 검색 아이콘 */}
       <svg
         className={cn(`absolute ${s.icon} text-[#a1a1a6] pointer-events-none`)}
+        aria-hidden="true"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
