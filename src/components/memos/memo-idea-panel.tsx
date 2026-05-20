@@ -110,16 +110,16 @@ export default function MemoIdeaPanel({
         >
           <div>
             <div className="flex items-center gap-2">
-              <Sparkles size={15} className="text-[#6366F1]" />
-              <span className="text-[13px] font-semibold text-[#1E293B]">아이디어 생성</span>
+              <Sparkles size={15} className="text-indigo-500" />
+              <span className="text-[13px] font-semibold text-foreground">아이디어 생성</span>
             </div>
-            <p className="text-[11px] text-[#94A3B8] mt-0.5">선택한 메모 {memoCount}개 기반</p>
+            <p className="text-[11px] text-foreground-quaternary mt-0.5">선택한 메모 {memoCount}개 기반</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-md hover:bg-[#F1F5F9] transition-colors"
+            className="p-1.5 rounded-md hover:bg-surface-secondary transition-colors"
           >
-            <X size={14} className="text-[#94A3B8]" />
+            <X size={14} className="text-foreground-quaternary" />
           </button>
         </div>
 
@@ -130,21 +130,21 @@ export default function MemoIdeaPanel({
               <p className="text-[13px] text-red-500 text-center">{error}</p>
               <button
                 onClick={() => generate(memoIds)}
-                className="px-4 py-2 text-[12px] font-medium text-[#6366F1] border border-[#6366F1] rounded-lg hover:bg-[#6366F1]/5 transition-colors"
+                className="px-4 py-2 text-[12px] font-medium text-indigo-500 border border-indigo-500 rounded-lg hover:bg-indigo-500/5 transition-colors"
               >
                 다시 시도
               </button>
             </div>
           ) : loading && !text ? (
-            <div className="flex items-center justify-center gap-2 py-12 text-[13px] text-[#94A3B8]">
-              <Loader2 size={16} className="animate-spin text-[#6366F1]" />
+            <div className="flex items-center justify-center gap-2 py-12 text-[13px] text-foreground-quaternary">
+              <Loader2 size={16} className="animate-spin text-indigo-500" />
               <span>아이디어를 생성하고 있습니다...</span>
             </div>
           ) : (
-            <div className="text-[13px] text-[#1E293B] leading-[1.85] whitespace-pre-wrap">
+            <div className="text-[13px] text-foreground leading-[1.85] whitespace-pre-wrap">
               {text}
               {loading && (
-                <span className="inline-block w-[2px] h-[14px] bg-[#6366F1] animate-pulse ml-0.5 align-text-bottom" />
+                <span className="inline-block w-[2px] h-[14px] bg-indigo-500 animate-pulse ml-0.5 align-text-bottom" />
               )}
             </div>
           )}
@@ -160,7 +160,7 @@ export default function MemoIdeaPanel({
               <button
                 onClick={handleSaveMemo}
                 disabled={!actionsEnabled || savingMemo}
-                className="flex items-center gap-1.5 flex-1 justify-center py-2.5 text-[12px] font-medium rounded-xl border transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-[#6366F1]/5"
+                className="flex items-center gap-1.5 flex-1 justify-center py-2.5 text-[12px] font-medium rounded-xl border transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-indigo-500/5"
                 style={{ borderColor: '#6366F1', color: '#6366F1' }}
               >
                 {savingMemo ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
@@ -169,7 +169,7 @@ export default function MemoIdeaPanel({
               <button
                 onClick={handleExtractTodos}
                 disabled={!actionsEnabled || extractingTodos}
-                className="flex items-center gap-1.5 flex-1 justify-center py-2.5 text-[12px] font-medium rounded-xl border transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-[#22C55E]/5"
+                className="flex items-center gap-1.5 flex-1 justify-center py-2.5 text-[12px] font-medium rounded-xl border transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-success/5"
                 style={{ borderColor: '#22C55E', color: '#22C55E' }}
               >
                 {extractingTodos ? <Loader2 size={12} className="animate-spin" /> : <CheckSquare size={12} />}
@@ -178,7 +178,7 @@ export default function MemoIdeaPanel({
               <button
                 onClick={handleCreateDocument}
                 disabled={!actionsEnabled || creatingDocument}
-                className="flex items-center gap-1.5 flex-1 justify-center py-2.5 text-[12px] font-medium rounded-xl border transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-[#2563EB]/5"
+                className="flex items-center gap-1.5 flex-1 justify-center py-2.5 text-[12px] font-medium rounded-xl border transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-primary/5"
                 style={{ borderColor: '#2563EB', color: '#2563EB' }}
               >
                 {creatingDocument ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}

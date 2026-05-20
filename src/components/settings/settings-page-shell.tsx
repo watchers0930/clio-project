@@ -314,10 +314,13 @@ export function SettingsPageShell({ initialTab = 'departments' }: SettingsPageSh
   }
 
   return (
-    <div className="flex flex-col gap-3 sm:gap-[15px]">
-      <div className="border-b border-[#e5e5e7] pb-3 sm:pb-4">
-        <h1 className="text-[24px] font-bold text-foreground">설정</h1>
-      </div>
+    <div className="flex flex-col gap-5">
+      <section className="rounded-2xl border border-border bg-white shadow-sm">
+        <div className="px-6 py-5 sm:px-8 sm:py-6">
+          <h1 className="text-[20px] font-bold text-foreground">설정</h1>
+          <p className="mt-1.5 text-[13px] text-foreground-secondary">부서, 사용자, 서명, 템플릿을 관리합니다.</p>
+        </div>
+      </section>
 
       <div className="overflow-x-auto">
         <Tabs

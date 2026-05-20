@@ -92,15 +92,15 @@ export function SttModal({ isOpen, onClose, onDocumentCreated }: SttModalProps) 
     return (
       <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center">
         <div className="bg-white rounded-t-[28px] shadow-xl w-full max-w-md px-6 py-8 flex flex-col items-center gap-5 sm:mx-4 sm:rounded-2xl sm:px-8 sm:py-10">
-          <div className="w-14 h-14 rounded-full bg-[#f0f5ff] flex items-center justify-center">
-            <svg className="w-6 h-6 text-[#2E6FF2] animate-spin" fill="none" viewBox="0 0 24 24">
+          <div className="w-14 h-14 rounded-full bg-primary-tint flex items-center justify-center">
+            <svg className="w-6 h-6 text-primary animate-spin" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
           </div>
           <div className="text-center">
-            <p className="text-base font-semibold text-[#1d1d1f]">음성을 변환하고 있어요</p>
-            <p className="text-sm text-[#6e6e73] mt-1.5">Whisper AI가 텍스트로 변환 중입니다 (최대 20초)</p>
+            <p className="text-base font-semibold text-foreground">음성을 변환하고 있어요</p>
+            <p className="text-sm text-foreground-secondary mt-1.5">Whisper AI가 텍스트로 변환 중입니다 (최대 20초)</p>
           </div>
         </div>
       </div>
@@ -118,25 +118,25 @@ export function SttModal({ isOpen, onClose, onDocumentCreated }: SttModalProps) 
       <div className="flex min-h-full items-end justify-center p-0 sm:items-center sm:p-4">
       <div className="bg-white rounded-t-[28px] shadow-xl w-full max-w-lg sm:rounded-2xl">
         {/* 헤더 */}
-        <div className="px-4 py-4 border-b border-[#e5e5e7] flex items-start justify-between gap-3 sm:px-6 sm:py-5">
+        <div className="px-4 py-4 border-b border-border flex items-start justify-between gap-3 sm:px-6 sm:py-5">
           <div>
-            <h2 className="text-[15px] font-semibold text-[#1B1F2B]">음성으로 회의록 생성</h2>
-            <p className="text-xs text-[#6e6e73] mt-0.5">음성을 텍스트로 변환하여 회의록을 자동 생성합니다</p>
+            <h2 className="text-[15px] font-semibold text-foreground">음성으로 회의록 생성</h2>
+            <p className="text-xs text-foreground-secondary mt-0.5">음성을 텍스트로 변환하여 회의록을 자동 생성합니다</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]">
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-surface-secondary text-foreground-secondary">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* 탭 */}
         <div className="px-4 pt-4 sm:px-6 sm:pt-5">
-          <div className="flex gap-1.5 p-1.5 bg-[#f5f5f7] rounded-xl">
+          <div className="flex gap-1.5 p-1.5 bg-surface-secondary rounded-xl">
             <button
               onClick={() => setInputMode('record')}
               className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-[13px] sm:text-sm font-medium transition-all ${
                 inputMode === 'record'
-                  ? 'bg-white text-[#1d1d1f] shadow-sm'
-                  : 'text-[#6e6e73] hover:text-[#1d1d1f]'
+                  ? 'bg-white text-foreground shadow-sm'
+                  : 'text-foreground-secondary hover:text-foreground'
               }`}
             >
               <Mic className="w-4 h-4" />
@@ -146,8 +146,8 @@ export function SttModal({ isOpen, onClose, onDocumentCreated }: SttModalProps) 
               onClick={() => setInputMode('upload')}
               className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-[13px] sm:text-sm font-medium transition-all ${
                 inputMode === 'upload'
-                  ? 'bg-white text-[#1d1d1f] shadow-sm'
-                  : 'text-[#6e6e73] hover:text-[#1d1d1f]'
+                  ? 'bg-white text-foreground shadow-sm'
+                  : 'text-foreground-secondary hover:text-foreground'
               }`}
             >
               <Upload className="w-4 h-4" />
@@ -158,7 +158,7 @@ export function SttModal({ isOpen, onClose, onDocumentCreated }: SttModalProps) 
 
         {/* 탭 콘텐츠 */}
         <div className="px-4 pb-4 sm:px-6 sm:pb-5">
-          <p className="mt-4 text-[12px] text-[#6e6e73]">녹음 또는 업로드 후 회의록 초안이 바로 열립니다.</p>
+          <p className="mt-4 text-[12px] text-foreground-secondary">녹음 또는 업로드 후 회의록 초안이 바로 열립니다.</p>
           {/* 에러 */}
           {transcribeError && (
             <div className="mt-4 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-600 flex items-start gap-2">
@@ -182,26 +182,26 @@ export function SttModal({ isOpen, onClose, onDocumentCreated }: SttModalProps) 
               <div
                 className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center gap-3 cursor-pointer transition-colors ${
                   dragOver
-                    ? 'border-[#2E6FF2] bg-[#f0f5ff]'
-                    : 'border-[#e5e5e7] hover:border-[#2E6FF2] hover:bg-[#f9f9fb]'
+                    ? 'border-primary bg-primary-tint'
+                    : 'border-border hover:border-primary hover:bg-surface-tertiary'
                 }`}
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
               >
-                <div className="w-12 h-12 rounded-full bg-[#f5f5f7] flex items-center justify-center">
-                  <FileAudio className="w-6 h-6 text-[#6e6e73]" />
+                <div className="w-12 h-12 rounded-full bg-surface-secondary flex items-center justify-center">
+                  <FileAudio className="w-6 h-6 text-foreground-secondary" />
                 </div>
                 {selectedFile ? (
                   <div className="text-center">
-                    <p className="text-sm font-medium text-[#1d1d1f]">{selectedFile.name}</p>
-                    <p className="text-xs text-[#6e6e73] mt-0.5">{(selectedFile.size / 1024 / 1024).toFixed(1)} MB</p>
+                    <p className="text-sm font-medium text-foreground">{selectedFile.name}</p>
+                    <p className="text-xs text-foreground-secondary mt-0.5">{(selectedFile.size / 1024 / 1024).toFixed(1)} MB</p>
                   </div>
                 ) : (
                   <div className="text-center">
-                    <p className="text-sm text-[#1d1d1f]">파일을 여기에 드래그하거나 클릭하여 업로드</p>
-                    <p className="text-xs text-[#6e6e73] mt-1">MP3, MP4, M4A, WAV, WebM (최대 25MB)</p>
+                    <p className="text-sm text-foreground">파일을 여기에 드래그하거나 클릭하여 업로드</p>
+                    <p className="text-xs text-foreground-secondary mt-1">MP3, MP4, M4A, WAV, WebM (최대 25MB)</p>
                   </div>
                 )}
                 <input
@@ -220,7 +220,7 @@ export function SttModal({ isOpen, onClose, onDocumentCreated }: SttModalProps) 
               <button
                 onClick={handleUploadSubmit}
                 disabled={!selectedFile}
-                className="w-full py-2.5 rounded-xl bg-[#2E6FF2] text-white text-[13px] font-medium hover:bg-[#1a5ad9] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-2.5 rounded-xl bg-primary text-white text-[13px] font-medium hover:bg-primary-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />

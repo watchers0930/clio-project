@@ -55,11 +55,11 @@ export function RiskSummary({
   });
 
   return (
-    <div className="bg-white border border-[#E2E5EA] rounded-2xl overflow-hidden">
+    <div className="bg-white border border-border rounded-2xl overflow-hidden">
       {/* 파일 정보 */}
-      <div className="px-5 py-4 border-b border-[#F0F2F5]">
-        <h2 className="text-[15px] font-bold text-[#1B1F2B] truncate">{fileName}</h2>
-        <p className="text-[12px] text-[#888] mt-1 flex flex-wrap gap-x-3">
+      <div className="px-5 py-4 border-b border-border">
+        <h2 className="text-[15px] font-bold text-foreground truncate">{fileName}</h2>
+        <p className="text-[12px] text-foreground-quaternary mt-1 flex flex-wrap gap-x-3">
           <span>{contractTypeLabel}</span>
           <span>·</span>
           <span>입장: {perspectiveLabel}</span>
@@ -87,13 +87,13 @@ export function RiskSummary({
           </div>
         ))}
         {/* 총 탐지 */}
-        <div className="rounded-xl bg-[#F7F8FA] px-4 py-4">
-          <p className="text-[11px] font-semibold text-[#888] mb-1">총 탐지</p>
-          <p className="text-[28px] font-bold text-[#1B1F2B] leading-none">
+        <div className="rounded-xl bg-surface-secondary px-4 py-4">
+          <p className="text-[11px] font-semibold text-foreground-quaternary mb-1">총 탐지</p>
+          <p className="text-[28px] font-bold text-foreground leading-none">
             {total}
             <span className="text-[13px] font-normal ml-0.5">건</span>
           </p>
-          <div className="mt-2 h-1 bg-[#E2E5EA] rounded-full" />
+          <div className="mt-2 h-1 bg-border rounded-full" />
         </div>
       </div>
     </div>

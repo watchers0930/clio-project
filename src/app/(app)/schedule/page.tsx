@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { CalendarDays, CheckSquare, Search, Sparkles } from 'lucide-react';
+import { CalendarDays, CheckSquare } from 'lucide-react';
 import { Spinner, Tabs } from '@/components/ui';
 import { startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import CalendarHeader from '@/components/schedule/calendar-header';
@@ -133,85 +133,51 @@ export default function SchedulePage() {
     '회의와 실행 일정';
 
   return (
-    <div className="space-y-[25px] pb-10">
-      <section className="rounded-[28px] border border-[#e5e5e7] bg-white overflow-hidden">
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
-          <div className="px-4 py-5 sm:px-6 sm:py-6 xl:px-[30px] xl:py-[30px]">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 25 }}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#0071e3]">Schedule Workflow</p>
-              <h1 className="text-[24px] font-bold leading-[1.25] text-[#1d1d1f] sm:text-[28px]">일정 / 할일</h1>
-              <p className="max-w-2xl text-[15px] text-[#6e6e73]" style={{ lineHeight: '20px' }}>
-                일정과 할일도 독립 제품이 아니라 문서 운영의 실행 단계입니다. 회의 일정과 실행 항목을 정리한 뒤,
-                관련 문서를 찾고 회의록, 보고서, 후속 실행 문서로 바로 이어갈 수 있습니다.
+    <div className="flex flex-col gap-5 pb-10">
+      <section className="rounded-2xl border border-border bg-white shadow-sm">
+        <div className="flex flex-col gap-5 px-6 py-5 sm:px-8 sm:py-6">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="text-[20px] font-bold text-foreground">일정 / 할일</h1>
+              <p className="mt-1.5 text-[13px] text-foreground-secondary">
+                회의 일정과 실행 항목을 정리하고, 관련 문서를 찾아 회의록이나 보고서로 이어갑니다.
               </p>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <MetricCard label="다가오는 일정" value={events.length} />
-                <MetricCard label="진행 중 할일" value={activeTodoCount} />
-                <MetricCard label="완료된 할일" value={completedTodoCount} />
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <button
-                  onClick={() => router.push('/meetings')}
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#1d1d1f] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#0071e3] transition-colors"
-                >
-                  <CalendarDays size={16} />
-                  회의 허브
-                </button>
-                <button
-                  onClick={() => {
-                    const params = new URLSearchParams({ q: scheduleFocus });
-                    router.push(`/search?${params.toString()}`);
-                  }}
-                  className="inline-flex items-center gap-2 rounded-xl border border-[#D7E7FF] bg-white px-4 py-2.5 text-sm font-medium text-[#2E6FF2] hover:bg-[#F3F8FF] transition-colors"
-                >
-                  <Search size={16} />
-                  관련 문서 검색
-                </button>
-                <button
-                  onClick={() => {
-                    const params = new URLSearchParams({
-                      create: 'true',
-                      instructions: `${scheduleFocus}와 관련된 회의/실행 문서를 작성하세요.`,
-                    });
-                    router.push(`/documents?${params.toString()}`);
-                  }}
-                  className="inline-flex items-center gap-2 rounded-xl border border-[#D7EFDE] bg-white px-4 py-2.5 text-sm font-medium text-[#258A4E] hover:bg-[#F4FBF6] transition-colors"
-                >
-                  <Sparkles size={16} />
-                  일정 기반 문서 작성
-                </button>
-              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => router.push('/meetings')}
+                className="h-9 rounded-xl bg-foreground px-4 text-[13px] font-medium text-white transition-colors hover:bg-primary"
+              >
+                회의 허브
+              </button>
+              <button
+                onClick={() => {
+                  const params = new URLSearchParams({ q: scheduleFocus });
+                  router.push(`/search?${params.toString()}`);
+                }}
+                className="h-9 rounded-xl border border-border bg-white px-4 text-[13px] font-medium text-foreground-secondary transition-colors hover:bg-surface-secondary"
+              >
+                관련 문서 검색
+              </button>
             </div>
           </div>
-
-          <div className="border-t border-[#e5e5e7] bg-[#fbfbfc] px-4 py-5 sm:px-6 sm:py-6 xl:border-t-0 xl:border-l xl:px-[28px] xl:py-[28px]">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 25 }}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7C8494]">Recommended Flow</p>
-              <div className="flex flex-col gap-3">
-                <QuickAction
-                  title="1. 일정 우선순위를 정합니다"
-                  description={`현재 기준 항목은 "${scheduleFocus}"입니다. 일정과 할일 중 먼저 처리할 대상을 정합니다.`}
-                  onClick={() => setActiveTab('calendar')}
-                />
-                <QuickAction
-                  title="2. 관련 문서를 찾습니다"
-                  description="회의 일정과 실행 항목을 바로 검색으로 넘겨 참고 자료와 기존 문서를 확인합니다."
-                  onClick={() => {
-                    const params = new URLSearchParams({ q: scheduleFocus });
-                    router.push(`/search?${params.toString()}`);
-                  }}
-                />
-                <QuickAction
-                  title="3. 문서 작성으로 이어갑니다"
-                  description="회의록, 후속 보고서, 실행 문서를 일정 문맥 그대로 생성 흐름으로 넘깁니다."
-                  onClick={() => {
-                    const params = new URLSearchParams({
-                      create: 'true',
-                      instructions: `${scheduleFocus}와 관련된 회의/실행 문서를 작성하세요.`,
-                    });
-                    router.push(`/documents?${params.toString()}`);
-                  }}
-                />
+          <div className="grid grid-cols-3 gap-3">
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-secondary px-4 py-3">
+              <div>
+                <p className="text-[10px] font-semibold text-foreground-tertiary">다가오는 일정</p>
+                <p className="text-[18px] font-bold text-foreground font-num leading-tight">{events.length}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-secondary px-4 py-3">
+              <div>
+                <p className="text-[10px] font-semibold text-foreground-tertiary">진행 중 할일</p>
+                <p className="text-[18px] font-bold text-foreground font-num leading-tight">{activeTodoCount}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-secondary px-4 py-3">
+              <div>
+                <p className="text-[10px] font-semibold text-foreground-tertiary">완료된 할일</p>
+                <p className="text-[18px] font-bold text-foreground font-num leading-tight">{completedTodoCount}</p>
               </div>
             </div>
           </div>
@@ -299,23 +265,5 @@ export default function SchedulePage() {
         todo={selectedTodo}
       />
     </div>
-  );
-}
-
-function MetricCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-2xl border border-[#E2E5EA] bg-[#f8f8fa] px-5 py-4">
-      <p className="text-[12px] text-[#6e6e73]">{label}</p>
-      <p className="mt-1 text-[20px] font-bold text-[#1d1d1f] font-num">{value}</p>
-    </div>
-  );
-}
-
-function QuickAction({ title, description, onClick }: { title: string; description: string; onClick: () => void }) {
-  return (
-    <button onClick={onClick} className="rounded-2xl border border-[#E2E5EA] bg-white px-5 py-4 text-left hover:border-[#0071e3]/35 transition-colors">
-      <p className="text-[14px] font-semibold text-[#1d1d1f]">{title}</p>
-      <p className="mt-1 text-[12px] leading-5 text-[#6e6e73]">{description}</p>
-    </button>
   );
 }

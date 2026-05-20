@@ -61,18 +61,6 @@ interface SidebarProps {
   mobile?: boolean;
 }
 
-const SIDEBAR_SPACING = {
-  brandX: 24,
-  navGap: 18,
-  navX: 20,
-  navTop: 24,
-  navBottom: 22,
-  platformCardPadding: '18px 18px 16px',
-  groupGap: 10,
-  footerX: 20,
-  footerBottom: 24,
-} as const;
-
 const UNREAD_POLL_INTERVAL_MS = 60_000;
 
 function Sidebar({ collapsed = false, onToggle, mobile = false }: SidebarProps) {
@@ -135,27 +123,20 @@ function Sidebar({ collapsed = false, onToggle, mobile = false }: SidebarProps) 
     >
       {/* Logo */}
       <div className={cn(
-        'flex items-center h-[56px] flex-shrink-0',
-        collapsed && !mobile ? 'justify-center' : ''
-      )} style={collapsed ? undefined : { paddingLeft: SIDEBAR_SPACING.brandX, paddingRight: SIDEBAR_SPACING.brandX }}>
-        <span className="text-[28px] tracking-[0.3em] text-white select-none" style={{ fontWeight: 300, fontFamily: '"Times New Roman", Times, serif' }}>
+        'flex items-center h-14 flex-shrink-0',
+        collapsed && !mobile ? 'justify-center' : 'px-6'
+      )}>
+        <span className="text-[28px] font-light tracking-[0.3em] text-white select-none font-serif">
           {collapsed && !mobile ? 'C' : 'CLIO'}
         </span>
       </div>
 
       {/* Nav */}
-      <nav
-        className="flex-1 flex flex-col overflow-y-auto sidebar-scroll"
-        style={{
-          gap: SIDEBAR_SPACING.navGap,
-          paddingLeft: SIDEBAR_SPACING.navX,
-          paddingRight: SIDEBAR_SPACING.navX,
-          paddingTop: SIDEBAR_SPACING.navTop,
-          paddingBottom: SIDEBAR_SPACING.navBottom,
-        }}
-      >
+      <nav className={cn(
+        'flex-1 flex flex-col overflow-y-auto sidebar-scroll gap-4.5 px-5 py-6',
+      )}>
         {!collapsed && (
-          <div className="rounded-2xl border border-white/14 bg-white/[0.07]" style={{ padding: SIDEBAR_SPACING.platformCardPadding }}>
+          <div className="rounded-lg border border-white/14 bg-white/[0.07] px-4.5 pt-4.5 pb-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/60">Platform</p>
             <p className="mt-2 text-[13px] font-medium text-white">{PLATFORM_LABEL}</p>
             <p className="mt-1 text-[11px] leading-5 text-white/70">{PLATFORM_SHORT_GUIDE}</p>
@@ -163,7 +144,7 @@ function Sidebar({ collapsed = false, onToggle, mobile = false }: SidebarProps) 
         )}
 
         {navGroups.map((group) => (
-          <div key={group.key} className="flex flex-col" style={{ gap: SIDEBAR_SPACING.groupGap }}>
+          <div key={group.key} className="flex flex-col gap-2.5">
             {(() => {
               const groupHasActiveItem = navItems
                 .filter((item) => item.group === group.key)
@@ -188,7 +169,7 @@ function Sidebar({ collapsed = false, onToggle, mobile = false }: SidebarProps) 
                     if (!collapsibleGroupKey) return;
                     setOpenGroups((prev) => ({ ...prev, [collapsibleGroupKey]: !prev[collapsibleGroupKey] }));
                   }}
-                  className="flex items-center justify-between rounded-xl px-3 py-2 text-left text-white/72 transition-colors hover:bg-white/[0.05] hover:text-white"
+                  className="flex items-center justify-between rounded-md px-3 py-2 text-left text-white/72 transition-colors hover:bg-white/[0.05] hover:text-white"
                 >
                   <div>
                     <p className={cn('text-[10px] font-semibold uppercase tracking-[0.2em]', group.accent)}>
@@ -210,7 +191,7 @@ function Sidebar({ collapsed = false, onToggle, mobile = false }: SidebarProps) 
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'flex items-center rounded-xl transition-all duration-150 border',
+                    'flex items-center rounded-md transition-all duration-150 border',
                     isActive
                       ? 'border-white/12 bg-white/[0.12] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
                       : 'border-transparent text-white/78 hover:bg-white/[0.07] hover:text-white',
@@ -222,7 +203,7 @@ function Sidebar({ collapsed = false, onToggle, mobile = false }: SidebarProps) 
                     <Icon size={17} strokeWidth={1.5} />
                     {item.badge && (() => {
                       return unreadTotal > 0 ? (
-                        <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center" style={{ padding: '0 3px' }}>
+                        <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 rounded-full bg-danger text-white text-[9px] font-bold flex items-center justify-center px-0.5">
                           {unreadTotal > 99 ? '99+' : unreadTotal}
                         </span>
                       ) : null;
@@ -233,7 +214,7 @@ function Sidebar({ collapsed = false, onToggle, mobile = false }: SidebarProps) 
                       <div className="flex items-center gap-2">
                         <span className="truncate text-[13px] font-medium">{item.label}</span>
                         {item.badge && unreadTotal > 0 ? (
-                          <span className="min-w-[20px] h-[20px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center" style={{ padding: '0 5px' }}>
+                          <span className="min-w-5 h-5 rounded-full bg-danger text-white text-[10px] font-bold flex items-center justify-center px-1">
                             {unreadTotal > 99 ? '99+' : unreadTotal}
                           </span>
                         ) : null}
@@ -256,11 +237,11 @@ function Sidebar({ collapsed = false, onToggle, mobile = false }: SidebarProps) 
       </nav>
 
       {/* Bottom */}
-      <div className="flex-shrink-0" style={{ marginBottom: SIDEBAR_SPACING.footerBottom }}>
+      <div className="flex-shrink-0 mb-6">
         <div className={cn(
           'flex items-center gap-2.5 py-2.5',
-          collapsed && !mobile ? 'justify-center px-0' : ''
-        )} style={collapsed && !mobile ? undefined : { paddingLeft: SIDEBAR_SPACING.footerX, paddingRight: SIDEBAR_SPACING.footerX }}>
+          collapsed && !mobile ? 'justify-center px-0' : 'px-5'
+        )}>
           <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-[11px] font-semibold text-primary-light flex-shrink-0">
             {user?.name?.charAt(0) ?? '?'}
           </div>

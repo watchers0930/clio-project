@@ -112,18 +112,18 @@ export default function MemoFormModal({ open, onClose, onSubmit, memo, initialDa
         {/* 헤더 */}
         <div className="flex items-center justify-between px-[38px] pt-[34px] pb-[30px]">
           <div>
-            <h2 className="text-[17px] font-bold text-[#0F172A]">
+            <h2 className="text-[17px] font-bold text-foreground">
               {isEdit ? '메모 수정' : '새 메모'}
             </h2>
-            <p className="text-[12px] text-[#94A3B8] mt-0.5">
+            <p className="text-[12px] text-foreground-quaternary mt-0.5">
               {isEdit ? '내용을 수정하세요' : '생각을 기록하세요'}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl hover:bg-[#F1F5F9] transition-colors"
+            className="p-2 rounded-xl hover:bg-surface-secondary transition-colors"
           >
-            <X size={16} className="text-[#94A3B8]" />
+            <X size={16} className="text-foreground-quaternary" />
           </button>
         </div>
 
@@ -151,7 +151,7 @@ export default function MemoFormModal({ open, onClose, onSubmit, memo, initialDa
                 }}
               />
             ))}
-            <span className="ml-1 text-[11px] text-[#94A3B8] font-medium">
+            <span className="ml-1 text-[11px] text-foreground-quaternary font-medium">
               {COLORS.find((c) => c.value === color)?.label}
             </span>
           </div>
@@ -164,7 +164,7 @@ export default function MemoFormModal({ open, onClose, onSubmit, memo, initialDa
               value={title}
               onChange={(e) => setTitle(e.target.value.slice(0, 50))}
               placeholder="메모 제목을 입력하세요"
-              className="w-full px-4 py-3 text-[14px] font-medium text-[#1E293B] rounded-xl outline-none transition-all"
+              className="w-full px-4 py-3 text-[14px] font-medium text-foreground rounded-xl outline-none transition-all"
               style={{
                 border: `1.5px solid ${title ? accentHex + '60' : '#E2E8F0'}`,
                 background: '#FAFBFF',
@@ -182,7 +182,7 @@ export default function MemoFormModal({ open, onClose, onSubmit, memo, initialDa
               onChange={(e) => setContent(e.target.value)}
               placeholder="내용을 입력하세요 (선택사항)"
               rows={5}
-              className="w-full px-4 py-3 text-[13px] text-[#334155] rounded-xl outline-none resize-none transition-all leading-[1.8]"
+              className="w-full px-4 py-3 text-[13px] text-foreground-secondary rounded-xl outline-none resize-none transition-all leading-[1.8]"
               style={{
                 border: '1.5px solid #E2E8F0',
                 background: '#FAFBFF',
@@ -196,7 +196,7 @@ export default function MemoFormModal({ open, onClose, onSubmit, memo, initialDa
           <div className="flex items-center gap-3 pt-1">
             <button
               onClick={onClose}
-              className="flex-1 py-2.5 text-[13px] font-medium text-[#64748B] rounded-xl border border-[#E2E8F0] hover:bg-[#F8FAFC] transition-colors"
+              className="flex-1 py-2.5 text-[13px] font-medium text-foreground-secondary rounded-xl border border-border hover:bg-surface-tertiary transition-colors"
             >
               취소
             </button>

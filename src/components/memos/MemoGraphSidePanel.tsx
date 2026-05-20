@@ -30,20 +30,20 @@ export default function MemoGraphSidePanel({ node, onEdit, onClose }: MemoGraphS
       >
         <div className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: accentColor }} />
-          <span className="text-[11px] font-semibold text-[#64748B] uppercase tracking-[0.18em]">메모 미리보기</span>
+          <span className="text-[11px] font-semibold text-foreground-secondary uppercase tracking-[0.18em]">메모 미리보기</span>
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-md hover:bg-[#F1F5F9] transition-colors"
+          className="p-1.5 rounded-md hover:bg-surface-secondary transition-colors"
         >
-          <X size={14} className="text-[#94A3B8]" />
+          <X size={14} className="text-foreground-quaternary" />
         </button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4">
         <div>
-          <h3 className="text-[15px] font-semibold text-[#1E293B] leading-snug">{node.title}</h3>
-          <p className="mt-2 text-[12px] leading-6 text-[#64748B] whitespace-pre-wrap">{preview}</p>
+          <h3 className="text-[15px] font-semibold text-foreground leading-snug">{node.title}</h3>
+          <p className="mt-2 text-[12px] leading-6 text-foreground-secondary whitespace-pre-wrap">{preview}</p>
         </div>
         <button
           onClick={() => onEdit(node.id)}

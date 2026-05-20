@@ -278,15 +278,15 @@ export function ShareLinkModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-md rounded-2xl border border-[#e5e5e7] bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-[#e5e5e7] px-4 py-4 sm:px-6 sm:py-5">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-border px-4 py-4 sm:px-6 sm:py-5">
           <div>
-            <h2 className="text-[15px] font-semibold text-[#1B1F2B]">
+            <h2 className="text-[15px] font-semibold text-foreground">
               {shareMode === 'internal' ? '내부 공유 관리' : shareMode === 'review' ? '검토 요청 보내기' : '외부 공유 링크 생성'}
             </h2>
-            <p className="mt-0.5 max-w-xs truncate text-xs text-[#6e6e73]">{resourceTitle}</p>
+            <p className="mt-0.5 max-w-xs truncate text-xs text-foreground-secondary">{resourceTitle}</p>
           </div>
-          <button onClick={onClose} className="rounded-lg p-2 text-[#6e6e73] hover:bg-[#f5f5f7]">
+          <button onClick={onClose} className="rounded-lg p-2 text-foreground-secondary hover:bg-surface-secondary">
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -294,11 +294,11 @@ export function ShareLinkModal({
         </div>
 
         <div className="px-4 pt-4 sm:px-6">
-          <div className="grid grid-cols-1 gap-1.5 rounded-2xl bg-[#f5f5f7] p-1.5 sm:flex sm:items-center">
+          <div className="grid grid-cols-1 gap-1.5 rounded-2xl bg-surface-secondary p-1.5 sm:flex sm:items-center">
             <button
               onClick={() => setShareMode('external')}
               className={`flex-1 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors ${
-                shareMode === 'external' ? 'bg-white text-[#1B1F2B] shadow-sm' : 'text-[#6e6e73]'
+                shareMode === 'external' ? 'bg-white text-foreground shadow-sm' : 'text-foreground-secondary'
               }`}
             >
               외부 링크
@@ -307,7 +307,7 @@ export function ShareLinkModal({
               <button
                 onClick={() => setShareMode('internal')}
                 className={`flex-1 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors ${
-                  shareMode === 'internal' ? 'bg-white text-[#1B1F2B] shadow-sm' : 'text-[#6e6e73]'
+                  shareMode === 'internal' ? 'bg-white text-foreground shadow-sm' : 'text-foreground-secondary'
                 }`}
               >
                 사용자/부서
@@ -316,7 +316,7 @@ export function ShareLinkModal({
             <button
               onClick={() => setShareMode('review')}
               className={`flex-1 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors ${
-                shareMode === 'review' ? 'bg-white text-[#1B1F2B] shadow-sm' : 'text-[#6e6e73]'
+                shareMode === 'review' ? 'bg-white text-foreground shadow-sm' : 'text-foreground-secondary'
               }`}
             >
               검토 요청

@@ -139,13 +139,12 @@ export default function ContractRiskPage() {
   };
 
   return (
-    <div className="min-h-full space-y-[25px] bg-[#F7F8FA] pb-10">
+    <div className="flex min-h-full flex-col gap-5 pb-10">
       <ContractRiskLoadingOverlay isTranscribing={isTranscribing} isAnalyzing={isAnalyzing} progressMsg={progressMsg} />
       <ContractRiskHero
         sourceHint={sourceHint}
         onOpenFiles={() => router.push('/files')}
         onOpenDocuments={() => router.push('/documents')}
-        onSelectUploadMode={() => setInputMode('upload')}
       />
 
       {/* ── 본문 2열 레이아웃 ────────────────────────────────────────────── */}

@@ -86,12 +86,12 @@ export function MemoGraphStage({
 
       <div className="absolute inset-0">
         {!hasData ? (
-          <div className="flex h-full items-center justify-center text-[13px] text-[#94A3B8]">메모가 없거나 연결된 메모가 없습니다</div>
+          <div className="flex h-full items-center justify-center text-[13px] text-foreground-quaternary">메모가 없거나 연결된 메모가 없습니다</div>
         ) : hasDimensions ? graphCanvas : null}
 
         <div className="absolute bottom-4 left-4 flex flex-wrap items-center gap-2">
           <div
-            className="flex items-center gap-4 rounded-full px-3 py-1.5 text-[10px] text-[#64748B]"
+            className="flex items-center gap-4 rounded-full px-3 py-1.5 text-[10px] text-foreground-secondary"
             style={{
               background: 'rgba(255,255,255,0.92)',
               border: '1px solid #E2E8F0',
@@ -111,13 +111,13 @@ export function MemoGraphStage({
               <span className="inline-block w-4" style={{ borderTop: '1px dashed #3B82F6AA' }} />
               의미
             </span>
-            <span className="text-[9px] text-[#94A3B8]">클릭=메모 포커스 · Shift+클릭=수동 묶기</span>
+            <span className="text-[9px] text-foreground-quaternary">클릭=메모 포커스 · Shift+클릭=수동 묶기</span>
           </div>
           {thresholdControl}
         </div>
 
         <div
-          className="absolute left-4 top-14 rounded-full border px-3 py-1.5 text-[10px] text-[#475569]"
+          className="absolute left-4 top-14 rounded-full border px-3 py-1.5 text-[10px] text-foreground-secondary"
           style={{
             background: 'rgba(255,255,255,0.9)',
             borderColor: '#E2E8F0',
@@ -161,7 +161,7 @@ export function MemoGraphStage({
               backdropFilter: 'blur(8px)',
             }}
           >
-            <span className="px-2 text-[11px] font-medium text-[#64748B]">{selectedCount}개 메모 선택됨</span>
+            <span className="px-2 text-[11px] font-medium text-foreground-secondary">{selectedCount}개 메모 선택됨</span>
             <button
               onClick={onOpenIdeaPanel}
               className="flex items-center gap-2 rounded-full px-4 py-2 text-[12px] font-semibold text-white transition-all hover:opacity-90"
@@ -176,7 +176,7 @@ export function MemoGraphStage({
             <button
               onClick={onCreateProposal}
               disabled={proposalLoading}
-              className="flex items-center gap-2 rounded-full border border-[#D7E7FF] bg-[#F5F9FF] px-4 py-2 text-[12px] font-semibold text-[#2E6FF2] transition-colors hover:bg-[#EEF5FF] disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex items-center gap-2 rounded-full border border-border-tint bg-primary-tint px-4 py-2 text-[12px] font-semibold text-primary transition-colors hover:bg-primary-tint disabled:cursor-not-allowed disabled:opacity-60"
             >
               <FileText size={14} />
               {proposalLoading ? '제안 보고서 생성 중...' : '제안 보고서'}

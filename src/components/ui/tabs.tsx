@@ -22,7 +22,7 @@ interface TabsProps {
 export function Tabs({ tabs, activeTab, onChange, variant = 'pill', className }: TabsProps) {
   if (variant === 'underline') {
     return (
-      <div className={cn('flex gap-7 border-b border-[#e5e5e7]', className)}>
+      <div className={cn('flex gap-7 border-b border-border', className)}>
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -30,8 +30,8 @@ export function Tabs({ tabs, activeTab, onChange, variant = 'pill', className }:
             className={cn(
               'flex items-center gap-2 pb-4 text-sm font-medium border-b-2 -mb-px transition-colors',
               activeTab === tab.id
-                ? 'border-[#0071e3] text-[#0071e3]'
-                : 'border-transparent text-[#6e6e73] hover:text-[#1d1d1f]'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-foreground-secondary hover:text-foreground'
             )}
           >
             {tab.icon}
@@ -40,8 +40,8 @@ export function Tabs({ tabs, activeTab, onChange, variant = 'pill', className }:
               <span className={cn(
                 'ml-1 px-2 py-1 rounded-full text-[11px] font-semibold',
                 activeTab === tab.id
-                  ? 'bg-[#0071e3]/10 text-[#0071e3]'
-                  : 'bg-[#f5f5f7] text-[#6e6e73]'
+                  ? 'bg-primary/10 text-primary'
+                  : 'bg-surface-secondary text-foreground-secondary'
               )}>
                 {tab.count}
               </span>
@@ -54,16 +54,16 @@ export function Tabs({ tabs, activeTab, onChange, variant = 'pill', className }:
 
   // pill variant (default)
   return (
-    <div className={cn('flex gap-1.5 bg-[#f5f5f7] rounded-xl p-1.5 w-fit', className)}>
+    <div className={cn('flex gap-1.5 bg-surface-secondary rounded-md p-1.5 w-fit', className)}>
       {tabs.map((tab) => (
         <button
           key={tab.id}
           onClick={() => onChange(tab.id)}
           className={cn(
-            'flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium rounded-lg transition-all',
+            'flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium rounded-sm transition-all',
             activeTab === tab.id
-              ? 'bg-white text-[#1d1d1f] shadow-sm'
-              : 'text-[#6e6e73] hover:text-[#1d1d1f]'
+              ? 'bg-white text-foreground shadow-sm'
+              : 'text-foreground-secondary hover:text-foreground'
           )}
         >
           {tab.icon}
@@ -72,8 +72,8 @@ export function Tabs({ tabs, activeTab, onChange, variant = 'pill', className }:
             <span className={cn(
               'ml-0.5 px-2 py-1 rounded-full text-[11px] font-semibold',
               activeTab === tab.id
-                ? 'bg-[#0071e3]/10 text-[#0071e3]'
-                : 'bg-[#e5e5e7] text-[#6e6e73]'
+                ? 'bg-primary/10 text-primary'
+                : 'bg-border text-foreground-secondary'
             )}>
               {tab.count}
             </span>

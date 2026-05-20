@@ -376,7 +376,7 @@ export default function TemplatesPage() {
   if (loading) return <SkeletonCard count={6} />;
 
   return (
-    <div className="space-y-[25px] pb-10">
+    <div className="flex flex-col gap-5 pb-10">
       <TemplatesHeader
         selectMode={selectMode}
         selectedCount={selectedIds.size}

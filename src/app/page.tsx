@@ -66,36 +66,37 @@ export default function RootPage() {
 
   if (!hasHydrated || !token) {
     return (
-      <div className="min-h-screen bg-clio-bg flex items-center justify-center">
+      <div className="min-h-screen bg-surface-secondary flex items-center justify-center">
         <div className="animate-spin h-6 w-6 border-2 border-navy border-t-transparent rounded-full" />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-start justify-center bg-[#f5f5f7] px-5 pb-8 pt-9">
-      <div className="w-full max-w-[740px]">
-        <div className="mb-6 text-center">
-          <h1
-            className="text-[44px] font-light tracking-[0.3em] text-[#1d1d1f]"
-            style={{ fontFamily: '"Times New Roman", Times, serif' }}
-          >
+    <div className="flex min-h-full items-start justify-center px-5 pb-8 pt-9">
+      <div className="mx-auto w-full max-w-[740px]">
+        <div className="mb-6 flex flex-col items-center text-center">
+          <h1 className="text-[44px] font-light tracking-[0.3em] text-foreground font-serif">
             CLIO
           </h1>
-          <p className="mt-3 text-[15px] text-[#6e6e73]">{PLATFORM_LABEL}</p>
-          <p className="mt-2.5 mb-5 w-full text-center text-[13px] leading-5 text-[#8e8e93]">
-            CLIO는 기업 문서를 한곳에 저장한 뒤, 공유하고, 코멘트를 반영하고, 다시 검색해 재활용하는 문서 운영 플랫폼입니다.
+          <p className="mt-3 text-[15px] text-foreground-secondary">
+            {PLATFORM_LABEL}
+          </p>
+          <p className="mt-2.5 mb-5 max-w-[520px] text-center text-[13px] leading-5 text-foreground-tertiary">
+            CLIO는 기업 문서를 한곳에 저장한 뒤, 공유하고, 코멘트를 반영하고,
+            <br className="hidden md:block" />
+            다시 검색해 재활용하는 문서 운영 플랫폼입니다.
           </p>
           <div className="h-3 w-full" aria-hidden="true" />
         </div>
 
-        <section className="mt-[12px] rounded-2xl border border-[#e5e5e7] bg-white px-5 py-7 md:px-[64px] md:pt-7 md:pb-9">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.22em] text-[#0071e3]">Quick Start</p>
-          <h2 className="mt-3 text-[28px] font-semibold leading-[1.2] text-[#1d1d1f]">
+        <section className="mt-[12px] rounded-2xl border border-border bg-white px-5 py-7 md:px-[64px] md:pt-7 md:pb-9">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.22em] text-primary">Quick Start</p>
+          <h2 className="mt-3 text-[28px] font-semibold leading-[1.2] text-foreground">
             무엇부터 시작할까요?
           </h2>
           <div className="mt-2 flex flex-col gap-4">
-            <p className="text-[13px] leading-6 text-[#6e6e73]">
+            <p className="text-[13px] leading-6 text-foreground-secondary">
               로그인 후 첫 진입점은 문서허브입니다. 가장 자주 쓰는 작업부터 바로 이어서 시작할 수 있습니다.
             </p>
 
@@ -106,15 +107,15 @@ export default function RootPage() {
                   <Link
                     key={option.title}
                     href={option.href}
-                    className="group h-full rounded-xl border border-[#e5e5e7] bg-[#f5f5f7] px-4 py-4 transition-colors hover:border-[#0071e3] hover:bg-white"
+                    className="group h-full rounded-xl border border-border bg-surface-secondary px-4 py-4 transition-colors hover:border-primary hover:bg-white"
                   >
                     <div className="flex h-full items-start gap-4">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#2E6FF2] transition-colors group-hover:bg-[#f3f8ff]">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-primary transition-colors group-hover:bg-primary-tint">
                         <Icon size={19} strokeWidth={1.8} />
                       </div>
                       <div className="min-w-0">
-                        <div className="text-[17px] font-semibold text-[#1d1d1f]">{option.title}</div>
-                        <p className="mt-1.5 text-[13px] leading-5 text-[#6e6e73]">{option.description}</p>
+                        <div className="text-[17px] font-semibold text-foreground">{option.title}</div>
+                        <p className="mt-1.5 text-[13px] leading-5 text-foreground-secondary">{option.description}</p>
                       </div>
                     </div>
                   </Link>
@@ -122,18 +123,18 @@ export default function RootPage() {
               })}
             </div>
 
-            <div className="mt-0.5 rounded-2xl border border-[#D7E7FF] bg-[#F7FBFF] px-4 py-3">
+            <div className="mt-0.5 rounded-2xl border border-border-tint bg-primary-tint px-4 py-3">
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-4">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#2E6FF2]">Quick Capture</p>
-                  <p className="mt-1 text-[14px] font-semibold text-[#1d1d1f]">회의 녹음으로 바로 회의록을 시작합니다</p>
-                  <p className="mt-0.5 text-[12px] leading-5 text-[#6e6e73] md:truncate">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Quick Capture</p>
+                  <p className="mt-1 text-[14px] font-semibold text-foreground">회의 녹음으로 바로 회의록을 시작합니다</p>
+                  <p className="mt-0.5 text-[12px] leading-5 text-foreground-secondary md:truncate">
                     마이크로 바로 녹음하거나 음성 파일을 올려 회의록과 할일 추출까지 바로 이어갑니다.
                   </p>
                 </div>
                 <Link
                   href="/meetings?record=true"
-                  className="inline-flex items-center justify-center gap-2 self-start whitespace-nowrap rounded-xl bg-[#1d1d1f] px-4 py-2.5 text-[12px] font-medium text-white hover:bg-[#0071e3] transition-colors md:self-auto"
+                  className="inline-flex items-center justify-center gap-2 self-start whitespace-nowrap rounded-xl bg-foreground px-4 py-2.5 text-[12px] font-medium text-white hover:bg-primary transition-colors md:self-auto"
                 >
                   <Mic size={15} />
                   회의 녹음 시작
@@ -143,13 +144,13 @@ export default function RootPage() {
           </div>
         </section>
 
-        <div className="mt-3 rounded-xl border border-[#e5e5e7] bg-white px-5 py-3 text-center">
-          <p className="text-[12px] text-[#6e6e73]">
+        <div className="mt-3 rounded-xl border border-border bg-white px-5 py-3 text-center">
+          <p className="text-[12px] text-foreground-secondary">
             문서 생성, 검색, 파일 운영뿐 아니라 회의, 메모, 일정과 할일, 음성 회의록 시작까지 첫 화면에서 바로 들어갈 수 있습니다.
           </p>
         </div>
 
-        <p className="mt-6 text-center text-[11px] text-[#6e6e73]" style={{ fontFamily: 'Verdana, sans-serif' }}>
+        <p className="mt-6 text-center text-[11px] text-foreground-secondary font-en">
           &copy; 2026 CLIO. All rights reserved.
         </p>
       </div>

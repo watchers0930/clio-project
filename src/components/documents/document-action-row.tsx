@@ -6,13 +6,13 @@ interface DocumentActionRowItem {
 }
 
 const ACTION_VARIANTS: Record<NonNullable<DocumentActionRowItem['variant']>, string> = {
-  primary: 'bg-[#1d1d1f] text-white hover:bg-[#0071e3]',
-  secondary: 'border border-[#D7E7FF] text-[#2E6FF2] hover:bg-[#eef6ff]',
-  review: 'border border-[#E6DBFF] text-[#7C3AED] hover:bg-[#FAF5FF]',
-  success: 'border border-[#D7EFDE] text-[#258A4E] hover:bg-[#F4FBF6]',
-  share: 'border border-[#E6DBFF] text-[#7B61FF] hover:bg-[#f6f3ff]',
-  warning: 'border border-[#f59e0b] text-[#f59e0b] hover:bg-amber-50',
-  muted: 'border border-[#e5e5e7] text-[#6e6e73] hover:bg-[#f5f5f7]',
+  primary: 'bg-foreground text-white hover:bg-primary',
+  secondary: 'border border-border-tint text-primary hover:bg-primary-tint',
+  review: 'border border-purple-200 text-purple-600 hover:bg-purple-50',
+  success: 'border border-success/30 text-success hover:bg-success/5',
+  share: 'border border-purple-200 text-purple-500 hover:bg-purple-50',
+  warning: 'border border-warning text-warning hover:bg-amber-50',
+  muted: 'border border-border text-foreground-secondary hover:bg-surface-secondary',
 };
 
 export function DocumentActionRow({ items }: { items: DocumentActionRowItem[] }) {

@@ -29,7 +29,7 @@ export default function MemoCard({ memo, onPin, onView, onEdit, onDelete }: Memo
 
   return (
     <div
-      className="relative bg-white rounded-xl border border-[#E2E5EA] shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer p-4"
+      className="relative bg-white rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer p-4"
       style={{ borderLeftWidth: 4, borderLeftColor: colorInfo.hex }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -47,15 +47,14 @@ export default function MemoCard({ memo, onPin, onView, onEdit, onDelete }: Memo
 
       {/* 제목 */}
       <h4
-        className="text-[14px] font-semibold text-[#1B1F2B] truncate pr-7 leading-snug"
-        style={{ fontFamily: '"Paperlogy", "Pretendard", "Noto Sans KR", sans-serif' }}
+        className="text-[14px] font-semibold text-foreground truncate pr-7 leading-snug font-sans"
       >
         {memo.title}
       </h4>
 
       {/* 내용 미리보기 */}
       {memo.content && (
-        <p className="text-[12px] text-[#7C8494] mt-2 line-clamp-2 leading-[1.6]">
+        <p className="text-[12px] text-foreground-secondary mt-2 line-clamp-2 leading-[1.6]">
           {memo.content}
         </p>
       )}
@@ -63,7 +62,7 @@ export default function MemoCard({ memo, onPin, onView, onEdit, onDelete }: Memo
       {/* 하단: 컬러 뱃지 (좌) + 생성일 (우) */}
       <div className="flex items-center justify-between mt-4 pt-0">
         {/* 컬러 뱃지 */}
-        <span className="flex items-center gap-1.5 text-[11px] text-[#94A3B8]">
+        <span className="flex items-center gap-1.5 text-[11px] text-foreground-quaternary">
           <span
             className="w-2 h-2 rounded-full inline-block flex-shrink-0"
             style={{ backgroundColor: colorInfo.hex }}
@@ -71,7 +70,7 @@ export default function MemoCard({ memo, onPin, onView, onEdit, onDelete }: Memo
           {colorInfo.label}
         </span>
         {/* 날짜 — hover 시 액션 버튼과 겹치지 않도록 숨김 */}
-        <p className={`text-[11px] text-[#A0A7B5] transition-opacity duration-150 ${hovered ? 'opacity-0' : 'opacity-100'}`}>
+        <p className={`text-[11px] text-foreground-quaternary transition-opacity duration-150 ${hovered ? 'opacity-0' : 'opacity-100'}`}>
           {format(new Date(memo.updated_at), 'M월 d일 HH:mm', { locale: ko })}
         </p>
       </div>
@@ -84,19 +83,19 @@ export default function MemoCard({ memo, onPin, onView, onEdit, onDelete }: Memo
         >
           <button
             onClick={() => onPin(memo.id)}
-            className="p-1.5 rounded-md hover:bg-[#F1F3F5] transition-colors"
+            className="p-1.5 rounded-md hover:bg-surface-secondary transition-colors"
             title={memo.is_pinned ? '고정 해제' : '고정'}
           >
             {memo.is_pinned
-              ? <PinOff size={13} className="text-[#7C8494]" />
-              : <Pin size={13} className="text-[#7C8494]" />}
+              ? <PinOff size={13} className="text-foreground-secondary" />
+              : <Pin size={13} className="text-foreground-secondary" />}
           </button>
           <button
             onClick={() => onEdit(memo)}
-            className="p-1.5 rounded-md hover:bg-[#F1F3F5] transition-colors"
+            className="p-1.5 rounded-md hover:bg-surface-secondary transition-colors"
             title="수정"
           >
-            <Pencil size={13} className="text-[#7C8494]" />
+            <Pencil size={13} className="text-foreground-secondary" />
           </button>
           <button
             onClick={() => onDelete(memo.id)}

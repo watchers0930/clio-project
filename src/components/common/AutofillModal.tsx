@@ -182,26 +182,26 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
       {/* 모달 */}
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-8 py-5 border-b border-[#E2E5EA]">
+        <div className="flex items-center justify-between px-8 py-5 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#2E6FF2]/10 flex items-center justify-center">
-              <Wand2 className="w-5 h-5 text-[#2E6FF2]" />
+            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Wand2 className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h2 className="text-[15px] font-semibold text-[#1B1F2B]">자동채우기</h2>
-              <p className="text-[12px] text-[#6B7280]">AI가 빈 필드를 자동으로 채워드립니다</p>
+              <h2 className="text-[15px] font-semibold text-foreground">자동채우기</h2>
+              <p className="text-[12px] text-foreground-secondary">AI가 빈 필드를 자동으로 채워드립니다</p>
             </div>
           </div>
           <button
             onClick={handleClose}
-            className="w-8 h-8 rounded-lg hover:bg-[#F7F8FA] flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-lg hover:bg-surface-secondary flex items-center justify-center transition-colors"
           >
-            <X className="w-4 h-4 text-[#6B7280]" />
+            <X className="w-4 h-4 text-foreground-secondary" />
           </button>
         </div>
 
         {/* 단계 표시 */}
-        <div className="flex items-center gap-0 px-8 py-3 bg-[#F7F8FA] border-b border-[#E2E5EA]">
+        <div className="flex items-center gap-0 px-8 py-3 bg-surface-secondary border-b border-border">
           {(['파일 업로드', '내용 입력', '다운로드'] as const).map((label, idx) => {
             const s = idx + 1;
             const active = step === s;
@@ -211,16 +211,16 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
                 <div className="flex items-center gap-2">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors ${
                     done ? 'bg-emerald-500 text-white' :
-                    active ? 'bg-[#2E6FF2] text-white' :
-                    'bg-[#E2E5EA] text-[#6B7280]'
+                    active ? 'bg-primary text-white' :
+                    'bg-border text-foreground-secondary'
                   }`}>
                     {done ? '✓' : s}
                   </div>
-                  <span className={`text-[12px] font-medium ${active ? 'text-[#1B1F2B]' : 'text-[#9CA3AF]'}`}>
+                  <span className={`text-[12px] font-medium ${active ? 'text-foreground' : 'text-foreground-quaternary'}`}>
                     {label}
                   </span>
                 </div>
-                {idx < 2 && <ChevronRight className="w-4 h-4 text-[#D1D5DB] mx-3" />}
+                {idx < 2 && <ChevronRight className="w-4 h-4 text-foreground-quaternary mx-3" />}
               </div>
             );
           })}
@@ -237,7 +237,7 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
                 onDragOver={e => e.preventDefault()}
                 onClick={() => fileInputRef.current?.click()}
                 className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors ${
-                  file ? 'border-[#2E6FF2] bg-[#2E6FF2]/5' : 'border-[#E2E5EA] hover:border-[#2E6FF2] hover:bg-[#F7F8FA]'
+                  file ? 'border-primary bg-primary/5' : 'border-border hover:border-primary hover:bg-surface-secondary'
                 }`}
               >
                 <input
@@ -249,17 +249,17 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
                 />
                 {file ? (
                   <div className="space-y-2">
-                    <CheckCircle className="w-10 h-10 text-[#2E6FF2] mx-auto" />
-                    <p className="text-[14px] font-medium text-[#1B1F2B]">{file.name}</p>
-                    <p className="text-[12px] text-[#6B7280]">
+                    <CheckCircle className="w-10 h-10 text-primary mx-auto" />
+                    <p className="text-[14px] font-medium text-foreground">{file.name}</p>
+                    <p className="text-[12px] text-foreground-secondary">
                       {(file.size / 1024).toFixed(1)} KB — 클릭해서 다른 파일 선택
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <Upload className="w-10 h-10 text-[#9CA3AF] mx-auto" />
-                    <p className="text-[14px] font-medium text-[#1B1F2B]">파일을 드래그하거나 클릭해서 선택</p>
-                    <p className="text-[12px] text-[#6B7280]">DOCX, HWPX, HWP · 최대 20MB</p>
+                    <Upload className="w-10 h-10 text-foreground-quaternary mx-auto" />
+                    <p className="text-[14px] font-medium text-foreground">파일을 드래그하거나 클릭해서 선택</p>
+                    <p className="text-[12px] text-foreground-secondary">DOCX, HWPX, HWP · 최대 20MB</p>
                   </div>
                 )}
               </div>
@@ -278,8 +278,8 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
           {step === 2 && (
             <div className="space-y-4">
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-[13px] text-[#6B7280]">
-                  총 <span className="font-semibold text-[#1B1F2B]">{fields.length}</span>개 필드 감지
+                <p className="text-[13px] text-foreground-secondary">
+                  총 <span className="font-semibold text-foreground">{fields.length}</span>개 필드 감지
                   {fields.filter(f => f.autoMapped).length > 0 && (
                     <span className="ml-2 text-emerald-600">
                       ({fields.filter(f => f.autoMapped).length}개 자동 매핑)
@@ -295,9 +295,9 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
                 const badge = CONFIDENCE_BADGE[field.confidence];
                 const displayName = field.inferredName ?? field.label;
                 return (
-                  <div key={field.key} className="border border-[#E2E5EA] rounded-xl p-4 space-y-3">
+                  <div key={field.key} className="border border-border rounded-xl p-4 space-y-3">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-[13px] font-medium text-[#1B1F2B]">{displayName}</span>
+                      <span className="text-[13px] font-medium text-foreground">{displayName}</span>
                       <span className={`text-[10px] px-2 py-1 rounded-full font-medium ${badge.cls}`}>
                         {badge.label}
                       </span>
@@ -308,14 +308,14 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
                       )}
                     </div>
                     {field.context && (
-                      <p className="text-[11px] text-[#9CA3AF]">위치: {field.context}</p>
+                      <p className="text-[11px] text-foreground-quaternary">위치: {field.context}</p>
                     )}
                     <input
                       type="text"
                       value={values[field.key] ?? ''}
                       onChange={e => setValues(prev => ({ ...prev, [field.key]: e.target.value }))}
                       placeholder={field.confidence === 'low' ? '내용을 직접 입력해 주세요' : `${displayName} 입력`}
-                      className="w-full text-[13px] px-3.5 py-2.5 border border-[#E2E5EA] rounded-lg focus:outline-none focus:border-[#2E6FF2] bg-[#F7F8FA] placeholder:text-[#C0C4CC]"
+                      className="w-full text-[13px] px-3.5 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary bg-surface-secondary placeholder:text-foreground-quaternary"
                     />
                   </div>
                 );
@@ -330,18 +330,18 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
                 <CheckCircle className="w-8 h-8 text-emerald-500" />
               </div>
               <div>
-                <h3 className="text-[16px] font-semibold text-[#1B1F2B]">자동채우기 완료!</h3>
-                <p className="text-[13px] text-[#6B7280] mt-1">
+                <h3 className="text-[16px] font-semibold text-foreground">자동채우기 완료!</h3>
+                <p className="text-[13px] text-foreground-secondary mt-1">
                   {fields.filter(f => values[f.key]).length}개 필드가 채워진 문서가 준비됐습니다.
                 </p>
               </div>
-              <div className="bg-[#F7F8FA] rounded-xl p-4 text-left">
-                <p className="text-[12px] text-[#6B7280]">완성 파일</p>
-                <p className="text-[14px] font-medium text-[#1B1F2B] mt-1">{downloadFileName}</p>
+              <div className="bg-surface-secondary rounded-xl p-4 text-left">
+                <p className="text-[12px] text-foreground-secondary">완성 파일</p>
+                <p className="text-[14px] font-medium text-foreground mt-1">{downloadFileName}</p>
               </div>
               <button
                 onClick={handleDownload}
-                className="flex items-center gap-2 mx-auto px-6 py-3 bg-[#2E6FF2] text-white rounded-xl text-[14px] font-medium hover:bg-[#2560d8] transition-colors"
+                className="flex items-center gap-2 mx-auto px-6 py-3 bg-primary text-white rounded-xl text-[14px] font-medium hover:bg-primary-dark transition-colors"
               >
                 <Download className="w-4 h-4" />
                 파일 다운로드
@@ -351,11 +351,11 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
         </div>
 
         {/* 푸터 */}
-        <div className="flex items-center justify-between px-8 py-5 border-t border-[#E2E5EA] bg-[#F7F8FA]">
+        <div className="flex items-center justify-between px-8 py-5 border-t border-border bg-surface-secondary">
           <button
             onClick={step === 1 ? handleClose : () => setStep(s => (s - 1) as 1 | 2 | 3)}
             disabled={analyzing || generating}
-            className="px-4 py-2.5 text-[13px] text-[#6B7280] hover:text-[#1B1F2B] disabled:opacity-40 transition-colors"
+            className="px-4 py-2.5 text-[13px] text-foreground-secondary hover:text-foreground disabled:opacity-40 transition-colors"
           >
             {step === 1 ? '취소' : '← 이전'}
           </button>
@@ -364,7 +364,7 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
             <button
               onClick={handleAnalyze}
               disabled={!file || analyzing}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#2E6FF2] text-white rounded-xl text-[13px] font-medium hover:bg-[#2560d8] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-[13px] font-medium hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               {analyzing ? <><Spinner size="sm" /> {analyzeMsg || '분석 중...'}</> : <><Wand2 className="w-4 h-4" /> 분석 시작</>}
             </button>
@@ -374,7 +374,7 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
             <button
               onClick={handleGenerate}
               disabled={generating}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#2E6FF2] text-white rounded-xl text-[13px] font-medium hover:bg-[#2560d8] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-[13px] font-medium hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               {generating ? <><Spinner size="sm" /> 생성 중...</> : <><Download className="w-4 h-4" /> 문서 생성</>}
             </button>
@@ -383,7 +383,7 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
           {step === 3 && (
             <button
               onClick={handleClose}
-              className="px-5 py-2.5 bg-[#1B1F2B] text-white rounded-xl text-[13px] font-medium hover:bg-[#2d3344] transition-colors"
+              className="px-5 py-2.5 bg-foreground text-white rounded-xl text-[13px] font-medium hover:bg-sidebar-hover transition-colors"
             >
               닫기
             </button>

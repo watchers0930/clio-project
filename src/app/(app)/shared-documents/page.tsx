@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRightLeft, ArrowUpRight, MessageSquareText, Share2 } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import { DocumentActionRow } from '@/components/documents/document-action-row';
 import { buildDocumentCreateHref } from '@/lib/documents/navigation';
@@ -80,73 +80,45 @@ export default function SharedDocumentsPage() {
   if (error) {
     return (
       <div className="flex min-h-[360px] items-center justify-center">
-        <div className="max-w-md rounded-[28px] border border-[#e5e5e7] bg-white px-6 py-8 text-center">
-          <p className="text-[18px] font-semibold text-[#1d1d1f]">공유 문서를 불러오지 못했습니다.</p>
-          <p className="mt-2 text-[13px] leading-6 text-[#6e6e73]">{error}</p>
+        <div className="max-w-md rounded-xl border border-border bg-white px-6 py-8 text-center">
+          <p className="text-[18px] font-semibold text-foreground">공유 문서를 불러오지 못했습니다.</p>
+          <p className="mt-2 text-[13px] leading-6 text-foreground-secondary">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-[25px] pb-10">
-      <section className="rounded-[28px] border border-[#e5e5e7] bg-white overflow-hidden">
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
-          <div className="px-4 py-5 sm:px-6 sm:py-6 xl:px-[30px] xl:py-[30px]">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 25 }}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#0071e3]">Shared Workspace</p>
-              <h1 className="text-[24px] font-bold leading-[1.2] text-[#1d1d1f] sm:text-[28px]">공유 문서</h1>
-              <p className="max-w-2xl text-[14px] text-[#6e6e73] sm:text-[15px]" style={{ lineHeight: '20px' }}>
-                부서나 사용자에게 공유받은 문서와, 내가 외부 링크나 내부 공유로 배포 중인 문서를 한곳에서 다시 확인합니다.
-                여기서 바로 문서 상세, 코멘트 검토, 새 문서 활용으로 이어집니다.
+    <div className="flex flex-col gap-5 pb-10">
+      <section className="rounded-2xl border border-border bg-white shadow-sm">
+        <div className="flex flex-col gap-5 px-6 py-5 sm:px-8 sm:py-6">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="text-[20px] font-bold text-foreground">공유 문서</h1>
+              <p className="mt-1.5 text-[13px] text-foreground-secondary">
+                공유받은 문서와 내가 배포 중인 문서를 확인하고, 코멘트 검토나 후속 문서 작성으로 이어갑니다.
               </p>
-              <div className="rounded-2xl border border-[#D7E7FF] bg-[#F7FBFF] px-4 py-3.5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#2E6FF2]">Core Flow</p>
-                <p className="mt-1 text-[12px] leading-5 text-[#425466]">공유 문서는 검토 반영과 후속 문서 작성으로 이어지는 운영 단계입니다.</p>
-              </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <MetricCard label="나에게 공유됨" value={data?.incomingCount ?? 0} />
-                <MetricCard label="내가 공유 중" value={data?.outgoingCount ?? 0} />
-              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => router.push('/documents')}
+                className="h-9 rounded-xl bg-foreground px-4 text-[13px] font-medium text-white transition-colors hover:bg-primary"
+              >
+                문서 목록
+              </button>
             </div>
           </div>
-          <div className="border-t border-[#e5e5e7] bg-[#fbfbfc] px-4 py-5 sm:px-6 sm:py-6 xl:border-l xl:border-t-0 xl:px-[28px] xl:py-[28px]">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 25 }}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7C8494]">Next Flow</p>
-              <div className="flex flex-col gap-3">
-                <QuickAction
-                  icon={<MessageSquareText size={18} />}
-                  title="공유된 문서에서 코멘트 확인"
-                  description="미반영 코멘트가 있는 문서를 먼저 열어 검토 흐름을 이어갑니다."
-                  onClick={() => {
-                    const nextDoc = data?.incomingDocuments.find((item) => item.pendingCommentCount > 0) ?? data?.outgoingDocuments.find((item) => item.pendingCommentCount > 0);
-                    router.push(nextDoc ? `${nextDoc.href}#document-comment-panel` : '/documents');
-                  }}
-                />
-                <QuickAction
-                  icon={<Share2 size={18} />}
-                  title="내가 공유 중인 문서 점검"
-                  description="최근에 공유한 문서를 열어 권한과 상태를 다시 확인합니다."
-                  onClick={() => router.push(data?.outgoingDocuments[0]?.href ?? '/documents')}
-                />
-                <QuickAction
-                  icon={<ArrowRightLeft size={18} />}
-                  title="공유 문서로 새 문서 작성"
-                  description="공유받은 문서를 기반으로 후속 문서나 업데이트 문서를 작성합니다."
-                  onClick={() => {
-                    const nextDoc = data?.incomingDocuments[0];
-                    router.push(
-                      nextDoc
-                        ? buildDocumentCreateHref({
-                            originDocumentId: nextDoc.id,
-                            originContext: 'shared_followup',
-                            contextTitle: nextDoc.title,
-                            instructions: `"${nextDoc.title}" 문서를 바탕으로 후속 문서를 작성해줘.`,
-                          })
-                        : buildDocumentCreateHref(),
-                    );
-                  }}
-                />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-secondary px-4 py-3">
+              <div>
+                <p className="text-[10px] font-semibold text-foreground-tertiary">나에게 공유됨</p>
+                <p className="text-[18px] font-bold text-foreground font-num leading-tight">{data?.incomingCount ?? 0}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-secondary px-4 py-3">
+              <div>
+                <p className="text-[10px] font-semibold text-foreground-tertiary">내가 공유 중</p>
+                <p className="text-[18px] font-bold text-foreground font-num leading-tight">{data?.outgoingCount ?? 0}</p>
               </div>
             </div>
           </div>
@@ -187,41 +159,6 @@ export default function SharedDocumentsPage() {
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-2xl border border-[#E2E5EA] bg-[#f8f8fa] p-4">
-      <p className="text-[12px] text-[#6e6e73]">{label}</p>
-      <p className="mt-1 text-[20px] font-bold text-[#1d1d1f] font-num">{value}</p>
-    </div>
-  );
-}
-
-function QuickAction({
-  icon,
-  title,
-  description,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  onClick: () => void;
-}) {
-  return (
-    <button onClick={onClick} className="rounded-2xl border border-[#E2E5EA] bg-white p-4 text-left hover:border-[#0071e3]/35 transition-colors">
-      <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#eef6ff] text-[#0071e3]">
-          {icon}
-        </div>
-        <div>
-          <p className="text-[14px] font-semibold text-[#1d1d1f]">{title}</p>
-          <p className="mt-1 text-[12px] leading-5 text-[#6e6e73]">{description}</p>
-        </div>
-      </div>
-    </button>
-  );
-}
-
 function SharedDocSection({
   title,
   description,
@@ -240,28 +177,28 @@ function SharedDocSection({
   onReuse: (item: SharedDocCard) => void;
 }) {
   return (
-    <section className="rounded-[28px] border border-[#e5e5e7] bg-white px-4 py-5 sm:px-6 sm:py-6 xl:px-[30px] xl:py-[30px]">
-      <p className="text-[16px] font-semibold text-[#1d1d1f]">{title}</p>
-      <p className="mt-3 text-[13px] leading-6 text-[#6e6e73]">{description}</p>
+    <section className="rounded-xl border border-border bg-white shadow-sm px-6 py-5 sm:px-8 sm:py-6">
+      <p className="text-[16px] font-semibold text-foreground">{title}</p>
+      <p className="mt-3 text-[13px] leading-6 text-foreground-secondary">{description}</p>
       <div className="mt-6 flex flex-col gap-4">
         {items.length === 0 ? (
-          <div className="flex min-h-[132px] items-center justify-center rounded-[24px] border border-dashed border-[#D7E7FF] bg-[#fbfbfc] px-6 py-10 text-center text-[13px] text-[#6e6e73]">
+          <div className="flex min-h-[132px] items-center justify-center rounded-xl border border-dashed border-border-tint bg-surface-tertiary px-6 py-10 text-center text-[13px] text-foreground-secondary">
             {emptyLabel}
           </div>
         ) : items.map((item) => (
-          <div key={item.id} className="rounded-2xl border border-[#E2E5EA] bg-[#fbfbfc] p-5">
+          <div key={item.id} className="rounded-2xl border border-border bg-surface-tertiary p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="truncate text-[14px] font-semibold text-[#1d1d1f]">{item.title}</p>
-                <p className="mt-1 text-[12px] text-[#6e6e73]">{item.ownerName}</p>
+                <p className="truncate text-[14px] font-semibold text-foreground">{item.title}</p>
+                <p className="mt-1 text-[12px] text-foreground-secondary">{item.ownerName}</p>
               </div>
               {item.pendingCommentCount > 0 && (
-                <span className="rounded-full bg-[#F6F0FF] px-3 py-1 text-[11px] font-semibold text-[#7C3AED]">
+                <span className="rounded-full bg-purple-50 px-3 py-1 text-[11px] font-semibold text-purple-600">
                   미반영 {item.pendingCommentCount}개
                 </span>
               )}
             </div>
-            <p className="mt-3 text-[12px] leading-5 text-[#6e6e73]">{buildShareMeta(item)}</p>
+            <p className="mt-3 text-[12px] leading-5 text-foreground-secondary">{buildShareMeta(item)}</p>
             <DocumentActionRow
               items={[
                 {

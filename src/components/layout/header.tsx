@@ -53,7 +53,7 @@ function Header({
             <Menu size={20} strokeWidth={1.5} />
           </button>
           <div className="min-w-0 lg:hidden">
-            <p className="truncate text-[15px] font-semibold text-[#1d1d1f]">{pageTitle}</p>
+            <p className="truncate text-[15px] font-semibold text-foreground">{pageTitle}</p>
           </div>
         </div>
 
@@ -64,13 +64,13 @@ function Header({
         <div className="flex items-center gap-2 sm:gap-4">
           {/* Search */}
           <div className="relative hidden md:block">
-            <Search size={15} strokeWidth={1.5} className="absolute top-1/2 -translate-y-1/2 text-muted pointer-events-none" style={{ left: 12 }} />
+            <Search size={15} strokeWidth={1.5} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
             <input
               type="text"
               placeholder="검색..."
-              style={{ paddingLeft: 38, paddingRight: 16, height: 42, width: 220 }}
               className={cn(
-                'rounded-xl border border-border bg-page-bg text-[14px]',
+                'w-[220px] h-[42px] pl-[38px] pr-4',
+                'rounded-md border border-border bg-page-bg text-sm',
                 'placeholder:text-muted/60',
                 'focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary',
                 'transition-all duration-300'
@@ -89,7 +89,7 @@ function Header({
                 {user?.name?.charAt(0) ?? '?'}
               </div>
               <div className="hidden text-left lg:block">
-                <p className="max-w-[120px] truncate text-[12px] font-semibold text-[#1d1d1f]">{user?.name ?? '사용자'}</p>
+                <p className="max-w-[120px] truncate text-[12px] font-semibold text-foreground">{user?.name ?? '사용자'}</p>
               </div>
             </button>
 

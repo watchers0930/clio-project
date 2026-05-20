@@ -25,35 +25,36 @@ export function TemplatesHeader({
   onOpenCreate: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
-        <h1 className="text-[22px] font-bold text-[#1d1d1f] sm:text-2xl">템플릿 관리</h1>
-        <p className="text-[#6e6e73]">문서 생성에 사용할 템플릿을 관리하세요</p>
+    <section className="rounded-2xl border border-border bg-white shadow-sm">
+      <div className="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-8 sm:py-6">
+      <div>
+        <h1 className="text-[20px] font-bold text-foreground">템플릿 관리</h1>
+        <p className="mt-1.5 text-[13px] text-foreground-secondary">문서 생성에 사용할 템플릿을 관리하세요</p>
       </div>
       <div className="grid w-full gap-3 sm:flex sm:w-auto">
         {selectMode ? (
           <>
-            <button onClick={onToggleSelectAll} className="px-4 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors">
+            <button onClick={onToggleSelectAll} className="px-4 py-2.5 rounded-xl border border-border text-sm text-foreground hover:bg-surface-secondary transition-colors">
               {allSelected ? '전체 해제' : '전체 선택'}
             </button>
-            <button onClick={onBulkDelete} disabled={selectedCount === 0} className="px-4 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#2d2d2f] transition-colors disabled:opacity-40">
+            <button onClick={onBulkDelete} disabled={selectedCount === 0} className="px-4 py-2.5 rounded-xl bg-foreground text-white text-sm font-medium hover:bg-sidebar-hover transition-colors disabled:opacity-40">
               {selectedCount}개 삭제
             </button>
-            <button onClick={onCancelSelect} className="px-4 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">
+            <button onClick={onCancelSelect} className="px-4 py-2.5 rounded-xl border border-border text-sm text-foreground-secondary hover:bg-surface-secondary transition-colors">
               취소
             </button>
           </>
         ) : (
           <>
-            <button onClick={onEnterSelectMode} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors">
+            <button onClick={onEnterSelectMode} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border text-sm text-foreground-secondary hover:bg-surface-secondary transition-colors">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               선택
             </button>
-            <button onClick={onOpenAutoRegister} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[#2E6FF2] text-[#2E6FF2] text-sm font-medium hover:bg-[#2E6FF2]/5 transition-colors">
+            <button onClick={onOpenAutoRegister} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-primary text-primary text-sm font-medium hover:bg-primary/5 transition-colors">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
               파일에서 등록
             </button>
-            <button onClick={onOpenCreate} className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors shadow-sm">
+            <button onClick={onOpenCreate} className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-foreground text-white text-sm font-medium hover:bg-primary transition-colors shadow-sm">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
               새 템플릿
             </button>
@@ -61,6 +62,7 @@ export function TemplatesHeader({
         )}
       </div>
     </div>
+    </section>
   );
 }
 
@@ -162,27 +164,27 @@ export function TemplatesGrid({
                 </div>
               </div>
 
-              <h3 className="mb-2 text-[13px] font-semibold text-[#1B1F2B] truncate">{template.name}</h3>
-              <p className="mb-4 text-[11px] leading-5 text-[#7C8494] line-clamp-2">{template.description}</p>
+              <h3 className="mb-2 text-[13px] font-semibold text-foreground truncate">{template.name}</h3>
+              <p className="mb-4 text-[11px] leading-5 text-foreground-secondary line-clamp-2">{template.description}</p>
 
-              <div className="flex items-center gap-3.5 text-[10px] text-[#7C8494]">
+              <div className="flex items-center gap-3.5 text-[10px] text-foreground-secondary">
                 <span>{template.department}</span>
                 <span>사용 {template.usageCount}회</span>
                 <span className="font-num">{template.lastUpdated}</span>
               </div>
             </div>
 
-            <div className="flex items-center border-t border-[#E2E5EA]/60">
-              <button onClick={(e) => { e.stopPropagation(); onPreview(template); }} className="flex-1 px-3 py-3 text-[12px] font-medium text-[#1B1F2B] hover:bg-[#f5f5f7] transition-colors border-r border-[#E2E5EA]/60">
+            <div className="flex items-center border-t border-border/60">
+              <button onClick={(e) => { e.stopPropagation(); onPreview(template); }} className="flex-1 px-3 py-3 text-[12px] font-medium text-foreground hover:bg-surface-secondary transition-colors border-r border-border/60">
                 미리보기
               </button>
-              <button onClick={(e) => { e.stopPropagation(); onEdit(template); }} className="flex-1 px-3 py-3 text-[12px] font-medium text-[#1B1F2B] hover:bg-[#f5f5f7] transition-colors border-r border-[#E2E5EA]/60">
+              <button onClick={(e) => { e.stopPropagation(); onEdit(template); }} className="flex-1 px-3 py-3 text-[12px] font-medium text-foreground hover:bg-surface-secondary transition-colors border-r border-border/60">
                 편집
               </button>
-              <button onClick={(e) => { e.stopPropagation(); onDuplicate(template); }} className="flex-1 px-3 py-3 text-[12px] font-medium text-[#1B1F2B] hover:bg-[#f5f5f7] transition-colors border-r border-[#E2E5EA]/60">
+              <button onClick={(e) => { e.stopPropagation(); onDuplicate(template); }} className="flex-1 px-3 py-3 text-[12px] font-medium text-foreground hover:bg-surface-secondary transition-colors border-r border-border/60">
                 복제
               </button>
-              <button onClick={(e) => { e.stopPropagation(); onDelete(template.id); }} className="flex-1 px-3 py-3 text-[12px] font-medium text-[#1d1d1f]/70 hover:bg-[#1d1d1f]/5 hover:text-[#1d1d1f] transition-colors">
+              <button onClick={(e) => { e.stopPropagation(); onDelete(template.id); }} className="flex-1 px-3 py-3 text-[12px] font-medium text-foreground/70 hover:bg-foreground/5 hover:text-foreground transition-colors">
                 삭제
               </button>
             </div>

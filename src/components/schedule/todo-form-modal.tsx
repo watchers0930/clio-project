@@ -60,39 +60,39 @@ export default function TodoFormModal({ open, onClose, onSubmit, todo }: TodoFor
       >
         {/* 헤더 */}
         <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
-          <h3 className="text-[16px] font-semibold text-[#1B1F2B]">
+          <h3 className="text-[16px] font-semibold text-foreground">
             {isEdit ? '할일 수정' : '할일 추가'}
           </h3>
-          <button onClick={onClose} className="text-[#7C8494] hover:text-[#1B1F2B] transition-colors">
+          <button onClick={onClose} className="text-foreground-secondary hover:text-foreground transition-colors">
             <X size={18} />
           </button>
         </div>
 
         <div className="flex flex-col gap-[10px]">
           <div>
-            <label className="block text-[12px] font-medium text-[#7C8494] mb-1.5">제목</label>
+            <label className="block text-[12px] font-medium text-foreground-secondary mb-1.5">제목</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="할일을 입력하세요"
-              className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/20 focus:border-[#2E6FF2]"
+              className="w-full px-3 py-2.5 text-[13px] border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
             />
           </div>
 
           <div>
-            <label className="block text-[12px] font-medium text-[#7C8494] mb-1.5">마감일</label>
+            <label className="block text-[12px] font-medium text-foreground-secondary mb-1.5">마감일</label>
             <input
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/20 focus:border-[#2E6FF2]"
+              className="w-full px-3 py-2.5 text-[13px] border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
 
           <div>
-            <label className="block text-[12px] font-medium text-[#7C8494] mb-1.5">우선순위</label>
+            <label className="block text-[12px] font-medium text-foreground-secondary mb-1.5">우선순위</label>
             <div className="flex gap-2">
               {PRIORITIES.map((p) => (
                 <button
@@ -113,13 +113,13 @@ export default function TodoFormModal({ open, onClose, onSubmit, todo }: TodoFor
           </div>
 
           <div>
-            <label className="block text-[12px] font-medium text-[#7C8494] mb-1.5">설명</label>
+            <label className="block text-[12px] font-medium text-foreground-secondary mb-1.5">설명</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="설명 (선택)"
               rows={2}
-              className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/20 focus:border-[#2E6FF2] resize-none"
+              className="w-full px-3 py-2.5 text-[13px] border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
             />
           </div>
         </div>
@@ -128,14 +128,14 @@ export default function TodoFormModal({ open, onClose, onSubmit, todo }: TodoFor
         <div className="flex justify-end gap-2" style={{ marginTop: 10 }}>
           <button
             onClick={onClose}
-            className="px-4 py-2 text-[13px] text-[#7C8494] hover:text-[#1B1F2B] transition-colors"
+            className="px-4 py-2 text-[13px] text-foreground-secondary hover:text-foreground transition-colors"
           >
             취소
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading || !title.trim()}
-            className="px-5 py-2 text-[13px] font-medium text-white bg-[#2E6FF2] rounded-lg hover:bg-[#1A5AD9] transition-colors disabled:opacity-40"
+            className="px-5 py-2 text-[13px] font-medium text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-40"
           >
             {loading ? <Spinner size="sm" variant="white" /> : isEdit ? '수정' : '추가'}
           </button>

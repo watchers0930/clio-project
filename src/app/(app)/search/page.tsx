@@ -260,7 +260,7 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="space-y-[25px] pb-10">
+    <div className="flex flex-col gap-5 pb-10">
       <SearchHeader
         query={query}
         onActivateFileTab={() => setActiveTab('file')}
@@ -272,7 +272,7 @@ export default function SearchPage() {
         onOpenFiles={() => router.push('/files')}
       />
 
-      <div className="space-y-[25px]">
+      <div className="flex flex-col gap-5">
         <SearchTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
         {activeTab === 'file' && (

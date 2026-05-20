@@ -15,8 +15,8 @@ const sizeMap = {
 };
 
 const colorMap = {
-  default: 'border-[#e5e5e7] border-t-[#6e6e73]',
-  primary: 'border-[#e5e5e7] border-t-[#0071e3]',
+  default: 'border-border border-t-foreground-secondary',
+  primary: 'border-border border-t-primary',
   white:   'border-white/30 border-t-white',
 };
 
@@ -48,10 +48,10 @@ export function FullPageSpinner() {
 export function SkeletonCard({ count = 4 }: { count?: number }) {
   return (
     <div className="space-y-4 animate-pulse">
-      <div className="h-8 w-48 bg-[#e5e5e7] rounded-lg" />
+      <div className="h-8 w-48 bg-border rounded-sm" />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {Array.from({ length: count }).map((_, i) => (
-          <div key={i} className="h-36 bg-white rounded-2xl border border-[#e5e5e7]" />
+          <div key={i} className="h-36 bg-white rounded-lg border border-border" />
         ))}
       </div>
     </div>

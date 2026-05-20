@@ -361,7 +361,7 @@ export default function MessagesPage() {
   const conversationLabel = activeChannelData?.name ?? '현재 대화';
 
   if (loading) {
-    return <div className="flex h-[calc(100dvh-136px)] gap-3 animate-pulse lg:h-[calc(100vh-120px)] lg:gap-4"><div className="hidden w-80 rounded-2xl border border-[#e5e5e7] bg-white lg:block" /><div className="flex-1 rounded-2xl border border-[#e5e5e7] bg-white" /></div>;
+    return <div className="flex h-[calc(100dvh-136px)] gap-3 animate-pulse lg:h-[calc(100vh-120px)] lg:gap-4"><div className="hidden w-80 rounded-2xl border border-border bg-white lg:block" /><div className="flex-1 rounded-2xl border border-border bg-white" /></div>;
   }
 
   return (

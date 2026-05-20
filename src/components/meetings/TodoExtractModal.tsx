@@ -132,12 +132,12 @@ export function TodoExtractModal({
       <div className="flex min-h-full items-end justify-center p-0 sm:items-center sm:p-4">
       <div className="bg-white rounded-t-[28px] shadow-xl w-full max-w-lg flex flex-col max-h-[92vh] sm:max-h-[85vh] sm:rounded-2xl">
         {/* 헤더 */}
-        <div className="px-4 py-4 border-b border-[#E2E5EA] flex items-start justify-between gap-3 flex-shrink-0 sm:px-6 sm:py-5">
+        <div className="px-4 py-4 border-b border-border flex items-start justify-between gap-3 flex-shrink-0 sm:px-6 sm:py-5">
           <div>
-            <h2 className="text-[15px] font-semibold text-[#1B1F2B]">할일 자동 추출 결과</h2>
-            <p className="text-[12px] text-[#888] mt-0.5 break-words sm:truncate sm:max-w-xs">문서: {documentTitle}</p>
+            <h2 className="text-[15px] font-semibold text-foreground">할일 자동 추출 결과</h2>
+            <p className="text-[12px] text-foreground-quaternary mt-0.5 break-words sm:truncate sm:max-w-xs">문서: {documentTitle}</p>
           </div>
-          <button onClick={onClose} className="p-1 rounded hover:bg-[#F7F8FA] text-[#888] transition-colors">
+          <button onClick={onClose} className="p-1 rounded hover:bg-surface-secondary text-foreground-quaternary transition-colors">
             <X size={18} />
           </button>
         </div>
@@ -145,11 +145,11 @@ export function TodoExtractModal({
         {/* 로딩 (재추출 중) */}
         {isReExtracting && (
           <div className="flex-1 flex flex-col items-center justify-center py-12 gap-3">
-            <svg className="animate-spin w-8 h-8 text-[#2E6FF2]" fill="none" viewBox="0 0 24 24">
+            <svg className="animate-spin w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
             </svg>
-            <p className="text-[13px] text-[#888]">AI가 할일을 추출하는 중...</p>
+            <p className="text-[13px] text-foreground-quaternary">AI가 할일을 추출하는 중...</p>
           </div>
         )}
 
@@ -157,20 +157,20 @@ export function TodoExtractModal({
         {!isReExtracting && (
           <>
             {/* 컨트롤 바 */}
-            <div className="px-4 py-4 border-b border-[#E2E5EA] flex flex-col items-start justify-between gap-3 flex-shrink-0 sm:px-6 sm:flex-row sm:items-center">
+            <div className="px-4 py-4 border-b border-border flex flex-col items-start justify-between gap-3 flex-shrink-0 sm:px-6 sm:flex-row sm:items-center">
               <button
                 onClick={toggleAll}
-                className="flex items-center gap-2 text-[12px] text-[#555] hover:text-[#1B1F2B] transition-colors"
+                className="flex items-center gap-2 text-[12px] text-foreground-secondary hover:text-foreground transition-colors"
               >
                 {allChecked
-                  ? <CheckSquare size={15} className="text-[#2E6FF2]" />
-                  : <Square size={15} className="text-[#aaa]" />}
+                  ? <CheckSquare size={15} className="text-primary" />
+                  : <Square size={15} className="text-foreground-quaternary" />}
                 전체 선택 ({todos.length}개 항목)
               </button>
               <button
                 onClick={handleReExtract}
                 disabled={isReExtracting}
-                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] text-[#2E6FF2] hover:bg-[#EEF6FF] hover:text-[#1E5FE2] transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] text-primary hover:bg-primary-tint hover:text-primary transition-colors disabled:opacity-50"
               >
                 <RefreshCw size={13} />
                 다시 추출
@@ -182,8 +182,8 @@ export function TodoExtractModal({
               {todos.length === 0 ? (
                 <div className="py-10 text-center">
                   <p className="text-[24px] mb-2">📭</p>
-                  <p className="text-[13px] text-[#888]">추출된 할일 항목이 없습니다.</p>
-                  <p className="text-[11px] text-[#aaa] mt-1">회의 내용에 액션 아이템이 포함되어 있지 않거나,<br />다시 추출하기를 시도해보세요.</p>
+                  <p className="text-[13px] text-foreground-quaternary">추출된 할일 항목이 없습니다.</p>
+                  <p className="text-[11px] text-foreground-quaternary mt-1">회의 내용에 액션 아이템이 포함되어 있지 않거나,<br />다시 추출하기를 시도해보세요.</p>
                 </div>
               ) : (
                 todos.map((todo, idx) => {
@@ -197,27 +197,27 @@ export function TodoExtractModal({
                       className={cn(
                         'flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all',
                         isChecked
-                          ? 'border-[#2E6FF2] bg-blue-50/50'
-                          : 'border-[#E2E5EA] bg-white hover:border-[#2E6FF2]/50',
+                          ? 'border-primary bg-blue-50/50'
+                          : 'border-border bg-white hover:border-primary/50',
                       )}
                     >
                       {isChecked
-                        ? <CheckSquare size={16} className="text-[#2E6FF2] flex-shrink-0 mt-0.5" />
-                        : <Square size={16} className="text-[#ccc] flex-shrink-0 mt-0.5" />}
+                        ? <CheckSquare size={16} className="text-primary flex-shrink-0 mt-0.5" />
+                        : <Square size={16} className="text-foreground-quaternary flex-shrink-0 mt-0.5" />}
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-medium text-[#1B1F2B] leading-snug">{todo.title}</p>
+                        <p className="text-[13px] font-medium text-foreground leading-snug">{todo.title}</p>
                         <div className="mt-2 flex items-center gap-2.5 flex-wrap">
                           <span className={cn('text-[10px] px-2 py-1 rounded-md border font-medium', badge.cls)}>
                             {badge.label}
                           </span>
                           {todo.assigneeName && (
-                            <span className="flex items-center gap-1.5 text-[11px] text-[#888]">
+                            <span className="flex items-center gap-1.5 text-[11px] text-foreground-quaternary">
                               <User size={11} />
                               {todo.assigneeName}
                             </span>
                           )}
                           {todo.dueDate && (
-                            <span className="flex items-center gap-1.5 text-[11px] text-[#888]">
+                            <span className="flex items-center gap-1.5 text-[11px] text-foreground-quaternary">
                               <CalendarDays size={11} />
                               {todo.dueDate}
                             </span>
@@ -239,10 +239,10 @@ export function TodoExtractModal({
             )}
 
             {/* 하단 버튼 */}
-            <div className="px-4 py-4 border-t border-[#E2E5EA] flex flex-col-reverse items-stretch justify-end gap-3 flex-shrink-0 sm:px-6 sm:flex-row sm:items-center">
+            <div className="px-4 py-4 border-t border-border flex flex-col-reverse items-stretch justify-end gap-3 flex-shrink-0 sm:px-6 sm:flex-row sm:items-center">
               <button
                 onClick={onClose}
-                className="w-full px-4 py-2.5 rounded-lg border border-[#E2E5EA] text-[13px] text-[#555] hover:bg-[#F7F8FA] transition-colors sm:w-auto"
+                className="w-full px-4 py-2.5 rounded-lg border border-border text-[13px] text-foreground-secondary hover:bg-surface-secondary transition-colors sm:w-auto"
               >
                 취소
               </button>
@@ -252,8 +252,8 @@ export function TodoExtractModal({
                 className={cn(
                   'w-full px-4 py-2.5 rounded-lg text-[13px] font-medium transition-all sm:w-auto',
                   checkedCount > 0 && !isLoading
-                    ? 'bg-[#2E6FF2] text-white hover:bg-[#1E5FE2]'
-                    : 'bg-[#E2E5EA] text-[#aaa] cursor-not-allowed',
+                    ? 'bg-primary text-white hover:bg-primary-dark'
+                    : 'bg-border text-foreground-quaternary cursor-not-allowed',
                 )}
               >
                 {isLoading ? (

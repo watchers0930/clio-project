@@ -1,39 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
-import {
-  PLATFORM_LABEL,
-} from '@/lib/constants/ui';
-
-const INPUT_BASE: React.CSSProperties = {
-  width: '100%',
-  padding: '0 18px',
-  backgroundColor: '#f5f5f7',
-  border: '1px solid #e5e5e7',
-  color: '#1d1d1f',
-  outline: 'none',
-  fontFamily: 'Verdana, sans-serif',
-};
-
-// 모바일 감지는 CSS media query 대신 window.innerWidth 기반
-function useIsMobile() {
-  const [mobile, setMobile] = useState(false);
-  useEffect(() => {
-    const check = () => setMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
-  return mobile;
-}
+import { PLATFORM_LABEL } from '@/lib/constants/ui';
 
 export default function LoginPage() {
   const router = useRouter();
   const { login, isLoading: storeLoading, error: storeError, clearError } = useAuthStore();
-  const isMobile = useIsMobile();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -69,47 +44,38 @@ export default function LoginPage() {
     }
   };
 
-  const inputStyle: React.CSSProperties = {
-    ...INPUT_BASE,
-    height: 52,
-    fontSize: 15,
-    borderRadius: 12,
-    padding: '0 18px',
-  };
-
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-page-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? 16 : 20 }}>
-      <div style={{ width: isMobile ? '100%' : '100%', maxWidth: 740 }}>
+    <div className="flex min-h-screen items-center justify-center bg-page-bg p-4 md:p-5">
+      <div className="w-full max-w-[740px]">
 
         {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: isMobile ? 28 : 36 }}>
-          <h1 style={{ fontSize: isMobile ? 36 : 44, fontWeight: 300, letterSpacing: isMobile ? '0.24em' : '0.3em', fontFamily: '"Times New Roman", Times, serif', color: '#1d1d1f' }}>
+        <div className="mb-8 text-center md:mb-10">
+          <h1 className="text-[36px] font-light tracking-[0.24em] text-foreground md:text-[44px] md:tracking-[0.3em] font-serif">
             CLIO
           </h1>
-          <p style={{ marginTop: 12, fontSize: 15, color: '#6e6e73' }}>
+          <p className="mt-3 text-[15px] text-foreground-secondary">
             {PLATFORM_LABEL}
           </p>
-          <p style={{ marginTop: 10, fontSize: 13, color: '#8e8e93', lineHeight: '20px', maxWidth: 520, marginInline: 'auto' }}>
-            CLIO는 기업 문서를 한곳에 저장한 뒤, 공유하고, 코멘트를 반영하고,
-            {!isMobile && <br />}
+          <p className="mx-auto mt-2.5 max-w-[520px] text-[13px] leading-5 text-foreground-tertiary">
+            CLIO는 기업 문서를 한곳에 저장한 뒤, 공유하고, 코멘트를 반영하고,{' '}
+            <br className="hidden md:block" />
             다시 검색해 재활용하는 문서 운영 플랫폼입니다.
           </p>
         </div>
 
         {/* Login Card */}
-        <div style={{ backgroundColor: '#fff', borderRadius: 16, border: '1px solid #e5e5e7', padding: isMobile ? '28px 18px' : '56px 144px' }}>
-
-          <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: isMobile ? 28 : 36, color: '#1d1d1f' }}>
+        <div className="rounded-2xl border border-border bg-white px-5 py-7 shadow-sm md:px-36 md:py-14">
+          <h2 className="text-[22px] font-semibold text-foreground">
             로그인
           </h2>
-          <p style={{ marginTop: -18, marginBottom: 28, fontSize: 13, color: '#6e6e73', lineHeight: 1.7 }}>
+          <p className="mt-2 mb-7 text-[13px] leading-relaxed text-foreground-secondary">
             로그인 후 첫 진입점은 문서허브이며, 저장한 문서를 기준으로 공유, 검색, 생성 흐름을 이어갈 수 있습니다.
           </p>
 
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <form onSubmit={handleLogin} className="flex flex-col gap-6">
             {/* Email */}
             <div>
-              <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>
+              <label className="mb-2.5 block text-[14px] font-medium text-foreground-secondary">
                 이메일
               </label>
               <input
@@ -118,30 +84,30 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@company.com"
-                style={inputStyle}
+                className="h-[52px] w-full rounded-xl border border-border bg-surface-secondary px-4.5 text-[15px] text-foreground font-en outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
                 required
               />
             </div>
 
             {/* Password */}
             <div>
-              <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>
+              <label className="mb-2.5 block text-[14px] font-medium text-foreground-secondary">
                 비밀번호
               </label>
-              <div style={{ position: 'relative' }}>
+              <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="비밀번호를 입력하세요"
-                  style={{ ...inputStyle, paddingRight: 48 }}
+                  className="h-[52px] w-full rounded-xl border border-border bg-surface-secondary px-4.5 pr-12 text-[15px] text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#6e6e73', padding: 0 }}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 p-0 text-foreground-secondary transition-colors hover:text-foreground"
                 >
                   {showPassword ? <EyeOff size={17} strokeWidth={1.5} /> : <Eye size={17} strokeWidth={1.5} />}
                 </button>
@@ -150,40 +116,36 @@ export default function LoginPage() {
 
             {/* Error */}
             {error && (
-              <p style={{ fontSize: 13, color: '#ff3b30' }}>{error}</p>
+              <p className="text-[13px] text-danger">{error}</p>
             )}
 
             {/* Submit */}
             <button
               type="submit"
               disabled={isLoading}
-              className="hover:bg-[#0071e3] transition-colors"
-              style={{ width: '100%', height: 54, fontSize: 16, fontWeight: 600, borderRadius: 12, marginTop: 8, backgroundColor: '#1d1d1f', color: '#fff', border: 'none', cursor: 'pointer', opacity: isLoading ? 0.5 : 1 }}
+              className="mt-2 h-[54px] w-full rounded-xl bg-foreground text-[16px] font-semibold text-white shadow-md transition-all hover:bg-primary disabled:opacity-50"
             >
               {isLoading ? '로그인 중...' : '로그인'}
             </button>
           </form>
 
           {/* Forgot */}
-          <div style={{ textAlign: 'center', marginTop: 20 }}>
-            <button
-              className="hover:text-[#0071e3] transition-colors"
-              style={{ fontSize: 14, color: '#6e6e73', background: 'none', border: 'none', cursor: 'pointer' }}
-            >
+          <div className="mt-5 text-center">
+            <button className="text-[14px] text-foreground-secondary transition-colors hover:text-primary">
               비밀번호를 잊으셨나요?
             </button>
           </div>
         </div>
 
         {/* Demo hint */}
-        <div style={{ marginTop: 16, padding: '14px 20px', backgroundColor: '#fff', border: '1px solid #e5e5e7', borderRadius: 12, textAlign: 'center' }}>
-          <p style={{ fontSize: 12, color: '#6e6e73' }}>
+        <div className="mt-4 rounded-xl border border-border bg-white px-5 py-3.5 text-center shadow-sm">
+          <p className="text-[12px] text-foreground-secondary">
             테스트 계정이 필요한 경우 관리자에게 발급을 요청하세요.
           </p>
         </div>
 
         {/* Footer */}
-        <p style={{ marginTop: 32, fontSize: 11, color: '#6e6e73', textAlign: 'center', fontFamily: 'Verdana, sans-serif' }}>
+        <p className="mt-8 text-center text-[11px] text-foreground-secondary font-num">
           &copy; 2026 CLIO. All rights reserved.
         </p>
       </div>

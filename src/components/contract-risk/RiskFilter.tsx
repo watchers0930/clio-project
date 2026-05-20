@@ -33,7 +33,7 @@ export function RiskFilter({ filter, onChange, counts }: RiskFilterProps) {
   ];
 
   return (
-    <div className="bg-white border border-[#E2E5EA] rounded-2xl p-4 space-y-3">
+    <div className="bg-white border border-border rounded-2xl p-4 space-y-3">
       {/* 리스크 수준 */}
       <div className="mb-[5px] flex flex-wrap items-center gap-2 pb-[5px]">
         {levels.map(btn => (
@@ -43,8 +43,8 @@ export function RiskFilter({ filter, onChange, counts }: RiskFilterProps) {
             className={cn(
               'inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[12px] font-medium transition-all sm:px-3.5',
               filter.level === btn.key
-                ? 'bg-[#2E6FF2] text-white border-[#2E6FF2] shadow-sm'
-                : 'bg-white text-[#555] border-[#E2E5EA] hover:border-[#2E6FF2]/60',
+                ? 'bg-primary text-white border-primary shadow-sm'
+                : 'bg-white text-foreground-secondary border-border hover:border-primary/60',
             )}
           >
             {btn.dot && (
@@ -53,7 +53,7 @@ export function RiskFilter({ filter, onChange, counts }: RiskFilterProps) {
             {btn.label}
             <span className={cn(
               'text-[10px] px-1.5 py-0.5 rounded-md font-semibold',
-              filter.level === btn.key ? 'bg-white/20 text-white' : 'bg-[#F0F2F5] text-[#888]',
+              filter.level === btn.key ? 'bg-white/20 text-white' : 'bg-surface-secondary text-foreground-quaternary',
             )}>
               {btn.count}
             </span>
@@ -71,14 +71,14 @@ export function RiskFilter({ filter, onChange, counts }: RiskFilterProps) {
             className={cn(
               'inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[12px] font-medium transition-all sm:px-3.5',
               filter.category === btn.key
-                ? 'bg-[#1B1F2B] text-white border-[#1B1F2B] shadow-sm'
-                : 'bg-white text-[#555] border-[#E2E5EA] hover:border-[#1B1F2B]/40',
+                ? 'bg-foreground text-white border-foreground shadow-sm'
+                : 'bg-white text-foreground-secondary border-border hover:border-foreground/40',
             )}
           >
             {btn.label}
             <span className={cn(
               'text-[10px] px-1.5 py-0.5 rounded-md font-semibold',
-              filter.category === btn.key ? 'bg-white/20 text-white' : 'bg-[#F0F2F5] text-[#888]',
+              filter.category === btn.key ? 'bg-white/20 text-white' : 'bg-surface-secondary text-foreground-quaternary',
             )}>
               {btn.count}
             </span>

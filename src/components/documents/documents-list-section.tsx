@@ -45,28 +45,28 @@ export function DocumentsListSection({
 
   return (
     <>
-      <div className="rounded-2xl border border-[#e5e5e7] bg-white px-5 py-5 sm:px-6 sm:py-6">
+      <div className="rounded-2xl border border-border bg-white px-5 py-5 sm:px-6 sm:py-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <p className="text-[14px] font-semibold text-[#1d1d1f]">문서 목록</p>
-            <p className="mt-1 text-[12px] text-[#6e6e73]">열기, 공유, 버전 확인</p>
+            <p className="text-[14px] font-semibold text-foreground">문서 목록</p>
+            <p className="mt-1 text-[12px] text-foreground-secondary">열기, 공유, 버전 확인</p>
           </div>
           <div className="flex w-full items-center gap-2.5 flex-wrap sm:w-auto sm:justify-end">
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-[#6e6e73]">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-foreground-secondary">
               <input
                 type="checkbox"
                 checked={docs.length > 0 && selectedDocIds.size === docs.length}
                 onChange={onToggleSelectAll}
-                className="w-4 h-4 rounded border-[#e5e5e7] accent-[#0071e3]"
+                className="w-4 h-4 rounded border-border accent-[#0071e3]"
               />
               전체 선택
             </label>
             {selectedDocIds.size > 0 && (
-              <button onClick={onBulkDelete} className="px-4 py-2.5 rounded-xl text-sm text-[#ff3b30] border border-[#ff3b30] hover:bg-red-50 transition-colors">
+              <button onClick={onBulkDelete} className="px-4 py-2.5 rounded-xl text-sm text-danger border border-danger hover:bg-red-50 transition-colors">
                 선택 삭제 ({selectedDocIds.size})
               </button>
             )}
-            <button onClick={onDeleteAll} className="px-4 py-2.5 rounded-xl text-sm text-[#6e6e73] border border-[#e5e5e7] hover:bg-[#f5f5f7] transition-colors">
+            <button onClick={onDeleteAll} className="px-4 py-2.5 rounded-xl text-sm text-foreground-secondary border border-border hover:bg-surface-secondary transition-colors">
               전체 삭제
             </button>
           </div>
@@ -96,7 +96,7 @@ export function DocumentsListSection({
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => onToggleDocSelect(doc.id)}
-                      className="w-[15px] h-[15px] rounded border-[#E2E5EA] accent-[#2E6FF2] shrink-0 cursor-pointer"
+                      className="w-[15px] h-[15px] rounded border-border accent-[#2E6FF2] shrink-0 cursor-pointer"
                     />
                     <span
                       className="text-[11px] font-semibold px-2.5 py-1 rounded-md inline-flex items-center gap-1.5"
@@ -106,14 +106,14 @@ export function DocumentsListSection({
                       {doc.status}
                     </span>
                   </div>
-                  <span className="text-[11px] text-[#7C8494] font-num">{doc.createdAt}</span>
+                  <span className="text-[11px] text-foreground-secondary font-num">{doc.createdAt}</span>
                 </div>
 
-                <h3 className="text-[14px] font-semibold text-[#1B1F2B] truncate" style={{ marginBottom: 14 }}>
+                <h3 className="text-[14px] font-semibold text-foreground truncate" style={{ marginBottom: 14 }}>
                   {doc.title}
                 </h3>
 
-                <div className="flex flex-wrap items-center gap-3.5 text-[11px] text-[#7C8494]" style={{ marginBottom: 18 }}>
+                <div className="flex flex-wrap items-center gap-3.5 text-[11px] text-foreground-secondary" style={{ marginBottom: 18 }}>
                   <span className="flex items-center gap-1">
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6z" /></svg>
                     {doc.template}
@@ -123,49 +123,49 @@ export function DocumentsListSection({
                     소스 {doc.sourceCount}개
                   </span>
                   {(doc.versionNumber ?? 1) > 1 && (
-                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#0071e3]/10 text-[#0071e3] font-medium">
+                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
                       v{doc.versionNumber}
                     </span>
                   )}
                 </div>
 
-                <div className="rounded-xl bg-[#f7f8fa] border border-[#E2E5EA]/60" style={{ padding: '14px 15px' }}>
-                  <p className="text-[11px] font-semibold text-[#1B1F2B]">
+                <div className="rounded-xl bg-surface-secondary border border-border/60" style={{ padding: '14px 15px' }}>
+                  <p className="text-[11px] font-semibold text-foreground">
                     {doc.status === '초안' ? '다음: 검토와 반영' : '다음: 공유와 재활용'}
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 border-t border-[#E2E5EA]/60 sm:flex">
+              <div className="grid grid-cols-2 border-t border-border/60 sm:flex">
                 <button
                   onClick={() => onOpenDocument(doc)}
-                  className="min-h-[48px] flex-1 border-r border-b border-[#E2E5EA]/60 px-3 py-3 text-[12px] font-medium text-[#1B1F2B] transition-colors hover:bg-[#f5f5f7] sm:border-b-0"
+                  className="min-h-[48px] flex-1 border-r border-b border-border/60 px-3 py-3 text-[12px] font-medium text-foreground transition-colors hover:bg-surface-secondary sm:border-b-0"
                 >
                   {doc.status === '초안' ? '검토 열기' : '운영 열기'}
                 </button>
                 <button
                   onClick={() => onDownload(doc)}
-                  className="min-h-[48px] flex-1 border-b border-[#E2E5EA]/60 px-3 py-3 text-[12px] font-medium text-[#1B1F2B] transition-colors hover:bg-[#f5f5f7] sm:border-r sm:border-b-0 sm:border-[#E2E5EA]/60"
+                  className="min-h-[48px] flex-1 border-b border-border/60 px-3 py-3 text-[12px] font-medium text-foreground transition-colors hover:bg-surface-secondary sm:border-r sm:border-b-0 sm:border-border/60"
                 >
                   다운로드
                 </button>
                 <button
                   onClick={() => onOpenShare(doc)}
-                  className="min-h-[48px] flex-1 border-r border-[#E2E5EA]/60 px-3 py-3 text-[12px] font-medium text-[#6e6e73] transition-colors hover:bg-[#f5f5f7]"
+                  className="min-h-[48px] flex-1 border-r border-border/60 px-3 py-3 text-[12px] font-medium text-foreground-secondary transition-colors hover:bg-surface-secondary"
                   title="공유 링크 생성"
                 >
                   공유
                 </button>
                 <button
                   onClick={() => onOpenVersionPanel(doc.id)}
-                  className="min-h-[48px] flex-1 px-3 py-3 text-[12px] font-medium text-[#6e6e73] transition-colors hover:bg-[#f5f5f7] sm:border-r sm:border-[#E2E5EA]/60"
+                  className="min-h-[48px] flex-1 px-3 py-3 text-[12px] font-medium text-foreground-secondary transition-colors hover:bg-surface-secondary sm:border-r sm:border-border/60"
                   title="버전 이력"
                 >
                   버전
                 </button>
                 <button
                   onClick={() => onDelete(doc.id)}
-                  className="col-span-2 min-h-[48px] flex-1 border-t border-[#E2E5EA]/60 px-3 py-3 text-[12px] font-medium text-[#1d1d1f]/70 transition-colors hover:bg-[#1d1d1f]/5 hover:text-[#1d1d1f] sm:col-span-1 sm:border-t-0"
+                  className="col-span-2 min-h-[48px] flex-1 border-t border-border/60 px-3 py-3 text-[12px] font-medium text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground sm:col-span-1 sm:border-t-0"
                 >
                   삭제
                 </button>

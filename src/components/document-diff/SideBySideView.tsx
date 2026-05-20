@@ -26,7 +26,7 @@ const CELL_TEXT: Record<string, string> = {
   added: 'text-green-800',
   removed: 'text-red-800',
   modified: 'text-yellow-800',
-  unchanged: 'text-[#1B1F2B]',
+  unchanged: 'text-foreground',
 };
 
 function WordHighlight({ line }: { line: DiffLine }) {
@@ -78,23 +78,23 @@ export function SideBySideView({ lines, onChangeRef }: SideBySideViewProps) {
             const isChange = line.type !== 'unchanged';
             const changeIdx = isChange ? changeCount++ : -1;
             const bg = ROW_BG[line.type] ?? '';
-            const textCls = CELL_TEXT[line.type] ?? 'text-[#1B1F2B]';
+            const textCls = CELL_TEXT[line.type] ?? 'text-foreground';
             const gutter = GUTTER[line.type] ?? '';
 
             return (
               <tr
                 key={idx}
                 ref={isChange ? (el) => onChangeRef(changeIdx, el) : undefined}
-                className={cn('border-b border-[#F0F0F0]', bg)}
+                className={cn('border-b border-border', bg)}
               >
                 {/* 구 버전 줄 번호 */}
-                <td className="w-10 px-2 text-right text-[#aaa] select-none border-r border-[#E2E5EA] bg-[#FAFBFC]">
+                <td className="w-10 px-2 text-right text-foreground-quaternary select-none border-r border-border bg-surface-tertiary">
                   {line.oldLine ?? ''}
                 </td>
                 {/* 구 버전 내용 */}
-                <td className={cn('px-3 py-1 align-top border-r border-[#E2E5EA] w-1/2', textCls)}>
+                <td className={cn('px-3 py-1 align-top border-r border-border w-1/2', textCls)}>
                   {line.type === 'added' ? (
-                    <span className="text-[#aaa] italic">—</span>
+                    <span className="text-foreground-quaternary italic">—</span>
                   ) : line.type === 'modified' ? (
                     <OldWordHighlight line={line} />
                   ) : (
@@ -111,13 +111,13 @@ export function SideBySideView({ lines, onChangeRef }: SideBySideViewProps) {
                   {gutter}
                 </td>
                 {/* 신 버전 줄 번호 */}
-                <td className="w-10 px-2 text-right text-[#aaa] select-none border-l border-[#E2E5EA] bg-[#FAFBFC]">
+                <td className="w-10 px-2 text-right text-foreground-quaternary select-none border-l border-border bg-surface-tertiary">
                   {line.newLine ?? ''}
                 </td>
                 {/* 신 버전 내용 */}
                 <td className={cn('px-3 py-1 align-top w-1/2', textCls)}>
                   {line.type === 'removed' ? (
-                    <span className="text-[#aaa] italic">—</span>
+                    <span className="text-foreground-quaternary italic">—</span>
                   ) : line.type === 'modified' ? (
                     <WordHighlight line={line} />
                   ) : (

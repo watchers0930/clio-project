@@ -35,7 +35,7 @@ export function AnalysisHistory() {
     return (
       <div className="space-y-3">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="bg-white border border-[#E2E5EA] rounded-xl h-[72px] animate-pulse" />
+          <div key={i} className="bg-white border border-border rounded-xl h-[72px] animate-pulse" />
         ))}
       </div>
     );
@@ -43,12 +43,12 @@ export function AnalysisHistory() {
 
   if (items.length === 0) {
     return (
-      <div className="bg-white border border-[#E2E5EA] rounded-2xl py-10 px-5 text-center">
-        <div className="w-10 h-10 bg-[#F0F2F5] rounded-xl flex items-center justify-center mx-auto mb-3">
-          <FileText size={18} className="text-[#ccc]" />
+      <div className="bg-white border border-border rounded-2xl py-10 px-5 text-center">
+        <div className="w-10 h-10 bg-surface-secondary rounded-xl flex items-center justify-center mx-auto mb-3">
+          <FileText size={18} className="text-foreground-quaternary" />
         </div>
-        <p className="text-[13px] font-medium text-[#888]">분석 이력 없음</p>
-        <p className="text-[11px] text-[#bbb] mt-1">계약서를 분석하면 여기에 표시됩니다</p>
+        <p className="text-[13px] font-medium text-foreground-quaternary">분석 이력 없음</p>
+        <p className="text-[11px] text-foreground-quaternary mt-1">계약서를 분석하면 여기에 표시됩니다</p>
       </div>
     );
   }
@@ -66,19 +66,19 @@ export function AnalysisHistory() {
           <Link
             key={item.id}
             href={`/contract-risk/${item.id}`}
-            className="group flex items-center gap-3.5 bg-white border border-[#E2E5EA] rounded-xl px-4 py-3.5 hover:border-[#2E6FF2]/50 hover:shadow-sm transition-all"
+            className="group flex items-center gap-3.5 bg-white border border-border rounded-xl px-4 py-3.5 hover:border-primary/50 hover:shadow-sm transition-all"
           >
             {/* 아이콘 */}
-            <div className="w-8 h-8 bg-[#EEF3FE] rounded-lg flex items-center justify-center shrink-0">
-              <ShieldCheck size={14} className="text-[#2E6FF2]" />
+            <div className="w-8 h-8 bg-primary-tint rounded-lg flex items-center justify-center shrink-0">
+              <ShieldCheck size={14} className="text-primary" />
             </div>
 
             {/* 내용 */}
             <div className="flex-1 min-w-0">
-              <p className="text-[12px] font-semibold text-[#1B1F2B] truncate group-hover:text-[#2E6FF2] transition-colors leading-tight">
+              <p className="text-[12px] font-semibold text-foreground truncate group-hover:text-primary transition-colors leading-tight">
                 {item.file_name}
               </p>
-              <p className="mt-1 text-[10px] text-[#aaa] truncate">
+              <p className="mt-1 text-[10px] text-foreground-quaternary truncate">
                 {CONTRACT_TYPE_LABELS[item.contract_type] ?? item.contract_type} · {dateStr}
               </p>
             </div>
@@ -101,20 +101,20 @@ export function AnalysisHistory() {
                 </span>
               )}
               {total === 0 && (
-                <span className="text-[10px] text-[#bbb]">탐지 없음</span>
+                <span className="text-[10px] text-foreground-quaternary">탐지 없음</span>
               )}
             </div>
 
             {/* 삭제 */}
             <button
               onClick={e => handleDelete(item.id, e)}
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-[#ddd] hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-foreground-quaternary hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
               title="삭제"
             >
               <Trash2 size={12} />
             </button>
 
-            <ChevronRight size={13} className="text-[#ddd] group-hover:text-[#2E6FF2] transition-colors shrink-0" />
+            <ChevronRight size={13} className="text-foreground-quaternary group-hover:text-primary transition-colors shrink-0" />
           </Link>
         );
       })}

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckCheck, Clock3, MessageSquareText } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import { DocumentActionRow } from '@/components/documents/document-action-row';
 import { buildDocumentCreateHref } from '@/lib/documents/navigation';
@@ -78,103 +77,84 @@ export default function ReviewsPage() {
   if (error) {
     return (
       <div className="flex min-h-[360px] items-center justify-center">
-        <div className="max-w-md rounded-[28px] border border-[#e5e5e7] bg-white px-6 py-8 text-center">
-          <p className="text-[18px] font-semibold text-[#1d1d1f]">검토 큐를 불러오지 못했습니다.</p>
-          <p className="mt-2 text-[13px] leading-6 text-[#6e6e73]">{error}</p>
+        <div className="max-w-md rounded-xl border border-border bg-white px-6 py-8 text-center">
+          <p className="text-[18px] font-semibold text-foreground">검토 큐를 불러오지 못했습니다.</p>
+          <p className="mt-2 text-[13px] leading-6 text-foreground-secondary">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-[25px] pb-10">
-      <section className="rounded-[28px] border border-[#e5e5e7] bg-white overflow-hidden">
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
-          <div className="px-4 py-5 sm:px-6 sm:py-6 xl:px-[30px] xl:py-[30px]">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 25 }}>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#0071e3]">Review Queue</p>
-            <h1 className="text-[24px] font-bold leading-[1.25] text-[#1d1d1f] sm:text-[28px]">코멘트/검토</h1>
-            <p className="max-w-2xl text-[15px] text-[#6e6e73]" style={{ lineHeight: '20px' }}>
-              공유된 문서와 운영 중인 문서에서 아직 반영되지 않은 코멘트를 한곳에 모아 봅니다.
-              여기서 바로 댓글 패널로 들어가 검토, 보류 해제, 반영 작업을 이어갈 수 있습니다.
-            </p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <MetricCard label="검토 대상 문서" value={data?.total ?? 0} />
-              <MetricCard label="미반영 코멘트" value={data?.pendingTotal ?? 0} />
-              <MetricCard label="보류 코멘트" value={data?.heldTotal ?? 0} />
+    <div className="flex flex-col gap-5 pb-10">
+      <section className="rounded-2xl border border-border bg-white shadow-sm">
+        <div className="flex flex-col gap-5 px-6 py-5 sm:px-8 sm:py-6">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="text-[20px] font-bold text-foreground">코멘트/검토</h1>
+              <p className="mt-1.5 text-[13px] text-foreground-secondary">
+                공유된 문서에서 아직 반영되지 않은 코멘트를 한곳에서 확인하고 검토, 반영 작업을 이어갑니다.
+              </p>
             </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => router.push(data?.items[0]?.href ?? '/documents')}
+                className="h-9 rounded-xl bg-foreground px-4 text-[13px] font-medium text-white transition-colors hover:bg-primary"
+              >
+                미반영 코멘트 확인
+              </button>
             </div>
           </div>
-          <div className="border-t border-[#e5e5e7] bg-[#fbfbfc] px-4 py-5 sm:px-6 sm:py-6 xl:border-l xl:border-t-0 xl:px-[28px] xl:py-[28px]">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 25 }}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7C8494]">Priority Flow</p>
-              <div className="flex flex-col gap-3">
-              <QuickAction
-                icon={<MessageSquareText size={18} />}
-                title="미반영 코멘트부터 확인"
-                description="가장 코멘트가 많이 쌓인 문서의 댓글 패널로 바로 이동합니다."
-                onClick={() => router.push(data?.items[0]?.href ?? '/documents')}
-              />
-              <QuickAction
-                icon={<Clock3 size={18} />}
-                title="보류 코멘트 다시 검토"
-                description="보류 코멘트가 남아 있는 문서를 먼저 찾아 다시 반영 흐름에 올립니다."
-                onClick={() => {
-                  const heldDoc = data?.items.find((item) => item.heldCount > 0);
-                  router.push(heldDoc?.href ?? '/documents');
-                }}
-              />
-              <QuickAction
-                icon={<CheckCheck size={18} />}
-                title="반영 후 새 버전으로 이어가기"
-                description="검토를 끝낸 문서를 열어 반영과 새 문서 활용 작업을 이어갑니다."
-                onClick={() => {
-                  const nextDoc = data?.items[0];
-                    router.push(
-                      nextDoc
-                        ? buildDocumentCreateHref({
-                            originDocumentId: nextDoc.id,
-                            originContext: 'review_followup',
-                            contextTitle: nextDoc.title,
-                            instructions: `"${nextDoc.title}" 문서의 검토 의견을 반영한 후속 문서를 작성해줘.`,
-                          })
-                        : buildDocumentCreateHref(),
-                  );
-                }}
-              />
+          <div className="grid grid-cols-3 gap-3">
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-secondary px-4 py-3">
+              <div>
+                <p className="text-[10px] font-semibold text-foreground-tertiary">검토 대상 문서</p>
+                <p className="text-[18px] font-bold text-foreground font-num leading-tight">{data?.total ?? 0}</p>
+              </div>
             </div>
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-secondary px-4 py-3">
+              <div>
+                <p className="text-[10px] font-semibold text-foreground-tertiary">미반영 코멘트</p>
+                <p className="text-[18px] font-bold text-foreground font-num leading-tight">{data?.pendingTotal ?? 0}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-secondary px-4 py-3">
+              <div>
+                <p className="text-[10px] font-semibold text-foreground-tertiary">보류 코멘트</p>
+                <p className="text-[18px] font-bold text-foreground font-num leading-tight">{data?.heldTotal ?? 0}</p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[#e5e5e7] bg-white p-5 sm:p-6">
-        <p className="text-[16px] font-semibold text-[#1d1d1f]">검토 대기 문서</p>
-        <p className="mt-1 text-[12px] text-[#6e6e73]">미반영 코멘트 수가 많은 순서대로 정렬합니다.</p>
+      <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
+        <p className="text-[16px] font-semibold text-foreground">검토 대기 문서</p>
+        <p className="mt-1 text-[12px] text-foreground-secondary">미반영 코멘트 수가 많은 순서대로 정렬합니다.</p>
         <div className="mt-4 flex flex-col gap-4">
           {(data?.items ?? []).length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[#D7E7FF] bg-[#fbfbfc] px-4 py-10 text-center text-[12px] text-[#6e6e73]">
+            <div className="rounded-2xl border border-dashed border-border-tint bg-surface-tertiary px-4 py-10 text-center text-[12px] text-foreground-secondary">
               지금 검토 대기 중인 문서가 없습니다.
             </div>
           ) : data?.items.map((item) => (
-            <div key={item.id} className="rounded-2xl border border-[#E2E5EA] bg-[#fbfbfc] p-5">
+            <div key={item.id} className="rounded-2xl border border-border bg-surface-tertiary p-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-[14px] font-semibold text-[#1d1d1f]">{item.title}</p>
-                  <p className="mt-1 text-[12px] text-[#6e6e73]">{item.ownerName}</p>
+                  <p className="truncate text-[14px] font-semibold text-foreground">{item.title}</p>
+                  <p className="mt-1 text-[12px] text-foreground-secondary">{item.ownerName}</p>
                 </div>
                 <div className="flex flex-wrap gap-2 justify-end">
-                  <span className="rounded-full bg-[#EEF6FF] px-3 py-1 text-[11px] font-semibold text-[#2E6FF2]">
+                  <span className="rounded-full bg-primary-tint px-3 py-1 text-[11px] font-semibold text-primary">
                     미반영 {item.pendingCount}
                   </span>
                   {item.heldCount > 0 && (
-                    <span className="rounded-full bg-[#FFF8ED] px-3 py-1 text-[11px] font-semibold text-[#B06D00]">
+                    <span className="rounded-full bg-warning/5 px-3 py-1 text-[11px] font-semibold text-warning">
                       보류 {item.heldCount}
                     </span>
                   )}
                 </div>
               </div>
-              <p className="mt-3 text-[12px] leading-5 text-[#6e6e73]">
+              <p className="mt-3 text-[12px] leading-5 text-foreground-secondary">
                 우선 처리 {getStatusSummary(item)} · 최근 코멘트 {formatDateLabel(item.latestCommentAt)}
               </p>
               <DocumentActionRow
@@ -209,37 +189,3 @@ export default function ReviewsPage() {
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-2xl border border-[#E2E5EA] bg-[#f8f8fa] px-5 py-4.5">
-      <p className="text-[12px] text-[#6e6e73]">{label}</p>
-      <p className="mt-1 text-[20px] font-bold text-[#1d1d1f] font-num">{value}</p>
-    </div>
-  );
-}
-
-function QuickAction({
-  icon,
-  title,
-  description,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  onClick: () => void;
-}) {
-  return (
-    <button onClick={onClick} className="rounded-2xl border border-[#E2E5EA] bg-white px-5 py-4.5 text-left hover:border-[#0071e3]/35 transition-colors">
-      <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#eef6ff] text-[#0071e3]">
-          {icon}
-        </div>
-        <div>
-          <p className="text-[14px] font-semibold text-[#1d1d1f]">{title}</p>
-          <p className="mt-1 text-[12px] leading-5 text-[#6e6e73]">{description}</p>
-        </div>
-      </div>
-    </button>
-  );
-}

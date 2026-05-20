@@ -6,25 +6,15 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      colors: {
-        navy: {
-          DEFAULT: '#1B1F2B',
-          light: '#252A38',
-          lighter: '#2F3545',
-        },
-        accent: {
-          DEFAULT: '#2E6FF2',
-          hover: '#1A5AD9',
-        },
-        clio: {
-          bg: '#F7F8FA',
-          border: '#E2E5EA',
-          text: '#1B1F2B',
-          'text-secondary': '#7C8494',
-        },
+      borderRadius: {
+        sm: 'var(--radius-sm)',
+        md: 'var(--radius-md)',
+        lg: 'var(--radius-lg)',
+        xl: 'var(--radius-xl)',
       },
       fontFamily: {
         sans: ['Paperlogy', 'Verdana', 'system-ui', '-apple-system', 'sans-serif'],
+        serif: ['"Times New Roman"', 'Times', 'serif'],
         num: ['Verdana', 'Geneva', 'sans-serif'],
         en: ['Verdana', 'Geneva', 'sans-serif'],
       },
@@ -33,6 +23,12 @@ const config: Config = {
       },
       fontSize: {
         '2xs': ['10px', '14px'],
+        'xs':  ['12px', '16px'],
+        'sm':  ['14px', '20px'],
+        'base': ['16px', '24px'],
+        'lg':  ['20px', '28px'],
+        'xl':  ['24px', '32px'],
+        '2xl': ['30px', '36px'],
       },
     },
   },

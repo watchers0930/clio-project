@@ -16,9 +16,9 @@ interface QualityCheckItemProps {
 
 export function QualityCheckItemCard({ item }: QualityCheckItemProps) {
   return (
-    <div className="rounded-xl border border-[#e5e5e7] bg-white p-5 space-y-3">
+    <div className="rounded-xl border border-border bg-white p-5 space-y-3">
       <div className="flex items-center gap-2.5">
-        <span className="text-xs font-semibold text-[#1d1d1f]">
+        <span className="text-xs font-semibold text-foreground">
           {CATEGORY_LABEL[item.category] ?? item.category}
         </span>
         <QualityCheckBadge severity={item.severity} />
@@ -26,8 +26,8 @@ export function QualityCheckItemCard({ item }: QualityCheckItemProps) {
 
       {item.original && (
         <div className="flex items-start gap-2.5">
-          <span className="text-[10px] font-medium text-[#6e6e73] shrink-0 mt-0.5">원문</span>
-          <span className="text-xs text-[#1d1d1f] font-mono bg-[#f5f5f7] rounded-md px-2.5 py-1 leading-relaxed">
+          <span className="text-[10px] font-medium text-foreground-secondary shrink-0 mt-0.5">원문</span>
+          <span className="text-xs text-foreground font-mono bg-surface-secondary rounded-md px-2.5 py-1 leading-relaxed">
             &ldquo;{item.original}&rdquo;
           </span>
         </div>
@@ -35,12 +35,12 @@ export function QualityCheckItemCard({ item }: QualityCheckItemProps) {
 
       {item.suggestion && (
         <div className="flex items-start gap-2.5">
-          <span className="text-[10px] font-medium text-[#34c759] shrink-0 mt-0.5">제안</span>
-          <span className="text-xs text-[#1d1d1f] leading-relaxed">{item.suggestion}</span>
+          <span className="text-[10px] font-medium text-success shrink-0 mt-0.5">제안</span>
+          <span className="text-xs text-foreground leading-relaxed">{item.suggestion}</span>
         </div>
       )}
 
-      <p className="text-xs text-[#6e6e73] leading-relaxed">{item.description}</p>
+      <p className="text-xs text-foreground-secondary leading-relaxed">{item.description}</p>
     </div>
   );
 }

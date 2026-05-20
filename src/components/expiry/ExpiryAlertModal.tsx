@@ -29,8 +29,7 @@ export function ExpiryAlertModal({ items, onDismissToday, onClose }: ExpiryAlert
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="bg-card rounded-t-[28px] border border-border shadow-xl w-full max-w-md mx-0 sm:mx-4 sm:rounded-[24px]"
-        style={{ maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+        className="bg-card rounded-t-[28px] border border-border shadow-xl w-full max-w-md mx-0 sm:mx-4 sm:rounded-xl max-h-[80vh] overflow-hidden flex flex-col"
       >
         {/* 헤더 */}
         <div className="px-5 py-5 border-b border-border flex items-start justify-between gap-3 sm:px-6 sm:py-6">
@@ -52,7 +51,7 @@ export function ExpiryAlertModal({ items, onDismissToday, onClose }: ExpiryAlert
             D-30 이내 만료 예정인 문서가 있습니다.
           </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="flex flex-col gap-2.5">
             {items.map((item) => {
               const badge = getDayBadgeStyle(item.days_remaining);
               return (

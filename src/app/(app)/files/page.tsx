@@ -110,7 +110,7 @@ function FilesPage() {
   if (loading) return <FilesPageSkeleton />;
 
   return (
-    <div className="space-y-[25px] pb-10">
+    <div className="flex flex-col gap-5 pb-10">
       <FilesHeaderActions />
 
       <BulkActionsBar
@@ -134,29 +134,25 @@ function FilesPage() {
         mode="actions-only"
       />
 
-      <section className="rounded-2xl border border-[#D7E7FF] bg-[#F7FBFF] px-4 py-4 sm:px-5">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#2E6FF2]">Next Step</p>
-            <p className="mt-1 text-[13px] font-semibold text-[#1B1F2B]">문서를 올린 뒤 바로 검색, 생성, 검토 흐름으로 넘기세요.</p>
-            <p className="mt-1 text-[12px] leading-5 text-[#6B7280]">문서허브는 저장소가 아니라 이후 작업의 시작점입니다.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
+      <section className="rounded-2xl border border-border bg-white shadow-sm">
+        <div className="flex items-center justify-between gap-4 px-6 py-4 sm:px-8">
+          <p className="text-[13px] text-foreground-secondary">문서를 올린 뒤 바로 검색, 생성, 검토 흐름으로 넘기세요.</p>
+          <div className="flex shrink-0 gap-2">
             <button
               onClick={() => router.push('/search')}
-              className="rounded-xl border border-[#D7E7FF] bg-white px-4 py-2.5 text-[12px] font-medium text-[#2E6FF2] hover:bg-[#EEF6FF] transition-colors"
+              className="h-8 rounded-lg border border-border bg-white px-3 text-[12px] font-medium text-foreground-secondary hover:bg-surface-secondary transition-colors"
             >
               AI 검색
             </button>
             <button
               onClick={() => router.push(buildDocumentCreateHref())}
-              className="rounded-xl bg-[#1d1d1f] px-4 py-2.5 text-[12px] font-medium text-white hover:bg-[#0071e3] transition-colors"
+              className="h-8 rounded-lg bg-foreground px-3 text-[12px] font-medium text-white hover:bg-primary transition-colors"
             >
-              새 문서 생성
+              새 문서
             </button>
             <button
               onClick={() => router.push('/reviews')}
-              className="rounded-xl border border-[#E6DBFF] bg-white px-4 py-2.5 text-[12px] font-medium text-[#7C3AED] hover:bg-[#FAF5FF] transition-colors"
+              className="h-8 rounded-lg border border-border bg-white px-3 text-[12px] font-medium text-foreground-secondary hover:bg-surface-secondary transition-colors"
             >
               검토 큐
             </button>
@@ -165,13 +161,13 @@ function FilesPage() {
       </section>
 
       <div className="flex items-center justify-between gap-3 py-[12px]">
-        <p className="text-sm text-[#6e6e73]">
-          총 <span className="font-num font-medium text-[#1d1d1f]">{filtered.length}</span>개 파일
+        <p className="text-sm text-foreground-secondary">
+          총 <span className="font-num font-medium text-foreground">{filtered.length}</span>개 파일
         </p>
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => { void handleReprocessAllErrors(); }}
-            className="inline-flex min-h-[32px] items-center justify-center gap-1.5 rounded-full border border-[#f6d7a3] bg-[#fffaf2] px-3 text-[10px] font-medium text-[#b06d00] transition-colors hover:bg-[#fff4df] sm:min-h-[34px] sm:px-3.5 sm:text-[11px]"
+            className="inline-flex min-h-[32px] items-center justify-center gap-1.5 rounded-full border border-warning/30 bg-warning/5 px-3 text-[10px] font-medium text-warning transition-colors hover:bg-warning/5 sm:min-h-[34px] sm:px-3.5 sm:text-[11px]"
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -180,7 +176,7 @@ function FilesPage() {
           </button>
           <button
             onClick={() => { setShowScrape(true); setScrapeUrl(''); setScrapeResult(null); }}
-            className="inline-flex min-h-[32px] items-center justify-center gap-1.5 rounded-full border border-[#e5e5e7] bg-white px-3 text-[10px] font-medium text-[#4b5563] transition-colors hover:bg-[#f5f5f7] sm:min-h-[34px] sm:px-3.5 sm:text-[11px]"
+            className="inline-flex min-h-[32px] items-center justify-center gap-1.5 rounded-full border border-border bg-white px-3 text-[10px] font-medium text-foreground-secondary transition-colors hover:bg-surface-secondary sm:min-h-[34px] sm:px-3.5 sm:text-[11px]"
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-2.07a4.5 4.5 0 00-1.242-7.244l-4.5-4.5a4.5 4.5 0 00-6.364 6.364l1.757 1.757" />
@@ -294,9 +290,9 @@ function FilesPage() {
 function FilesPageSkeleton() {
   return (
     <div className="space-y-6 animate-pulse">
-      <div className="h-8 w-48 bg-[#e5e5e7] rounded-lg" />
-      <div className="h-12 bg-white rounded-2xl border border-[#e5e5e7]" />
-      <div className="h-96 bg-white rounded-2xl border border-[#e5e5e7]" />
+      <div className="h-8 w-48 bg-border rounded-lg" />
+      <div className="h-12 bg-white rounded-2xl border border-border" />
+      <div className="h-96 bg-white rounded-2xl border border-border" />
     </div>
   );
 }

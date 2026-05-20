@@ -19,14 +19,14 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="text-sm font-medium text-clio-text"
+            className="text-sm font-medium text-foreground"
           >
             {label}
           </label>
         )}
         <div className="relative">
           {leftIcon && (
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-clio-text-secondary pointer-events-none">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-secondary pointer-events-none">
               {leftIcon}
             </span>
           )}
@@ -34,15 +34,15 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             className={cn(
-              'flex h-11 w-full rounded-xl border bg-white px-4 text-sm text-clio-text',
-              'placeholder:text-clio-text-secondary/60',
-              'focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent',
+              'flex h-11 w-full rounded-md border bg-white px-4 text-sm text-foreground',
+              'placeholder:text-foreground-tertiary',
+              'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary',
               'disabled:opacity-50 disabled:cursor-not-allowed',
               'transition-all',
               leftIcon && 'pl-11',
               error
                 ? 'border-danger focus:ring-danger/30 focus:border-danger'
-                : 'border-clio-border',
+                : 'border-border',
               className
             )}
             {...props}
@@ -50,7 +50,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         </div>
         {error && <p className="text-xs text-danger">{error}</p>}
         {hint && !error && (
-          <p className="text-xs text-clio-text-secondary">{hint}</p>
+          <p className="text-xs text-foreground-secondary">{hint}</p>
         )}
       </div>
     );

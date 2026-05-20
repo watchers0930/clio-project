@@ -31,7 +31,7 @@ export default function CalendarCell({
   return (
     <div
       onClick={() => onClick(date)}
-      className="min-h-[124px] p-2.5 border-b border-r border-[#E2E5EA]/60 cursor-pointer transition-colors hover:bg-[#f9fafb]"
+      className="min-h-[124px] p-2.5 border-b border-r border-border/60 cursor-pointer transition-colors hover:bg-surface-tertiary"
       style={{
         backgroundColor: isSelected ? 'rgba(46,111,242,0.06)' : !inMonth ? '#fafafa' : undefined,
         boxShadow: isSelected ? 'inset 0 0 0 1.5px rgba(46,111,242,0.35)' : undefined,
@@ -89,7 +89,7 @@ export default function CalendarCell({
           );
         })}
         {events.length > 3 && (
-            <span className="pl-1.5 text-[10px] font-medium text-[#2E6FF2] cursor-pointer hover:underline">
+            <span className="pl-1.5 text-[10px] font-medium text-primary cursor-pointer hover:underline">
               +{events.length - 3}개 더
             </span>
         )}

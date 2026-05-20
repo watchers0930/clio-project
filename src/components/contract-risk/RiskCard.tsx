@@ -64,11 +64,11 @@ export function RiskCard({ item }: RiskCardProps) {
   };
 
   return (
-    <div className={cn('bg-white border border-[#E2E5EA] border-l-4 rounded-2xl overflow-hidden', cfg.borderCls)}>
+    <div className={cn('bg-white border border-border border-l-4 rounded-2xl overflow-hidden', cfg.borderCls)}>
 
       {/* 헤더 (클릭하여 토글) */}
       <button
-        className="w-full text-left px-5 py-4 flex items-start gap-3.5 hover:bg-[#FAFBFC] transition-colors"
+        className="w-full text-left px-5 py-4 flex items-start gap-3.5 hover:bg-surface-tertiary transition-colors"
         onClick={() => setExpanded(v => !v)}
       >
         {/* 아이콘 */}
@@ -82,14 +82,14 @@ export function RiskCard({ item }: RiskCardProps) {
             <span className={cn('text-[11px] font-bold px-2.5 py-1 rounded-lg border leading-none', cfg.badgeCls)}>
               {cfg.label}위 리스크
             </span>
-            <span className="text-[11px] font-mono text-[#aaa]">{item.id}</span>
+            <span className="text-[11px] font-mono text-foreground-quaternary">{item.id}</span>
             {def && (
-              <span className="text-[10px] text-[#888] bg-[#F0F2F5] rounded-md px-2 py-1">
+              <span className="text-[10px] text-foreground-quaternary bg-surface-secondary rounded-md px-2 py-1">
                 {CATEGORY_LABELS[def.category] ?? ''}
               </span>
             )}
           </div>
-          <p className="text-[14px] font-semibold text-[#1B1F2B] leading-snug">
+          <p className="text-[14px] font-semibold text-foreground leading-snug">
             {def?.name ?? item.id}
           </p>
         </div>
@@ -98,32 +98,32 @@ export function RiskCard({ item }: RiskCardProps) {
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={e => { e.stopPropagation(); handleCopy(); }}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#ccc] hover:text-[#1B1F2B] hover:bg-[#F0F2F5] transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-foreground-quaternary hover:text-foreground hover:bg-surface-secondary transition-colors"
             title="복사"
           >
             {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
           </button>
           <div className={cn('flex h-7 w-7 items-center justify-center rounded-lg transition-transform', expanded && 'rotate-180')}>
-            <ChevronDown size={15} className="text-[#aaa]" />
+            <ChevronDown size={15} className="text-foreground-quaternary" />
           </div>
         </div>
       </button>
 
       {/* 상세 내용 */}
       {expanded && (
-        <div className="px-5 pb-5 border-t border-[#F0F2F5] bg-[#FAFBFC] space-y-4 pt-4">
+        <div className="px-5 pb-5 border-t border-border bg-surface-tertiary space-y-4 pt-4">
           {item.excerpt && (
             <div>
-              <p className="text-[10px] font-bold text-[#2E6FF2] uppercase tracking-widest mb-2">원문 발췌</p>
-              <div className="bg-white border border-[#E2E5EA] rounded-xl p-3.5 text-[12px] text-[#555] italic leading-relaxed">
+              <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-2">원문 발췌</p>
+              <div className="bg-white border border-border rounded-xl p-3.5 text-[12px] text-foreground-secondary italic leading-relaxed">
                 {item.excerpt}
               </div>
             </div>
           )}
           {item.explanation && (
             <div>
-              <p className="text-[10px] font-bold text-[#1B1F2B] uppercase tracking-widest mb-2">AI 분석</p>
-              <p className="text-[13px] text-[#333] leading-relaxed">{item.explanation}</p>
+              <p className="text-[10px] font-bold text-foreground uppercase tracking-widest mb-2">AI 분석</p>
+              <p className="text-[13px] text-foreground leading-relaxed">{item.explanation}</p>
             </div>
           )}
           {item.recommendation && (

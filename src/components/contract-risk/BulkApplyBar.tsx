@@ -23,13 +23,13 @@ export function BulkApplyBar({
   if (acceptedCount === 0) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-30 bg-[#1B1F2B] text-white px-6 py-3.5 flex items-center gap-4 shadow-2xl">
+    <div className="fixed bottom-0 left-0 right-0 z-30 bg-foreground text-white px-6 py-3.5 flex items-center gap-4 shadow-2xl">
       {/* 수락 건수 */}
       <div className="flex items-center gap-2 flex-shrink-0">
         <CheckCircle className="w-4 h-4 text-green-400" />
         <span className="text-sm">
           <span className="font-semibold text-green-400">{acceptedCount}개</span>
-          <span className="text-[#9CA3AF]"> 조항 수락됨 / 전체 {totalCount}개</span>
+          <span className="text-foreground-quaternary"> 조항 수락됨 / 전체 {totalCount}개</span>
         </span>
       </div>
 
@@ -44,8 +44,8 @@ export function BulkApplyBar({
             className={cn(
               'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
               outputFormat === fmt
-                ? 'bg-white text-[#1B1F2B]'
-                : 'text-[#9CA3AF] hover:text-white border border-[#3C3C43]',
+                ? 'bg-white text-foreground'
+                : 'text-foreground-quaternary hover:text-white border border-foreground/30',
             )}
           >
             {fmt.toUpperCase()}
@@ -60,8 +60,8 @@ export function BulkApplyBar({
         className={cn(
           'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all',
           isApplying
-            ? 'bg-[#2E6FF2]/50 cursor-not-allowed'
-            : 'bg-[#2E6FF2] hover:bg-[#245ED0]',
+            ? 'bg-primary/50 cursor-not-allowed'
+            : 'bg-primary hover:bg-primary-dark',
         )}
       >
         {isApplying ? (

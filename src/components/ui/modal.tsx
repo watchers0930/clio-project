@@ -47,7 +47,7 @@ function Modal({
     >
       <div
         className={cn(
-          'mx-0 max-h-[90vh] w-full overflow-y-auto rounded-[24px] bg-white shadow-xl',
+          'mx-0 max-h-[90vh] w-full overflow-y-auto rounded-xl bg-white shadow-xl',
           sizeStyles[size],
           className
         )}
@@ -63,7 +63,7 @@ function Modal({
             )}
             <button
               onClick={onClose}
-              className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer text-[#aaa] transition-colors hover:text-foreground sm:right-6"
+              className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer text-foreground-quaternary transition-colors hover:text-foreground sm:right-6"
             >
               <X size={16} strokeWidth={1.5} />
             </button>
@@ -75,7 +75,7 @@ function Modal({
           <div className="flex justify-end px-5 pt-5 sm:px-7">
             <button
               onClick={onClose}
-              className="text-[#aaa] hover:text-foreground transition-colors cursor-pointer"
+              className="text-foreground-quaternary hover:text-foreground transition-colors cursor-pointer"
             >
               <X size={16} strokeWidth={1.5} />
             </button>

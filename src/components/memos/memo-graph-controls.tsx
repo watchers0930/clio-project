@@ -8,7 +8,7 @@ interface MemoGraphControlsProps {
 export default function MemoGraphControls({ threshold, onChange }: MemoGraphControlsProps) {
   return (
     <div
-      className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] text-[#64748B]"
+      className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] text-foreground-secondary"
       style={{
         background: 'rgba(255,255,255,0.92)',
         border: '1px solid #E2E8F0',

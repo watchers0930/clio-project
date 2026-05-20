@@ -70,7 +70,7 @@ function AppLayout({ children }: AppLayoutProps) {
           </main>
         ) : (
           /* 일반 페이지: 스크롤 가능, 푸터는 콘텐츠 하단에 위치 */
-          <main className="flex-1 overflow-y-auto pb-[92px] lg:pb-0">
+          <main className="flex-1 overflow-y-auto pb-24 lg:pb-0">
             <div className="mx-auto w-full max-w-[1680px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10 xl:px-10 xl:py-12">
               {children}
             </div>

@@ -91,9 +91,9 @@ export function OnboardingModal() {
         {/* 닫기 */}
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-lg hover:bg-[#F7F8FA] flex items-center justify-center transition-colors"
+          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-lg hover:bg-surface-secondary flex items-center justify-center transition-colors"
         >
-          <X className="w-4 h-4 text-[#6B7280]" />
+          <X className="w-4 h-4 text-foreground-secondary" />
         </button>
 
         {/* 상단 컬러 배너 */}
@@ -117,8 +117,8 @@ export function OnboardingModal() {
 
         {/* 본문 */}
         <div className="px-5 pb-4 pt-6 sm:px-8">
-          <h2 className="text-[18px] font-bold text-[#1B1F2B] mb-2">{slide.title}</h2>
-          <p className="text-[13px] text-[#6B7280] leading-relaxed">{slide.desc}</p>
+          <h2 className="text-[18px] font-bold text-foreground mb-2">{slide.title}</h2>
+          <p className="text-[13px] text-foreground-secondary leading-relaxed">{slide.desc}</p>
         </div>
 
         {/* 점 인디케이터 */}
@@ -138,11 +138,11 @@ export function OnboardingModal() {
         </div>
 
         {/* 푸터 */}
-        <div className="flex items-center justify-between border-t border-[#E2E5EA] bg-[#F7F8FA] px-5 py-4 sm:px-8 sm:py-5">
+        <div className="flex items-center justify-between border-t border-border bg-surface-secondary px-5 py-4 sm:px-8 sm:py-5">
           <button
             onClick={() => setStep(s => s - 1)}
             disabled={step === 0}
-            className="flex items-center gap-1 text-[13px] text-[#6B7280] hover:text-[#1B1F2B] disabled:opacity-0 transition-colors"
+            className="flex items-center gap-1 text-[13px] text-foreground-secondary hover:text-foreground disabled:opacity-0 transition-colors"
           >
             <ChevronLeft className="w-4 h-4" /> 이전
           </button>

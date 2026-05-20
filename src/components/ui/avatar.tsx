@@ -57,7 +57,7 @@ function Avatar({ src, name, size = 'md', className }: AvatarProps) {
     <div
       className={cn(
         'rounded-full flex-shrink-0 flex items-center justify-center',
-        'bg-accent/15 text-accent font-semibold select-none',
+        'bg-primary/15 text-primary font-semibold select-none',
         sizeStyles[size],
         className
       )}

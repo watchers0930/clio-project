@@ -109,30 +109,30 @@ export default function EventFormModal({
       >
         {/* 헤더 */}
         <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
-          <h3 className="text-[16px] font-semibold text-[#1B1F2B]">
+          <h3 className="text-[16px] font-semibold text-foreground">
             {isEdit ? '일정 수정' : '일정 등록'}
           </h3>
-          <button onClick={onClose} className="text-[#7C8494] hover:text-[#1B1F2B] transition-colors">
+          <button onClick={onClose} className="text-foreground-secondary hover:text-foreground transition-colors">
             <X size={18} />
           </button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="flex flex-col gap-2.5">
           {/* 제목 */}
           <div>
-            <label className="block text-[12px] font-medium text-[#7C8494] mb-1">제목</label>
+            <label className="block text-[12px] font-medium text-foreground-secondary mb-1">제목</label>
             <input
               type="text"
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               placeholder="일정 제목을 입력하세요"
-              className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/20 focus:border-[#2E6FF2]"
+              className="w-full px-3 py-2.5 text-[13px] border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
 
           {/* 유형 */}
           <div>
-            <label className="block text-[12px] font-medium text-[#7C8494] mb-1">유형</label>
+            <label className="block text-[12px] font-medium text-foreground-secondary mb-1">유형</label>
             <div className="flex gap-2 flex-wrap">
               {EVENT_TYPES.map((type) => (
                 <button
@@ -153,12 +153,12 @@ export default function EventFormModal({
           </div>
 
           {/* 종일 */}
-          <label className="flex items-center gap-2 text-[13px] text-[#1B1F2B]">
+          <label className="flex items-center gap-2 text-[13px] text-foreground">
             <input
               type="checkbox"
               checked={form.all_day}
               onChange={(e) => setForm({ ...form, all_day: e.target.checked })}
-              className="rounded border-[#E2E5EA]"
+              className="rounded border-border"
             />
             종일
           </label>
@@ -166,44 +166,44 @@ export default function EventFormModal({
           {/* 시작/종료 */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[12px] font-medium text-[#7C8494] mb-1">시작</label>
+              <label className="block text-[12px] font-medium text-foreground-secondary mb-1">시작</label>
               <input
                 type={form.all_day ? 'date' : 'datetime-local'}
                 value={form.all_day ? form.start_at.split('T')[0] : form.start_at}
                 onChange={(e) => setForm({ ...form, start_at: form.all_day ? e.target.value + 'T00:00' : e.target.value })}
-                className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/20 focus:border-[#2E6FF2]"
+                className="w-full px-3 py-2.5 text-[13px] border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
             </div>
             <div>
-              <label className="block text-[12px] font-medium text-[#7C8494] mb-1">종료</label>
+              <label className="block text-[12px] font-medium text-foreground-secondary mb-1">종료</label>
               <input
                 type={form.all_day ? 'date' : 'datetime-local'}
                 value={form.all_day ? form.end_at.split('T')[0] : form.end_at}
                 onChange={(e) => setForm({ ...form, end_at: form.all_day ? e.target.value + 'T23:59' : e.target.value })}
-                className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/20 focus:border-[#2E6FF2]"
+                className="w-full px-3 py-2.5 text-[13px] border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
             </div>
           </div>
 
           {/* 장소 */}
           <div>
-            <label className="block text-[12px] font-medium text-[#7C8494] mb-1">장소</label>
+            <label className="block text-[12px] font-medium text-foreground-secondary mb-1">장소</label>
             <input
               type="text"
               value={form.location}
               onChange={(e) => setForm({ ...form, location: e.target.value })}
               placeholder="장소 (선택)"
-              className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/20 focus:border-[#2E6FF2]"
+              className="w-full px-3 py-2.5 text-[13px] border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
 
           {/* 공개 범위 */}
           <div>
-            <label className="block text-[12px] font-medium text-[#7C8494] mb-1">공개 범위</label>
+            <label className="block text-[12px] font-medium text-foreground-secondary mb-1">공개 범위</label>
             <select
               value={form.department_id ?? ''}
               onChange={(e) => setForm({ ...form, department_id: e.target.value || null })}
-              className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/20 focus:border-[#2E6FF2]"
+              className="w-full px-3 py-2.5 text-[13px] border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             >
               <option value="">전사 공개</option>
               {departments.map((d) => (
@@ -214,13 +214,13 @@ export default function EventFormModal({
 
           {/* 설명 */}
           <div>
-            <label className="block text-[12px] font-medium text-[#7C8494] mb-1">설명</label>
+            <label className="block text-[12px] font-medium text-foreground-secondary mb-1">설명</label>
             <textarea
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder="설명 (선택)"
               rows={3}
-              className="w-full px-3 py-2.5 text-[13px] border border-[#E2E5EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E6FF2]/20 focus:border-[#2E6FF2] resize-none"
+              className="w-full px-3 py-2.5 text-[13px] border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
             />
           </div>
         </div>
@@ -231,7 +231,7 @@ export default function EventFormModal({
             {isEdit && onDelete && (
               <button
                 onClick={async () => { await onDelete(); onClose(); }}
-                className="px-4 py-2 text-[13px] text-[#1d1d1f] hover:bg-[#1d1d1f]/5 rounded-lg transition-colors"
+                className="px-4 py-2 text-[13px] text-foreground hover:bg-foreground/5 rounded-lg transition-colors"
               >
                 삭제
               </button>
@@ -240,14 +240,14 @@ export default function EventFormModal({
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-[13px] text-[#7C8494] hover:text-[#1B1F2B] transition-colors"
+              className="px-4 py-2 text-[13px] text-foreground-secondary hover:text-foreground transition-colors"
             >
               취소
             </button>
             <button
               onClick={handleSubmit}
               disabled={loading || !form.title.trim()}
-              className="px-5 py-2 text-[13px] font-medium text-white bg-[#2E6FF2] rounded-lg hover:bg-[#1A5AD9] transition-colors disabled:opacity-40"
+              className="px-5 py-2 text-[13px] font-medium text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-40"
             >
               {loading ? <Spinner size="sm" variant="white" /> : isEdit ? '수정' : '등록'}
             </button>

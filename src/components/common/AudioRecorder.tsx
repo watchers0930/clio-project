@@ -96,11 +96,11 @@ export function AudioRecorder({ onComplete, onSwitchToUpload, className }: Audio
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z" />
               </svg>
             </div>
-            <p className="text-sm text-[#6e6e73] leading-relaxed">{error}</p>
+            <p className="text-sm text-foreground-secondary leading-relaxed">{error}</p>
             {onSwitchToUpload && (
               <button
                 onClick={onSwitchToUpload}
-                className="px-4 py-2.5 rounded-lg text-sm text-[#2E6FF2] border border-[#2E6FF2] hover:bg-blue-50 transition-colors"
+                className="px-4 py-2.5 rounded-lg text-sm text-primary border border-primary hover:bg-blue-50 transition-colors"
               >
                 파일 업로드로 전환
               </button>
@@ -108,16 +108,16 @@ export function AudioRecorder({ onComplete, onSwitchToUpload, className }: Audio
           </div>
         ) : (
           <>
-            <div className="w-16 h-16 rounded-full bg-[#f5f5f7] flex items-center justify-center">
-              <Mic className="w-7 h-7 text-[#6e6e73]" />
+            <div className="w-16 h-16 rounded-full bg-surface-secondary flex items-center justify-center">
+              <Mic className="w-7 h-7 text-foreground-secondary" />
             </div>
             <div className="text-center">
-              <p className="text-sm font-medium text-[#1d1d1f]">마이크로 직접 녹음하기</p>
-              <p className="text-xs text-[#6e6e73] mt-1">최대 10분 · Chrome, Safari, Firefox 지원</p>
+              <p className="text-sm font-medium text-foreground">마이크로 직접 녹음하기</p>
+              <p className="text-xs text-foreground-secondary mt-1">최대 10분 · Chrome, Safari, Firefox 지원</p>
             </div>
             <button
               onClick={startRecording}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#2E6FF2] transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-foreground text-white text-sm font-medium hover:bg-primary transition-colors"
             >
               <Mic className="w-4 h-4" />
               녹음 시작
@@ -139,10 +139,10 @@ export function AudioRecorder({ onComplete, onSwitchToUpload, className }: Audio
               status === 'recording' ? 'bg-red-500 animate-pulse' : 'bg-yellow-400'
             }`}
           />
-          <span className="text-sm font-medium text-[#1d1d1f]">
+          <span className="text-sm font-medium text-foreground">
             {status === 'recording' ? '녹음 중' : '일시정지'}
           </span>
-          <span className="text-sm font-num text-[#6e6e73]">{formatDuration(duration)}</span>
+          <span className="text-sm font-num text-foreground-secondary">{formatDuration(duration)}</span>
         </div>
 
         {/* 파형 캔버스 */}
@@ -150,7 +150,7 @@ export function AudioRecorder({ onComplete, onSwitchToUpload, className }: Audio
           ref={canvasRef}
           width={240}
           height={48}
-          className="rounded-lg bg-[#f5f5f7]"
+          className="rounded-lg bg-surface-secondary"
         />
 
         {/* 10분 남은 시간 경고 */}
@@ -162,7 +162,7 @@ export function AudioRecorder({ onComplete, onSwitchToUpload, className }: Audio
         <div className="flex items-center gap-3.5">
           <button
             onClick={status === 'recording' ? pauseRecording : resumeRecording}
-            className="inline-flex items-center gap-2 px-4 py-3 rounded-xl border border-[#e5e5e7] text-sm text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-3 rounded-xl border border-border text-sm text-foreground hover:bg-surface-secondary transition-colors"
           >
             {status === 'recording' ? (
               <><Pause className="w-4 h-4" /> 일시정지</>
@@ -172,7 +172,7 @@ export function AudioRecorder({ onComplete, onSwitchToUpload, className }: Audio
           </button>
           <button
             onClick={stopRecording}
-            className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-red-600 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-foreground text-white text-sm font-medium hover:bg-red-600 transition-colors"
           >
             <Square className="w-4 h-4" />
             정지
@@ -192,7 +192,7 @@ export function AudioRecorder({ onComplete, onSwitchToUpload, className }: Audio
             <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
           </svg>
         </div>
-        <span className="text-sm font-medium text-[#1d1d1f]">
+        <span className="text-sm font-medium text-foreground">
           녹음 완료 ({formatDuration(duration)})
         </span>
       </div>
@@ -211,14 +211,14 @@ export function AudioRecorder({ onComplete, onSwitchToUpload, className }: Audio
       <div className="flex items-center gap-3.5">
         <button
           onClick={resetRecording}
-          className="inline-flex items-center gap-2 px-4 py-3 rounded-xl border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-3 rounded-xl border border-border text-sm text-foreground-secondary hover:bg-surface-secondary transition-colors"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           다시 녹음
         </button>
         <button
           onClick={handleComplete}
-          className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-[#2E6FF2] text-white text-sm font-medium hover:bg-[#1a5ad9] transition-colors"
+          className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-dark transition-colors"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />

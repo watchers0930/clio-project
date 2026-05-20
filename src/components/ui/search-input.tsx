@@ -48,7 +48,7 @@ export function SearchInput({
     <div className={cn('relative flex items-center', s.wrapper, className)}>
       {/* 검색 아이콘 */}
       <svg
-        className={cn(`absolute ${s.icon} text-[#a1a1a6] pointer-events-none`)}
+        className={cn(`absolute ${s.icon} text-foreground-quaternary pointer-events-none`)}
         aria-hidden="true"
         fill="none"
         viewBox="0 0 24 24"
@@ -66,8 +66,8 @@ export function SearchInput({
         placeholder={placeholder}
         disabled={disabled}
         className={cn(
-          'w-full rounded-xl border border-[#e5e5e7] bg-[#f5f5f7] text-[#1d1d1f]',
-          'placeholder:text-[#a1a1a6] focus:outline-none focus:ring-2 focus:ring-[#0071e3]/30 focus:border-[#0071e3]',
+          'w-full rounded-md border border-border bg-surface-secondary text-foreground',
+          'placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary',
           'disabled:opacity-50 disabled:cursor-not-allowed transition-all',
           s.input,
           showButton && 'pr-20',
@@ -79,7 +79,7 @@ export function SearchInput({
         <button
           onClick={onSearch}
           disabled={buttonDisabled ?? disabled ?? loading}
-          className="absolute right-2 top-1/2 -translate-y-1/2 px-3.5 py-2 rounded-lg bg-[#1d1d1f] text-white text-xs font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40"
+          className="absolute right-2 top-1/2 -translate-y-1/2 px-3.5 py-2 rounded-sm bg-foreground text-white text-xs font-medium hover:bg-primary transition-colors disabled:opacity-40"
         >
           {loading ? (
             <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />

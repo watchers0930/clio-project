@@ -177,25 +177,25 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
 
-      <div className="relative mx-4 flex max-h-[90vh] w-full max-w-3xl flex-col rounded-[28px] bg-white shadow-2xl">
+      <div className="relative mx-4 flex max-h-[90vh] w-full max-w-3xl flex-col rounded-xl bg-white shadow-2xl">
         {/* 헤더 */}
-        <div className="flex items-center justify-between border-b border-[#E2E5EA] px-8 py-6 shrink-0">
+        <div className="flex items-center justify-between border-b border-border px-8 py-6 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#2E6FF2]/10 flex items-center justify-center">
-              <Scale className="w-5 h-5 text-[#2E6FF2]" />
+            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Scale className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h2 className="text-[15px] font-semibold text-[#1B1F2B]">법령 기반 조항 수정</h2>
-              <p className="text-[12px] text-[#6B7280]">위험 조항을 법령에 근거하여 수정합니다</p>
+              <h2 className="text-[15px] font-semibold text-foreground">법령 기반 조항 수정</h2>
+              <p className="text-[12px] text-foreground-secondary">위험 조항을 법령에 근거하여 수정합니다</p>
             </div>
           </div>
-          <button onClick={handleClose} className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-[#F7F8FA]">
-            <X className="w-4 h-4 text-[#6B7280]" />
+          <button onClick={handleClose} className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-surface-secondary">
+            <X className="w-4 h-4 text-foreground-secondary" />
           </button>
         </div>
 
         {/* 단계 표시 */}
-        <div className="flex items-center gap-1 px-8 py-4 bg-[#F7F8FA] border-b border-[#E2E5EA] shrink-0">
+        <div className="flex items-center gap-1 px-8 py-4 bg-surface-secondary border-b border-border shrink-0">
           {(['조항 선택', 'AI 수정 제안', '다운로드'] as const).map((label, idx) => {
             const s = idx + 1;
             const active = step === s;
@@ -204,11 +204,11 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
               <div key={s} className="flex items-center">
                 <div className="flex items-center gap-2">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${
-                    done ? 'bg-emerald-500 text-white' : active ? 'bg-[#2E6FF2] text-white' : 'bg-[#E2E5EA] text-[#6B7280]'
+                    done ? 'bg-emerald-500 text-white' : active ? 'bg-primary text-white' : 'bg-border text-foreground-secondary'
                   }`}>{done ? '✓' : s}</div>
-                  <span className={`text-[12px] font-medium ${active ? 'text-[#1B1F2B]' : 'text-[#9CA3AF]'}`}>{label}</span>
+                  <span className={`text-[12px] font-medium ${active ? 'text-foreground' : 'text-foreground-quaternary'}`}>{label}</span>
                 </div>
-                {idx < 2 && <ChevronRight className="mx-4 h-4 w-4 text-[#D1D5DB]" />}
+                {idx < 2 && <ChevronRight className="mx-4 h-4 w-4 text-foreground-quaternary" />}
               </div>
             );
           })}
@@ -220,7 +220,7 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
           {/* Step 1: 조항 선택 */}
           {step === 1 && (
             <div className="flex flex-col gap-3">
-              <p className="text-[13px] text-[#6B7280] mb-4">
+              <p className="text-[13px] text-foreground-secondary mb-4">
                 위험도 <span className="font-semibold text-red-600">고위험</span> /
                 <span className="font-semibold text-amber-600"> 중위험</span> 조항 {targetItems.length}개 — 수정할 조항을 선택하세요.
               </p>
@@ -231,7 +231,7 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
                   <button
                     key={idx}
                     onClick={() => handleSelectItem(idx)}
-                    className="w-full text-left border border-[#E2E5EA] rounded-2xl px-5 py-5 hover:border-[#2E6FF2] hover:bg-[#2E6FF2]/5 transition-colors group"
+                    className="w-full text-left border border-border rounded-2xl px-5 py-5 hover:border-primary hover:bg-primary/5 transition-colors group"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1">
@@ -245,14 +245,14 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
                             </span>
                           )}
                         </div>
-                        <p className="text-[13px] font-medium text-[#1B1F2B] group-hover:text-[#2E6FF2] transition-colors">
+                        <p className="text-[13px] font-medium text-foreground group-hover:text-primary transition-colors">
                           {def?.name ?? item.id}
                         </p>
                         {item.explanation && (
-                          <p className="text-[12px] text-[#6B7280] mt-1 line-clamp-2">{item.explanation}</p>
+                          <p className="text-[12px] text-foreground-secondary mt-1 line-clamp-2">{item.explanation}</p>
                         )}
                       </div>
-                      <ChevronRight className="w-4 h-4 text-[#9CA3AF] shrink-0 mt-1" />
+                      <ChevronRight className="w-4 h-4 text-foreground-quaternary shrink-0 mt-1" />
                     </div>
                   </button>
                 );
@@ -263,20 +263,20 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
           {/* Step 2: 법령 검색 + AI 제안 */}
           {step === 2 && selectedIdx !== null && (
             <div className="space-y-5">
-              <div className="rounded-2xl border border-[#E2E5EA] bg-[#F7F8FA] p-5">
+              <div className="rounded-2xl border border-border bg-surface-secondary p-5">
                 <div className="mb-2 flex items-center gap-2">
                   <span className={`text-[10px] px-2 py-1 rounded-full font-medium ${RISK_LEVEL_CLS[targetItems[selectedIdx].risk_level]}`}>
                     {RISK_LEVEL_LABEL[targetItems[selectedIdx].risk_level]}
                   </span>
                 </div>
-                <p className="text-[14px] font-semibold text-[#1B1F2B]">
+                <p className="text-[14px] font-semibold text-foreground">
                   {getItemDef(targetItems[selectedIdx])?.name ?? targetItems[selectedIdx].id}
                 </p>
               </div>
 
               {/* 법령 검색 */}
               <div>
-                <label className="text-[12px] font-medium text-[#374151] mb-2 block">법령 검색</label>
+                <label className="text-[12px] font-medium text-foreground-secondary mb-2 block">법령 검색</label>
                 <div className="flex gap-3">
                   <input
                     type="text"
@@ -284,12 +284,12 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
                     onChange={e => setLegalQuery(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleLegalSearch()}
                     placeholder="검색어 입력 (예: 손해배상, 계약해지)"
-                    className="flex-1 rounded-xl border border-[#E2E5EA] bg-[#F7F8FA] px-4 py-3 text-[13px] focus:outline-none focus:border-[#2E6FF2]"
+                    className="flex-1 rounded-xl border border-border bg-surface-secondary px-4 py-3 text-[13px] focus:outline-none focus:border-primary"
                   />
                   <button
                     onClick={handleLegalSearch}
                     disabled={searchLoading || !legalQuery.trim()}
-                    className="flex items-center gap-1.5 rounded-xl bg-[#1B1F2B] px-5 py-3 text-[13px] font-medium text-white disabled:opacity-40 hover:bg-[#2E6FF2] transition-colors"
+                    className="flex items-center gap-1.5 rounded-xl bg-foreground px-5 py-3 text-[13px] font-medium text-white disabled:opacity-40 hover:bg-primary transition-colors"
                   >
                     {searchLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                     검색
@@ -300,18 +300,18 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
                 {fixState.lawResults.length > 0 && (
                   <div className="mt-4 max-h-48 space-y-3 overflow-y-auto">
                     {fixState.lawResults.map((law, i) => (
-                      <div key={i} className="rounded-xl border border-[#E2E5EA] bg-white p-4">
+                      <div key={i} className="rounded-xl border border-border bg-white p-4">
                         <div className="mb-2 flex items-center gap-2">
-                          <Scale className="w-3 h-3 text-[#2E6FF2]" />
-                          <span className="text-[12px] font-semibold text-[#2E6FF2]">
+                          <Scale className="w-3 h-3 text-primary" />
+                          <span className="text-[12px] font-semibold text-primary">
                             {law.lawName}{law.articleNo ? ` 제${law.articleNo}조` : ''}
                           </span>
                           {law.promulgationDate && (
-                            <span className="text-[10px] text-[#9CA3AF]">{law.promulgationDate}</span>
+                            <span className="text-[10px] text-foreground-quaternary">{law.promulgationDate}</span>
                           )}
                         </div>
                         {law.articleContent && (
-                          <p className="text-[12px] text-[#4B5563] line-clamp-3">{law.articleContent}</p>
+                          <p className="text-[12px] text-foreground-secondary line-clamp-3">{law.articleContent}</p>
                         )}
                       </div>
                     ))}
@@ -322,11 +322,11 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
               {/* AI 수정 제안 */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-[12px] font-medium text-[#374151]">AI 수정 제안</label>
+                  <label className="text-[12px] font-medium text-foreground-secondary">AI 수정 제안</label>
                   <button
                     onClick={handleSuggest}
                     disabled={fixState.loading}
-                    className="flex items-center gap-1.5 rounded-xl bg-[#2E6FF2] px-4 py-2.5 text-[12px] font-medium text-white disabled:opacity-40 hover:bg-[#2560d8] transition-colors"
+                    className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-[12px] font-medium text-white disabled:opacity-40 hover:bg-primary-dark transition-colors"
                   >
                     {fixState.loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
                     {fixState.suggestedFix ? '재생성' : 'AI 제안 받기'}
@@ -335,7 +335,7 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
 
                 {fixState.suggestedFix ? (
                   <div className="space-y-3">
-                    <div className="p-4 bg-[#F0F7FF] rounded-xl border border-[#BFDBFE] text-[13px] text-[#1E3A5F] whitespace-pre-wrap leading-relaxed">
+                    <div className="p-4 bg-primary-tint rounded-xl border border-primary/30 text-[13px] text-foreground whitespace-pre-wrap leading-relaxed">
                       {fixState.suggestedFix}
                     </div>
 
@@ -346,7 +346,7 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
                         className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-[12px] font-medium border transition-colors ${
                           fixState.status === 'accepted'
                             ? 'bg-emerald-500 text-white border-emerald-500'
-                            : 'border-[#E2E5EA] text-[#6B7280] hover:border-emerald-400 hover:text-emerald-600'
+                            : 'border-border text-foreground-secondary hover:border-emerald-400 hover:text-emerald-600'
                         }`}
                       >
                         <Check className="w-3.5 h-3.5" /> 수락
@@ -355,8 +355,8 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
                         onClick={() => handleStatusChange('modified')}
                         className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-[12px] font-medium border transition-colors ${
                           fixState.status === 'modified'
-                            ? 'bg-[#2E6FF2] text-white border-[#2E6FF2]'
-                            : 'border-[#E2E5EA] text-[#6B7280] hover:border-[#2E6FF2] hover:text-[#2E6FF2]'
+                            ? 'bg-primary text-white border-primary'
+                            : 'border-border text-foreground-secondary hover:border-primary hover:text-primary'
                         }`}
                       >
                         <Edit3 className="w-3.5 h-3.5" /> 수정 후 수락
@@ -366,7 +366,7 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
                         className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-[12px] font-medium border transition-colors ${
                           fixState.status === 'rejected'
                             ? 'bg-red-500 text-white border-red-500'
-                            : 'border-[#E2E5EA] text-[#6B7280] hover:border-red-400 hover:text-red-500'
+                            : 'border-border text-foreground-secondary hover:border-red-400 hover:text-red-500'
                         }`}
                       >
                         <ThumbsDown className="w-3.5 h-3.5" /> 거부
@@ -383,13 +383,13 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
                           if (selectedIdx !== null) setAllFixes(prev => new Map(prev).set(selectedIdx, updated));
                         }}
                         rows={6}
-                        className="w-full text-[13px] px-3 py-3 border border-[#2E6FF2] rounded-xl focus:outline-none bg-white leading-relaxed"
+                        className="w-full text-[13px] px-3 py-3 border border-primary rounded-xl focus:outline-none bg-white leading-relaxed"
                         placeholder="수정할 내용을 입력하세요"
                       />
                     )}
                   </div>
                 ) : (
-                  <div className="p-8 border border-dashed border-[#E2E5EA] rounded-xl text-center text-[13px] text-[#9CA3AF]">
+                  <div className="p-8 border border-dashed border-border rounded-xl text-center text-[13px] text-foreground-quaternary">
                     법령 검색 후 &quot;AI 제안 받기&quot; 버튼을 눌러주세요
                   </div>
                 )}
@@ -413,14 +413,14 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
                 <Check className="w-8 h-8 text-emerald-500" />
               </div>
               <div>
-                <h3 className="text-[16px] font-semibold text-[#1B1F2B]">수정 계약서 생성 완료</h3>
-                <p className="text-[13px] text-[#6B7280] mt-1">
+                <h3 className="text-[16px] font-semibold text-foreground">수정 계약서 생성 완료</h3>
+                <p className="text-[13px] text-foreground-secondary mt-1">
                   {acceptedCount}개 조항이 수정된 계약서가 준비됐습니다.
                 </p>
               </div>
-              <div className="rounded-2xl bg-[#F7F8FA] p-5 text-left">
-                <p className="text-[12px] text-[#6B7280]">완성 파일</p>
-                <p className="text-[14px] font-medium text-[#1B1F2B] mt-1">{downloadFileName}</p>
+              <div className="rounded-2xl bg-surface-secondary p-5 text-left">
+                <p className="text-[12px] text-foreground-secondary">완성 파일</p>
+                <p className="text-[14px] font-medium text-foreground mt-1">{downloadFileName}</p>
               </div>
               <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-left">
                 <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
@@ -431,7 +431,7 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
               {downloadUrl && (
                 <button
                   onClick={() => { const a = document.createElement('a'); a.href = downloadUrl; a.download = downloadFileName; a.click(); }}
-                  className="flex items-center gap-2 mx-auto px-6 py-3 bg-[#2E6FF2] text-white rounded-xl text-[14px] font-medium hover:bg-[#2560d8] transition-colors"
+                  className="flex items-center gap-2 mx-auto px-6 py-3 bg-primary text-white rounded-xl text-[14px] font-medium hover:bg-primary-dark transition-colors"
                 >
                   <Download className="w-4 h-4" />
                   수정 계약서 다운로드
@@ -442,7 +442,7 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
         </div>
 
         {/* 푸터 */}
-        <div className="flex items-center justify-between border-t border-[#E2E5EA] bg-[#F7F8FA] px-8 py-6 shrink-0">
+        <div className="flex items-center justify-between border-t border-border bg-surface-secondary px-8 py-6 shrink-0">
           <button
             onClick={() => {
               if (step === 1) handleClose();
@@ -450,24 +450,24 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
               else setStep(2);
             }}
             disabled={generating}
-            className="px-4 py-2.5 text-[13px] text-[#6B7280] hover:text-[#1B1F2B] disabled:opacity-40 transition-colors"
+            className="px-4 py-2.5 text-[13px] text-foreground-secondary hover:text-foreground disabled:opacity-40 transition-colors"
           >
             {step === 1 ? '취소' : '← 이전'}
           </button>
 
           {step === 1 && targetItems.length === 0 && (
-            <p className="text-[13px] text-[#9CA3AF]">수정 가능한 위험 조항이 없습니다</p>
+            <p className="text-[13px] text-foreground-quaternary">수정 가능한 위험 조항이 없습니다</p>
           )}
 
           {step === 2 && (
             <div className="flex items-center gap-3.5">
-              <span className="text-[12px] text-[#6B7280]">
-                처리됨: <span className="font-semibold text-[#1B1F2B]">{Array.from(allFixes.values()).filter(f => f.status !== 'pending').length}</span>/{targetItems.length}
+              <span className="text-[12px] text-foreground-secondary">
+                처리됨: <span className="font-semibold text-foreground">{Array.from(allFixes.values()).filter(f => f.status !== 'pending').length}</span>/{targetItems.length}
               </span>
               <button
                 onClick={() => setStep(3)}
                 disabled={acceptedCount === 0 || generating}
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#2E6FF2] text-white rounded-xl text-[13px] font-medium hover:bg-[#2560d8] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-[13px] font-medium hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 title="다른 조항도 선택하거나 바로 계약서 생성"
               >
                 다른 조항 추가하기 →
@@ -475,7 +475,7 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
               <button
                 onClick={handleGenerate}
                 disabled={acceptedCount === 0 || generating}
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#1B1F2B] text-white rounded-xl text-[13px] font-medium hover:bg-[#2E6FF2] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center gap-2 px-5 py-2.5 bg-foreground text-white rounded-xl text-[13px] font-medium hover:bg-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {generating ? <><Spinner size="sm" /> 생성 중...</> : <><Download className="w-4 h-4" /> 계약서 재생성</>}
               </button>
@@ -485,7 +485,7 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
           {step === 3 && (
             <button
               onClick={handleClose}
-              className="px-5 py-2.5 bg-[#1B1F2B] text-white rounded-xl text-[13px] font-medium hover:bg-[#2d3344] transition-colors"
+              className="px-5 py-2.5 bg-foreground text-white rounded-xl text-[13px] font-medium hover:bg-sidebar-hover transition-colors"
             >
               닫기
             </button>

@@ -222,7 +222,7 @@ export default function DocumentViewerPage() {
   const navigateToDocument = (docId: string) => router.push(`/documents/${docId}`);
 
   return (
-    <div className="flex flex-col gap-4 bg-[#F7F8FA] p-4 lg:min-h-full lg:flex-row lg:gap-[20px] lg:p-[20px]">
+    <div className="flex flex-col gap-4 bg-surface-secondary p-4 lg:min-h-full lg:flex-row lg:gap-[20px] lg:p-[20px]">
 
       {/* ── 좌측: 문서 뷰어 ── */}
       <div className="flex min-w-0 flex-1 flex-col gap-4 lg:gap-[20px]">
@@ -271,7 +271,7 @@ export default function DocumentViewerPage() {
       </div>
 
       {/* ── 우측: 댓글 패널 (항상 표시) ── */}
-      <div id="document-comment-panel" className="w-full lg:w-[340px] flex-shrink-0 self-start overflow-hidden rounded-2xl border border-[#e5e5e7] bg-white">
+      <div id="document-comment-panel" className="w-full lg:w-[340px] flex-shrink-0 self-start overflow-hidden rounded-2xl border border-border bg-white">
         <DocumentCommentPanel
           documentId={id}
           inline

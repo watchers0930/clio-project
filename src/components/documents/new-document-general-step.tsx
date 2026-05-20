@@ -84,12 +84,12 @@ export function NewDocumentGeneralStep({
     <div className="grid md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-6">
       <div className="space-y-5">
         <div>
-          <p className="text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 8 }}>{isWorklogTemplate ? '수동 입력' : '문서 기본 정보'}</p>
+          <p className="text-sm font-medium text-foreground" style={{ marginBottom: 8 }}>{isWorklogTemplate ? '수동 입력' : '문서 기본 정보'}</p>
           <div className="grid grid-cols-1 gap-3">
             {manualFields.map((field) => (
               <div key={field.key}>
-                <label className="block text-xs text-[#6e6e73]" style={{ marginBottom: 6 }}>
-                  {field.label} {field.required && <span className="text-[#ff3b30]">*</span>}
+                <label className="block text-xs text-foreground-secondary" style={{ marginBottom: 6 }}>
+                  {field.label} {field.required && <span className="text-danger">*</span>}
                 </label>
                 {field.type === 'textarea' ? (
                   <textarea
@@ -97,7 +97,7 @@ export function NewDocumentGeneralStep({
                     onChange={(e) => onSetDocumentInputs((prev) => ({ ...prev, [field.key]: e.target.value }))}
                     rows={3}
                     placeholder={field.placeholder}
-                    className="w-full px-4 py-2.5 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#c7c7cc] focus:outline-none focus:ring-2 focus:ring-[#0071e3]"
+                    className="w-full px-4 py-2.5 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 ) : (
                   <input
@@ -105,7 +105,7 @@ export function NewDocumentGeneralStep({
                     value={documentInputs[field.key] ?? ''}
                     onChange={(e) => onSetDocumentInputs((prev) => ({ ...prev, [field.key]: e.target.value }))}
                     placeholder={field.placeholder}
-                    className="w-full px-4 py-2.5 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#c7c7cc] focus:outline-none focus:ring-2 focus:ring-[#0071e3]"
+                    className="w-full px-4 py-2.5 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 )}
               </div>
@@ -115,14 +115,14 @@ export function NewDocumentGeneralStep({
 
         {autoFields.length > 0 && (
           <div>
-            <p className="text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 8 }}>자동 입력</p>
+            <p className="text-sm font-medium text-foreground" style={{ marginBottom: 8 }}>자동 입력</p>
             <div className="grid grid-cols-1 gap-3">
               {autoFields.map((field) => (
                 <div key={field.key}>
-                  <label className="block text-xs text-[#6e6e73]" style={{ marginBottom: 6 }}>
+                  <label className="block text-xs text-foreground-secondary" style={{ marginBottom: 6 }}>
                     {field.label}
                   </label>
-                  <div className="w-full px-4 py-2.5 rounded-xl border border-dashed border-[#d1d1d6] bg-[#f5f5f7] text-sm text-[#6e6e73]">
+                  <div className="w-full px-4 py-2.5 rounded-xl border border-dashed border-border bg-surface-secondary text-sm text-foreground-secondary">
                     {AUTO_INPUT_FIELD_KEYS.has(field.key)
                       ? '로그인 사용자 정보와 현재 날짜 기준으로 자동 입력됩니다.'
                       : '시스템이 자동 입력합니다.'}
@@ -134,15 +134,15 @@ export function NewDocumentGeneralStep({
         )}
 
         {aiFields.length > 0 && (
-          <div className="rounded-2xl border border-[#d7e7ff] bg-[#f5f8ff] p-4">
-            <p className="text-sm font-medium text-[#1d1d1f]">AI 자동 입력</p>
+          <div className="rounded-2xl border border-border-tint bg-primary-tint p-4">
+            <p className="text-sm font-medium text-foreground">AI 자동 입력</p>
             <div className="mt-3 space-y-3">
               {aiFields.map((field) => (
                 <div key={field.key}>
-                  <label className="block text-xs text-[#6e6e73]" style={{ marginBottom: 6 }}>
+                  <label className="block text-xs text-foreground-secondary" style={{ marginBottom: 6 }}>
                     {field.label}
                   </label>
-                  <div className="w-full px-4 py-2.5 rounded-xl border border-[#d7e7ff] bg-white text-sm text-[#6e6e73]">
+                  <div className="w-full px-4 py-2.5 rounded-xl border border-border-tint bg-white text-sm text-foreground-secondary">
                     선택한 소스 파일 분석과 AI 보강 설정을 기준으로 자동 반영됩니다.
                   </div>
                 </div>
@@ -152,7 +152,7 @@ export function NewDocumentGeneralStep({
         )}
 
         <div>
-          <p className="text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 8 }}>출력 포맷</p>
+          <p className="text-sm font-medium text-foreground" style={{ marginBottom: 8 }}>출력 포맷</p>
           <div className="grid grid-cols-2 gap-3">
             {[
               { value: 'docx', label: 'DOCX', icon: '📄', desc: '문서 파일' },
@@ -164,17 +164,17 @@ export function NewDocumentGeneralStep({
               <button
                 key={format.value}
                 onClick={() => onSetOutputFormat(format.value)}
-                className={`p-3 rounded-xl border text-center transition-all ${outputFormat === format.value ? 'border-[#0071e3] bg-[#f0f5ff] ring-2 ring-[#0071e3]/30' : 'border-[#e5e5e7] hover:border-[#0071e3]'}`}
+                className={`p-3 rounded-xl border text-center transition-all ${outputFormat === format.value ? 'border-primary bg-primary-tint ring-2 ring-primary/30' : 'border-border hover:border-primary'}`}
               >
                 <span className="text-xl">{format.icon}</span>
-                <p className="text-xs font-bold text-[#1d1d1f] mt-1">{format.label}</p>
-                <p className="text-[10px] text-[#6e6e73]">{format.desc}</p>
+                <p className="text-xs font-bold text-foreground mt-1">{format.label}</p>
+                <p className="text-[10px] text-foreground-secondary">{format.desc}</p>
               </button>
             ))}
           </div>
           {selectedTemplateItem?.templateFile?.name && (
-            <p className="mt-2 text-xs text-[#6e6e73]">
-              현재 템플릿 파일 형식은 <span className="font-medium text-[#1d1d1f]">{selectedTemplateItem.templateFile.type}</span>이며, 호환되는 출력 포맷만 표시됩니다.
+            <p className="mt-2 text-xs text-foreground-secondary">
+              현재 템플릿 파일 형식은 <span className="font-medium text-foreground">{selectedTemplateItem.templateFile.type}</span>이며, 호환되는 출력 포맷만 표시됩니다.
             </p>
           )}
         </div>
@@ -182,26 +182,26 @@ export function NewDocumentGeneralStep({
 
       <div className="space-y-5">
         <div className="flex flex-col h-full">
-          <p className="text-sm text-[#6e6e73]" style={{ marginBottom: 10 }}>추가 지시사항 (선택)</p>
+          <p className="text-sm text-foreground-secondary" style={{ marginBottom: 10 }}>추가 지시사항 (선택)</p>
           <textarea
             value={instructions}
             onChange={(e) => onSetInstructions(e.target.value)}
             placeholder="예: 핵심 수치 위주로 요약해 주세요. 표 형태로 정리해 주세요."
             rows={14}
-            className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none"
+            className="w-full px-4 py-3 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
           />
         </div>
-        <div className="rounded-2xl border border-[#d7e7ff] bg-[#f5f8ff] p-4">
+        <div className="rounded-2xl border border-border-tint bg-primary-tint p-4">
           <label className="flex items-center gap-3">
             <input
               type="checkbox"
               checked={aiAssistEnabled}
               onChange={(e) => onSetAiAssistEnabled(e.target.checked)}
-              className="rounded border-[#c7d7f7] text-[#2e6ff2] focus:ring-[#2e6ff2]"
+              className="rounded border-primary/30 text-primary focus:ring-primary"
             />
             <div>
-              <p className="text-sm font-medium text-[#1d1d1f]">AI 보강 사용</p>
-              <p className="text-xs text-[#5e6573]">비어 있는 항목과 서술을 AI가 참조 자료 기준으로 보강합니다.</p>
+              <p className="text-sm font-medium text-foreground">AI 보강 사용</p>
+              <p className="text-xs text-foreground-secondary">비어 있는 항목과 서술을 AI가 참조 자료 기준으로 보강합니다.</p>
             </div>
           </label>
           {aiAssistEnabled && (
@@ -210,20 +210,20 @@ export function NewDocumentGeneralStep({
               onChange={(e) => onSetAiAssistPrompt(e.target.value)}
               placeholder="예: 실행안 중심으로 보강하고, 불확실한 값은 [확인필요]로 남겨주세요."
               rows={3}
-              className="mt-3 w-full px-4 py-3 rounded-xl border border-[#d7e7ff] bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none"
+              className="mt-3 w-full px-4 py-3 rounded-xl border border-border-tint bg-white text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
             />
           )}
         </div>
         {selectedTemplate === '__none__' && (
           <div>
-            <p className="text-sm font-medium text-[#1d1d1f]" style={{ marginBottom: 5 }}>문서 구조 *</p>
-            <p className="text-xs text-[#6e6e73]" style={{ marginBottom: 8 }}>AI가 이 구조를 따라 문서를 생성합니다</p>
+            <p className="text-sm font-medium text-foreground" style={{ marginBottom: 5 }}>문서 구조 *</p>
+            <p className="text-xs text-foreground-secondary" style={{ marginBottom: 8 }}>AI가 이 구조를 따라 문서를 생성합니다</p>
             <textarea
               value={customStructure}
               onChange={(e) => onSetCustomStructure(e.target.value)}
               placeholder={"예:\n# 업무일지\n## 오늘의 업무\n- 주요 업무 내용 1\n- 주요 업무 내용 2\n## 문제점 및 해결 방안\n## 내일의 계획"}
               rows={6}
-              className="w-full px-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3] resize-none font-mono"
+              className="w-full px-4 py-3 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none font-mono"
             />
           </div>
         )}
@@ -231,20 +231,20 @@ export function NewDocumentGeneralStep({
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-[#1d1d1f]">템플릿 양식 미리보기</p>
-          <p className="text-xs text-[#6e6e73]">입력값은 생성 시 양식 기준으로 반영됩니다.</p>
+          <p className="text-sm font-medium text-foreground">템플릿 양식 미리보기</p>
+          <p className="text-xs text-foreground-secondary">입력값은 생성 시 양식 기준으로 반영됩니다.</p>
         </div>
         {selectedTemplateItem ? (
-          <div className="rounded-2xl border border-[#e5e5e7] bg-[#f5f7fb] p-3">
+          <div className="rounded-2xl border border-border bg-surface-secondary p-3">
             <iframe
               title="selected-template-preview"
               src={previewSrc}
               srcDoc={previewSrc ? undefined : previewDoc}
-              className="h-[720px] w-full rounded-xl border border-[#dfe4ea] bg-white"
+              className="h-[720px] w-full rounded-xl border border-border bg-white"
             />
           </div>
         ) : (
-          <div className="rounded-2xl border border-dashed border-[#d1d1d6] bg-[#fafafa] px-4 py-10 text-center text-sm text-[#6e6e73]">
+          <div className="rounded-2xl border border-dashed border-border bg-surface-tertiary px-4 py-10 text-center text-sm text-foreground-secondary">
             직접 작성 문서는 템플릿 양식 미리보기가 없습니다.
           </div>
         )}

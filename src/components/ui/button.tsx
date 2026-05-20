@@ -3,7 +3,7 @@
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline' | 'outlinePrimary';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -18,17 +18,21 @@ const variantStyles: Record<ButtonVariant, string> = {
   primary:
     'bg-primary text-white hover:bg-primary-dark active:bg-primary-dark shadow-sm',
   secondary:
-    'border border-border bg-white text-secondary hover:bg-page-bg active:bg-page-bg',
+    'border border-border bg-white text-foreground-secondary hover:bg-surface-secondary active:bg-surface-secondary',
   ghost:
-    'text-secondary hover:bg-page-bg hover:text-foreground active:bg-border/30',
+    'text-foreground-secondary hover:bg-surface-secondary hover:text-foreground active:bg-border/30',
   danger:
     'bg-danger text-white hover:bg-danger/90 active:bg-danger/80 shadow-sm',
+  outline:
+    'border border-border bg-white text-foreground-secondary hover:bg-surface-secondary',
+  outlinePrimary:
+    'border border-border-tint bg-white text-primary hover:bg-primary-tint',
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: 'h-9 px-3.5 text-sm gap-1.5 rounded-lg',
-  md: 'h-11 px-5 text-sm gap-2 rounded-xl',
-  lg: 'h-12 px-6 text-base gap-2.5 rounded-xl',
+  sm: 'h-9 px-3.5 text-sm gap-1.5 rounded-sm',
+  md: 'h-11 px-5 text-sm gap-2 rounded-md',
+  lg: 'h-12 px-6 text-base gap-2.5 rounded-md',
 };
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(

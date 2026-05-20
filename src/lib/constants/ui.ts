@@ -5,26 +5,26 @@
 
 /** 파일 타입 뱃지 스타일 */
 export const FILE_TYPE_BADGE: Record<string, string> = {
-  PDF:  'bg-[#f5f5f7] text-[#1d1d1f]',
-  DOCX: 'bg-[#f5f5f7] text-[#1d1d1f]',
-  PPTX: 'bg-[#f5f5f7] text-[#1d1d1f]',
-  XLSX: 'bg-[#f5f5f7] text-[#1d1d1f]',
-  HWP:  'bg-[#f5f5f7] text-[#1d1d1f]',
-  MD:   'bg-[#f5f5f7] text-[#1d1d1f]',
-  M4A:  'bg-[#f5f5f7] text-[#1d1d1f]',
+  PDF:  'bg-surface-secondary text-foreground',
+  DOCX: 'bg-surface-secondary text-foreground',
+  PPTX: 'bg-surface-secondary text-foreground',
+  XLSX: 'bg-surface-secondary text-foreground',
+  HWP:  'bg-surface-secondary text-foreground',
+  MD:   'bg-surface-secondary text-foreground',
+  M4A:  'bg-surface-secondary text-foreground',
 };
 
 /** 파일 처리 상태 색상 */
 export const FILE_STATUS_COLOR: Record<string, string> = {
-  '완료':  'bg-[#f5f5f7] text-[#30d158]',
-  '처리중': 'bg-[#f5f5f7] text-[#ff9f0a]',
-  '오류':  'bg-[#f5f5f7] text-[#ff3b30]',
+  '완료':  'bg-surface-secondary text-success',
+  '처리중': 'bg-surface-secondary text-warning',
+  '오류':  'bg-surface-secondary text-danger',
 };
 
 /** 문서 상태 뱃지 */
 export const DOCUMENT_STATUS_BADGE: Record<string, { label: string; color: string }> = {
-  draft:     { label: '초안', color: 'bg-[#f5f5f7] text-[#6e6e73]' },
-  completed: { label: '완성', color: 'bg-[#e8f5e9] text-[#30d158]' },
+  draft:     { label: '초안', color: 'bg-surface-secondary text-foreground-secondary' },
+  completed: { label: '완성', color: 'bg-success/10 text-success' },
 };
 
 /** 감사 로그 액션 레이블 */
@@ -42,8 +42,14 @@ export const ACTION_LABELS: Record<string, string> = {
   'search':                   '검색을 수행했습니다.',
 };
 
-/** 차트 기본 색상 팔레트 */
-export const CHART_COLORS = ['#1d1d1f', '#6e6e73', '#0071e3', '#a1a1a6', '#d2d2d7'] as const;
+/** 차트 기본 색상 팔레트 — CSS 변수 참조 */
+export const CHART_COLORS = [
+  'var(--color-foreground)',
+  'var(--color-foreground-secondary)',
+  'var(--color-primary)',
+  'var(--color-foreground-quaternary)',
+  'var(--color-border-secondary)',
+] as const;
 
 /** 제품 공통 메시지 */
 export const PLATFORM_LABEL = '기업 문서 운영 플랫폼';

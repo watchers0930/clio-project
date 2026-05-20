@@ -52,19 +52,19 @@ export function RiskItemSidebar({
   return (
     <div className="flex flex-col h-full">
       {/* 헤더 */}
-      <div className="flex flex-col gap-2.5 px-4 py-4 border-b border-[#E2E5EA] sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-5">
-        <span className="text-[14px] font-semibold text-[#1B1F2B]">조항 목록</span>
+      <div className="flex flex-col gap-2.5 px-4 py-4 border-b border-border sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-5">
+        <span className="text-[14px] font-semibold text-foreground">조항 목록</span>
         <div className="flex flex-wrap items-center gap-2.5">
           <button
             onClick={onSelectAll}
-            className="rounded-lg px-2.5 py-1.5 text-[12px] text-[#2E6FF2] hover:bg-[#EEF6FF]"
+            className="rounded-lg px-2.5 py-1.5 text-[12px] text-primary hover:bg-primary-tint"
           >
             전체선택
           </button>
-          <span className="text-[#E2E5EA]">|</span>
+          <span className="text-border">|</span>
           <button
             onClick={onClearAll}
-            className="rounded-lg px-2.5 py-1.5 text-[12px] text-[#888] hover:bg-[#F7F8FA]"
+            className="rounded-lg px-2.5 py-1.5 text-[12px] text-foreground-quaternary hover:bg-surface-secondary"
           >
             해제
           </button>
@@ -74,7 +74,7 @@ export function RiskItemSidebar({
       {/* 항목 목록 */}
       <div className="flex-1 overflow-y-auto flex flex-col gap-3 p-3 sm:gap-3 sm:p-3">
         {foundItems.length === 0 && (
-          <p className="px-4 py-4 text-[12px] text-[#888] sm:px-5">탐지된 리스크 항목이 없습니다.</p>
+          <p className="px-4 py-4 text-[12px] text-foreground-quaternary sm:px-5">탐지된 리스크 항목이 없습니다.</p>
         )}
         {foundItems.map((item) => {
           const def = CONTRACT_RISK_ITEMS.find((d) => d.id === item.id);
@@ -87,13 +87,13 @@ export function RiskItemSidebar({
             decision === 'accepted'
               ? 'bg-green-50 border-green-200'
               : decision === 'skipped'
-              ? 'bg-[#F7F8FA] border-[#E2E5EA]'
+              ? 'bg-surface-secondary border-border'
               : isActive
-              ? 'bg-[#F0F5FF] border-[#C7D9FB]'
-              : 'bg-white border-[#E2E5EA]';
+              ? 'bg-primary-tint border-primary/30'
+              : 'bg-white border-border';
 
           const textCls =
-            decision === 'skipped' ? 'text-[#888]' : 'text-[#1B1F2B]';
+            decision === 'skipped' ? 'text-foreground-quaternary' : 'text-foreground';
 
           return (
             <div
@@ -121,7 +121,7 @@ export function RiskItemSidebar({
               {/* 항목 정보 */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-mono text-[#888] bg-[#F7F8FA] border border-[#E2E5EA] px-1.5 py-0.5 rounded-md">{item.id}</span>
+                  <span className="text-[11px] font-mono text-foreground-quaternary bg-surface-secondary border border-border px-1.5 py-0.5 rounded-md">{item.id}</span>
                   <span className={cn('text-[12px] font-medium leading-snug truncate', textCls)}>
                     {def?.name ?? item.id}
                   </span>
@@ -135,8 +135,8 @@ export function RiskItemSidebar({
                 )}
                 {decision === 'skipped' && (
                   <div className="mt-1.5 flex items-center gap-1">
-                    <SkipForward className="w-3 h-3 text-[#888]" />
-                    <span className="text-[11px] text-[#888]">건너뜀</span>
+                    <SkipForward className="w-3 h-3 text-foreground-quaternary" />
+                    <span className="text-[11px] text-foreground-quaternary">건너뜀</span>
                   </div>
                 )}
               </div>
@@ -146,15 +146,15 @@ export function RiskItemSidebar({
       </div>
 
       {/* 하단 버튼 */}
-      <div className="border-t border-[#E2E5EA] px-4 py-4 sm:px-5 sm:py-5">
+      <div className="border-t border-border px-4 py-4 sm:px-5 sm:py-5">
         <button
           onClick={onSuggestStart}
           disabled={selectedKeys.size === 0 || isSuggesting}
           className={cn(
             'w-full py-2.5 rounded-xl text-[13px] font-medium transition-all',
             selectedKeys.size > 0 && !isSuggesting
-              ? 'bg-[#2E6FF2] text-white hover:bg-[#245ED0]'
-              : 'bg-[#F7F8FA] text-[#888] cursor-not-allowed border border-[#E2E5EA]',
+              ? 'bg-primary text-white hover:bg-primary-dark'
+              : 'bg-surface-secondary text-foreground-quaternary cursor-not-allowed border border-border',
           )}
         >
           {isSuggesting ? (

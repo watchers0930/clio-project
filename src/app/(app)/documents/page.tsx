@@ -24,10 +24,10 @@ export default function DocumentsPage() {
   if (state.loading) {
     return (
       <div className="space-y-6 animate-pulse">
-        <div className="h-8 w-48 bg-[#e5e5e7] rounded-lg" />
+        <div className="h-8 w-48 bg-border rounded-lg" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-40 bg-white rounded-2xl border border-[#e5e5e7]" />
+            <div key={i} className="h-40 bg-white rounded-2xl border border-border" />
           ))}
         </div>
       </div>
@@ -35,7 +35,7 @@ export default function DocumentsPage() {
   }
 
   return (
-    <div className="space-y-[25px] pb-10">
+    <div className="flex flex-col gap-5 pb-10">
       <DocumentsPageHeader
         onOpenStt={() => state.setSttModalOpen(true)}
         onOpenCreate={state.openCreateModal}

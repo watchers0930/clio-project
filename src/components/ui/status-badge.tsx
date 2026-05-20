@@ -11,7 +11,7 @@ interface StatusBadgeProps {
 
 export function StatusBadge({ type, value, className }: StatusBadgeProps) {
   let label = value;
-  let colorClass = 'bg-[#f5f5f7] text-[#6e6e73]';
+  let colorClass = 'bg-surface-secondary text-foreground-secondary';
 
   switch (type) {
     case 'file-status': {
@@ -53,7 +53,7 @@ export function TextBadge({
   return (
     <span
       className={cn(
-        'inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#f5f5f7] text-[#1d1d1f]',
+        'inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-surface-secondary text-foreground',
         className
       )}
       style={color ? { backgroundColor: `${color}15`, color } : undefined}

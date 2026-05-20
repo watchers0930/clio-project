@@ -3,15 +3,8 @@
 import { FILE_STATUS_COLOR, FILE_TYPE_BADGE } from '@/lib/constants/ui';
 import type { FileItem } from './types';
 
-interface FilesHeaderActionsLayoutConfig {
-  sectionGap?: number;
-  actionGap?: number;
-  topMargin?: number;
-  paddingX?: number;
-}
-
 interface HeaderActionsProps {
-  layoutConfig?: FilesHeaderActionsLayoutConfig;
+  layoutConfig?: unknown;
 }
 
 interface BulkActionsBarProps {
@@ -57,27 +50,20 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
 }
 
-export function FilesHeaderActions({ layoutConfig }: HeaderActionsProps) {
+export function FilesHeaderActions(_props: HeaderActionsProps) {
   return (
-    <div
-      className="flex flex-col"
-      style={{
-        marginTop: `${layoutConfig?.topMargin ?? 0}px`,
-        marginBottom: '0px',
-        paddingLeft: `${layoutConfig?.paddingX ?? 0}px`,
-        paddingRight: `${layoutConfig?.paddingX ?? 0}px`,
-        gap: `${layoutConfig?.sectionGap ?? 24}px`,
-      }}
-    >
-      <div className="flex flex-col gap-3 sm:gap-4">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#0071e3]">Core Flow</p>
-          <p className="mt-2 text-[12px] text-[#7C8494]">문서허브 - AI 검색 - 문서 생성 - 검토 반영 - 공유</p>
-          <h2 className="text-[22px] font-bold text-[#1d1d1f] sm:text-2xl">문서 자산 목록</h2>
-          <p className="mt-2 text-[13px] text-[#6e6e73]">업로드된 문서와 생성 문서를 바로 처리하세요.</p>
+    <section className="rounded-2xl border border-border bg-white shadow-sm">
+      <div className="px-6 py-5 sm:px-8 sm:py-6">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-[20px] font-bold text-foreground">문서허브</h1>
+            <p className="mt-1.5 text-[13px] text-foreground-secondary">
+              업로드된 문서와 생성 문서를 관리하고 검색, 생성, 검토 흐름으로 이어갑니다.
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -93,28 +79,28 @@ export function BulkActionsBar({
   if (selectedCount === 0) return null;
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-[#0071e3]/30 bg-[#f5f5f7] px-4 py-4 sm:px-6 sm:py-5">
-      <span className="text-sm font-medium text-[#1d1d1f]">
+    <div className="flex flex-col gap-3 rounded-2xl border border-primary/30 bg-surface-secondary px-4 py-4 sm:px-6 sm:py-5">
+      <span className="text-sm font-medium text-foreground">
         <span className="font-num">{selectedCount}</span>개 선택됨
       </span>
       <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
-        <button onClick={onCompanyScope} className="rounded-lg border border-[#0071e3] px-4 py-2 text-sm font-medium text-[#0071e3] transition-colors hover:bg-[#e0f0ff]">
+        <button onClick={onCompanyScope} className="rounded-lg border border-primary px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary-tint">
           전사로 변경
         </button>
-        <button onClick={onDepartmentScope} className="rounded-lg border border-[#e5e5e7] bg-white px-4 py-2 text-sm font-medium text-[#6e6e73] transition-colors hover:bg-[#f5f5f7]">
+        <button onClick={onDepartmentScope} className="rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-foreground-secondary transition-colors hover:bg-surface-secondary">
           부서로 변경
         </button>
         <button
           onClick={onBulkReprocess}
           disabled={reprocessableSelectedCount === 0}
-          className="rounded-lg border border-[#f59e0b] bg-white px-4 py-2 text-sm font-medium text-[#f59e0b] transition-colors hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-lg border border-warning bg-white px-4 py-2 text-sm font-medium text-warning transition-colors hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
         >
           선택 재처리
         </button>
-        <button onClick={onBulkDelete} className="rounded-lg bg-[#1d1d1f] px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-[#0071e3] sm:ml-auto">
+        <button onClick={onBulkDelete} className="rounded-lg bg-foreground px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary sm:ml-auto">
           선택 삭제
         </button>
-        <button onClick={onClearSelection} className="rounded-lg border border-[#e5e5e7] bg-white px-5 py-2 text-sm text-[#6e6e73] transition-colors hover:bg-[#f5f5f7]">
+        <button onClick={onClearSelection} className="rounded-lg border border-border bg-white px-5 py-2 text-sm text-foreground-secondary transition-colors hover:bg-surface-secondary">
           선택 해제
         </button>
       </div>
@@ -146,7 +132,7 @@ export function FilesFilterBar({
           <>
             <button
               onClick={onOpenUpload}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#1d1d1f] px-5 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#0071e3]"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-foreground px-5 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
@@ -157,7 +143,7 @@ export function FilesFilterBar({
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={onReprocessErrors}
-                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-[#f6d7a3] bg-[#fffaf2] px-3 py-2.5 text-[11px] font-medium text-[#b06d00] transition-colors hover:bg-[#fff4df] sm:px-3.5 sm:text-[12px]"
+                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-warning/30 bg-warning/5 px-3 py-2.5 text-[11px] font-medium text-warning transition-colors hover:bg-warning/5 sm:px-3.5 sm:text-[12px]"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -166,7 +152,7 @@ export function FilesFilterBar({
                 </button>
                 <button
                   onClick={onOpenScrape}
-                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-[#e5e5e7] bg-white px-3 py-2.5 text-[11px] font-medium text-[#4b5563] transition-colors hover:bg-[#f5f5f7] sm:px-3.5 sm:text-[12px]"
+                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-border bg-white px-3 py-2.5 text-[11px] font-medium text-foreground-secondary transition-colors hover:bg-surface-secondary sm:px-3.5 sm:text-[12px]"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-2.07a4.5 4.5 0 00-1.242-7.244l-4.5-4.5a4.5 4.5 0 00-6.364 6.364l1.757 1.757" />
@@ -179,18 +165,18 @@ export function FilesFilterBar({
         )}
         {mode !== 'actions-only' && (
           <div className="grid grid-cols-[minmax(0,116px)_minmax(0,1fr)] gap-3 sm:grid-cols-[minmax(0,140px)_minmax(0,1fr)]">
-            <select value={resourceFilter} onChange={(e) => onResourceFilterChange(e.target.value as '전체' | 'file' | 'document' | 'linked')} className="w-full rounded-xl border border-[#e5e5e7] bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3]">
+            <select value={resourceFilter} onChange={(e) => onResourceFilterChange(e.target.value as '전체' | 'file' | 'document' | 'linked')} className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
               {resourceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
             <div className="relative min-w-0">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6e6e73]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
               </svg>
               <input
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder="파일 검색..."
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-[#e5e5e7] bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0071e3]"
+                className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           </div>
@@ -212,13 +198,13 @@ export function FilesListView({
   onOpenContractRiskFromFile,
 }: FilesContentProps) {
   return (
-    <div className="overflow-hidden rounded-[16px] border border-[#e5e5e7] bg-white shadow-sm">
+    <div className="overflow-hidden rounded-[16px] border border-border bg-white shadow-sm">
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-[#f5f5f7] text-left text-[#6e6e73]">
+            <tr className="bg-surface-secondary text-left text-foreground-secondary">
               <th className="w-10 px-6 py-5.5">
-                <input type="checkbox" checked={selectedIds.size === paged.length && paged.length > 0} onChange={onToggleAll} className="rounded border-[#e5e5e7] text-[#0071e3] focus:ring-[#0071e3]" />
+                <input type="checkbox" checked={selectedIds.size === paged.length && paged.length > 0} onChange={onToggleAll} className="rounded border-border text-primary focus:ring-primary" />
               </th>
               <th className="px-6 py-5.5 font-medium">파일명</th>
               <th className="hidden px-6 py-5.5 font-medium sm:table-cell">부서</th>
@@ -228,43 +214,43 @@ export function FilesListView({
               <th className="px-6 py-5.5 font-medium">상태</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#e5e5e7]">
+          <tbody className="divide-y divide-border">
             {paged.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-6 py-14 text-center text-[#6e6e73]">검색 결과가 없습니다.</td>
+                <td colSpan={7} className="px-6 py-14 text-center text-foreground-secondary">검색 결과가 없습니다.</td>
               </tr>
             )}
             {paged.map((file) => (
-              <tr key={file.id} className="hover:bg-[#f5f5f7] transition-colors">
+              <tr key={file.id} className="hover:bg-surface-secondary transition-colors">
                 <td className="px-6 py-6">
-                  <input type="checkbox" checked={selectedIds.has(file.id)} onChange={() => onToggleSelect(file.id)} className="rounded border-[#e5e5e7] text-[#0071e3] focus:ring-[#0071e3]" />
+                  <input type="checkbox" checked={selectedIds.has(file.id)} onChange={() => onToggleSelect(file.id)} className="rounded border-border text-primary focus:ring-primary" />
                 </td>
                 <td className="px-6 py-6">
                   <button onClick={() => onOpenFile(file)} className="flex items-center gap-2.5 text-left group">
                     <FileIcon type={file.type} />
-                    <span className="font-medium text-[#1d1d1f] truncate max-w-[200px] group-hover:text-[#0071e3] transition-colors">{file.name}</span>
+                    <span className="font-medium text-foreground truncate max-w-[200px] group-hover:text-primary transition-colors">{file.name}</span>
                     <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${file.sourceType === 'document' ? 'bg-purple-100 text-purple-700' : (FILE_TYPE_BADGE[file.type] ?? 'bg-gray-100 text-gray-600')}`}>{file.sourceType === 'document' ? 'AI문서' : file.type}</span>
                   </button>
                 </td>
-                <td className="hidden px-6 py-6 leading-6 text-[#6e6e73] sm:table-cell">{file.department}</td>
+                <td className="hidden px-6 py-6 leading-6 text-foreground-secondary sm:table-cell">{file.department}</td>
                 <td className="hidden px-6 py-6 md:table-cell">
                   <div className="flex flex-wrap gap-2">
-                    <button onClick={() => onOpenSearchFromFile(file)} className="rounded-lg border border-[#D7E7FF] px-2.5 py-1.5 text-[11px] font-medium text-[#2E6FF2] hover:bg-[#EEF6FF] transition-colors">
+                    <button onClick={() => onOpenSearchFromFile(file)} className="rounded-lg border border-border-tint px-2.5 py-1.5 text-[11px] font-medium text-primary hover:bg-primary-tint transition-colors">
                       검색
                     </button>
-                    <button onClick={() => onOpenDocumentsFromFile(file)} className="rounded-lg border border-[#D7EFDE] px-2.5 py-1.5 text-[11px] font-medium text-[#258A4E] hover:bg-[#F4FBF6] transition-colors">
+                    <button onClick={() => onOpenDocumentsFromFile(file)} className="rounded-lg border border-success/30 px-2.5 py-1.5 text-[11px] font-medium text-success hover:bg-success/5 transition-colors">
                       생성
                     </button>
-                    <button onClick={() => onOpenCommentsFromFile(file)} className="rounded-lg border border-[#E6DBFF] px-2.5 py-1.5 text-[11px] font-medium text-[#7C3AED] hover:bg-[#FAF5FF] transition-colors">
+                    <button onClick={() => onOpenCommentsFromFile(file)} className="rounded-lg border border-purple-200 px-2.5 py-1.5 text-[11px] font-medium text-purple-600 hover:bg-purple-50 transition-colors">
                       검토
                     </button>
-                    <button onClick={() => onOpenContractRiskFromFile(file)} className="rounded-lg border border-[#FDE4E4] px-2.5 py-1.5 text-[11px] font-medium text-[#C24141] hover:bg-[#FFF5F5] transition-colors">
+                    <button onClick={() => onOpenContractRiskFromFile(file)} className="rounded-lg border border-danger/30 px-2.5 py-1.5 text-[11px] font-medium text-danger hover:bg-danger/5 transition-colors">
                       리스크
                     </button>
                   </div>
                 </td>
-                <td className="hidden px-6 py-6 leading-6 text-[#6e6e73] md:table-cell">{file.size}</td>
-                <td className="hidden px-6 py-6 leading-6 text-[#6e6e73] md:table-cell">{file.uploadDate}</td>
+                <td className="hidden px-6 py-6 leading-6 text-foreground-secondary md:table-cell">{file.size}</td>
+                <td className="hidden px-6 py-6 leading-6 text-foreground-secondary md:table-cell">{file.uploadDate}</td>
                 <td className="px-6 py-6">
                   <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${FILE_STATUS_COLOR[file.status]}`}>{file.status}</span>
                 </td>
@@ -273,23 +259,23 @@ export function FilesListView({
           </tbody>
         </table>
       </div>
-      <div className="divide-y divide-[#e5e5e7] md:hidden">
+      <div className="divide-y divide-border md:hidden">
         {paged.length === 0 && (
-          <div className="px-5 py-14 text-center text-[#6e6e73]">검색 결과가 없습니다.</div>
+          <div className="px-5 py-14 text-center text-foreground-secondary">검색 결과가 없습니다.</div>
         )}
         {paged.map((file) => (
           <div key={file.id} className="px-4 py-5">
             <div className="flex items-start gap-3">
-              <input type="checkbox" checked={selectedIds.has(file.id)} onChange={() => onToggleSelect(file.id)} className="mt-1 rounded border-[#e5e5e7] text-[#0071e3] focus:ring-[#0071e3]" />
+              <input type="checkbox" checked={selectedIds.has(file.id)} onChange={() => onToggleSelect(file.id)} className="mt-1 rounded border-border text-primary focus:ring-primary" />
               <div className="min-w-0 flex-1">
                 <button onClick={() => onOpenFile(file)} className="flex w-full items-start gap-2 text-left">
                   <FileIcon type={file.type} />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2 pb-[7px]">
-                      <span className="truncate text-[14px] font-medium text-[#1d1d1f]">{file.name}</span>
+                      <span className="truncate text-[14px] font-medium text-foreground">{file.name}</span>
                       <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${file.sourceType === 'document' ? 'bg-purple-100 text-purple-700' : (FILE_TYPE_BADGE[file.type] ?? 'bg-gray-100 text-gray-600')}`}>{file.sourceType === 'document' ? 'AI문서' : file.type}</span>
                     </div>
-                    <div className="mt-[30px] flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[11px] leading-5 text-[#6e6e73]">
+                    <div className="mt-[30px] flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[11px] leading-5 text-foreground-secondary">
                       <span>{file.department}</span>
                       <span>·</span>
                       <span>{file.uploadDate}</span>
@@ -307,13 +293,13 @@ export function FilesListView({
                   <span className={`inline-flex min-h-[24px] items-center rounded-full px-2.5 py-0 text-xs font-medium leading-none ${FILE_STATUS_COLOR[file.status]}`}>{file.status}</span>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <button onClick={() => onOpenSearchFromFile(file)} className="rounded-lg border border-[#D7E7FF] px-3 py-2 text-[11px] font-medium text-[#2E6FF2] hover:bg-[#EEF6FF] transition-colors">
+                  <button onClick={() => onOpenSearchFromFile(file)} className="rounded-lg border border-border-tint px-3 py-2 text-[11px] font-medium text-primary hover:bg-primary-tint transition-colors">
                     관련 문서 검색
                   </button>
-                  <button onClick={() => onOpenDocumentsFromFile(file)} className="rounded-lg border border-[#D7EFDE] px-3 py-2 text-[11px] font-medium text-[#258A4E] hover:bg-[#F4FBF6] transition-colors">
+                  <button onClick={() => onOpenDocumentsFromFile(file)} className="rounded-lg border border-success/30 px-3 py-2 text-[11px] font-medium text-success hover:bg-success/5 transition-colors">
                     후속 문서 작성
                   </button>
-                  <button onClick={() => onOpenCommentsFromFile(file)} className="rounded-lg border border-[#E6DBFF] px-3 py-2 text-[11px] font-medium text-[#7C3AED] hover:bg-[#FAF5FF] transition-colors">
+                  <button onClick={() => onOpenCommentsFromFile(file)} className="rounded-lg border border-purple-200 px-3 py-2 text-[11px] font-medium text-purple-600 hover:bg-purple-50 transition-colors">
                     검토 문서 열기
                   </button>
                 </div>
@@ -335,25 +321,25 @@ export function FilesPagination({ safePage, totalPages, onPageChange }: Paginati
   const visiblePages = Array.from({ length: windowEnd - windowStart + 1 }, (_, index) => windowStart + index);
 
   return (
-    <div className="flex items-center justify-center gap-2" style={{ marginTop: 20 }}>
-      <button disabled={safePage <= 1} onClick={() => onPageChange(safePage - 1)} className="px-3 py-1.5 rounded-lg border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">이전</button>
+    <div className="mt-5 flex items-center justify-center gap-2">
+      <button disabled={safePage <= 1} onClick={() => onPageChange(safePage - 1)} className="px-3 py-1.5 rounded-lg border border-border text-sm text-foreground-secondary hover:bg-surface-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors">이전</button>
       {visiblePages.map((page) => (
         <button
           key={page}
           onClick={() => onPageChange(page)}
-          className={`w-8 h-8 rounded-lg text-sm font-medium font-num transition-colors ${safePage === page ? 'bg-[#1d1d1f] text-white' : 'text-[#6e6e73] hover:bg-[#f5f5f7]'}`}
+          className={`w-8 h-8 rounded-lg text-sm font-medium font-num transition-colors ${safePage === page ? 'bg-foreground text-white' : 'text-foreground-secondary hover:bg-surface-secondary'}`}
         >
           {page}
         </button>
       ))}
-      <button disabled={safePage >= totalPages} onClick={() => onPageChange(safePage + 1)} className="px-3 py-1.5 rounded-lg border border-[#e5e5e7] text-sm text-[#6e6e73] hover:bg-[#f5f5f7] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">다음</button>
+      <button disabled={safePage >= totalPages} onClick={() => onPageChange(safePage + 1)} className="px-3 py-1.5 rounded-lg border border-border text-sm text-foreground-secondary hover:bg-surface-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors">다음</button>
     </div>
   );
 }
 
 function ScopeBadge({ scope, compact = false }: { scope: 'company' | 'department'; compact?: boolean }) {
   return (
-    <span className={`inline-flex items-center rounded-full font-medium leading-none ${compact ? 'min-h-[20px] px-2 py-0 text-[10px]' : 'min-h-[24px] px-2.5 py-0 text-xs'} ${scope === 'company' ? 'bg-[#e0f0ff] text-[#0071e3]' : 'bg-[#f5f5f7] text-[#6e6e73]'}`}>
+    <span className={`inline-flex items-center rounded-full font-medium leading-none ${compact ? 'min-h-[20px] px-2 py-0 text-[10px]' : 'min-h-[24px] px-2.5 py-0 text-xs'} ${scope === 'company' ? 'bg-primary-tint text-primary' : 'bg-surface-secondary text-foreground-secondary'}`}>
       {scope === 'company' ? '전사' : '부서'}
     </span>
   );

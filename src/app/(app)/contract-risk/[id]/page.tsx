@@ -283,26 +283,26 @@ export default function ContractRiskResultPage() {
 
   // ── 기본 단일 컬럼 (기존 분석 결과 뷰) ───────────────────────────────
   return (
-    <div className="min-h-full bg-[#F7F8FA]">
+    <div className="min-h-full bg-surface-secondary">
 
       {/* 상단 헤더 바 */}
-      <div className="bg-white border-b border-[#E2E5EA] sticky top-0 z-20">
+      <div className="bg-white border-b border-border sticky top-0 z-20">
         <div className="mx-auto flex h-auto max-w-4xl items-center justify-between gap-4 px-4 py-4 sm:h-[68px] sm:px-6 sm:py-0">
           <div className="flex min-w-0 flex-wrap items-center gap-2.5 sm:gap-3">
             <button
               onClick={() => router.push('/contract-risk')}
-              className="flex items-center gap-2 text-[12px] text-[#888] hover:text-[#1B1F2B] transition-colors shrink-0"
+              className="flex items-center gap-2 text-[12px] text-foreground-quaternary hover:text-foreground transition-colors shrink-0"
             >
               <ArrowLeft size={14} /> 목록
             </button>
-            <span className="text-[#E2E5EA]">/</span>
-            <p className="text-[13px] font-medium text-[#1B1F2B] truncate">{analysis.file_name}</p>
+            <span className="text-border">/</span>
+            <p className="text-[13px] font-medium text-foreground truncate">{analysis.file_name}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2 shrink-0 justify-end">
             {total > 0 && (
               <button
                 onClick={handleEnterSuggestMode}
-                className="flex items-center gap-2 px-4 py-2.5 border border-[#2E6FF2] text-[#2E6FF2] rounded-xl text-[12px] font-medium hover:bg-[#2E6FF2]/5 transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 border border-primary text-primary rounded-xl text-[12px] font-medium hover:bg-primary/5 transition-colors"
               >
                 <Scale size={13} /> 조항 수정 제안
               </button>
@@ -310,7 +310,7 @@ export default function ContractRiskResultPage() {
             <button
               onClick={handleDownload}
               disabled={downloading}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#1B1F2B] text-white rounded-xl text-[12px] font-medium hover:bg-[#2E3340] transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2.5 bg-foreground text-white rounded-xl text-[12px] font-medium hover:bg-sidebar-hover transition-colors disabled:opacity-50"
             >
               <Download size={13} />
               {downloading ? '다운로드 중...' : 'DOCX 리포트'}
@@ -320,31 +320,31 @@ export default function ContractRiskResultPage() {
       </div>
 
       <div className="mx-auto flex max-w-4xl flex-col gap-4 px-4 py-5 sm:px-6 sm:py-7">
-        <div className="rounded-2xl border border-[#E2E5EA] bg-white p-5 sm:p-6">
+        <div className="rounded-2xl border border-border bg-white p-5 sm:p-6">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#2E6FF2]">Next Workflow</p>
-              <p className="text-[15px] font-semibold text-[#1B1F2B] mt-2">리스크 검토 후 바로 이어서 작업할 수 있습니다</p>
-              <p className="text-[12px] text-[#888] mt-2">분석 결과를 바탕으로 수정 제안, 문서 정리, 파일 재확인까지 한 흐름으로 연결합니다.</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">Next Workflow</p>
+              <p className="text-[15px] font-semibold text-foreground mt-2">리스크 검토 후 바로 이어서 작업할 수 있습니다</p>
+              <p className="text-[12px] text-foreground-quaternary mt-2">분석 결과를 바탕으로 수정 제안, 문서 정리, 파일 재확인까지 한 흐름으로 연결합니다.</p>
             </div>
             <div className="flex flex-wrap gap-2.5">
               {total > 0 && (
                 <button
                   onClick={handleEnterSuggestMode}
-                  className="px-4 py-2.5 rounded-xl bg-[#1B1F2B] text-white text-[12px] font-medium hover:bg-[#2E3340] transition-colors"
+                  className="px-4 py-2.5 rounded-xl bg-foreground text-white text-[12px] font-medium hover:bg-sidebar-hover transition-colors"
                 >
                   수정 제안 시작
                 </button>
               )}
               <button
                 onClick={() => router.push('/documents')}
-                className="px-4 py-2.5 rounded-xl border border-[#E2E5EA] text-[12px] font-medium text-[#666] hover:bg-[#F7F8FA] transition-colors"
+                className="px-4 py-2.5 rounded-xl border border-border text-[12px] font-medium text-foreground-secondary hover:bg-surface-secondary transition-colors"
               >
                 문서 생성으로 이동
               </button>
               <button
                 onClick={() => router.push('/files')}
-                className="px-4 py-2.5 rounded-xl border border-[#E2E5EA] text-[12px] font-medium text-[#666] hover:bg-[#F7F8FA] transition-colors"
+                className="px-4 py-2.5 rounded-xl border border-border text-[12px] font-medium text-foreground-secondary hover:bg-surface-secondary transition-colors"
               >
                 문서허브 보기
               </button>
@@ -352,17 +352,17 @@ export default function ContractRiskResultPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 mt-5">
-            <div className="rounded-xl border border-[#E2E5EA] bg-[#FBFBFC] p-5">
-              <p className="text-[13px] font-semibold text-[#1B1F2B]">1. 리스크 확인</p>
-              <p className="text-[11px] text-[#888] mt-1">상/중/하 위험도를 먼저 확인하고 우선순위를 정합니다.</p>
+            <div className="rounded-xl border border-border bg-surface-tertiary p-5">
+              <p className="text-[13px] font-semibold text-foreground">1. 리스크 확인</p>
+              <p className="text-[11px] text-foreground-quaternary mt-1">상/중/하 위험도를 먼저 확인하고 우선순위를 정합니다.</p>
             </div>
-            <div className="rounded-xl border border-[#E2E5EA] bg-[#FBFBFC] p-5">
-              <p className="text-[13px] font-semibold text-[#1B1F2B]">2. 수정 제안 반영</p>
-              <p className="text-[11px] text-[#888] mt-1">필요한 조항만 골라 법령 기반 수정안으로 이어갑니다.</p>
+            <div className="rounded-xl border border-border bg-surface-tertiary p-5">
+              <p className="text-[13px] font-semibold text-foreground">2. 수정 제안 반영</p>
+              <p className="text-[11px] text-foreground-quaternary mt-1">필요한 조항만 골라 법령 기반 수정안으로 이어갑니다.</p>
             </div>
-            <div className="rounded-xl border border-[#E2E5EA] bg-[#FBFBFC] p-5">
-              <p className="text-[13px] font-semibold text-[#1B1F2B]">3. 문서 워크플로우로 이동</p>
-              <p className="text-[11px] text-[#888] mt-1">검토가 끝나면 문서 생성 또는 문서허브에서 후속 작업을 진행합니다.</p>
+            <div className="rounded-xl border border-border bg-surface-tertiary p-5">
+              <p className="text-[13px] font-semibold text-foreground">3. 문서 워크플로우로 이동</p>
+              <p className="text-[11px] text-foreground-quaternary mt-1">검토가 끝나면 문서 생성 또는 문서허브에서 후속 작업을 진행합니다.</p>
             </div>
           </div>
         </div>
@@ -378,26 +378,26 @@ export default function ContractRiskResultPage() {
 
         {/* AI 종합 의견 */}
         {analysis.risk_result.summary && (
-          <div className="rounded-2xl border border-[#E2E5EA] bg-white p-5 sm:p-6">
+          <div className="rounded-2xl border border-border bg-white p-5 sm:p-6">
             <div className="mb-4 flex items-center gap-2.5">
-              <div className="w-6 h-6 bg-[#EEF3FE] rounded-lg flex items-center justify-center">
-                <ShieldCheck size={13} className="text-[#2E6FF2]" />
+              <div className="w-6 h-6 bg-primary-tint rounded-lg flex items-center justify-center">
+                <ShieldCheck size={13} className="text-primary" />
               </div>
-              <p className="text-[12px] font-semibold text-[#2E6FF2] uppercase tracking-wide">AI 종합 의견</p>
+              <p className="text-[12px] font-semibold text-primary uppercase tracking-wide">AI 종합 의견</p>
             </div>
-            <p className="text-[13px] text-[#333] leading-relaxed">{analysis.risk_result.summary}</p>
+            <p className="text-[13px] text-foreground leading-relaxed">{analysis.risk_result.summary}</p>
             <div className="mt-5 flex flex-wrap gap-2.5">
               {total > 0 && (
                 <button
                   onClick={handleEnterSuggestMode}
-                  className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#2E6FF2] hover:text-[#1E5FE2] transition-colors"
+                  className="inline-flex items-center gap-1.5 text-[12px] font-medium text-primary hover:text-primary transition-colors"
                 >
                   조항 수정 제안으로 이동 <ArrowRight size={13} />
                 </button>
               )}
               <button
                 onClick={() => router.push('/documents')}
-                className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#666] hover:text-[#1B1F2B] transition-colors"
+                className="inline-flex items-center gap-1.5 text-[12px] font-medium text-foreground-secondary hover:text-foreground transition-colors"
               >
                 문서 생성으로 넘기기 <ArrowRight size={13} />
               </button>
@@ -407,7 +407,7 @@ export default function ContractRiskResultPage() {
 
         {/* 탐지 항목 없음 */}
         {total === 0 && (
-          <div className="rounded-2xl border border-[#E2E5EA] bg-white p-6 text-center sm:p-10">
+          <div className="rounded-2xl border border-border bg-white p-6 text-center sm:p-10">
             <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <ShieldCheck size={24} className="text-emerald-600" />
             </div>
@@ -425,8 +425,8 @@ export default function ContractRiskResultPage() {
               {sortedItems.length > 0 ? (
                 sortedItems.map(item => <RiskCard key={item.id} item={item} />)
               ) : (
-                <div className="rounded-2xl border border-[#E2E5EA] bg-white py-10 text-center">
-                  <p className="text-[13px] text-[#aaa]">해당 필터 조건의 항목이 없습니다.</p>
+                <div className="rounded-2xl border border-border bg-white py-10 text-center">
+                  <p className="text-[13px] text-foreground-quaternary">해당 필터 조건의 항목이 없습니다.</p>
                 </div>
               )}
             </div>
@@ -434,8 +434,8 @@ export default function ContractRiskResultPage() {
         )}
 
         {/* 면책 */}
-        <div className="border-t border-[#E2E5EA] pt-5 pb-2 text-center">
-          <p className="text-[11px] text-[#c0c4cc] leading-relaxed">
+        <div className="border-t border-border pt-5 pb-2 text-center">
+          <p className="text-[11px] text-foreground-quaternary leading-relaxed">
             ⚠️ 이 분석은 AI가 생성한 참고 자료이며 법적 조언이 아닙니다.<br />
             최종 계약 체결 전 법률 전문가 검토를 권장합니다.
           </p>

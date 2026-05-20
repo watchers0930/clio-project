@@ -19,7 +19,7 @@ export default function TodoItemRow({ todo, onToggle, onEdit, onDelete }: TodoIt
 
   return (
     <div
-      className="flex items-center gap-3 px-5 py-3.5 border-b border-[#E2E5EA] last:border-0 hover:bg-[#f9fafb] transition-colors group"
+      className="flex items-center gap-3 px-5 py-3.5 border-b border-border last:border-0 hover:bg-surface-tertiary transition-colors group"
       style={{ opacity: isCompleted ? 0.55 : 1 }}
     >
       {/* 체크박스 */}
@@ -46,7 +46,7 @@ export default function TodoItemRow({ todo, onToggle, onEdit, onDelete }: TodoIt
           {todo.title}
         </p>
         {todo.description && (
-          <p className="text-[11px] text-[#7C8494] truncate mt-0.5">{todo.description}</p>
+          <p className="text-[11px] text-foreground-secondary truncate mt-0.5">{todo.description}</p>
         )}
       </div>
 
@@ -73,11 +73,11 @@ export default function TodoItemRow({ todo, onToggle, onEdit, onDelete }: TodoIt
 
       {/* 액션 */}
       <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-        <button onClick={() => onEdit(todo)} className="p-1.5 rounded hover:bg-[#f5f5f7]">
-          <Pencil size={13} className="text-[#7C8494]" />
+        <button onClick={() => onEdit(todo)} className="p-1.5 rounded hover:bg-surface-secondary">
+          <Pencil size={13} className="text-foreground-secondary" />
         </button>
-        <button onClick={() => onDelete(todo.id)} className="p-1.5 rounded hover:bg-[#1d1d1f]/5">
-          <Trash2 size={13} className="text-[#ff3b30]/60" />
+        <button onClick={() => onDelete(todo.id)} className="p-1.5 rounded hover:bg-foreground/5">
+          <Trash2 size={13} className="text-danger/60" />
         </button>
       </div>
     </div>

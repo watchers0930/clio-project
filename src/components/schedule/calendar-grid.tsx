@@ -36,9 +36,9 @@ export default function CalendarGrid({
     });
 
   return (
-    <div className="bg-white rounded-xl border border-[#E2E5EA] overflow-hidden">
+    <div className="bg-white rounded-xl border border-border overflow-hidden">
       {/* 요일 헤더 */}
-      <div className="grid grid-cols-7 border-b border-[#E2E5EA] bg-[#f9fafb]">
+      <div className="grid grid-cols-7 border-b border-border bg-surface-tertiary">
         {WEEKDAY_LABELS.map((label, i) => (
           <div
             key={label}

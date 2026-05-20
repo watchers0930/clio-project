@@ -165,7 +165,7 @@ export function FileSearchTab({
 
   return (
     <>
-      <div className="rounded-2xl border border-[#e5e5e7] bg-white" style={{ padding: '32px' }}>
+      <div className="rounded-2xl border border-border bg-white" style={{ padding: '32px' }}>
         <div className="relative flex items-center gap-2">
           <div className="flex-1">
             <SearchInput
@@ -187,10 +187,10 @@ export function FileSearchTab({
       <div aria-hidden="true" style={{ height: 10 }} />
 
       <div className="flex flex-wrap items-center" style={{ gap: 22 }}>
-        <select value={department} onChange={(e) => onDepartmentChange(e.target.value)} className="rounded-xl border border-[#e5e5e7] bg-white text-[14px] text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3]" style={{ padding: '10px 18px' }}>
+        <select value={department} onChange={(e) => onDepartmentChange(e.target.value)} className="rounded-xl border border-border bg-white text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary" style={{ padding: '10px 18px' }}>
           {departments.map((item) => <option key={item}>{item}</option>)}
         </select>
-        <select value={fileType} onChange={(e) => onFileTypeChange(e.target.value)} className="rounded-xl border border-[#e5e5e7] bg-white text-[14px] text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3]" style={{ padding: '10px 18px' }}>
+        <select value={fileType} onChange={(e) => onFileTypeChange(e.target.value)} className="rounded-xl border border-border bg-white text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary" style={{ padding: '10px 18px' }}>
           {['전체', 'PDF', 'DOCX', 'PPTX', 'XLSX', 'MD', 'M4A'].map((item) => <option key={item}>{item}</option>)}
         </select>
       </div>
@@ -199,7 +199,7 @@ export function FileSearchTab({
 
       {searchContext ? (
         <div
-          className="relative rounded-2xl border border-[#D7E7FF] bg-[#F3F8FF]"
+          className="relative rounded-2xl border border-border-tint bg-primary-tint"
           style={{
             paddingLeft: resumeCardLayouts.searchContext.outerPaddingX,
             paddingRight: resumeCardLayouts.searchContext.outerPaddingX,
@@ -208,17 +208,17 @@ export function FileSearchTab({
           }}
         >
           <div className="flex flex-wrap items-center" style={{ gap: resumeCardLayouts.searchContext.chipGap }}>
-            <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-[#2E6FF2]">검색 권한 범위</span>
-            <span className="rounded-full border border-[#D7E7FF] bg-white px-3 py-1 text-[11px] text-[#4B5563]">역할: {searchContext.role}</span>
-            <span className="rounded-full border border-[#D7E7FF] bg-white px-3 py-1 text-[11px] text-[#4B5563]">기본 부서: {searchContext.departmentName}</span>
-            <span className="rounded-full border border-[#D7E7FF] bg-white px-3 py-1 text-[11px] text-[#4B5563]">조회 가능 부서: {Math.max(searchContext.availableDepartments.length - 1, 0)}개</span>
-            <span className="rounded-full border border-[#B9D6FF] bg-[#EAF3FF] px-3 py-1 text-[11px] font-medium text-[#1F5FCC]">현재 부서 필터: {department}</span>
-            <span className="rounded-full border border-[#B9D6FF] bg-[#EAF3FF] px-3 py-1 text-[11px] font-medium text-[#1F5FCC]">현재 파일 형식: {fileType}</span>
+            <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-primary">검색 권한 범위</span>
+            <span className="rounded-full border border-border-tint bg-white px-3 py-1 text-[11px] text-foreground-secondary">역할: {searchContext.role}</span>
+            <span className="rounded-full border border-border-tint bg-white px-3 py-1 text-[11px] text-foreground-secondary">기본 부서: {searchContext.departmentName}</span>
+            <span className="rounded-full border border-border-tint bg-white px-3 py-1 text-[11px] text-foreground-secondary">조회 가능 부서: {Math.max(searchContext.availableDepartments.length - 1, 0)}개</span>
+            <span className="rounded-full border border-primary/30 bg-primary-tint px-3 py-1 text-[11px] font-medium text-primary">현재 부서 필터: {department}</span>
+            <span className="rounded-full border border-primary/30 bg-primary-tint px-3 py-1 text-[11px] font-medium text-primary">현재 파일 형식: {fileType}</span>
           </div>
-          <p className="text-[12px] leading-5 text-[#425466]" style={{ marginTop: resumeCardLayouts.searchContext.descriptionMarginTop }}>{searchContext.documentScopeLabel}</p>
-          <p className="text-[12px] leading-5 text-[#6B7280]" style={{ marginTop: resumeCardLayouts.searchContext.descriptionSecondaryMarginTop }}>{searchContext.departmentFilterLabel}</p>
+          <p className="text-[12px] leading-5 text-foreground-secondary" style={{ marginTop: resumeCardLayouts.searchContext.descriptionMarginTop }}>{searchContext.documentScopeLabel}</p>
+          <p className="text-[12px] leading-5 text-foreground-secondary" style={{ marginTop: resumeCardLayouts.searchContext.descriptionSecondaryMarginTop }}>{searchContext.departmentFilterLabel}</p>
           <div
-            className="rounded-xl border border-[#D7E7FF] bg-white"
+            className="rounded-xl border border-border-tint bg-white"
             style={{
               marginTop: resumeCardLayouts.searchContext.helperBoxMarginTop,
               paddingLeft: resumeCardLayouts.searchContext.helperBoxPaddingX,
@@ -227,13 +227,13 @@ export function FileSearchTab({
               paddingBottom: resumeCardLayouts.searchContext.helperBoxPaddingY,
             }}
           >
-            <p className="text-[12px] font-semibold text-[#1D3557]">지금 검색에 적용되는 기준</p>
-            <p className="mt-1 text-[12px] leading-5 text-[#5E6573]">결과는 현재 계정이 접근 가능한 문서 범위 안에서만 계산되며, 위 필터는 그 범위를 다시 좁히는 용도로만 동작합니다.</p>
+            <p className="text-[12px] font-semibold text-foreground">지금 검색에 적용되는 기준</p>
+            <p className="mt-1 text-[12px] leading-5 text-foreground-secondary">결과는 현재 계정이 접근 가능한 문서 범위 안에서만 계산되며, 위 필터는 그 범위를 다시 좁히는 용도로만 동작합니다.</p>
           </div>
         </div>
       ) : null}
 
-      {searched ? <p className="text-[12px] text-[#7C8494]">이번 검색 필터에는 접근 가능한 부서만 표시되며, 선택한 파일 형식은 결과 목록과 후속 액션 제안에 함께 반영됩니다.</p> : null}
+      {searched ? <p className="text-[12px] text-foreground-secondary">이번 검색 필터에는 접근 가능한 부서만 표시되며, 선택한 파일 형식은 결과 목록과 후속 액션 제안에 함께 반영됩니다.</p> : null}
 
       {!searched ? (
         <div className="flex flex-wrap" style={{ gap: 8 }}>
@@ -241,7 +241,7 @@ export function FileSearchTab({
             <button
               key={suggestion}
               onClick={() => onSuggestionClick(suggestion)}
-              className="rounded-full border border-[#e5e5e7] bg-[#f5f5f7] text-[14px] text-[#1d1d1f] transition-colors hover:border-[#0071e3] hover:bg-white"
+              className="rounded-full border border-border bg-surface-secondary text-[14px] text-foreground transition-colors hover:border-primary hover:bg-white"
               style={{ padding: '10px 18px' }}
             >
               {suggestion}
@@ -253,7 +253,7 @@ export function FileSearchTab({
       {loading ? (
         <div className="flex flex-col items-center justify-center gap-4 py-20">
           <Spinner size="lg" />
-          <p className="text-sm text-[#6e6e73]">파일을 검색하고 있습니다...</p>
+          <p className="text-sm text-foreground-secondary">파일을 검색하고 있습니다...</p>
         </div>
       ) : null}
 
@@ -296,15 +296,15 @@ export function FileSearchTab({
 
           {(relatedResults.length > 0 || recentQueries.length > 0) ? (
             <section className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-              <div className="relative rounded-2xl border border-[#e5e5e7] bg-white" style={{ padding: resumeCardLayouts.relatedDocs.outerPadding }}>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7C8494]">Related Docs</p>
-                <p className="mt-2 text-[14px] font-semibold text-[#1d1d1f]">이번 검색에서 같이 볼 문서</p>
+              <div className="relative rounded-2xl border border-border bg-white" style={{ padding: resumeCardLayouts.relatedDocs.outerPadding }}>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-secondary">Related Docs</p>
+                <p className="mt-2 text-[14px] font-semibold text-foreground">이번 검색에서 같이 볼 문서</p>
                 <div className="flex flex-col" style={{ marginTop: resumeCardLayouts.relatedDocs.contentMarginTop, gap: resumeCardLayouts.relatedDocs.listGap }}>
                   {relatedResults.slice(0, 3).map((result) => (
                     <button
                       key={result.id}
                       onClick={() => onOpenResult(result)}
-                      className="rounded-xl border border-[#E2E5EA] bg-[#fbfbfc] text-left transition-colors hover:border-[#0071e3]/40 hover:bg-white"
+                      className="rounded-xl border border-border bg-surface-tertiary text-left transition-colors hover:border-primary/40 hover:bg-white"
                       style={{
                         paddingLeft: resumeCardLayouts.relatedDocs.itemPaddingX,
                         paddingRight: resumeCardLayouts.relatedDocs.itemPaddingX,
@@ -313,13 +313,13 @@ export function FileSearchTab({
                       }}
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <p className="truncate text-[13px] font-semibold text-[#1d1d1f]">{result.name}</p>
+                        <p className="truncate text-[13px] font-semibold text-foreground">{result.name}</p>
                         <div className="flex items-center gap-2">
-                          {result.relationLabel ? <span className="rounded-full bg-[#EEF6FF] px-2.5 py-1 text-[10px] font-medium text-[#2E6FF2]">{result.relationLabel}</span> : null}
-                          <span className="text-[10px] font-medium text-[#7C8494]">{result.department}</span>
+                          {result.relationLabel ? <span className="rounded-full bg-primary-tint px-2.5 py-1 text-[10px] font-medium text-primary">{result.relationLabel}</span> : null}
+                          <span className="text-[10px] font-medium text-foreground-secondary">{result.department}</span>
                         </div>
                       </div>
-                      <p className="mt-2 text-[11px] text-[#6e6e73]">
+                      <p className="mt-2 text-[11px] text-foreground-secondary">
                         {result.fileType} · {result.date}
                         {result.originDocumentTitle ? ` · 기준 문서 ${result.originDocumentTitle}` : ''}
                       </p>
@@ -328,15 +328,15 @@ export function FileSearchTab({
                 </div>
               </div>
 
-              <div className="relative rounded-2xl border border-[#e5e5e7] bg-white" style={{ padding: resumeCardLayouts.recentFlow.outerPadding }}>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7C8494]">Recent Flow</p>
-                <p className="mt-2 text-[14px] font-semibold text-[#1d1d1f]">최근 자주 이어본 검색 흐름</p>
+              <div className="relative rounded-2xl border border-border bg-white" style={{ padding: resumeCardLayouts.recentFlow.outerPadding }}>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-secondary">Recent Flow</p>
+                <p className="mt-2 text-[14px] font-semibold text-foreground">최근 자주 이어본 검색 흐름</p>
                 <div className="mt-4 flex flex-wrap" style={{ marginTop: resumeCardLayouts.recentFlow.contentMarginTop, gap: resumeCardLayouts.recentFlow.chipGap }}>
                   {recentQueries.length === 0 ? (
-                    <p className="text-[12px] leading-5 text-[#6e6e73]">최근 검색 흐름이 아직 없습니다. 몇 번 검색하면 여기에서 바로 다시 이어갈 수 있습니다.</p>
+                    <p className="text-[12px] leading-5 text-foreground-secondary">최근 검색 흐름이 아직 없습니다. 몇 번 검색하면 여기에서 바로 다시 이어갈 수 있습니다.</p>
                   ) : (
                     recentQueries.map((recentQuery) => (
-                      <button key={recentQuery} onClick={() => onSuggestionClick(recentQuery)} className="rounded-full border border-[#d6ebff] bg-[#eef6ff] px-3 py-2 text-[12px] font-medium text-[#0071e3] transition-colors hover:bg-[#e2f0ff]">
+                      <button key={recentQuery} onClick={() => onSuggestionClick(recentQuery)} className="rounded-full border border-primary/30 bg-primary-tint px-3 py-2 text-[12px] font-medium text-primary transition-colors hover:bg-primary-tint">
                         {recentQuery}
                       </button>
                     ))
@@ -347,8 +347,8 @@ export function FileSearchTab({
           ) : null}
 
           <div className="flex items-center justify-between">
-            <p className="text-sm text-[#6e6e73]"><span className="font-semibold text-[#1d1d1f]">{sortedResults.length}개</span> 결과</p>
-            <select value={sort} onChange={(e) => onSortChange(e.target.value)} className="rounded-lg border border-[#e5e5e7] bg-white px-3.5 py-2 text-sm text-[#1d1d1f] focus:outline-none">
+            <p className="text-sm text-foreground-secondary"><span className="font-semibold text-foreground">{sortedResults.length}개</span> 결과</p>
+            <select value={sort} onChange={(e) => onSortChange(e.target.value)} className="rounded-lg border border-border bg-white px-3.5 py-2 text-sm text-foreground focus:outline-none">
               {['관련도순', '최신순', '오래된순', '이름순'].map((option) => <option key={option}>{option}</option>)}
             </select>
           </div>
@@ -356,27 +356,27 @@ export function FileSearchTab({
           {sortedResults.length === 0 ? (
             <EmptyState iconType="search" title="검색 결과가 없습니다" description="다른 키워드로 다시 검색해 보세요" />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="flex flex-col gap-4">
               {sortedResults.map((result) => (
-                <div key={result.id} className="rounded-2xl border border-[#DDE7F3] bg-[#F8FBFF] p-5 transition-shadow hover:shadow-md">
-                  <div className="rounded-2xl border border-[#D7E7FF] bg-white p-4">
+                <div key={result.id} className="rounded-2xl border border-border bg-primary-tint p-5 transition-shadow hover:shadow-md">
+                  <div className="rounded-2xl border border-border-tint bg-white p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
-                        <h3 className="truncate text-[16px] font-semibold text-[#1d1d1f]">{result.name}</h3>
-                        <p className="mt-1 text-[12px] text-[#6e6e73]">{result.fileType} · {result.department} · {result.date}</p>
+                        <h3 className="truncate text-[16px] font-semibold text-foreground">{result.name}</h3>
+                        <p className="mt-1 text-[12px] text-foreground-secondary">{result.fileType} · {result.department} · {result.date}</p>
                         {result.relationLabel ? (
-                          <p className="mt-2 text-[11px] text-[#2E6FF2]">
+                          <p className="mt-2 text-[11px] text-primary">
                             {result.relationLabel}
                             {result.originDocumentTitle ? ` · 기준 문서 ${result.originDocumentTitle}` : ''}
                           </p>
                         ) : result.originDocumentTitle ? (
-                          <p className="mt-2 text-[11px] text-[#5E6573]">기준 문서 <span className="font-medium text-[#1d1d1f]">{result.originDocumentTitle}</span></p>
+                          <p className="mt-2 text-[11px] text-foreground-secondary">기준 문서 <span className="font-medium text-foreground">{result.originDocumentTitle}</span></p>
                         ) : null}
                       </div>
-                      <span className="rounded-full bg-[#EEF6FF] px-2.5 py-1 text-[11px] font-semibold text-[#2E6FF2]">{result.relevance}%</span>
+                      <span className="rounded-full bg-primary-tint px-2.5 py-1 text-[11px] font-semibold text-primary">{result.relevance}%</span>
                     </div>
 
-                    <p className="mt-5 text-[12px] leading-5 text-[#5E6573]">{result.excerpt}</p>
+                    <p className="mt-5 text-[12px] leading-5 text-foreground-secondary">{result.excerpt}</p>
 
                     <div aria-hidden="true" style={{ height: 10 }} />
                     <DocumentActionRow
@@ -418,23 +418,23 @@ export function FileSearchTab({
                       ]}
                     />
 
-                    <div className="mt-4 flex items-center gap-4 border-t border-[#f5f5f7] pt-4">
-                      <button onClick={() => onOpenPreview(result.id)} className="flex items-center gap-1.5 text-sm font-medium text-[#6e6e73] transition-colors hover:text-[#1d1d1f]">
+                    <div className="mt-4 flex items-center gap-4 border-t border-surface-secondary pt-4">
+                      <button onClick={() => onOpenPreview(result.id)} className="flex items-center gap-1.5 text-sm font-medium text-foreground-secondary transition-colors hover:text-foreground">
                         <EyeIcon />
                         미리보기
                       </button>
-                      <button onClick={() => onToggleSummary(result.id)} className="flex items-center gap-1.5 text-sm font-medium text-[#0071e3] transition-colors">
+                      <button onClick={() => onToggleSummary(result.id)} className="flex items-center gap-1.5 text-sm font-medium text-primary transition-colors">
                         <SparkleIcon />
                         AI 요약 {expandedSummary === result.id ? '접기' : '보기'}
                       </button>
-                      <button onClick={() => onDownloadOriginal(result)} className="flex items-center gap-1.5 text-sm font-medium text-[#6e6e73] transition-colors hover:text-[#1d1d1f]">
+                      <button onClick={() => onDownloadOriginal(result)} className="flex items-center gap-1.5 text-sm font-medium text-foreground-secondary transition-colors hover:text-foreground">
                         <DownloadIcon />
                         원본 다운로드
                       </button>
                     </div>
                   </div>
 
-                  {expandedSummary === result.id ? <div className="mt-4 rounded-xl bg-[#f5f5f7] p-5 text-sm leading-relaxed text-[#1d1d1f]">{result.aiSummary}</div> : null}
+                  {expandedSummary === result.id ? <div className="mt-4 rounded-xl bg-surface-secondary p-5 text-sm leading-relaxed text-foreground">{result.aiSummary}</div> : null}
                 </div>
               ))}
             </div>
@@ -444,11 +444,11 @@ export function FileSearchTab({
 
       {!searched && !loading ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#f5f5f7]" style={{ marginBottom: 16 }}>
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-surface-secondary" style={{ marginBottom: 16 }}>
             <SearchIcon />
           </div>
-          <h3 className="text-lg font-semibold text-[#1d1d1f]" style={{ marginBottom: 8 }}>파일 검색</h3>
-          <p className="max-w-sm text-sm text-[#6e6e73]">파일명이나 내용으로 업로드된 문서를 검색합니다.</p>
+          <h3 className="text-lg font-semibold text-foreground" style={{ marginBottom: 8 }}>파일 검색</h3>
+          <p className="max-w-sm text-sm text-foreground-secondary">파일명이나 내용으로 업로드된 문서를 검색합니다.</p>
         </div>
       ) : null}
     </>
@@ -485,22 +485,22 @@ function WorkflowResumeCard({
   onShare: (result: SearchResult) => void;
 }) {
   return (
-    <div className="relative rounded-2xl border border-[#DDE7F3] bg-[#F8FBFF] p-5">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6B7A90]">{eyebrow}</p>
-      <p className="mt-2 text-[15px] font-semibold text-[#1d1d1f]">{title}</p>
-      <p className="text-[12px] leading-5 text-[#5E6573]" style={{ marginTop: spacing.descriptionMarginTop, marginBottom: spacing.descriptionMarginBottom }}>{description}</p>
+    <div className="relative rounded-2xl border border-border bg-primary-tint p-5">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-secondary">{eyebrow}</p>
+      <p className="mt-2 text-[15px] font-semibold text-foreground">{title}</p>
+      <p className="text-[12px] leading-5 text-foreground-secondary" style={{ marginTop: spacing.descriptionMarginTop, marginBottom: spacing.descriptionMarginBottom }}>{description}</p>
 
       {result ? (
-        <div className="mt-4 rounded-2xl border border-[#D7E7FF] bg-white p-4">
+        <div className="mt-4 rounded-2xl border border-border-tint bg-white p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="truncate text-[14px] font-semibold text-[#1d1d1f]">{result.name}</p>
-              <p className="mt-1 text-[12px] text-[#6e6e73]">{result.fileType} · {result.department} · {result.date}</p>
-              {result.relationLabel ? <p className="mt-2 text-[11px] text-[#2E6FF2]">{result.relationLabel}{result.originDocumentTitle ? ` · 기준 문서 ${result.originDocumentTitle}` : ''}</p> : null}
+              <p className="truncate text-[14px] font-semibold text-foreground">{result.name}</p>
+              <p className="mt-1 text-[12px] text-foreground-secondary">{result.fileType} · {result.department} · {result.date}</p>
+              {result.relationLabel ? <p className="mt-2 text-[11px] text-primary">{result.relationLabel}{result.originDocumentTitle ? ` · 기준 문서 ${result.originDocumentTitle}` : ''}</p> : null}
             </div>
-            <span className="rounded-full bg-[#EEF6FF] px-2.5 py-1 text-[11px] font-semibold text-[#2E6FF2]">{result.relevance}%</span>
+            <span className="rounded-full bg-primary-tint px-2.5 py-1 text-[11px] font-semibold text-primary">{result.relevance}%</span>
           </div>
-          <p className="line-clamp-2 text-[12px] leading-5 text-[#5E6573]" style={{ marginTop: spacing.excerptMarginTop }}>{result.excerpt}</p>
+          <p className="line-clamp-2 text-[12px] leading-5 text-foreground-secondary" style={{ marginTop: spacing.excerptMarginTop }}>{result.excerpt}</p>
           <div aria-hidden="true" style={{ height: 10 }} />
           <div style={{ marginTop: spacing.actionsMarginTop }}>
             <DocumentActionRow
@@ -531,14 +531,14 @@ function WorkflowResumeCard({
           </div>
         </div>
       ) : (
-        <div className="mt-4 rounded-2xl border border-dashed border-[#D7E7FF] bg-white px-4 py-5 text-[12px] leading-5 text-[#6e6e73]">{emptyLabel}</div>
+        <div className="mt-4 rounded-2xl border border-dashed border-border-tint bg-white px-4 py-5 text-[12px] leading-5 text-foreground-secondary">{emptyLabel}</div>
       )}
     </div>
   );
 }
 
 function SearchIcon() {
-  return <svg className="h-10 w-10 text-[#0071e3]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>;
+  return <svg className="h-10 w-10 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>;
 }
 
 function EyeIcon() {

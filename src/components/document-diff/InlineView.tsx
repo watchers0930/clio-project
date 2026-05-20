@@ -43,9 +43,9 @@ export function InlineView({ lines, onChangeRef }: InlineViewProps) {
                   <tr
                     key={`${idx}-old`}
                     ref={(el) => onChangeRef(changeIdx, el)}
-                    className="bg-red-50 border-b border-[#F0F0F0]"
+                    className="bg-red-50 border-b border-border"
                   >
-                    <td className="w-10 px-2 text-right text-[#aaa] select-none border-r border-[#E2E5EA] bg-[#FAFBFC]">
+                    <td className="w-10 px-2 text-right text-foreground-quaternary select-none border-r border-border bg-surface-tertiary">
                       {line.oldLine}
                     </td>
                     <td className="w-5 text-center select-none font-bold text-[11px] text-red-600">-</td>
@@ -66,8 +66,8 @@ export function InlineView({ lines, onChangeRef }: InlineViewProps) {
                     </td>
                   </tr>
                   {/* 신 버전 줄 (추가) */}
-                  <tr key={`${idx}-new`} className="bg-green-50 border-b border-[#F0F0F0]">
-                    <td className="w-10 px-2 text-right text-[#aaa] select-none border-r border-[#E2E5EA] bg-[#FAFBFC]">
+                  <tr key={`${idx}-new`} className="bg-green-50 border-b border-border">
+                    <td className="w-10 px-2 text-right text-foreground-quaternary select-none border-r border-border bg-surface-tertiary">
                       {line.newLine}
                     </td>
                     <td className="w-5 text-center select-none font-bold text-[11px] text-green-600">+</td>
@@ -95,9 +95,9 @@ export function InlineView({ lines, onChangeRef }: InlineViewProps) {
               <tr
                 key={idx}
                 ref={isChange ? (el) => onChangeRef(changeIdx, el) : undefined}
-                className={cn('border-b border-[#F0F0F0]', bg)}
+                className={cn('border-b border-border', bg)}
               >
-                <td className="w-10 px-2 text-right text-[#aaa] select-none border-r border-[#E2E5EA] bg-[#FAFBFC]">
+                <td className="w-10 px-2 text-right text-foreground-quaternary select-none border-r border-border bg-surface-tertiary">
                   {line.type === 'added' ? line.newLine : line.oldLine}
                 </td>
                 <td className={cn('w-5 text-center select-none font-bold text-[11px]', gutterCls)}>
@@ -107,7 +107,7 @@ export function InlineView({ lines, onChangeRef }: InlineViewProps) {
                   'px-3 py-1',
                   line.type === 'added' ? 'text-green-800' :
                   line.type === 'removed' ? 'text-red-800 line-through' :
-                  'text-[#1B1F2B]',
+                  'text-foreground',
                 )}>
                   {line.content}
                 </td>

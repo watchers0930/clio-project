@@ -36,12 +36,12 @@ export default function MemoTodoConfirmModal({ todos, onClose }: MemoTodoConfirm
           className="flex items-center justify-between px-4 py-4 border-b flex-shrink-0 sm:px-6 sm:py-5"
           style={{ borderColor: '#E2E8F0' }}
         >
-          <h3 className="text-[15px] font-semibold text-[#1E293B]">할일 추출 결과</h3>
+          <h3 className="text-[15px] font-semibold text-foreground">할일 추출 결과</h3>
           <button
             onClick={onClose}
-            className="p-1 rounded-md hover:bg-[#F1F5F9] transition-colors"
+            className="p-1 rounded-md hover:bg-surface-secondary transition-colors"
           >
-            <X size={14} className="text-[#94A3B8]" />
+            <X size={14} className="text-foreground-quaternary" />
           </button>
         </div>
 
@@ -58,7 +58,7 @@ export default function MemoTodoConfirmModal({ todos, onClose }: MemoTodoConfirm
                     style={{ background: '#F8FAFC', borderColor: '#E2E8F0' }}
                   >
                     <CheckCircle2 size={15} className="flex-shrink-0" style={{ color: '#22C55E' }} />
-                    <span className="flex-1 text-[13px] text-[#334155] leading-snug">{todo.title}</span>
+                    <span className="flex-1 text-[13px] text-foreground-secondary leading-snug">{todo.title}</span>
                     <span
                       className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0"
                       style={{ color: style.color, background: style.bg }}
@@ -70,9 +70,9 @@ export default function MemoTodoConfirmModal({ todos, onClose }: MemoTodoConfirm
               })}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-4 py-8 text-center">
-              <p className="text-[13px] font-medium text-[#334155]">등록된 할일이 없습니다.</p>
-              <p className="mt-1 text-[12px] leading-5 text-[#64748B]">
+            <div className="rounded-2xl border border-dashed border-border bg-surface-tertiary px-4 py-8 text-center">
+              <p className="text-[13px] font-medium text-foreground-secondary">등록된 할일이 없습니다.</p>
+              <p className="mt-1 text-[12px] leading-5 text-foreground-secondary">
                 아이디어 문장을 조금 더 구체적으로 정리한 뒤 다시 추출해 보세요.
               </p>
             </div>
@@ -84,7 +84,7 @@ export default function MemoTodoConfirmModal({ todos, onClose }: MemoTodoConfirm
           className="px-4 py-4 border-t flex flex-col gap-3 flex-shrink-0 sm:px-6 sm:py-5 sm:flex-row sm:items-center sm:justify-between"
           style={{ borderColor: '#E2E8F0' }}
         >
-          <p className="text-[12px] text-[#94A3B8]">
+          <p className="text-[12px] text-foreground-quaternary">
             {todos.length > 0 ? `${todos.length}개 할일이 등록되었습니다.` : '등록 가능한 할일을 찾지 못했습니다.'}
           </p>
           <button

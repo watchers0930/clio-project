@@ -37,14 +37,14 @@ export function MobileBottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-2xl px-2.5 py-2.5 text-center transition-colors',
-                isActive ? 'text-[#0071e3]' : 'text-[#7c8494]',
+                'flex min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-lg px-2.5 py-2.5 text-center transition-colors',
+                isActive ? 'text-primary' : 'text-foreground-secondary',
               )}
             >
               <div
                 className={cn(
-                  'flex h-10 w-10 items-center justify-center rounded-2xl transition-colors',
-                  isActive ? 'bg-[#eef6ff] text-[#0071e3]' : 'bg-transparent text-inherit',
+                  'flex h-10 w-10 items-center justify-center rounded-lg transition-colors',
+                  isActive ? 'bg-primary-tint text-primary' : 'bg-transparent text-inherit',
                 )}
               >
                 <Icon size={18} strokeWidth={1.9} />

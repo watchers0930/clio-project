@@ -116,14 +116,14 @@ export function DiffAnalysisPanel({
   if (!hasChanges) return null;
 
   return (
-    <div className="border border-[#E2E5EA] rounded-xl overflow-hidden">
+    <div className="border border-border rounded-xl overflow-hidden">
       {/* 헤더 */}
-      <div className="flex items-center justify-between px-4 py-3 bg-[#F7F8FA] border-b border-[#E2E5EA]">
+      <div className="flex items-center justify-between px-4 py-3 bg-surface-secondary border-b border-border">
         <div className="flex items-center gap-2">
-          <Sparkles size={15} className="text-[#2E6FF2]" />
-          <span className="text-[13px] font-semibold text-[#1B1F2B]">AI 변경 분석</span>
+          <Sparkles size={15} className="text-primary" />
+          <span className="text-[13px] font-semibold text-foreground">AI 변경 분석</span>
           {isStreaming && (
-            <span className="flex items-center gap-1 text-[11px] text-[#888]">
+            <span className="flex items-center gap-1 text-[11px] text-foreground-quaternary">
               <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
@@ -136,7 +136,7 @@ export function DiffAnalysisPanel({
           {!started && (
             <button
               onClick={startAnalysis}
-              className="text-[12px] px-3 py-1.5 rounded-lg bg-[#2E6FF2] text-white hover:bg-[#1E5FE2] transition-colors"
+              className="text-[12px] px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors"
             >
               분석 시작
             </button>
@@ -144,14 +144,14 @@ export function DiffAnalysisPanel({
           {started && !isStreaming && (
             <button
               onClick={startAnalysis}
-              className="text-[11px] text-[#2E6FF2] hover:underline"
+              className="text-[11px] text-primary hover:underline"
             >
               재분석
             </button>
           )}
           <button
             onClick={() => setCollapsed((p) => !p)}
-            className="p-1 rounded hover:bg-[#ECEDF0] text-[#888] transition-colors"
+            className="p-1 rounded hover:bg-surface-secondary text-foreground-quaternary transition-colors"
           >
             {collapsed ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
           </button>
@@ -169,20 +169,20 @@ export function DiffAnalysisPanel({
           )}
 
           {!started && !error && (
-            <p className="text-[13px] text-[#888] py-4 text-center">
+            <p className="text-[13px] text-foreground-quaternary py-4 text-center">
               &quot;분석 시작&quot; 버튼을 눌러 변경 내용을 AI로 해석하세요.
             </p>
           )}
 
           {started && !streamText && !error && isStreaming && (
-            <p className="text-[13px] text-[#888] py-4 text-center">AI가 변경 내용을 분석하는 중...</p>
+            <p className="text-[13px] text-foreground-quaternary py-4 text-center">AI가 변경 내용을 분석하는 중...</p>
           )}
 
           {streamText && (
             <div
               className={cn(
-                'text-[13px] text-[#1B1F2B] leading-relaxed whitespace-pre-wrap',
-                isStreaming && 'after:content-["▌"] after:animate-pulse after:text-[#2E6FF2]',
+                'text-[13px] text-foreground leading-relaxed whitespace-pre-wrap',
+                isStreaming && 'after:content-["▌"] after:animate-pulse after:text-primary',
               )}
             >
               {streamText}

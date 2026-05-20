@@ -29,11 +29,40 @@
   --color-border: #e5e5e7;
   --color-muted: #6e6e73;
   --color-page-bg: #f2f2f2;
+
+  /* 텍스트 시맨틱 */
+  --color-foreground-secondary: #6e6e73;
+  --color-foreground-tertiary: #86868b;
+  --color-foreground-quaternary: #a1a1a6;
+
+  /* 표면 */
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f5f5f7;
+  --color-surface-tertiary: #fbfbfc;
+
+  /* Primary 틴트 */
+  --color-primary-tint: #EEF6FF;
+  --color-primary-tint-strong: #D7E7FF;
+
+  /* 테두리 */
+  --color-border-secondary: #d2d2d7;
+  --color-border-tint: #D7E7FF;
+
+  /* 간격 */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 0.75rem;
+  --space-lg: 1rem;
+  --space-xl: 1.5rem;
+  --space-2xl: 2rem;
+
+  /* 라운드 */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
   --font-sans: 'Paperlogy', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --space-control-y: 0.75rem;
-  --space-control-x: 1rem;
-  --space-block-gap: 1.5rem;
-  --space-surface-padding: 1.5rem;
 }
 
 * { box-sizing: border-box; margin: 0; }
@@ -44,6 +73,7 @@ body {
   font-family: 'Paperlogy', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 15px;
   line-height: 1.7;
+  word-break: keep-all;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -56,8 +86,8 @@ body {
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+::-webkit-scrollbar-thumb { background: var(--color-border-secondary); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-foreground-tertiary); }
 
 /* Focus */
 *:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
@@ -77,15 +107,15 @@ th {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #6e6e73;
+  color: var(--color-foreground-secondary);
   padding: 16px 20px;
-  border-bottom: 1px solid #e5e5e7;
-  background: #f5f5f7;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-secondary);
   white-space: nowrap;
 }
 td {
   padding: 16px 20px;
-  border-bottom: 1px solid #e5e5e7;
+  border-bottom: 1px solid var(--color-border);
   font-size: 14px;
   vertical-align: middle;
 }
@@ -94,9 +124,9 @@ tr:hover td { background: rgba(0,0,0,0.01); }
 
 /* Card: 24px padding */
 .clio-card {
-  background: #ffffff;
-  border: 1px solid #e5e5e7;
-  border-radius: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   padding: 24px;
 }
 
@@ -116,7 +146,7 @@ textarea {
   font-family: inherit;
   font-size: 14px;
   min-height: 46px;
-  padding: var(--space-control-y) var(--space-control-x);
+  padding: var(--space-md) var(--space-lg);
 }
 
 /* Buttons */
@@ -136,17 +166,13 @@ label {
   margin-bottom: 0.45rem;
 }
 
-main > div > * + * {
-  margin-top: var(--space-block-gap);
-}
-
 /* Card hover */
 .card-hover {
-  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+  transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 .card-hover:hover {
-  transform: scale(1.01);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.03);
 }
 
 /* Sidebar dark scrollbar */
@@ -184,15 +210,15 @@ main > div > * + * {
 
 .spinner {
   width: 24px; height: 24px;
-  border: 2.5px solid #e5e5e7;
-  border-top-color: #0071e3;
+  border: 2.5px solid var(--color-border);
+  border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #e5e5e7 25%, #f0f0f2 50%, #e5e5e7 75%);
+  background: linear-gradient(90deg, var(--color-border) 25%, var(--color-surface-secondary) 50%, var(--color-border) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s ease infinite;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }

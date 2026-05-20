@@ -1,5 +1,9 @@
 import type { Department, UserItem } from '@/components/settings/types';
 
+const inputCls = 'h-[52px] w-full rounded-xl border border-border bg-surface-secondary px-4.5 text-[15px] text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary';
+const labelCls = 'mb-2.5 block text-[14px] font-medium text-foreground-secondary';
+const selectCls = 'h-[52px] w-full rounded-xl border border-border bg-surface-secondary px-3.5 text-[15px] text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary';
+
 interface DepartmentModalProps {
   open: boolean;
   editDept: Department | null;
@@ -16,50 +20,43 @@ interface DepartmentModalProps {
 
 export function DepartmentModal(props: DepartmentModalProps) {
   const {
-    open,
-    editDept,
-    deptName,
-    deptCode,
-    deptDesc,
-    saving,
-    onClose,
-    onSave,
-    onChangeDeptName,
-    onChangeDeptCode,
-    onChangeDeptDesc,
+    open, editDept, deptName, deptCode, deptDesc, saving,
+    onClose, onSave, onChangeDeptName, onChangeDeptCode, onChangeDeptDesc,
   } = props;
 
   if (!open) return null;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={onClose} />
-      <div style={{ position: 'relative', width: '100%', maxWidth: 520, backgroundColor: '#fff', borderRadius: 24, border: '1px solid #e5e5e7', padding: '52px 52px' }}>
-        <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 10, color: '#1d1d1f' }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-[520px] rounded-xl border border-border bg-white p-10 shadow-xl">
+        <h2 className="text-[22px] font-semibold text-foreground">
           {editDept ? '부서 수정' : '부서 추가'}
         </h2>
-        <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 10 }}>
+        <p className="mt-2 mb-4 text-[14px] text-foreground-secondary">
           {editDept ? '부서 정보를 수정합니다.' : '새로운 부서를 추가합니다.'}
         </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="flex flex-col gap-4">
           <div>
-            <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>부서명 *</label>
-            <input value={deptName} onChange={(event) => onChangeDeptName(event.target.value)} placeholder="경영기획팀" style={{ width: '100%', height: 52, padding: '0 18px', fontSize: 15, borderRadius: 12, backgroundColor: '#f5f5f7', border: '1px solid #e5e5e7', color: '#1d1d1f', outline: 'none' }} />
+            <label className={labelCls}>부서명 *</label>
+            <input value={deptName} onChange={(e) => onChangeDeptName(e.target.value)} placeholder="경영기획팀" className={inputCls} />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>코드 *</label>
-            <input value={deptCode} onChange={(event) => onChangeDeptCode(event.target.value)} placeholder="BIZ" style={{ width: '100%', height: 52, padding: '0 18px', fontSize: 15, borderRadius: 12, backgroundColor: '#f5f5f7', border: '1px solid #e5e5e7', color: '#1d1d1f', outline: 'none', textTransform: 'uppercase' }} />
+            <label className={labelCls}>코드 *</label>
+            <input value={deptCode} onChange={(e) => onChangeDeptCode(e.target.value)} placeholder="BIZ" className={`${inputCls} uppercase`} />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>설명</label>
-            <input value={deptDesc} onChange={(event) => onChangeDeptDesc(event.target.value)} placeholder="부서 설명을 입력하세요" style={{ width: '100%', height: 52, padding: '0 18px', fontSize: 15, borderRadius: 12, backgroundColor: '#f5f5f7', border: '1px solid #e5e5e7', color: '#1d1d1f', outline: 'none' }} />
+            <label className={labelCls}>설명</label>
+            <input value={deptDesc} onChange={(e) => onChangeDeptDesc(e.target.value)} placeholder="부서 설명을 입력하세요" className={inputCls} />
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 14, marginTop: 18 }}>
-          <button onClick={onClose} className="hover:bg-[#f5f5f7] transition-colors" style={{ height: 52, padding: '0 24px', fontSize: 15, fontWeight: 500, borderRadius: 12, border: 'none', backgroundColor: 'transparent', color: '#6e6e73', cursor: 'pointer' }}>취소</button>
-          <button onClick={onSave} disabled={saving || !deptName.trim() || !deptCode.trim()} className="hover:bg-[#0071e3] transition-colors" style={{ height: 52, padding: '0 32px', fontSize: 15, fontWeight: 600, borderRadius: 12, border: 'none', backgroundColor: '#1d1d1f', color: '#fff', cursor: 'pointer', opacity: (saving || !deptName.trim() || !deptCode.trim()) ? 0.4 : 1 }}>
+        <div className="mt-6 flex justify-end gap-3">
+          <button onClick={onClose} className="h-[48px] rounded-xl px-6 text-[15px] font-medium text-foreground-secondary transition-colors hover:bg-surface-secondary">
+            취소
+          </button>
+          <button onClick={onSave} disabled={saving || !deptName.trim() || !deptCode.trim()} className="h-[48px] rounded-xl bg-foreground px-8 text-[15px] font-semibold text-white shadow-md transition-all hover:bg-primary disabled:opacity-40">
             {saving ? '저장 중...' : (editDept ? '수정' : '추가')}
           </button>
         </div>
@@ -89,74 +86,64 @@ interface UserModalProps {
 
 export function UserModal(props: UserModalProps) {
   const {
-    open,
-    editUser,
-    userName,
-    userEmail,
-    userPassword,
-    userDeptId,
-    userRole,
-    userSaving,
-    departments,
-    onClose,
-    onSave,
-    onChangeUserName,
-    onChangeUserEmail,
-    onChangeUserPassword,
-    onChangeUserDeptId,
-    onChangeUserRole,
+    open, editUser, userName, userEmail, userPassword, userDeptId, userRole, userSaving, departments,
+    onClose, onSave, onChangeUserName, onChangeUserEmail, onChangeUserPassword, onChangeUserDeptId, onChangeUserRole,
   } = props;
 
   if (!open) return null;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={onClose} />
-      <div style={{ position: 'relative', width: '100%', maxWidth: 520, backgroundColor: '#fff', borderRadius: 24, border: '1px solid #e5e5e7', padding: '52px 52px' }}>
-        <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 10, color: '#1d1d1f' }}>{editUser ? '사용자 수정' : '사용자 추가'}</h2>
-        <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 10 }}>{editUser ? '사용자 정보를 수정합니다.' : '새로운 사용자 계정을 생성합니다.'}</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-[520px] rounded-xl border border-border bg-white p-10 shadow-xl">
+        <h2 className="text-[22px] font-semibold text-foreground">
+          {editUser ? '사용자 수정' : '사용자 추가'}
+        </h2>
+        <p className="mt-2 mb-4 text-[14px] text-foreground-secondary">
+          {editUser ? '사용자 정보를 수정합니다.' : '새로운 사용자 계정을 생성합니다.'}
+        </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="flex flex-col gap-4">
           <div>
-            <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>이름 *</label>
-            <input value={userName} onChange={(event) => onChangeUserName(event.target.value)} placeholder="홍길동" style={{ width: '100%', height: 52, padding: '0 18px', fontSize: 15, borderRadius: 12, backgroundColor: '#f5f5f7', border: '1px solid #e5e5e7', color: '#1d1d1f', outline: 'none' }} />
+            <label className={labelCls}>이름 *</label>
+            <input value={userName} onChange={(e) => onChangeUserName(e.target.value)} placeholder="홍길동" className={inputCls} />
           </div>
           {!editUser ? (
             <>
               <div>
-                <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>이메일 *</label>
-                <input value={userEmail} onChange={(event) => onChangeUserEmail(event.target.value)} placeholder="name@company.com" type="email" style={{ width: '100%', height: 52, padding: '0 18px', fontSize: 15, borderRadius: 12, backgroundColor: '#f5f5f7', border: '1px solid #e5e5e7', color: '#1d1d1f', outline: 'none', fontFamily: 'Verdana, sans-serif' }} />
+                <label className={labelCls}>이메일 *</label>
+                <input value={userEmail} onChange={(e) => onChangeUserEmail(e.target.value)} placeholder="name@company.com" type="email" className={`${inputCls} font-en`} />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>비밀번호 *</label>
-                <input value={userPassword} onChange={(event) => onChangeUserPassword(event.target.value)} placeholder="6자 이상" type="password" style={{ width: '100%', height: 52, padding: '0 18px', fontSize: 15, borderRadius: 12, backgroundColor: '#f5f5f7', border: '1px solid #e5e5e7', color: '#1d1d1f', outline: 'none' }} />
+                <label className={labelCls}>비밀번호 *</label>
+                <input value={userPassword} onChange={(e) => onChangeUserPassword(e.target.value)} placeholder="6자 이상" type="password" className={inputCls} />
               </div>
             </>
           ) : (
             <>
               <div>
-                <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>이메일</label>
-                <input value={userEmail} onChange={(event) => onChangeUserEmail(event.target.value)} type="email" style={{ width: '100%', height: 52, padding: '0 18px', fontSize: 15, borderRadius: 12, backgroundColor: '#f5f5f7', border: '1px solid #e5e5e7', color: '#1d1d1f', outline: 'none', fontFamily: 'Verdana, sans-serif' }} />
+                <label className={labelCls}>이메일</label>
+                <input value={userEmail} onChange={(e) => onChangeUserEmail(e.target.value)} type="email" className={`${inputCls} font-en`} />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>비밀번호 초기화 <span style={{ fontSize: 12, color: '#a1a1a6' }}>(변경 시에만 입력)</span></label>
-                <input value={userPassword} onChange={(event) => onChangeUserPassword(event.target.value)} placeholder="새 비밀번호 (6자 이상)" type="password" style={{ width: '100%', height: 52, padding: '0 18px', fontSize: 15, borderRadius: 12, backgroundColor: '#f5f5f7', border: '1px solid #e5e5e7', color: '#1d1d1f', outline: 'none' }} />
+                <label className={labelCls}>비밀번호 초기화 <span className="text-[12px] text-foreground-quaternary">(변경 시에만 입력)</span></label>
+                <input value={userPassword} onChange={(e) => onChangeUserPassword(e.target.value)} placeholder="새 비밀번호 (6자 이상)" type="password" className={inputCls} />
               </div>
             </>
           )}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>부서</label>
-              <select value={userDeptId} onChange={(event) => onChangeUserDeptId(event.target.value)} style={{ width: '100%', height: 52, padding: '0 14px', fontSize: 15, borderRadius: 12, backgroundColor: '#f5f5f7', border: '1px solid #e5e5e7', color: '#1d1d1f', outline: 'none' }}>
+              <label className={labelCls}>부서</label>
+              <select value={userDeptId} onChange={(e) => onChangeUserDeptId(e.target.value)} className={selectCls}>
                 <option value="">미배정</option>
-                {departments.filter((department) => department.is_active !== false).map((department) => (
-                  <option key={department.id} value={department.id}>{department.name}</option>
+                {departments.filter((d) => d.is_active !== false).map((d) => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 10, color: '#6e6e73' }}>역할</label>
-              <select value={userRole} onChange={(event) => onChangeUserRole(event.target.value)} style={{ width: '100%', height: 52, padding: '0 14px', fontSize: 15, borderRadius: 12, backgroundColor: '#f5f5f7', border: '1px solid #e5e5e7', color: '#1d1d1f', outline: 'none' }}>
+              <label className={labelCls}>역할</label>
+              <select value={userRole} onChange={(e) => onChangeUserRole(e.target.value)} className={selectCls}>
                 <option value="user">사용자</option>
                 <option value="manager">매니저</option>
                 <option value="admin">관리자</option>
@@ -165,9 +152,11 @@ export function UserModal(props: UserModalProps) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 14, marginTop: 18 }}>
-          <button onClick={onClose} className="hover:bg-[#f5f5f7] transition-colors" style={{ height: 52, padding: '0 24px', fontSize: 15, fontWeight: 500, borderRadius: 12, border: 'none', backgroundColor: 'transparent', color: '#6e6e73', cursor: 'pointer' }}>취소</button>
-          <button onClick={onSave} disabled={userSaving || !userName.trim() || !userEmail.trim() || (!editUser && !userPassword.trim())} className="hover:bg-[#0071e3] transition-colors" style={{ height: 52, padding: '0 32px', fontSize: 15, fontWeight: 600, borderRadius: 12, border: 'none', backgroundColor: '#1d1d1f', color: '#fff', cursor: 'pointer', opacity: (userSaving || !userName.trim() || !userEmail.trim() || (!editUser && !userPassword.trim())) ? 0.4 : 1 }}>
+        <div className="mt-6 flex justify-end gap-3">
+          <button onClick={onClose} className="h-[48px] rounded-xl px-6 text-[15px] font-medium text-foreground-secondary transition-colors hover:bg-surface-secondary">
+            취소
+          </button>
+          <button onClick={onSave} disabled={userSaving || !userName.trim() || !userEmail.trim() || (!editUser && !userPassword.trim())} className="h-[48px] rounded-xl bg-foreground px-8 text-[15px] font-semibold text-white shadow-md transition-all hover:bg-primary disabled:opacity-40">
             {userSaving ? '저장 중...' : (editUser ? '수정' : '추가')}
           </button>
         </div>

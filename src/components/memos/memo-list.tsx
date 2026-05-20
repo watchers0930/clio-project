@@ -61,18 +61,18 @@ export default function MemoList({
       {/* 검색 + 새 메모 + 탭 */}
       <div className="flex items-center gap-3 mb-[40px]" style={{ paddingBottom: 10 }}>
         <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A0A7B5]" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-quaternary" />
           <input
             type="text"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="메모 검색..."
-            className="w-full pl-9 pr-3 py-2 text-[13px] border border-[#E2E5EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20 focus:border-[#6366F1]"
+            className="w-full pl-9 pr-3 py-2 text-[13px] border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
           />
         </div>
 
         {/* 탭 토글 */}
-        <div className="flex items-center gap-1 p-1 rounded-lg bg-[#F1F5F9] border border-[#E2E8F0] flex-shrink-0">
+        <div className="flex items-center gap-1 p-1 rounded-lg bg-surface-secondary border border-border flex-shrink-0">
           <button
             onClick={() => onViewModeChange('list')}
             className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-md transition-all"
@@ -111,7 +111,7 @@ export default function MemoList({
 
       {viewMode === 'list' ? (
         <>
-          <p className="text-[12px] text-[#A0A7B5]" style={{ marginTop: 20, marginBottom: 5 }}>
+          <p className="text-[12px] text-foreground-quaternary" style={{ marginTop: 20, marginBottom: 5 }}>
             총 {memos.length}건{search && ` (검색: "${search}")`}
           </p>
 
@@ -129,7 +129,7 @@ export default function MemoList({
               ))}
             </div>
           ) : (
-            <div className="text-center py-16 text-[#A0A7B5] text-[13px]">
+            <div className="text-center py-16 text-foreground-quaternary text-[13px]">
               {search ? '검색 결과가 없습니다' : '아직 메모가 없습니다'}
             </div>
           )}
@@ -141,11 +141,11 @@ export default function MemoList({
               <Spinner size="lg" />
             </div>
           ) : graph.error ? (
-            <div className="text-center py-16 text-[#EF4444] text-[13px]">
+            <div className="text-center py-16 text-danger text-[13px]">
               {graph.error}
               <button
                 onClick={graph.refresh}
-                className="ml-3 text-[#6366F1] underline"
+                className="ml-3 text-indigo-500 underline"
               >
                 다시 시도
               </button>

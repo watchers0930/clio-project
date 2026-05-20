@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { CalendarDays, Mic, Search, Sparkles } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import { SttModal } from '@/components/meetings/SttModal';
 import { buildDocumentCreateHref } from '@/lib/documents/navigation';
@@ -90,91 +90,73 @@ function MeetingsPageContent() {
   const nextMeeting = events[0] ?? null;
 
   return (
-    <div className="space-y-[25px] pb-10">
-      <section className="rounded-[28px] border border-[#e5e5e7] bg-white overflow-hidden">
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
-          <div className="px-4 py-5 sm:px-6 sm:py-6 xl:px-[30px] xl:py-[30px]">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 25 }}>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#0071e3]">Meeting Workflow</p>
-            <h1 className="text-[24px] font-bold leading-[1.25] text-[#1d1d1f] sm:text-[28px]">회의</h1>
-            <p className="max-w-2xl text-[15px] text-[#6e6e73]" style={{ lineHeight: '20px' }}>
-              회의는 독립 기능이 아니라 문서 입력 채널입니다. 회의록 생성이나 기존 회의록 검토부터 시작한 뒤 문서 운영 흐름으로 넘기세요.
-            </p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <MetricCard label="다가오는 회의" value={events.length} />
-              <MetricCard label="최근 회의 문서" value={meetingDocs.length} />
-              <MetricCard label="다음 회의 초점" value={nextMeeting ? 1 : 0} />
+    <div className="flex flex-col gap-5 pb-10">
+      <section className="rounded-2xl border border-border bg-white shadow-sm">
+        <div className="flex flex-col gap-5 px-6 py-5 sm:px-8 sm:py-6">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="text-[20px] font-bold text-foreground">회의</h1>
+              <p className="mt-1.5 text-[13px] text-foreground-secondary">
+                회의록 생성과 기존 회의록 검토부터 시작한 뒤 문서 운영 흐름으로 넘기세요.
+              </p>
             </div>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => router.push('/documents')}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#1d1d1f] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#0071e3] transition-colors"
+                className="h-9 rounded-xl bg-foreground px-4 text-[13px] font-medium text-white transition-colors hover:bg-primary"
               >
-                <Sparkles size={16} />
                 회의 기반 문서 작성
               </button>
               <button
                 onClick={() => setSttModalOpen(true)}
-                className="inline-flex items-center gap-2 rounded-xl border border-[#e5e5e7] bg-white px-4 py-2.5 text-sm font-medium text-[#1d1d1f] hover:border-[#2E6FF2] hover:text-[#2E6FF2] transition-colors"
+                className="h-9 rounded-xl border border-border bg-white px-4 text-[13px] font-medium text-foreground-secondary transition-colors hover:bg-surface-secondary"
               >
-                <Mic size={16} />
-                음성으로 회의록
+                음성 회의록
               </button>
               <Link
                 href="/schedule"
-                className="inline-flex items-center gap-2 rounded-xl border border-[#e5e5e7] bg-[#f5f5f7] px-4 py-2.5 text-sm font-medium text-[#1d1d1f] hover:border-[#0071e3] hover:text-[#0071e3] transition-colors"
+                className="h-9 inline-flex items-center rounded-xl border border-border bg-white px-4 text-[13px] font-medium text-foreground-secondary transition-colors hover:bg-surface-secondary"
               >
-                <CalendarDays size={16} />
-                일정/할일 보기
+                일정 보기
               </Link>
             </div>
-            </div>
           </div>
-          <div className="border-t border-[#e5e5e7] bg-[#fbfbfc] px-4 py-5 sm:px-6 sm:py-6 xl:border-l xl:border-t-0 xl:px-[28px] xl:py-[28px]">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 25 }}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7C8494]">Recommended Flow</p>
-              <div className="flex flex-col gap-3">
-              <QuickAction
-                title="1. 일정 확인"
-                description={nextMeeting ? `"${nextMeeting.title}"` : '다가오는 일정 없음'}
-                onClick={() => router.push('/schedule')}
-              />
-              <QuickAction
-                title="2. 회의록 생성"
-                description="초안 바로 만들기"
-                onClick={() => {
-                  const focus = nextMeeting?.title ?? '회의';
-                  router.push(buildDocumentCreateHref({
-                    originContext: 'meeting_minutes',
-                    contextTitle: focus,
-                    instructions: `${focus} 회의 내용을 정리한 회의록 초안을 작성하세요.`,
-                  }));
-                }}
-              />
-              <QuickAction
-                title="3. 후속 문서 작성"
-                description="보고/실행 문서로 연결"
-                onClick={() => router.push('/documents')}
-              />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-secondary px-4 py-3">
+              <div>
+                <p className="text-[10px] font-semibold text-foreground-tertiary">다가오는 회의</p>
+                <p className="text-[18px] font-bold text-foreground font-num leading-tight">{events.length}</p>
+              </div>
             </div>
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-secondary px-4 py-3">
+              <div>
+                <p className="text-[10px] font-semibold text-foreground-tertiary">최근 회의 문서</p>
+                <p className="text-[18px] font-bold text-foreground font-num leading-tight">{meetingDocs.length}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-secondary px-4 py-3">
+              <div>
+                <p className="text-[10px] font-semibold text-foreground-tertiary">다음 회의</p>
+                <p className="text-[18px] font-bold text-foreground font-num leading-tight">{nextMeeting ? 1 : 0}</p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-6">
-        <section className="rounded-2xl border border-[#e5e5e7] bg-white p-5">
-          <p className="text-[16px] font-semibold text-[#1d1d1f]">다가오는 회의</p>
-          <p className="mt-1 text-[12px] text-[#6e6e73]">일정에서 바로 시작</p>
+        <section className="rounded-2xl border border-border bg-white p-5">
+          <p className="text-[16px] font-semibold text-foreground">다가오는 회의</p>
+          <p className="mt-1 text-[12px] text-foreground-secondary">일정에서 바로 시작</p>
           <div className="mt-4 flex flex-col gap-4">
             {events.length === 0 ? (
               <EmptyCard label="다가오는 회의 일정이 없습니다." />
             ) : events.map((event) => (
-              <div key={event.id} className="rounded-2xl border border-[#E2E5EA] bg-[#fbfbfc] p-5">
+              <div key={event.id} className="rounded-2xl border border-border bg-surface-tertiary p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate text-[14px] font-semibold text-[#1d1d1f]">{event.title}</p>
-                    <p className="mt-1 text-[12px] text-[#6e6e73]">
+                    <p className="truncate text-[14px] font-semibold text-foreground">{event.title}</p>
+                    <p className="mt-1 text-[12px] text-foreground-secondary">
                       {event.start_at.split('T')[0]} · {event.location || '장소 미정'} · {event.creator_name || '작성자 미상'}
                     </p>
                   </div>
@@ -186,13 +168,13 @@ function MeetingsPageContent() {
                       contextTitle: event.title,
                       instructions: `${event.title} 회의 내용을 정리한 회의록 초안을 작성하세요.`,
                     }))}
-                    className="rounded-xl bg-[#1d1d1f] px-4 py-2.5 text-[12px] font-medium text-white hover:bg-[#0071e3] transition-colors"
+                    className="rounded-xl bg-foreground px-4 py-2.5 text-[12px] font-medium text-white hover:bg-primary transition-colors"
                   >
                     회의록 작성
                   </button>
                   <button
                     onClick={() => router.push(`/search?q=${encodeURIComponent(event.title)}`)}
-                    className="inline-flex items-center gap-2 rounded-xl border border-[#D7E7FF] px-4 py-2.5 text-[12px] font-medium text-[#2E6FF2] hover:bg-[#eef6ff] transition-colors"
+                    className="inline-flex items-center gap-2 rounded-xl border border-border-tint px-4 py-2.5 text-[12px] font-medium text-primary hover:bg-primary-tint transition-colors"
                   >
                     <Search size={14} />
                     관련 문서 검색
@@ -203,20 +185,20 @@ function MeetingsPageContent() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-[#e5e5e7] bg-white p-5">
-          <p className="text-[16px] font-semibold text-[#1d1d1f]">최근 회의 문서</p>
-          <p className="mt-1 text-[12px] text-[#6e6e73]">바로 열고 이어가기</p>
+        <section className="rounded-2xl border border-border bg-white p-5">
+          <p className="text-[16px] font-semibold text-foreground">최근 회의 문서</p>
+          <p className="mt-1 text-[12px] text-foreground-secondary">바로 열고 이어가기</p>
           <div className="mt-4 flex flex-col gap-4">
             {meetingDocs.length === 0 ? (
               <EmptyCard label="최근 회의 문서가 없습니다." />
             ) : meetingDocs.map((doc) => (
-              <div key={doc.id} className="rounded-2xl border border-[#E2E5EA] bg-[#fbfbfc] p-5">
-                <p className="text-[14px] font-semibold text-[#1d1d1f]">{doc.title}</p>
-                <p className="mt-1 text-[12px] text-[#6e6e73]">{doc.createdAt} · {doc.status}</p>
+              <div key={doc.id} className="rounded-2xl border border-border bg-surface-tertiary p-5">
+                <p className="text-[14px] font-semibold text-foreground">{doc.title}</p>
+                <p className="mt-1 text-[12px] text-foreground-secondary">{doc.createdAt} · {doc.status}</p>
                 <div className="mt-4 flex flex-wrap gap-2.5">
                   <button
                     onClick={() => router.push(`/documents/${doc.id}`)}
-                    className="rounded-xl bg-[#1d1d1f] px-4 py-2.5 text-[12px] font-medium text-white hover:bg-[#0071e3] transition-colors"
+                    className="rounded-xl bg-foreground px-4 py-2.5 text-[12px] font-medium text-white hover:bg-primary transition-colors"
                   >
                     문서 열기
                   </button>
@@ -227,13 +209,13 @@ function MeetingsPageContent() {
                       contextTitle: doc.title,
                       instructions: `"${doc.title}" 회의 문서를 바탕으로 후속 보고 문서를 작성해줘.`,
                     }))}
-                    className="rounded-xl border border-[#D7EFDE] px-4 py-2.5 text-[12px] font-medium text-[#258A4E] hover:bg-[#F4FBF6] transition-colors"
+                    className="rounded-xl border border-success/30 px-4 py-2.5 text-[12px] font-medium text-success hover:bg-success/5 transition-colors"
                   >
                     후속 문서 작성
                   </button>
                   <button
                     onClick={() => router.push(`/documents/${doc.id}#document-comment-panel`)}
-                    className="rounded-xl border border-[#E6DBFF] px-4 py-2.5 text-[12px] font-medium text-[#7C3AED] hover:bg-[#FAF5FF] transition-colors"
+                    className="rounded-xl border border-purple-200 px-4 py-2.5 text-[12px] font-medium text-purple-600 hover:bg-purple-50 transition-colors"
                   >
                     코멘트 보기
                   </button>
@@ -269,27 +251,9 @@ function MeetingsPageFallback() {
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-2xl border border-[#E2E5EA] bg-[#f8f8fa] px-4 py-3.5">
-      <p className="text-[12px] text-[#6e6e73]">{label}</p>
-      <p className="mt-1 text-[20px] font-bold text-[#1d1d1f] font-num">{value}</p>
-    </div>
-  );
-}
-
-function QuickAction({ title, description, onClick }: { title: string; description: string; onClick: () => void }) {
-  return (
-    <button onClick={onClick} className="rounded-2xl border border-[#E2E5EA] bg-white px-4 py-3.5 text-left hover:border-[#0071e3]/35 transition-colors">
-      <p className="text-[14px] font-semibold text-[#1d1d1f]">{title}</p>
-      <p className="mt-1 text-[12px] leading-5 text-[#6e6e73]">{description}</p>
-    </button>
-  );
-}
-
 function EmptyCard({ label }: { label: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-[#D7E7FF] bg-[#fbfbfc] px-4 py-10 text-center text-[12px] text-[#6e6e73]">
+    <div className="rounded-2xl border border-dashed border-border-tint bg-surface-tertiary px-4 py-10 text-center text-[12px] text-foreground-secondary">
       {label}
     </div>
   );

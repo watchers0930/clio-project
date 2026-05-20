@@ -48,7 +48,7 @@ export default function TodoList({
       {/* 헤더 */}
       <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
         <div className="flex items-center gap-3">
-          <div className="flex gap-1.5 bg-[#f5f5f7] rounded-lg p-1.5">
+          <div className="flex gap-1.5 bg-surface-secondary rounded-lg p-1.5">
             {FILTERS.map((f) => (
               <button
                 key={f.value}
@@ -64,12 +64,12 @@ export default function TodoList({
               </button>
             ))}
           </div>
-          <span className="text-[12px] text-[#7C8494]">{sorted.length}건</span>
+          <span className="text-[12px] text-foreground-secondary">{sorted.length}건</span>
         </div>
 
         <button
           onClick={onAdd}
-          className="flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium text-white bg-[#2E6FF2] rounded-lg hover:bg-[#1A5AD9] transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors"
         >
           <Plus size={15} />
           할일 추가
@@ -78,15 +78,15 @@ export default function TodoList({
 
       {/* 목록 */}
       {sorted.length === 0 ? (
-        <div className="text-center py-20 text-[#7C8494]">
+        <div className="text-center py-20 text-foreground-secondary">
           <div className="text-[40px] mb-3 opacity-20">&#x2713;</div>
           <p className="text-[14px]">할일이 없습니다</p>
-          <button onClick={onAdd} className="text-[13px] text-[#2E6FF2] hover:underline mt-2">
+          <button onClick={onAdd} className="text-[13px] text-primary hover:underline mt-2">
             새 할일 추가하기
           </button>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-[#E2E5EA] overflow-hidden">
+        <div className="bg-white rounded-xl border border-border overflow-hidden">
           {sorted.map((todo) => (
             <TodoItemRow
               key={todo.id}

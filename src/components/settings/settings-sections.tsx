@@ -80,24 +80,24 @@ export function SettingsOpsSummary({ departments, users }: SettingsOpsSummaryPro
         {summaryCards.map((card) => {
           const Icon = card.icon;
           return (
-            <div key={card.label} className="rounded-2xl border border-[#E2E5EA] bg-white p-4 sm:p-5">
+            <div key={card.label} className="rounded-2xl border border-border bg-white p-4 sm:p-5">
               <div className="mb-3 flex items-center justify-between sm:mb-4">
-                <span className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#2E6FF2]">{card.label}</span>
-                <div className="rounded-xl bg-[#EEF3FE] p-2 text-[#2E6FF2]">
+                <span className="text-[12px] font-semibold uppercase tracking-[0.16em] text-primary">{card.label}</span>
+                <div className="rounded-xl bg-primary-tint p-2 text-primary">
                   <Icon size={16} />
                 </div>
               </div>
-              <p className="text-[28px] font-semibold text-[#151821]">{card.value}</p>
-              <p className="mt-2 text-sm text-[#667085]">{card.caption}</p>
+              <p className="text-[28px] font-semibold text-foreground">{card.value}</p>
+              <p className="mt-2 text-sm text-foreground-secondary">{card.caption}</p>
             </div>
           );
         })}
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.3fr_1fr]">
-        <div className="rounded-2xl border border-[#E2E5EA] bg-white p-4 sm:p-6">
+        <div className="rounded-2xl border border-border bg-white p-4 sm:p-6">
           <div className="flex flex-col gap-2 border-b border-border pb-4">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#2E6FF2]">운영 원칙</p>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-primary">운영 원칙</p>
             <h2 className="text-[20px] font-semibold text-foreground">설정은 CRUD 화면이 아니라 문서 운영 정책판입니다.</h2>
             <p className="text-sm text-muted">조직 구조, 공유 정책, 역할별 액션을 한 화면에서 점검하고 바로 문서 운영 흐름으로 이동할 수 있어야 합니다.</p>
           </div>
@@ -105,20 +105,20 @@ export function SettingsOpsSummary({ departments, users }: SettingsOpsSummaryPro
             {policyCards.map((card) => {
               const Icon = card.icon;
               return (
-                <div key={card.title} className="rounded-2xl bg-[#F7F8FA] p-4">
-                  <div className="mb-3 flex items-center gap-2 text-[#1B1F2B]">
-                    <Icon size={16} className="text-[#2E6FF2]" />
+                <div key={card.title} className="rounded-2xl bg-surface-secondary p-4">
+                  <div className="mb-3 flex items-center gap-2 text-foreground">
+                    <Icon size={16} className="text-primary" />
                     <h3 className="text-sm font-semibold">{card.title}</h3>
                   </div>
-                  <p className="text-sm text-[#475467]">{card.description}</p>
+                  <p className="text-sm text-foreground-secondary">{card.description}</p>
                   <div className="mt-4 flex flex-col gap-2">
                     {card.points.map((point) => (
-                <div key={point} className="rounded-xl border border-white/70 bg-white px-4 py-3 text-[13px] text-[#344054]">
+                <div key={point} className="rounded-xl border border-white/70 bg-white px-4 py-3 text-[13px] text-foreground-secondary">
                         {point}
                       </div>
                     ))}
                   </div>
-                  <Link href={card.href} className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#2E6FF2] hover:text-[#1749B1]">
+                  <Link href={card.href} className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark">
                     {card.label}
                     <ArrowRight size={14} />
                   </Link>
@@ -128,37 +128,37 @@ export function SettingsOpsSummary({ departments, users }: SettingsOpsSummaryPro
           </div>
         </div>
 
-        <div className="rounded-2xl border border-[#E2E5EA] bg-white p-4 sm:p-6">
+        <div className="rounded-2xl border border-border bg-white p-4 sm:p-6">
           <div className="border-b border-border pb-4">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#2E6FF2]">운영 체크</p>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-primary">운영 체크</p>
             <h2 className="mt-2 text-[18px] font-semibold text-foreground">지금 바로 손봐야 할 항목</h2>
           </div>
           <div className="mt-5 flex flex-col gap-3">
-            <div className="rounded-2xl bg-[#F7F8FA] p-4">
-              <p className="text-sm font-semibold text-[#1B1F2B]">부서 운영</p>
-              <p className="mt-1 text-sm text-[#667085]">
+            <div className="rounded-2xl bg-surface-secondary p-4">
+              <p className="text-sm font-semibold text-foreground">부서 운영</p>
+              <p className="mt-1 text-sm text-foreground-secondary">
                 {departmentsWithoutManager.length > 0
                   ? `부서장 미지정 부서 ${departmentsWithoutManager.length}개가 남아 있습니다.`
                   : '활성 부서는 모두 부서장 연결 상태입니다.'}
               </p>
             </div>
-            <div className="rounded-2xl bg-[#F7F8FA] p-4">
-              <p className="text-sm font-semibold text-[#1B1F2B]">사용자 배치</p>
-              <p className="mt-1 text-sm text-[#667085]">
+            <div className="rounded-2xl bg-surface-secondary p-4">
+              <p className="text-sm font-semibold text-foreground">사용자 배치</p>
+              <p className="mt-1 text-sm text-foreground-secondary">
                 {unassignedUsers.length > 0
                   ? `부서 미배정 사용자 ${unassignedUsers.length}명을 사용자 관리 탭에서 정리해야 합니다.`
                   : '모든 활성 사용자가 부서에 연결되어 있습니다.'}
               </p>
             </div>
-            <div className="rounded-2xl bg-[#F7F8FA] p-4">
-              <p className="text-sm font-semibold text-[#1B1F2B]">공유 정책</p>
-              <p className="mt-1 text-sm text-[#667085]">공유 문서와 코멘트/검토 화면을 기준으로 링크 공유보다 내부 공유와 검토 요청 흐름을 우선 점검합니다.</p>
+            <div className="rounded-2xl bg-surface-secondary p-4">
+              <p className="text-sm font-semibold text-foreground">공유 정책</p>
+              <p className="mt-1 text-sm text-foreground-secondary">공유 문서와 코멘트/검토 화면을 기준으로 링크 공유보다 내부 공유와 검토 요청 흐름을 우선 점검합니다.</p>
             </div>
           </div>
           <div className="mt-5 flex flex-wrap gap-2.5">
-            <Link href="/shared-documents" className="rounded-xl bg-[#1D1D1F] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#2E6FF2] transition-colors">공유 문서</Link>
-            <Link href="/reviews" className="rounded-xl bg-[#F7F8FA] px-4 py-2.5 text-sm font-medium text-[#1B1F2B] hover:bg-[#EEF3FE] hover:text-[#2E6FF2] transition-colors">코멘트/검토</Link>
-            <Link href={buildReportDraftHref()} className="rounded-xl bg-[#F7F8FA] px-4 py-2.5 text-sm font-medium text-[#1B1F2B] hover:bg-[#EEF3FE] hover:text-[#2E6FF2] transition-colors">보고서 흐름</Link>
+            <Link href="/shared-documents" className="rounded-xl bg-foreground px-4 py-2.5 text-sm font-medium text-white hover:bg-primary transition-colors">공유 문서</Link>
+            <Link href="/reviews" className="rounded-xl bg-surface-secondary px-4 py-2.5 text-sm font-medium text-foreground hover:bg-primary-tint hover:text-primary transition-colors">코멘트/검토</Link>
+            <Link href={buildReportDraftHref()} className="rounded-xl bg-surface-secondary px-4 py-2.5 text-sm font-medium text-foreground hover:bg-primary-tint hover:text-primary transition-colors">보고서 흐름</Link>
           </div>
         </div>
       </div>
@@ -179,7 +179,7 @@ export function DepartmentsSection({ departments, onOpenDeptModal, onDeleteDept 
         <h2 className="text-[16px] font-semibold">부서 목록</h2>
         <button
           onClick={() => onOpenDeptModal()}
-          className="flex w-full items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors sm:w-auto"
+          className="flex w-full items-center justify-center gap-2 px-4 py-2 rounded-xl bg-foreground text-white text-sm font-medium hover:bg-primary transition-colors sm:w-auto"
         >
           <Plus size={16} /> 부서 추가
         </button>
@@ -203,8 +203,8 @@ export function DepartmentsSection({ departments, onOpenDeptModal, onDeleteDept 
               <td className="px-6 py-5 text-sm text-muted">{department.description || '-'}</td>
               <td className="px-6 py-5 text-sm font-num">{department.memberCount}명</td>
               <td className="px-6 py-4 text-right">
-                <button onClick={() => onOpenDeptModal(department)} className="p-2 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]"><Pencil size={14} /></button>
-                <button onClick={() => onDeleteDept(department.id)} className="ml-1 p-2 rounded-lg hover:bg-red-50 text-[#6e6e73] hover:text-red-500"><Trash2 size={14} /></button>
+                <button onClick={() => onOpenDeptModal(department)} className="p-2 rounded-lg hover:bg-surface-secondary text-foreground-secondary"><Pencil size={14} /></button>
+                <button onClick={() => onDeleteDept(department.id)} className="ml-1 p-2 rounded-lg hover:bg-red-50 text-foreground-secondary hover:text-red-500"><Trash2 size={14} /></button>
               </td>
             </tr>
           ))}
@@ -244,7 +244,7 @@ export function UsersSection({
         <h2 className="text-[16px] font-semibold">사용자 목록</h2>
         <button
           onClick={() => onOpenUserModal()}
-          className="flex w-full items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors sm:w-auto"
+          className="flex w-full items-center justify-center gap-2 px-4 py-2 rounded-xl bg-foreground text-white text-sm font-medium hover:bg-primary transition-colors sm:w-auto"
         >
           <Plus size={16} /> 사용자 추가
         </button>
@@ -299,14 +299,14 @@ export function UsersSection({
                     <button
                       onClick={() => onSaveUserChanges(user.id)}
                       disabled={savingUserId === user.id}
-                      className="flex items-center gap-1.5 rounded-lg bg-[#0071e3] px-3.5 py-2 text-xs font-medium text-white hover:bg-[#0077ED] transition-colors disabled:opacity-50"
+                      className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-xs font-medium text-white hover:bg-primary transition-colors disabled:opacity-50"
                     >
                       {savingUserId === user.id ? <Spinner size="sm" /> : <Save size={12} />}
                       저장
                     </button>
                   )}
-                  <button onClick={() => onOpenUserModal(user)} className="p-2 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73]"><Pencil size={14} /></button>
-                  <button onClick={() => onDeleteUser(user.id, user.name)} className="p-2 rounded-lg hover:bg-red-50 text-[#6e6e73] hover:text-red-500"><Trash2 size={14} /></button>
+                  <button onClick={() => onOpenUserModal(user)} className="p-2 rounded-lg hover:bg-surface-secondary text-foreground-secondary"><Pencil size={14} /></button>
+                  <button onClick={() => onDeleteUser(user.id, user.name)} className="p-2 rounded-lg hover:bg-red-50 text-foreground-secondary hover:text-red-500"><Trash2 size={14} /></button>
                 </td>
               </tr>
             );
@@ -346,14 +346,14 @@ export function SignatureSection({
         </div>
       ) : sigUrl ? (
         <div className="flex flex-col gap-4">
-          <div className="relative border border-border rounded-xl overflow-hidden bg-[#f5f5f7] flex items-center justify-center" style={{ height: 140 }}>
+          <div className="relative border border-border rounded-xl overflow-hidden bg-surface-secondary flex items-center justify-center" style={{ height: 140 }}>
             <Image src={sigUrl} alt="내 서명" width={320} height={120} unoptimized style={{ maxHeight: 120, maxWidth: '100%', width: 'auto', objectFit: 'contain' }} />
           </div>
           <div className="flex gap-3.5">
             <button
               onClick={() => sigFileRef.current?.click()}
               disabled={sigUploading}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium hover:bg-[#0071e3] transition-colors disabled:opacity-40"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-foreground text-white text-sm font-medium hover:bg-primary transition-colors disabled:opacity-40"
             >
               {sigUploading ? <Spinner size="sm" /> : <Upload size={14} />}
               서명 교체
@@ -369,7 +369,7 @@ export function SignatureSection({
       ) : (
         <div
           onClick={() => sigFileRef.current?.click()}
-          className="border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-[#0071e3] hover:bg-blue-50/30 transition-colors"
+          className="border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-primary hover:bg-blue-50/30 transition-colors"
           style={{ height: 160 }}
         >
           {sigUploading ? (
