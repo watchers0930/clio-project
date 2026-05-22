@@ -13,6 +13,7 @@ interface BulkActionsBarProps {
   onCompanyScope: () => void;
   onDepartmentScope: () => void;
   onBulkReprocess: () => void;
+  onBulkDownload: () => void;
   onBulkDelete: () => void;
   onClearSelection: () => void;
 }
@@ -73,6 +74,7 @@ export function BulkActionsBar({
   onCompanyScope,
   onDepartmentScope,
   onBulkReprocess,
+  onBulkDownload,
   onBulkDelete,
   onClearSelection,
 }: BulkActionsBarProps) {
@@ -89,6 +91,12 @@ export function BulkActionsBar({
         </button>
         <button onClick={onDepartmentScope} className="rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-foreground-secondary transition-colors hover:bg-surface-secondary">
           부서로 변경
+        </button>
+        <button
+          onClick={onBulkDownload}
+          className="rounded-lg border border-primary bg-white px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary-tint"
+        >
+          선택 다운로드
         </button>
         <button
           onClick={onBulkReprocess}
@@ -208,16 +216,14 @@ export function FilesListView({
               </th>
               <th className="px-6 py-5.5 font-medium">파일명</th>
               <th className="hidden px-6 py-5.5 font-medium sm:table-cell">부서</th>
-              <th className="hidden px-6 py-5.5 font-medium md:table-cell">다음 작업</th>
               <th className="hidden px-6 py-5.5 font-medium md:table-cell">크기</th>
               <th className="hidden px-6 py-5.5 font-medium md:table-cell">업로드일</th>
-              <th className="px-6 py-5.5 font-medium">상태</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {paged.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-6 py-14 text-center text-foreground-secondary">검색 결과가 없습니다.</td>
+                <td colSpan={5} className="px-6 py-14 text-center text-foreground-secondary">검색 결과가 없습니다.</td>
               </tr>
             )}
             {paged.map((file) => (
@@ -233,27 +239,8 @@ export function FilesListView({
                   </button>
                 </td>
                 <td className="hidden px-6 py-6 leading-6 text-foreground-secondary sm:table-cell">{file.department}</td>
-                <td className="hidden px-6 py-6 md:table-cell">
-                  <div className="flex flex-wrap gap-2">
-                    <button onClick={() => onOpenSearchFromFile(file)} className="rounded-lg border border-border-tint px-2.5 py-1.5 text-[11px] font-medium text-primary hover:bg-primary-tint transition-colors">
-                      검색
-                    </button>
-                    <button onClick={() => onOpenDocumentsFromFile(file)} className="rounded-lg border border-success/30 px-2.5 py-1.5 text-[11px] font-medium text-success hover:bg-success/5 transition-colors">
-                      생성
-                    </button>
-                    <button onClick={() => onOpenCommentsFromFile(file)} className="rounded-lg border border-purple-200 px-2.5 py-1.5 text-[11px] font-medium text-purple-600 hover:bg-purple-50 transition-colors">
-                      검토
-                    </button>
-                    <button onClick={() => onOpenContractRiskFromFile(file)} className="rounded-lg border border-danger/30 px-2.5 py-1.5 text-[11px] font-medium text-danger hover:bg-danger/5 transition-colors">
-                      리스크
-                    </button>
-                  </div>
-                </td>
                 <td className="hidden px-6 py-6 leading-6 text-foreground-secondary md:table-cell">{file.size}</td>
                 <td className="hidden px-6 py-6 leading-6 text-foreground-secondary md:table-cell">{file.uploadDate}</td>
-                <td className="px-6 py-6">
-                  <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${FILE_STATUS_COLOR[file.status]}`}>{file.status}</span>
-                </td>
               </tr>
             ))}
           </tbody>

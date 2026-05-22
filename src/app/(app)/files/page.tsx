@@ -83,6 +83,7 @@ function FilesPage() {
     handleBulkReprocess,
     handleReprocessAllErrors,
     handleDownload,
+    handleBulkDownload,
     handleScrape,
     closeUploadModal,
     handleOpenFile,
@@ -119,6 +120,7 @@ function FilesPage() {
         onCompanyScope={() => { void bulkChangeScope('company'); }}
         onDepartmentScope={() => { void bulkChangeScope('department'); }}
         onBulkReprocess={() => { void handleBulkReprocess(); }}
+        onBulkDownload={() => { void handleBulkDownload(); }}
         onBulkDelete={() => setBulkConfirmOpen(true)}
         onClearSelection={() => setSelectedIds(new Set())}
       />

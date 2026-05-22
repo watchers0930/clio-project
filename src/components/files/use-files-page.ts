@@ -424,6 +424,33 @@ export function useFilesPage() {
     setTimeout(() => setDownloadToast(null), 2000);
   };
 
+  const handleBulkDownload = async () => {
+    const targets = files.filter((f) => selectedIds.has(f.id));
+    if (targets.length === 0) return;
+    setDownloadToast(`${targets.length}개 파일 다운로드 중...`);
+    for (const file of targets) {
+      try {
+        const res = await fetch(`/api/files/${file.id}/download`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.url) {
+            const a = document.createElement('a');
+            a.href = data.url;
+            a.download = file.name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          }
+        }
+      } catch {
+        // skip individual failures
+      }
+      // small delay between downloads to avoid browser blocking
+      await new Promise((r) => setTimeout(r, 300));
+    }
+    setTimeout(() => setDownloadToast(null), 2000);
+  };
+
   const handleScrape = async () => {
     if (!scrapeUrl.trim() || scrapeLoading) return;
     setScrapeLoading(true);
@@ -543,6 +570,7 @@ export function useFilesPage() {
     handleBulkReprocess,
     handleReprocessAllErrors,
     handleDownload,
+    handleBulkDownload,
     handleScrape,
     closeUploadModal,
     handleOpenFile,
