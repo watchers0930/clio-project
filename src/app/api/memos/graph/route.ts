@@ -36,7 +36,15 @@ function extractWords(text: string): string[] {
   const words = new Set<string>();
   const korean = text.match(/[가-힣]{2,}/g) ?? [];
   const english = text.match(/[a-zA-Z]{3,}/g) ?? [];
-  korean.forEach((w) => words.add(w));
+  korean.forEach((w) => {
+    words.add(w);
+    // 4글자 이상 한글 복합어를 2글자씩 분리 (계정모음 → 계정, 모음)
+    if (w.length >= 4) {
+      for (let i = 0; i <= w.length - 2; i += 2) {
+        words.add(w.slice(i, i + 2));
+      }
+    }
+  });
   english.forEach((w) => words.add(w.toLowerCase()));
   return Array.from(words);
 }
