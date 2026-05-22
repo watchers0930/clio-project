@@ -64,12 +64,12 @@ function Header({
         <div className="flex items-center gap-2 sm:gap-4">
           {/* Search */}
           <div className="relative hidden md:block">
-            <Search size={15} strokeWidth={1.5} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+            <Search size={15} strokeWidth={1.5} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
             <input
               type="text"
               placeholder="검색..."
               className={cn(
-                'w-[220px] h-[42px] pl-[38px] pr-4',
+                'w-[220px] h-[42px] pl-10 pr-4',
                 'rounded-md border border-border bg-page-bg text-sm',
                 'placeholder:text-muted/60',
                 'focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary',
