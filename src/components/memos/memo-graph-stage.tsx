@@ -13,7 +13,6 @@ interface ClusterLabelPosition {
 interface MemoGraphStageProps {
   selectedCount: number;
   hasData: boolean;
-  hasDimensions: boolean;
   graphMode: 'global' | 'local';
   effectiveGraphMode: 'global' | 'local';
   focusNodeId: string | null;
@@ -39,7 +38,6 @@ interface MemoGraphStageProps {
 export function MemoGraphStage({
   selectedCount,
   hasData,
-  hasDimensions,
   graphMode,
   effectiveGraphMode,
   focusNodeId,
@@ -87,7 +85,7 @@ export function MemoGraphStage({
       <div className="absolute inset-0">
         {!hasData ? (
           <div className="flex h-full items-center justify-center text-[13px] text-foreground-quaternary">메모가 없거나 연결된 메모가 없습니다</div>
-        ) : hasDimensions ? graphCanvas : null}
+        ) : graphCanvas}
 
         <div className="absolute bottom-4 left-4 flex flex-wrap items-center gap-2">
           <div

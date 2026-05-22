@@ -410,7 +410,6 @@ export default function MemoGraphView({
       <MemoGraphStage
         selectedCount={selectedIds.size}
         hasData={data.nodes.length > 0}
-        hasDimensions={dimensions.width > 0}
         graphMode={graphMode}
         effectiveGraphMode={effectiveGraphMode}
         focusNodeId={focusNodeId}
@@ -419,7 +418,7 @@ export default function MemoGraphView({
         thresholdControl={<MemoGraphControls threshold={threshold} onChange={setThreshold} />}
         graphCanvas={(
           <div ref={containerRef} className="absolute inset-0">
-            <ForceGraph2D
+            {dimensions.width > 0 && <ForceGraph2D
               ref={fgRef as MutableRefObject<ForceGraphMethods<Record<string, unknown>, Record<string, unknown>> | undefined>}
               graphData={filteredGraphData}
               width={dimensions.width}
@@ -449,7 +448,7 @@ export default function MemoGraphView({
                 labelDirRef.current.set((n as ForceGraphNode).id, dir);
                 if (showClusters) updateClusterLabelPositions();
               }}
-            />
+            />}
           </div>
         )}
         clusterLabelPositions={clusterLabelPositions}
