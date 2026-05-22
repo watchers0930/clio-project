@@ -232,20 +232,18 @@ export function FileSearchTab({
 
         {searched ? <p className="text-[12px] text-foreground-secondary">이번 검색 필터에는 접근 가능한 부서만 표시되며, 선택한 파일 형식은 결과 목록과 후속 액션 제안에 함께 반영됩니다.</p> : null}
 
-        {!searched ? (
-          <div className="flex flex-wrap" style={{ gap: 8 }}>
-            {suggestions.map((suggestion) => (
-              <button
-                key={suggestion}
-                onClick={() => onSuggestionClick(suggestion)}
-                className="rounded-full border border-border bg-surface-secondary text-[14px] text-foreground transition-colors hover:border-primary hover:bg-white"
-                style={{ padding: '10px 18px' }}
-              >
-                {suggestion}
-              </button>
-            ))}
-          </div>
-        ) : null}
+        <div className="flex flex-wrap" style={{ gap: 8 }}>
+          {suggestions.map((suggestion) => (
+            <button
+              key={suggestion}
+              onClick={() => onSuggestionClick(suggestion)}
+              className="rounded-full border border-border bg-surface-secondary text-[14px] text-foreground transition-colors hover:border-primary hover:bg-white"
+              style={{ padding: '10px 18px' }}
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (
