@@ -34,9 +34,9 @@ export function DocumentsPageHeader({
       <div className="flex w-fit gap-1.5 rounded-xl bg-surface-secondary p-1.5">
         <button
           onClick={onOpenCreate}
-          className="flex flex-col items-start rounded-lg px-5 py-3 text-left transition-all text-foreground-secondary hover:bg-white hover:text-foreground hover:shadow-sm"
+          className="flex flex-col items-start rounded-lg px-5 py-3 text-left transition-all bg-white text-foreground shadow-sm"
         >
-          <span className="text-[13px] font-semibold">새문서</span>
+          <span className="text-[13px] font-semibold text-primary">새문서</span>
           <span className="mt-0.5 text-[11px] text-foreground-quaternary">템플릿 기반 문서 생성</span>
         </button>
         <button
