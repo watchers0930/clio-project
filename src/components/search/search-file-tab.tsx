@@ -186,18 +186,12 @@ export function FileSearchTab({
 
       <div className="flex flex-col" style={{ gap: 8 }}>
         <div className="flex flex-wrap items-center" style={{ gap: 22 }}>
-          <label className="flex items-center gap-2 text-[14px] font-medium text-foreground-secondary">
-            부서
-            <select value={department} onChange={(e) => onDepartmentChange(e.target.value)} className="rounded-xl border border-border bg-white text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary" style={{ padding: '10px 18px' }}>
-              {departments.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-[14px] font-medium text-foreground-secondary">
-            파일형식
-            <select value={fileType} onChange={(e) => onFileTypeChange(e.target.value)} className="rounded-xl border border-border bg-white text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary" style={{ padding: '10px 18px' }}>
-              {['전체', 'PDF', 'DOCX', 'PPTX', 'XLSX', 'MD', 'M4A'].map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-          </label>
+          <select value={department} onChange={(e) => onDepartmentChange(e.target.value)} className="rounded-xl border border-border bg-white text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary" style={{ padding: '10px 18px' }}>
+            {departments.map((item) => <option key={item} value={item}>{item === '전체' ? '부서: 전체' : item}</option>)}
+          </select>
+          <select value={fileType} onChange={(e) => onFileTypeChange(e.target.value)} className="rounded-xl border border-border bg-white text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary" style={{ padding: '10px 18px' }}>
+            {['전체', 'PDF', 'DOCX', 'PPTX', 'XLSX', 'MD', 'M4A'].map((item) => <option key={item} value={item}>{item === '전체' ? '파일형식: 전체' : item}</option>)}
+          </select>
         </div>
 
         {searchContext ? (
