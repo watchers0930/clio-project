@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
 import type { FileItem, ScrapeResult } from './types';
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 10;
 const ALLOWED_EXTS = new Set(['pdf', 'docx', 'dotx', 'pptx', 'xlsx', 'hwp', 'hwpx', 'md', 'txt', 'csv']);
 const MAX_SIZE = 50 * 1024 * 1024;
 
