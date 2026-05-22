@@ -37,8 +37,8 @@ interface NavItem {
 const navItems: NavItem[] = [
   { group: 'core', label: '대시보드', href: '/dashboard', icon: LayoutDashboard, description: '문서 운영 현황과 우선순위' },
   { group: 'core', label: '문서허브', href: '/files', icon: FolderOpen, description: '저장, 공유, 반영의 시작점' },
-  { group: 'core', label: 'AI 검색', href: '/search', icon: Search, description: '문서 탐색과 재활용 진입점' },
   { group: 'core', label: '문서 생성', href: '/documents', icon: FilePlus, description: '초안, 검토, 공유까지 연결' },
+  { group: 'core', label: 'AI 검색', href: '/search', icon: Search, description: '문서 탐색과 재활용 진입점' },
   // { group: 'core', label: '코멘트/검토', href: '/reviews', icon: MessageSquareText, description: '미반영 의견과 검토 대기 문서' },
   { group: 'core', label: '공유 문서', href: '/shared-documents', icon: ArrowRightLeft, description: '공유받은 문서와 배포 중 문서' },
   { group: 'collab', label: '메시지', href: '/messages', icon: MessageSquare, badge: true, description: '문서 기반 대화와 공유' },
