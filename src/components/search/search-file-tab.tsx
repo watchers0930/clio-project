@@ -184,71 +184,69 @@ export function FileSearchTab({
         </div>
       </div>
 
-      <div aria-hidden="true" style={{ height: 10 }} />
+      <div className="flex flex-col" style={{ gap: 8 }}>
+        <div className="flex flex-wrap items-center" style={{ gap: 22 }}>
+          <select value={department} onChange={(e) => onDepartmentChange(e.target.value)} className="rounded-xl border border-border bg-white text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary" style={{ padding: '10px 18px' }}>
+            {departments.map((item) => <option key={item}>{item}</option>)}
+          </select>
+          <select value={fileType} onChange={(e) => onFileTypeChange(e.target.value)} className="rounded-xl border border-border bg-white text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary" style={{ padding: '10px 18px' }}>
+            {['전체', 'PDF', 'DOCX', 'PPTX', 'XLSX', 'MD', 'M4A'].map((item) => <option key={item}>{item}</option>)}
+          </select>
+        </div>
 
-      <div className="flex flex-wrap items-center" style={{ gap: 22 }}>
-        <select value={department} onChange={(e) => onDepartmentChange(e.target.value)} className="rounded-xl border border-border bg-white text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary" style={{ padding: '10px 18px' }}>
-          {departments.map((item) => <option key={item}>{item}</option>)}
-        </select>
-        <select value={fileType} onChange={(e) => onFileTypeChange(e.target.value)} className="rounded-xl border border-border bg-white text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary" style={{ padding: '10px 18px' }}>
-          {['전체', 'PDF', 'DOCX', 'PPTX', 'XLSX', 'MD', 'M4A'].map((item) => <option key={item}>{item}</option>)}
-        </select>
-      </div>
-
-      <div aria-hidden="true" style={{ height: 10 }} />
-
-      {searchContext ? (
-        <div
-          className="relative rounded-2xl border border-border-tint bg-primary-tint"
-          style={{
-            paddingLeft: resumeCardLayouts.searchContext.outerPaddingX,
-            paddingRight: resumeCardLayouts.searchContext.outerPaddingX,
-            paddingTop: resumeCardLayouts.searchContext.outerPaddingY,
-            paddingBottom: resumeCardLayouts.searchContext.outerPaddingY,
-          }}
-        >
-          <div className="flex flex-wrap items-center" style={{ gap: resumeCardLayouts.searchContext.chipGap }}>
-            <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-primary">검색 권한 범위</span>
-            <span className="rounded-full border border-border-tint bg-white px-3 py-1 text-[11px] text-foreground-secondary">역할: {searchContext.role}</span>
-            <span className="rounded-full border border-border-tint bg-white px-3 py-1 text-[11px] text-foreground-secondary">기본 부서: {searchContext.departmentName}</span>
-            <span className="rounded-full border border-border-tint bg-white px-3 py-1 text-[11px] text-foreground-secondary">조회 가능 부서: {Math.max(searchContext.availableDepartments.length - 1, 0)}개</span>
-            <span className="rounded-full border border-primary/30 bg-primary-tint px-3 py-1 text-[11px] font-medium text-primary">현재 부서 필터: {department}</span>
-            <span className="rounded-full border border-primary/30 bg-primary-tint px-3 py-1 text-[11px] font-medium text-primary">현재 파일 형식: {fileType}</span>
-          </div>
-          <p className="text-[12px] leading-5 text-foreground-secondary" style={{ marginTop: resumeCardLayouts.searchContext.descriptionMarginTop }}>{searchContext.documentScopeLabel}</p>
-          <p className="text-[12px] leading-5 text-foreground-secondary" style={{ marginTop: resumeCardLayouts.searchContext.descriptionSecondaryMarginTop }}>{searchContext.departmentFilterLabel}</p>
+        {searchContext ? (
           <div
-            className="rounded-xl border border-border-tint bg-white"
+            className="relative rounded-2xl border border-border-tint bg-primary-tint"
             style={{
-              marginTop: resumeCardLayouts.searchContext.helperBoxMarginTop,
-              paddingLeft: resumeCardLayouts.searchContext.helperBoxPaddingX,
-              paddingRight: resumeCardLayouts.searchContext.helperBoxPaddingX,
-              paddingTop: resumeCardLayouts.searchContext.helperBoxPaddingY,
-              paddingBottom: resumeCardLayouts.searchContext.helperBoxPaddingY,
+              paddingLeft: resumeCardLayouts.searchContext.outerPaddingX,
+              paddingRight: resumeCardLayouts.searchContext.outerPaddingX,
+              paddingTop: resumeCardLayouts.searchContext.outerPaddingY,
+              paddingBottom: resumeCardLayouts.searchContext.outerPaddingY,
             }}
           >
-            <p className="text-[12px] font-semibold text-foreground">지금 검색에 적용되는 기준</p>
-            <p className="mt-1 text-[12px] leading-5 text-foreground-secondary">결과는 현재 계정이 접근 가능한 문서 범위 안에서만 계산되며, 위 필터는 그 범위를 다시 좁히는 용도로만 동작합니다.</p>
-          </div>
-        </div>
-      ) : null}
-
-      {searched ? <p className="text-[12px] text-foreground-secondary">이번 검색 필터에는 접근 가능한 부서만 표시되며, 선택한 파일 형식은 결과 목록과 후속 액션 제안에 함께 반영됩니다.</p> : null}
-
-      {!searched ? (
-        <div className="flex flex-wrap" style={{ gap: 8 }}>
-          {suggestions.map((suggestion) => (
-            <button
-              key={suggestion}
-              onClick={() => onSuggestionClick(suggestion)}
-              className="rounded-full border border-border bg-surface-secondary text-[14px] text-foreground transition-colors hover:border-primary hover:bg-white"
-              style={{ padding: '10px 18px' }}
+            <div className="flex flex-wrap items-center" style={{ gap: resumeCardLayouts.searchContext.chipGap }}>
+              <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-primary">검색 권한 범위</span>
+              <span className="rounded-full border border-border-tint bg-white px-3 py-1 text-[11px] text-foreground-secondary">역할: {searchContext.role}</span>
+              <span className="rounded-full border border-border-tint bg-white px-3 py-1 text-[11px] text-foreground-secondary">기본 부서: {searchContext.departmentName}</span>
+              <span className="rounded-full border border-border-tint bg-white px-3 py-1 text-[11px] text-foreground-secondary">조회 가능 부서: {Math.max(searchContext.availableDepartments.length - 1, 0)}개</span>
+              <span className="rounded-full border border-primary/30 bg-primary-tint px-3 py-1 text-[11px] font-medium text-primary">현재 부서 필터: {department}</span>
+              <span className="rounded-full border border-primary/30 bg-primary-tint px-3 py-1 text-[11px] font-medium text-primary">현재 파일 형식: {fileType}</span>
+            </div>
+            <p className="text-[12px] leading-5 text-foreground-secondary" style={{ marginTop: resumeCardLayouts.searchContext.descriptionMarginTop }}>{searchContext.documentScopeLabel}</p>
+            <p className="text-[12px] leading-5 text-foreground-secondary" style={{ marginTop: resumeCardLayouts.searchContext.descriptionSecondaryMarginTop }}>{searchContext.departmentFilterLabel}</p>
+            <div
+              className="rounded-xl border border-border-tint bg-white"
+              style={{
+                marginTop: resumeCardLayouts.searchContext.helperBoxMarginTop,
+                paddingLeft: resumeCardLayouts.searchContext.helperBoxPaddingX,
+                paddingRight: resumeCardLayouts.searchContext.helperBoxPaddingX,
+                paddingTop: resumeCardLayouts.searchContext.helperBoxPaddingY,
+                paddingBottom: resumeCardLayouts.searchContext.helperBoxPaddingY,
+              }}
             >
-              {suggestion}
-            </button>
-          ))}
-        </div>
-      ) : null}
+              <p className="text-[12px] font-semibold text-foreground">지금 검색에 적용되는 기준</p>
+              <p className="mt-1 text-[12px] leading-5 text-foreground-secondary">결과는 현재 계정이 접근 가능한 문서 범위 안에서만 계산되며, 위 필터는 그 범위를 다시 좁히는 용도로만 동작합니다.</p>
+            </div>
+          </div>
+        ) : null}
+
+        {searched ? <p className="text-[12px] text-foreground-secondary">이번 검색 필터에는 접근 가능한 부서만 표시되며, 선택한 파일 형식은 결과 목록과 후속 액션 제안에 함께 반영됩니다.</p> : null}
+
+        {!searched ? (
+          <div className="flex flex-wrap" style={{ gap: 8 }}>
+            {suggestions.map((suggestion) => (
+              <button
+                key={suggestion}
+                onClick={() => onSuggestionClick(suggestion)}
+                className="rounded-full border border-border bg-surface-secondary text-[14px] text-foreground transition-colors hover:border-primary hover:bg-white"
+                style={{ padding: '10px 18px' }}
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
 
       {loading ? (
         <div className="flex flex-col items-center justify-center gap-4 py-20">
