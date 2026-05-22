@@ -45,32 +45,21 @@ export function DocumentsListSection({
 
   return (
     <>
-      <div className="rounded-2xl border border-border bg-white px-5 py-5 sm:px-6 sm:py-6">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <p className="text-[14px] font-semibold text-foreground">문서 목록</p>
-            <p className="mt-1 text-[12px] text-foreground-secondary">열기, 공유, 버전 확인</p>
-          </div>
-          <div className="flex w-full items-center gap-2.5 flex-wrap sm:w-auto sm:justify-end">
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-foreground-secondary">
-              <input
-                type="checkbox"
-                checked={docs.length > 0 && selectedDocIds.size === docs.length}
-                onChange={onToggleSelectAll}
-                className="w-4 h-4 rounded border-border accent-[#0071e3]"
-              />
-              전체 선택
-            </label>
-            {selectedDocIds.size > 0 && (
-              <button onClick={onBulkDelete} className="px-4 py-2.5 rounded-xl text-sm text-danger border border-danger hover:bg-red-50 transition-colors">
-                선택 삭제 ({selectedDocIds.size})
-              </button>
-            )}
-            <button onClick={onDeleteAll} className="px-4 py-2.5 rounded-xl text-sm text-foreground-secondary border border-border hover:bg-surface-secondary transition-colors">
-              전체 삭제
-            </button>
-          </div>
-        </div>
+      <div className="flex items-center gap-[10px]">
+        <input
+          type="checkbox"
+          checked={docs.length > 0 && selectedDocIds.size === docs.length}
+          onChange={onToggleSelectAll}
+          className="w-4 h-4 rounded border-border accent-[#0071e3] cursor-pointer"
+        />
+        {selectedDocIds.size > 0 && (
+          <button onClick={onBulkDelete} className="px-3.5 py-2 rounded-xl text-[13px] text-danger border border-danger hover:bg-red-50 transition-colors">
+            선택 삭제 ({selectedDocIds.size})
+          </button>
+        )}
+        <button onClick={onDeleteAll} className="px-3.5 py-2 rounded-xl text-[13px] text-foreground-secondary border border-border hover:bg-surface-secondary transition-colors">
+          전체 삭제
+        </button>
       </div>
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3" style={{ marginTop: 18 }}>
