@@ -234,7 +234,7 @@ export function FilesListView({
                 <td className="px-6 py-6">
                   <button onClick={() => onOpenFile(file)} className="flex items-center gap-2.5 text-left group">
                     <FileIcon type={file.type} />
-                    <span className="font-medium text-foreground truncate max-w-[700px] group-hover:text-primary transition-colors">{file.name}</span>
+                    <span className="font-medium text-foreground truncate max-w-[630px] group-hover:text-primary transition-colors">{file.name}</span>
                     <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${file.sourceType === 'document' ? 'bg-purple-100 text-purple-700' : (FILE_TYPE_BADGE[file.type] ?? 'bg-gray-100 text-gray-600')}`}>{file.sourceType === 'document' ? 'AI문서' : file.type}</span>
                   </button>
                 </td>
