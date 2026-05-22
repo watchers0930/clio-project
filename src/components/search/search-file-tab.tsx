@@ -186,10 +186,10 @@ export function FileSearchTab({
 
       <div className="flex flex-col" style={{ gap: 8 }}>
         <div className="flex flex-wrap items-center" style={{ gap: 22 }}>
-          <select value={department} onChange={(e) => onDepartmentChange(e.target.value)} className="rounded-xl border border-border bg-white text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary" style={{ padding: '10px 18px' }}>
+          <select value={department} onChange={(e) => onDepartmentChange(e.target.value)} className="rounded-xl border border-border bg-white text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary" style={{ padding: '10px 18px 10px 18px', paddingRight: 36 }}>
             {departments.map((item) => <option key={item} value={item}>{item === '전체' ? '부서' : item}</option>)}
           </select>
-          <select value={fileType} onChange={(e) => onFileTypeChange(e.target.value)} className="rounded-xl border border-border bg-white text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary" style={{ padding: '10px 18px' }}>
+          <select value={fileType} onChange={(e) => onFileTypeChange(e.target.value)} className="rounded-xl border border-border bg-white text-[14px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary" style={{ padding: '10px 18px 10px 18px', paddingRight: 36 }}>
             {['전체', 'PDF', 'DOCX', 'PPTX', 'XLSX', 'MD', 'M4A'].map((item) => <option key={item} value={item}>{item === '전체' ? '파일형식' : item}</option>)}
           </select>
         </div>
