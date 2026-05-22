@@ -114,17 +114,6 @@ function FilesPage() {
     <div className="flex flex-col gap-5 pb-10">
       <FilesHeaderActions />
 
-      <BulkActionsBar
-        selectedCount={selectedIds.size}
-        reprocessableSelectedCount={reprocessableSelectedCount}
-        onCompanyScope={() => { void bulkChangeScope('company'); }}
-        onDepartmentScope={() => { void bulkChangeScope('department'); }}
-        onBulkReprocess={() => { void handleBulkReprocess(); }}
-        onBulkDownload={() => { void handleBulkDownload(); }}
-        onBulkDelete={() => setBulkConfirmOpen(true)}
-        onClearSelection={() => setSelectedIds(new Set())}
-      />
-
       <FilesFilterBar
         search={search}
         resourceFilter={resourceFilter}
@@ -135,32 +124,6 @@ function FilesPage() {
         onResourceFilterChange={(value) => { setResourceFilter(value); setPage(1); }}
         mode="actions-only"
       />
-
-      <section className="rounded-2xl border border-border bg-white shadow-sm">
-        <div className="flex items-center justify-between gap-4 px-6 py-4 sm:px-8">
-          <p className="text-[13px] text-foreground-secondary">문서를 올린 뒤 바로 검색, 생성, 검토 흐름으로 넘기세요.</p>
-          <div className="flex shrink-0 gap-2">
-            <button
-              onClick={() => router.push('/search')}
-              className="h-8 rounded-lg border border-border bg-white px-3 text-[12px] font-medium text-foreground-secondary hover:bg-surface-secondary transition-colors"
-            >
-              AI 검색
-            </button>
-            <button
-              onClick={() => router.push(buildDocumentCreateHref())}
-              className="h-8 rounded-lg bg-foreground px-3 text-[12px] font-medium text-white hover:bg-primary transition-colors"
-            >
-              새 문서
-            </button>
-            <button
-              onClick={() => router.push('/reviews')}
-              className="h-8 rounded-lg border border-border bg-white px-3 text-[12px] font-medium text-foreground-secondary hover:bg-surface-secondary transition-colors"
-            >
-              검토 큐
-            </button>
-          </div>
-        </div>
-      </section>
 
       <div className="flex items-center justify-between gap-3 py-[12px]">
         <p className="text-sm text-foreground-secondary">
@@ -187,6 +150,17 @@ function FilesPage() {
           </button>
         </div>
       </div>
+
+      <BulkActionsBar
+        selectedCount={selectedIds.size}
+        reprocessableSelectedCount={reprocessableSelectedCount}
+        onCompanyScope={() => { void bulkChangeScope('company'); }}
+        onDepartmentScope={() => { void bulkChangeScope('department'); }}
+        onBulkReprocess={() => { void handleBulkReprocess(); }}
+        onBulkDownload={() => { void handleBulkDownload(); }}
+        onBulkDelete={() => setBulkConfirmOpen(true)}
+        onClearSelection={() => setSelectedIds(new Set())}
+      />
 
       {filtered.length === 0 ? (
         <EmptyState title="검색 결과가 없습니다." description="필터를 조정하거나 새 파일을 업로드해보세요." />
