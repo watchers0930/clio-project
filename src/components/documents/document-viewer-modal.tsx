@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { DocumentCommentPanel } from '@/components/documents/DocumentCommentPanel';
 import { DocumentOpsSummary } from '@/components/documents/document-ops-summary';
 import type { DocumentItem } from '@/components/documents/page-types';
+import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
 
 interface DocumentViewerModalProps {
   viewDoc: DocumentItem | null;
@@ -83,9 +85,18 @@ export function DocumentViewerModal({
   onDownloadAiContext,
   onCommentsReflected,
 }: DocumentViewerModalProps) {
+  const [proposalViewMode, setProposalViewMode] = useState<'preview' | 'edit'>('preview');
+
   if (!viewDoc) return null;
 
   const isProposal = viewDoc.template === '제안서';
+  const proposalHtml = isProposal
+    ? renderProposalDocumentHtml({
+        title: isDraft ? editTitle || viewDoc.title : viewDoc.title,
+        content: isDraft ? editContent || viewDoc.content || '' : viewDoc.content || '',
+        createdAt: viewDoc.createdAt,
+      })
+    : '';
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-labelledby="view-doc-title">
@@ -165,7 +176,48 @@ export function DocumentViewerModal({
               onSearchRelated={() => onSearchRelated(viewDoc)}
             />
             <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
-              {isDraft ? (
+              {isProposal ? (
+                <div className="flex h-full min-h-[400px] flex-col gap-3">
+                  {isDraft && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setProposalViewMode('preview')}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                          proposalViewMode === 'preview'
+                            ? 'bg-foreground text-white'
+                            : 'border border-border text-foreground-secondary hover:bg-surface-secondary'
+                        }`}
+                      >
+                        레이아웃 보기
+                      </button>
+                      <button
+                        onClick={() => setProposalViewMode('edit')}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                          proposalViewMode === 'edit'
+                            ? 'bg-foreground text-white'
+                            : 'border border-border text-foreground-secondary hover:bg-surface-secondary'
+                        }`}
+                      >
+                        원문 편집
+                      </button>
+                    </div>
+                  )}
+                  {!isDraft || proposalViewMode === 'preview' ? (
+                    <iframe
+                      title="proposal-preview"
+                      srcDoc={proposalHtml}
+                      className="h-full min-h-[640px] w-full rounded-xl border border-border bg-white"
+                    />
+                  ) : (
+                    <textarea
+                      value={editContent}
+                      onChange={(e) => onChangeContent(e.target.value)}
+                      className="w-full h-full min-h-[400px] text-sm text-foreground leading-relaxed bg-transparent resize-none focus:outline-none font-mono"
+                      placeholder="문서 내용을 편집하세요..."
+                    />
+                  )}
+                </div>
+              ) : isDraft ? (
                 <textarea
                   value={editContent}
                   onChange={(e) => onChangeContent(e.target.value)}

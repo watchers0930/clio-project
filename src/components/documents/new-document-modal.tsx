@@ -4,6 +4,7 @@ import type { DocumentItem, SourceFile, TemplateItem } from '@/components/docume
 import { isWorklogTemplateName, WORKLOG_FIELDS } from '@/lib/templates/worklog';
 import { NewDocumentGeneralStep } from '@/components/documents/new-document-general-step';
 import { DOCUMENT_RELATION_LABELS, TEMPLATE_ICONS } from '@/components/documents/document-page-constants';
+import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
 
 function getAllowedOutputFormats(templateFile: TemplateItem['templateFile'] | null, isContract: boolean) {
   if (isContract) return ['hwpx'] as const;
@@ -140,6 +141,13 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
     return true;
   });
   const relationLabel = DOCUMENT_RELATION_LABELS[originContext ?? ''] ?? null;
+  const generatedProposalHtml = selectedTemplateItem?.name === '제안서' && generatedDoc
+    ? renderProposalDocumentHtml({
+        title: generatedDoc.title,
+        content: generatedDoc.content ?? '',
+        documentInputs,
+      })
+    : '';
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="new-doc-title">
       <div className="mx-4 max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-xl">
@@ -447,10 +455,18 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
                 </div>
               </div>
               {(outputFormat === 'docx' || outputFormat === 'pdf' || outputFormat === 'hwpx') && (
-                <div className="bg-surface-secondary rounded-xl p-4 max-h-60 overflow-y-auto">
-                  <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                    {generatedDoc.content ?? '내용 없음'}
-                  </div>
+                <div className={`bg-surface-secondary rounded-xl p-4 ${selectedTemplateItem?.name === '제안서' ? '' : 'max-h-60 overflow-y-auto'}`}>
+                  {selectedTemplateItem?.name === '제안서' ? (
+                    <iframe
+                      title="generated-proposal-preview"
+                      srcDoc={generatedProposalHtml}
+                      className="h-[480px] w-full rounded-lg border border-border bg-white"
+                    />
+                  ) : (
+                    <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                      {generatedDoc.content ?? '내용 없음'}
+                    </div>
+                  )}
                 </div>
               )}
               {outputFormat === 'xlsx' && generatedOutline && (generatedOutline as { sheets?: { sheetName: string; headers: string[]; rows: unknown[][] }[] }).sheets && (
