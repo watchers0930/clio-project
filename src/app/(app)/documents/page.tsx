@@ -133,6 +133,7 @@ export default function DocumentsPage() {
         fileSearch={state.fileSearch}
         fileDeptFilter={state.fileDeptFilter}
         fileTypeFilter={state.fileTypeFilter}
+        uploadingLocalFiles={state.uploadingLocalFiles}
         templates={state.templates}
         sourceFiles={state.sourceFiles}
         originDocumentId={state.originDocumentId}
@@ -164,6 +165,7 @@ export default function DocumentsPage() {
         onSetFileSearch={state.setFileSearch}
         onSetFileDeptFilter={state.setFileDeptFilter}
         onSetFileTypeFilter={state.setFileTypeFilter}
+        onUploadLocalFiles={state.uploadLocalFiles}
         onDownloadGeneratedFile={state.handleDownloadGeneratedFile}
         onDownloadAiContext={state.handleDownloadAiContext}
       />

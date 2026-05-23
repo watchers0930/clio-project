@@ -5,6 +5,7 @@ import {
   WORKLOG_TEMPLATE_HTML,
   WORKLOG_FIELDS,
 } from '@/lib/templates/worklog';
+import { createProposalTemplateBundle, isProposalTemplateName } from '@/lib/templates/proposal';
 
 export interface TemplateFieldDefinition {
   key: string;
@@ -76,6 +77,10 @@ function parseOutlineSections(outline: string) {
 }
 
 function buildDefaultHtml(name: string, sections: TemplateSectionDefinition[]) {
+  if (isProposalTemplateName(name)) {
+    return createProposalTemplateBundle().layoutHtml;
+  }
+
   if (isWorklogTemplateName(name)) {
     return WORKLOG_TEMPLATE_HTML;
   }
@@ -124,6 +129,28 @@ export function createTemplateBundle(params: {
   outline?: string | null;
   placeholders?: unknown;
 }) {
+  if (isProposalTemplateName(params.name)) {
+    const proposalBundle = createProposalTemplateBundle();
+    const placeholderFields = Array.isArray(params.placeholders)
+      ? params.placeholders
+          .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
+          .map((item, index) => ({
+            key: String(item.key ?? `placeholder_${index + 1}`),
+            label: String(item.label ?? item.key ?? `플레이스홀더 ${index + 1}`),
+            type: 'text' as const,
+            placeholder: typeof item.context === 'string' ? item.context : undefined,
+          }))
+      : [];
+
+    return {
+      ...proposalBundle,
+      fields: [
+        ...proposalBundle.fields,
+        ...placeholderFields.filter((field) => !proposalBundle.fields.some((base) => base.key === field.key)),
+      ],
+    };
+  }
+
   const outline = (params.outline ?? '').trim() || `# ${params.name}\n## 개요\n## 주요 내용\n## 결론`;
   const resolvedOutline = isWorklogTemplateName(params.name) ? WORKLOG_OUTLINE : outline;
   const sections = parseOutlineSections(resolvedOutline);
@@ -163,6 +190,14 @@ export function parseTemplateBundle(rawContent: string | null | undefined, fallb
     try {
       const parsed = JSON.parse(rawContent) as Partial<TemplateBundle>;
       if (parsed?.mode === 'html-template' && parsed.version === 1) {
+        if (isProposalTemplateName(fallback.name)) {
+          return createTemplateBundle({
+            name: fallback.name,
+            description: fallback.description,
+            outline: rawContent,
+            placeholders: fallback.placeholders,
+          });
+        }
         return {
           version: 1 as const,
           mode: 'html-template' as const,

@@ -28,6 +28,7 @@ import {
   resolveVersionFields,
 } from './route-helpers';
 import { getWorklogDocumentTitle, isWorklogTemplateName } from '@/lib/templates/worklog';
+import { isProposalTemplateName } from '@/lib/templates/proposal';
 
 export const maxDuration = 60;
 
@@ -168,6 +169,14 @@ function buildDocumentSummary(params: {
 
 function buildDocumentInputInstructions(documentInputs: Record<string, string>) {
   const lines: string[] = [];
+  const labelMap: Record<string, string> = {
+    demand_org: '수요기관명',
+    proposer_name: '제안사명',
+    project_name: '사업명 또는 과업명',
+    proposal_objective: '제안 목적',
+    scope_summary: '핵심 수행 범위',
+    special_notes: '특기사항 또는 작성 메모',
+  };
 
   const pushLine = (label: string, value: string | undefined) => {
     const trimmed = value?.trim();
@@ -183,7 +192,7 @@ function buildDocumentInputInstructions(documentInputs: Record<string, string>) 
   for (const [key, value] of Object.entries(documentInputs)) {
     if (!value?.trim()) continue;
     if (['report_title', 'subtitle', 'today_work', 'tomorrow_work', 'note'].includes(key)) continue;
-    lines.push(`${key}: ${value.trim()}`);
+    lines.push(`${labelMap[key] ?? key}: ${value.trim()}`);
   }
 
   return lines.length > 0 ? `## 기본 입력값\n${lines.join('\n')}` : '';
@@ -236,6 +245,7 @@ export async function POST(request: NextRequest) {
     const templateContext = await loadTemplateContext(supabase, templateId, customStructure, format);
     const { tmpl, templateBundle, templateName, templateFileText, templateBuffer, templateFileName } = templateContext;
     format = templateContext.format;
+    const isProposalTemplate = isProposalTemplateName(templateName);
 
     if (templateFileName) {
       const ext = templateFileName.split('.').pop()?.toLowerCase() ?? '';
@@ -334,6 +344,7 @@ export async function POST(request: NextRequest) {
     const generationInstructions = [
       enrichedInstructions,
       documentInputInstructions,
+      isProposalTemplate ? '## 제안서 작성 규칙\n입력된 기본정보를 최우선 사실로 사용합니다. 참조 자료를 근거로 공공기관 제출용 제안서를 작성합니다. 확인되지 않은 비용, 일정, 인력 실명은 [확인필요]로 남깁니다.' : '',
       aiAssist ? '## AI 보강 요청\n사용자가 직접 입력하지 않은 항목은 참조 자료와 템플릿 문맥을 바탕으로 자연스럽게 보강합니다. 사실이 불명확한 값은 [확인필요]로 남깁니다.' : '',
       aiAssistPrompt ? `## 추가 AI 보강 지시\n${String(aiAssistPrompt)}` : '',
     ].filter(Boolean).join('\n\n');

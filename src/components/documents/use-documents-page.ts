@@ -61,6 +61,7 @@ export function useDocumentsPage() {
   const [fileSearch, setFileSearch] = useState('');
   const [fileDeptFilter, setFileDeptFilter] = useState('전체');
   const [fileTypeFilter, setFileTypeFilter] = useState('전체');
+  const [uploadingLocalFiles, setUploadingLocalFiles] = useState(false);
   const [shareDocId, setShareDocId] = useState<string | null>(null);
   const [shareDocTitle, setShareDocTitle] = useState('');
   const [selectedDocIds, setSelectedDocIds] = useState<Set<string>>(new Set());
@@ -179,6 +180,39 @@ export function useDocumentsPage() {
     }
   }, []);
 
+  const uploadLocalFiles = useCallback(async (files: FileList | null) => {
+    if (!files?.length) return;
+    setUploadingLocalFiles(true);
+    try {
+      const uploadedIds: string[] = [];
+
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('scope', 'company');
+
+        const res = await fetch('/api/files', { method: 'POST', body: formData });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.data?.id) {
+          throw new Error(data?.error ?? `${file.name} 업로드 실패`);
+        }
+        uploadedIds.push(data.data.id as string);
+      }
+
+      await loadFiles();
+      setSelectedFiles((prev) => {
+        const next = new Set(prev);
+        uploadedIds.forEach((id) => next.add(id));
+        return next;
+      });
+      toast.success(`${uploadedIds.length}개 파일을 업로드하고 참조문서로 선택했습니다.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '로컬 파일 업로드에 실패했습니다.');
+    } finally {
+      setUploadingLocalFiles(false);
+    }
+  }, [loadFiles, toast]);
+
   useEffect(() => {
     loadDocs();
     loadTemplates();
@@ -295,14 +329,17 @@ export function useDocumentsPage() {
     if (step === 3) {
       if (selectedTemplate === '__none__' && !customStructure.trim()) return false;
       const selectedTemplateItem = templates.find((template) => template.id === selectedTemplate);
-      if (isWorklogTemplateName(selectedTemplateItem?.name)) {
-        return ((selectedTemplateItem?.templateFields ?? [...WORKLOG_FIELDS]) as TemplateFieldDefinition[])
-          .filter((field) => field.required)
-          .filter((field) => !field.autoFill && !field.aiAssist)
-          .every((field) => Boolean(documentInputs[field.key]?.trim()));
-      }
-      const hasTitle = Boolean(documentInputs.report_title?.trim());
-      return hasTitle;
+      const resolvedFields = ((selectedTemplateItem?.templateFields
+        ?? (isWorklogTemplateName(selectedTemplateItem?.name) ? [...WORKLOG_FIELDS] : [
+          { key: 'report_title', label: '문서 제목', type: 'text' as const, required: true, placeholder: '예: 2026년 2분기 사업 보고서' },
+          { key: 'subtitle', label: '소제목', type: 'text' as const, placeholder: '예: 경영회의 보고용' },
+        ])) as TemplateFieldDefinition[]);
+
+      const requiredManualFields = resolvedFields
+        .filter((field) => field.required)
+        .filter((field) => !field.autoFill && !field.aiAssist);
+
+      return requiredManualFields.every((field) => Boolean(documentInputs[field.key]?.trim()));
     }
     return true;
   };
@@ -452,8 +489,8 @@ export function useDocumentsPage() {
   };
 
   return {
-    router, loading, docs, showModal, step, selectedTemplate, selectedFiles, instructions, customStructure, documentInputs, aiAssistEnabled, aiAssistPrompt, generating, generatedDoc, outputFormat, generatedDownloadUrl, generatedOutline, contractFormData, dateErrors, fileSearch, fileDeptFilter, fileTypeFilter, shareDocId, shareDocTitle, selectedDocIds, viewDoc, editContent, editTitle, saving, qualityCheckDocId, todoExtractOpen, todoExtractInitial, sttModalOpen, showViewerComments, versionPanelDocId, versionItems, versionLoading, confirmState, templates, sourceFiles, selectedFont, downloadFormat, designPrompt, designPromptLang, loadingDesignPrompt, copiedDesignPrompt, isEdited, isDraft, originDocumentId, originContext, creationContextTitle,
-    loadDocs, setShareDocId, setShareDocTitle, setTodoExtractOpen, setTodoExtractInitial, setSttModalOpen, setShowViewerComments, setQualityCheckDocId, setVersionPanelDocId, setStep, setSelectedTemplate, setSelectedFiles, setInstructions, setCustomStructure, setDocumentInputs, setAiAssistEnabled, setAiAssistPrompt, setOutputFormat, setContractFormData, setFileSearch, setFileDeptFilter, setFileTypeFilter, setEditContent, setEditTitle, setDownloadFormat, setSelectedFont, resetModal, openCreateModal, toggleFile, canNext, handleGenerate, handleDelete, handleBulkDelete, handleDeleteAll, toggleDocSelect, toggleSelectAll, openVersionPanel, openDocModal, handleSave, handleComplete, handleRevertToDraft, handleDesignPrompt, handleCopyDesignPrompt, handleDownload, handleDownloadAiContext, handleViewerClose, handleDownloadGeneratedFile, handleDateInput, closeConfirm, startReuseDocument, openSearchFromDocument,
+    router, loading, docs, showModal, step, selectedTemplate, selectedFiles, instructions, customStructure, documentInputs, aiAssistEnabled, aiAssistPrompt, generating, generatedDoc, outputFormat, generatedDownloadUrl, generatedOutline, contractFormData, dateErrors, fileSearch, fileDeptFilter, fileTypeFilter, uploadingLocalFiles, shareDocId, shareDocTitle, selectedDocIds, viewDoc, editContent, editTitle, saving, qualityCheckDocId, todoExtractOpen, todoExtractInitial, sttModalOpen, showViewerComments, versionPanelDocId, versionItems, versionLoading, confirmState, templates, sourceFiles, selectedFont, downloadFormat, designPrompt, designPromptLang, loadingDesignPrompt, copiedDesignPrompt, isEdited, isDraft, originDocumentId, originContext, creationContextTitle,
+    loadDocs, setShareDocId, setShareDocTitle, setTodoExtractOpen, setTodoExtractInitial, setSttModalOpen, setShowViewerComments, setQualityCheckDocId, setVersionPanelDocId, setStep, setSelectedTemplate, setSelectedFiles, setInstructions, setCustomStructure, setDocumentInputs, setAiAssistEnabled, setAiAssistPrompt, setOutputFormat, setContractFormData, setFileSearch, setFileDeptFilter, setFileTypeFilter, setEditContent, setEditTitle, setDownloadFormat, setSelectedFont, resetModal, openCreateModal, toggleFile, canNext, handleGenerate, handleDelete, handleBulkDelete, handleDeleteAll, toggleDocSelect, toggleSelectAll, openVersionPanel, openDocModal, handleSave, handleComplete, handleRevertToDraft, handleDesignPrompt, handleCopyDesignPrompt, handleDownload, handleDownloadAiContext, handleViewerClose, handleDownloadGeneratedFile, handleDateInput, closeConfirm, startReuseDocument, openSearchFromDocument, uploadLocalFiles,
     handleVersionNew: (docId: string) => { setNewVersionDocId(docId); setVersionPanelDocId(null); openCreateModal(); },
   };
 }

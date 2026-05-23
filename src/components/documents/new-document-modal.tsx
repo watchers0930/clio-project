@@ -37,6 +37,7 @@ interface NewDocumentModalProps {
   fileSearch: string;
   fileDeptFilter: string;
   fileTypeFilter: string;
+  uploadingLocalFiles: boolean;
   templates: TemplateItem[];
   sourceFiles: SourceFile[];
   originDocumentId: string | null;
@@ -62,6 +63,7 @@ interface NewDocumentModalProps {
   onSetFileSearch: (value: string) => void;
   onSetFileDeptFilter: (value: string) => void;
   onSetFileTypeFilter: (value: string) => void;
+  onUploadLocalFiles: (files: FileList | null) => Promise<void>;
   onDownloadGeneratedFile: () => void;
   onDownloadAiContext: (docId: string, lang: 'ko' | 'en') => void;
 }
@@ -87,6 +89,7 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
     fileSearch,
     fileDeptFilter,
     fileTypeFilter,
+    uploadingLocalFiles,
     templates,
     sourceFiles,
     originDocumentId,
@@ -112,6 +115,7 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
     onSetFileSearch,
     onSetFileDeptFilter,
     onSetFileTypeFilter,
+    onUploadLocalFiles,
     onDownloadGeneratedFile,
     onDownloadAiContext,
   } = props;
@@ -212,6 +216,27 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm text-foreground-secondary">참조할 소스 파일을 선택하세요 (선택사항)</p>
                 <span className="text-xs font-medium text-primary">{selectedFiles.size}개 선택됨</span>
+              </div>
+              <div className="rounded-xl border border-border bg-surface-secondary px-4 py-3">
+                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">로컬 파일 추가</p>
+                    <p className="text-xs text-foreground-secondary">문서허브에 없는 파일은 여기서 바로 업로드하고 참조문서로 선택합니다.</p>
+                  </div>
+                  <label className={`inline-flex cursor-pointer items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${uploadingLocalFiles ? 'bg-border text-foreground-secondary' : 'bg-foreground text-white hover:bg-primary'}`}>
+                    <input
+                      type="file"
+                      multiple
+                      className="hidden"
+                      disabled={uploadingLocalFiles}
+                      onChange={(e) => {
+                        void onUploadLocalFiles(e.target.files);
+                        e.currentTarget.value = '';
+                      }}
+                    />
+                    {uploadingLocalFiles ? '업로드 중...' : '로컬 파일 선택'}
+                  </label>
+                </div>
               </div>
               {selectedFiles.size === 0 && (
                 <p className="text-xs text-warning bg-warning/5 px-3.5 py-2.5 rounded-lg">파일 없이도 템플릿 양식 기반으로 문서를 생성할 수 있습니다.</p>

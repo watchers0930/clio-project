@@ -43,6 +43,12 @@ export function buildTemplatePreviewData(bundle: TemplateBundle, name: string) {
     today_work: '주요 실적 정리 및 리스크 검토',
     tomorrow_work: '후속 보고서 정리 및 의사결정안 작성',
     note: '사용자가 직접 입력한 메모나 AI 첨언이 반영됩니다.',
+    demand_org: '한국OO공단',
+    proposer_name: '클리오 주식회사',
+    project_name: '문서 운영 플랫폼 고도화 사업',
+    proposal_objective: '기관의 문서 운영 효율성과 협업 품질을 개선하기 위한 제안 목적이 이 영역에 반영됩니다.',
+    scope_summary: '분석, 설계, 구축, 테스트, 교육, 안정화 등 핵심 수행 범위가 반영됩니다.',
+    special_notes: '기관 요청사항, 제외 범위, 작성 메모가 이 영역에 반영됩니다.',
   };
 
   for (const field of bundle.fields) {

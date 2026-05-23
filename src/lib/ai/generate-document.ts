@@ -8,6 +8,7 @@ import { openai } from '@ai-sdk/openai';
 import type { GenerationResult, OutputFormat } from '@/lib/renderers/types';
 import type { TemplateBundle } from '@/lib/templates/template-schema';
 import { isWorklogTemplateName } from '@/lib/templates/worklog';
+import { isProposalTemplateName } from '@/lib/templates/proposal';
 import {
   MAX_CONTEXT_CHARS,
   MAX_TEMPLATE_FILE_CHARS,
@@ -69,6 +70,7 @@ export async function generateDocumentContent(params: {
   const hasTemplateFile = !!trimmedTemplateFileText;
   const hasTemplateContent = !!templateContent?.trim();
   const hasTemplateBundle = !!templateBundle;
+  const isProposalTemplate = isProposalTemplateName(templateName);
   const systemPrompt = hasTemplateFile
     ? `당신은 계약서/공문서 작성 전문 AI입니다. 한국어로 작성합니다.
 
@@ -79,6 +81,17 @@ export async function generateDocumentContent(params: {
 4. 양식에 없는 내용을 임의로 추가하지 않습니다.
 5. 값을 찾을 수 없는 빈칸은 [미정] 또는 [확인필요]로 표시합니다.
 6. 마크다운 형식으로 출력합니다.`
+    : hasTemplateBundle && isProposalTemplate
+    ? `당신은 공공기관 제출용 제안서 작성 전문 AI입니다. 한국어로 작성합니다.
+
+## 핵심 규칙
+1. 입력된 기본정보 7개를 최우선 사실로 사용합니다.
+2. 제공된 섹션 구조와 순서를 그대로 유지합니다.
+3. 참조 문서가 있으면 이를 근거로 각 섹션을 확장 작성합니다.
+4. 확인되지 않은 기관명, 비용, 일정, 인력 실명은 임의 확정하지 말고 [확인필요]로 남깁니다.
+5. 문체는 공공기관 제출용으로 간결하고 공식적으로 유지합니다.
+6. 불필요한 마케팅 표현, 과장 표현, 추측성 표현을 쓰지 않습니다.
+7. 순수 마크다운만 출력합니다.`
     : hasTemplateBundle
     ? `당신은 한국어 보고서 작성 전문 AI입니다.
 
@@ -120,6 +133,13 @@ export async function generateDocumentContent(params: {
   if (instructions) userPrompt += `## 지시사항\n${instructions}\n\n`;
   userPrompt += hasTemplateFile
     ? `표준양식의 구조를 그대로 유지하면서 "${templateName}" 문서를 완성하세요.`
+    : hasTemplateBundle && isProposalTemplate
+    ? `"${templateName}" 문서를 다음 원칙으로 작성하세요.
+1. H1 제목
+2. 목차
+3. 정의된 각 섹션을 H2로 순서대로 작성
+4. 입력 필드와 참조자료를 바탕으로 공공기관 제출용 제안서를 완성
+5. 불명확한 값은 [확인필요]로 표기`
     : hasTemplateBundle
     ? `"${templateName}" 문서를 다음 순서로 작성하세요.
 1. H1 제목
