@@ -9,6 +9,8 @@ import type { CorporateTheme } from '@/lib/renderers/types';
 import { DEFAULT_THEME } from '@/lib/renderers/types';
 import { injectSignatureDocx, injectSignatureHwpx } from '@/lib/utils/inject-signature';
 import { parseTemplateBundle, type TemplateBundle } from '@/lib/templates/template-schema';
+import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
+import { isProposalTemplateName } from '@/lib/templates/proposal';
 import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
 
 /* ── 한국어 순서 표현(첫째/둘째 등)이 문장 중간에 있으면 앞에 줄바꿈 삽입 ── */
@@ -291,6 +293,7 @@ export async function GET(
     let signatureBuffer: Buffer | null = null;
     let signerName = '';
     let templateBundle: TemplateBundle | null = null;
+    let templateName = '';
     try {
       const adminClient = createAdminSupabaseClient();
       const { data: docMeta } = await adminClient
@@ -306,6 +309,7 @@ export async function GET(
           .eq('id', doc.template_id)
           .maybeSingle();
         if (templateData) {
+          templateName = templateData.name ?? '';
           templateBundle = parseTemplateBundle(templateData.content, {
             name: templateData.name,
             description: templateData.description,
@@ -338,9 +342,30 @@ export async function GET(
       } catch { /* 서명 없으면 그냥 진행 */ }
     }
 
+    const isProposalDocument = isProposalTemplateName(templateName);
+    const proposalPreviewHtml = isProposalDocument
+      ? renderProposalDocumentHtml({
+          title: doc.title,
+          content: doc.content ?? '',
+        })
+      : '';
+
     // storage_path가 있고 inline(미리보기) 요청이면 실제 파일을 PDF로 서빙
     // storage_path가 있고 다운로드 요청이면 실제 파일을 원본 포맷으로 서빙
     if (doc.storage_path) {
+      if (isProposalDocument && (inline || format === 'pdf')) {
+        const proposalBuffer = Buffer.from(proposalPreviewHtml, 'utf-8');
+        return new NextResponse(new Uint8Array(proposalBuffer), {
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Content-Disposition': inline
+              ? `inline; filename*=UTF-8''${encodeURIComponent(`${doc.title}.html`)}`
+              : `attachment; filename*=UTF-8''${encodeURIComponent(`${doc.title}.html`)}`,
+            'Content-Length': String(proposalBuffer.length),
+          },
+        });
+      }
+
       const adminClient = createAdminSupabaseClient();
       const { data: blob, error: dlErr } = await adminClient.storage.from('files').download(doc.storage_path);
       if (!dlErr && blob) {
@@ -469,6 +494,15 @@ export async function GET(
         );
         return new NextResponse(new Uint8Array(errHtml), { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
       }
+      if (isProposalDocument) {
+        const proposalBuffer = Buffer.from(proposalPreviewHtml, 'utf-8');
+        return new NextResponse(new Uint8Array(proposalBuffer), {
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Content-Length': String(proposalBuffer.length),
+          },
+        });
+      }
       // 실제 content → PDF(HTML) 렌더
       const pdfRendered = await renderPdf(content, doc.title, theme, {
         templateBundle,
@@ -492,6 +526,16 @@ export async function GET(
         if (signatureBuffer) rendered = { ...rendered, buffer: injectSignatureHwpx(rendered.buffer, signatureBuffer, signerName) };
         break;
       case 'pdf':
+        if (isProposalDocument) {
+          const proposalBuffer = Buffer.from(proposalPreviewHtml, 'utf-8');
+          return new NextResponse(new Uint8Array(proposalBuffer), {
+            headers: {
+              'Content-Type': 'text/html; charset=utf-8',
+              'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(`${doc.title}.html`)}`,
+              'Content-Length': String(proposalBuffer.length),
+            },
+          });
+        }
         rendered = await renderPdf(content, doc.title, theme, {
           templateBundle,
           documentInputs: { author: signerName },

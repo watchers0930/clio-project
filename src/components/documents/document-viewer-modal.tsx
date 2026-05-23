@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { DocumentCommentPanel } from '@/components/documents/DocumentCommentPanel';
-import { DocumentOpsSummary } from '@/components/documents/document-ops-summary';
 import { HtmlPreviewFrame } from '@/components/documents/html-preview-frame';
 import type { DocumentItem } from '@/components/documents/page-types';
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
@@ -90,7 +89,12 @@ export function DocumentViewerModal({
 
   if (!viewDoc) return null;
 
+  void onReuseDocument;
+  void onSearchRelated;
+  void onOpenMemo;
+
   const isProposal = viewDoc.template === '제안서';
+  const availableDownloadFormats = isProposal ? ['pdf'] : downloadFormatOptions;
   const proposalHtml = isProposal
     ? renderProposalDocumentHtml({
         title: isDraft ? editTitle || viewDoc.title : viewDoc.title,
@@ -164,18 +168,6 @@ export function DocumentViewerModal({
                 </span>
               </div>
             </div>
-            <DocumentOpsSummary
-              documentTitle={viewDoc.title}
-              isDraft={isDraft}
-              versionLabel={(viewDoc.versionNumber ?? 1) > 1 ? `v${viewDoc.versionNumber}` : null}
-              onOpenComments={onToggleComments}
-              onOpenShare={() => onOpenShare(viewDoc)}
-              onOpenVersions={() => onOpenVersions(viewDoc.id)}
-              onReuse={() => onReuseDocument(viewDoc)}
-              onOpenContractRisk={() => onOpenContractRisk(viewDoc)}
-              onOpenMemo={() => onOpenMemo(viewDoc)}
-              onSearchRelated={() => onSearchRelated(viewDoc)}
-            />
             <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
               {isProposal ? (
                 <div className="flex h-full min-h-[400px] flex-col gap-3">
@@ -241,17 +233,15 @@ export function DocumentViewerModal({
             </div>
 
             {isProposal && (
-              <div className="border-t border-border px-4 py-4 shrink-0 sm:px-6 sm:py-5">
-                <div className="flex flex-col gap-2.5">
-                  <div className="flex items-center gap-3.5">
-                    <span className="text-sm font-medium text-foreground">AI 디자인 프롬프트</span>
-                    <span className="text-[10px] px-2.5 py-1 rounded-full bg-gradient-to-r from-primary to-purple-500 text-white font-medium">GenSpark / Gamma / Canva</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2.5">
-                    <button onClick={() => onGenerateDesignPrompt('ko')} disabled={loadingDesignPrompt} className="px-4 py-2.5 rounded-lg text-sm font-medium border border-primary text-primary hover:bg-primary-tint disabled:opacity-50 transition-colors">
+              <div className="border-t border-border px-4 py-3 shrink-0 sm:px-6 sm:py-4">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span className="text-sm font-medium text-foreground">AI 디자인 프롬프트</span>
+                  <span className="text-[10px] px-2 py-1 rounded-full bg-gradient-to-r from-primary to-purple-500 text-white font-medium">GenSpark / Gamma / Canva</span>
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => onGenerateDesignPrompt('ko')} disabled={loadingDesignPrompt} className="px-3 py-2 rounded-lg text-xs font-medium border border-primary text-primary hover:bg-primary-tint disabled:opacity-50 transition-colors">
                       {loadingDesignPrompt && designPromptLang === 'ko' ? '생성 중...' : '국문 프롬프트'}
                     </button>
-                    <button onClick={() => onGenerateDesignPrompt('en')} disabled={loadingDesignPrompt} className="px-4 py-2.5 rounded-lg text-sm font-medium border border-purple-600 text-purple-600 hover:bg-purple-50 disabled:opacity-50 transition-colors">
+                    <button onClick={() => onGenerateDesignPrompt('en')} disabled={loadingDesignPrompt} className="px-3 py-2 rounded-lg text-xs font-medium border border-purple-600 text-purple-600 hover:bg-purple-50 disabled:opacity-50 transition-colors">
                       {loadingDesignPrompt && designPromptLang === 'en' ? 'Generating...' : 'English Prompt'}
                     </button>
                   </div>
@@ -270,18 +260,16 @@ export function DocumentViewerModal({
             )}
 
             {isProposal && (
-              <div className="border-t border-border px-4 py-4 shrink-0 sm:px-6 sm:py-5">
-                <div className="flex flex-col gap-2.5">
-                  <div className="flex items-center gap-3.5">
-                    <span className="text-sm font-medium text-foreground">AI 컨텍스트 다운로드</span>
-                    <span className="text-[10px] px-2.5 py-1 rounded-full bg-gradient-to-r from-[#34c759] to-[#30d158] text-white font-medium">ChatGPT / Gemini / Claude</span>
-                  </div>
-                  <p className="text-xs text-foreground-secondary">다른 AI 도구에서 활용할 수 있는 컨텍스트 파일을 다운로드합니다.</p>
-                  <div className="flex flex-wrap gap-2.5">
-                    <button onClick={() => onDownloadAiContext(viewDoc.id, 'ko')} className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border border-success text-success hover:bg-success/5 transition-colors">
+              <div className="border-t border-border px-4 py-3 shrink-0 sm:px-6 sm:py-4">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span className="text-sm font-medium text-foreground">AI 컨텍스트 다운로드</span>
+                  <span className="text-[10px] px-2 py-1 rounded-full bg-gradient-to-r from-[#34c759] to-[#30d158] text-white font-medium">ChatGPT / Gemini / Claude</span>
+                  <span className="text-xs text-foreground-secondary">다른 AI 도구용 텍스트 파일</span>
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => onDownloadAiContext(viewDoc.id, 'ko')} className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium border border-success text-success hover:bg-success/5 transition-colors">
                       국문 다운로드
                     </button>
-                    <button onClick={() => onDownloadAiContext(viewDoc.id, 'en')} className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border border-success text-success hover:bg-success/5 transition-colors">
+                    <button onClick={() => onDownloadAiContext(viewDoc.id, 'en')} className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium border border-success text-success hover:bg-success/5 transition-colors">
                       English Download
                     </button>
                   </div>
@@ -309,7 +297,7 @@ export function DocumentViewerModal({
                   </button>
                 )}
                 <select value={downloadFormat} onChange={(e) => onChangeDownloadFormat(e.target.value)} className="px-3 py-2.5 rounded-xl border border-border text-sm text-foreground-secondary bg-white">
-                  {downloadFormatOptions.map((format) => <option key={format} value={format}>{format.toUpperCase()}</option>)}
+                  {availableDownloadFormats.map((format) => <option key={format} value={format}>{format.toUpperCase()}</option>)}
                 </select>
                 <select value={selectedFont} onChange={(e) => onChangeSelectedFont(e.target.value)} className="px-3 py-2.5 rounded-xl border border-border text-sm text-foreground-secondary bg-white max-w-[120px]">
                   {fontOptions.map((font) => <option key={font} value={font}>{font}</option>)}

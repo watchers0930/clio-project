@@ -220,6 +220,12 @@ export function useDocumentsPage() {
   }, [loadDocs, loadTemplates, loadFiles]);
 
   useEffect(() => {
+    if (viewDoc?.template === '제안서' && downloadFormat !== 'pdf') {
+      setDownloadFormat('pdf');
+    }
+  }, [viewDoc?.template, downloadFormat]);
+
+  useEffect(() => {
     if (initializedFromQuery || typeof window === 'undefined' || sourceFiles.length === 0) return;
 
     const params = new URLSearchParams(window.location.search);
