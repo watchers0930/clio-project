@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { DocumentCommentPanel } from '@/components/documents/DocumentCommentPanel';
-import { DocumentOpsSummary } from '@/components/documents/document-ops-summary';
 import {
   type DocData,
   DocumentViewerContent,
@@ -65,9 +64,10 @@ export default function DocumentViewerPage() {
   // storage_path 또는 id가 바뀔 때만 재실행 (content 변경 시 HWPX 파일은 동일하므로 재fetch 불필요)
   const docStoragePath = doc?.storage_path ?? null;
   const docIsFileBased = doc ? isFileBased(doc) : false;
+  const isProposalDoc = doc?.template_name === '제안서';
   const docVersionNumber = doc?.version_number ?? 1;
   useEffect(() => {
-    if (!docIsFileBased) {
+    if (!docIsFileBased || isProposalDoc) {
       setFileBlobUrl(null);
       setFileBlobError(false);
       return;
@@ -86,19 +86,21 @@ export default function DocumentViewerPage() {
       })
       .catch(() => { setFileBlobUrl(null); setFileBlobError(true); });
     return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
-  }, [id, docStoragePath, docIsFileBased, docVersionNumber]);
+  }, [id, docStoragePath, docIsFileBased, docVersionNumber, isProposalDoc]);
 
   const handleDownload = async () => {
     if (!doc || downloading) return;
     setDownloading(true);
     try {
-      const res = await fetch(`/api/documents/${id}/download?format=docx&font=맑은 고딕`);
+      const format = doc.template_name === '제안서' ? 'pdf' : 'docx';
+      const extension = doc.template_name === '제안서' ? 'html' : 'docx';
+      const res = await fetch(`/api/documents/${id}/download?format=${format}&font=맑은 고딕`);
       if (!res.ok) { toast.error('다운로드 실패'); return; }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${doc.title}.docx`;
+      a.download = `${doc.title}.${extension}`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
@@ -168,13 +170,15 @@ export default function DocumentViewerPage() {
 
   const handleVersionDownload = async (vId: string, title: string) => {
     try {
-      const res = await fetch(`/api/documents/${vId}/download?format=docx&font=맑은 고딕`);
+      const format = doc?.template_name === '제안서' ? 'pdf' : 'docx';
+      const extension = doc?.template_name === '제안서' ? 'html' : 'docx';
+      const res = await fetch(`/api/documents/${vId}/download?format=${format}&font=맑은 고딕`);
       if (!res.ok) { toast.error('다운로드 실패'); return; }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${title}.docx`;
+      a.download = `${title}.${extension}`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
@@ -217,8 +221,10 @@ export default function DocumentViewerPage() {
 
   if (!doc) return null;
 
+  void handleReuseDocument;
   const isDraft = doc.status === 'draft' || doc.status === '초안';
   const isMeetingDoc = /회의|회의록|meeting/i.test(doc.title ?? '');
+  void isMeetingDoc;
   const navigateToDocument = (docId: string) => router.push(`/documents/${docId}`);
 
   return (
@@ -240,26 +246,10 @@ export default function DocumentViewerPage() {
           onEditDraft={() => router.push('/documents')}
         />
 
-        <DocumentOpsSummary
-          documentTitle={doc.title}
-          isDraft={isDraft}
-          isMeetingDoc={isMeetingDoc}
-          versionLabel={(doc.version_number ?? 1) > 1 ? `v${doc.version_number}` : null}
-          commentMode="panel"
-          onOpenComments={() => {
-            const panel = document.getElementById('document-comment-panel');
-            panel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }}
-          onOpenShare={() => setShareOpen(true)}
-          onOpenVersions={openVersionPanel}
-          onReuse={handleReuseDocument}
-          onExtractTodos={isMeetingDoc ? () => setTodoExtractOpen(true) : undefined}
-          onOpenMemo={() => router.push(`/memos?documentId=${encodeURIComponent(doc.id)}&documentTitle=${encodeURIComponent(doc.title)}`)}
-          onSearchRelated={handleSearchRelated}
-        />
-
         <DocumentViewerOverviewSection doc={doc} isDraft={isDraft} onNavigateDocument={navigateToDocument} />
-        <DocumentViewerOpsSections doc={doc} onNavigateDocument={navigateToDocument} onOpenShare={() => setShareOpen(true)} />
+        {doc.template_name !== '제안서' ? (
+          <DocumentViewerOpsSections doc={doc} onNavigateDocument={navigateToDocument} onOpenShare={() => setShareOpen(true)} />
+        ) : null}
         <DocumentViewerContent
           doc={doc}
           fileBlobUrl={fileBlobUrl}

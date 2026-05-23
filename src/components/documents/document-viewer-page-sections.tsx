@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, Download, GitBranch, Link2, Printer, Search } from 'lucide-react';
 import { Spinner } from '@/components/ui';
+import { HtmlPreviewFrame } from '@/components/documents/html-preview-frame';
+import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
 
 export interface DocData {
   id: string;
@@ -443,6 +445,27 @@ export function DocumentViewerContent({
   authorName,
 }: ContentProps) {
   const fileBased = isFileBased(doc);
+  const isProposal = doc.template_name === '제안서';
+
+  if (isProposal) {
+    const proposalHtml = renderProposalDocumentHtml({
+      title: doc.title,
+      content: doc.content ?? '',
+      createdAt: doc.created_at?.split('T')[0],
+    });
+
+    return (
+      <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-white">
+        <div className="min-h-0 flex-1 p-4 sm:p-5">
+          <HtmlPreviewFrame
+            title={doc.title}
+            html={proposalHtml}
+            className="h-full min-h-[720px] w-full rounded-xl border border-border bg-white"
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (fileBased) {
     return (
