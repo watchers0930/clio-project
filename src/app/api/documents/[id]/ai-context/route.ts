@@ -130,5 +130,14 @@ Create a professional proposal based on the content above.
     ? `${title}_AI컨텍스트_국문.txt`
     : `${title}_AI_Context_EN.txt`;
 
-  return NextResponse.json({ context, lang, fileName });
+  const encodedFileName = encodeURIComponent(fileName);
+
+  return new NextResponse(context, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Content-Disposition': `attachment; filename*=UTF-8''${encodedFileName}`,
+      'Cache-Control': 'no-store',
+    },
+  });
 }

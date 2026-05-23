@@ -37,6 +37,20 @@ export function useDocumentViewerActions({
   const [loadingDesignPrompt, setLoadingDesignPrompt] = useState(false);
   const [copiedDesignPrompt, setCopiedDesignPrompt] = useState(false);
 
+  const triggerBrowserDownload = (blob: Blob, fileName: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    window.setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 1000);
+  };
+
   const openDocModal = useCallback((doc: Document) => {
     setViewDoc(doc);
     setEditContent(doc.content ?? '');
@@ -190,14 +204,7 @@ export function useDocumentViewerActions({
       if (!res.ok) throw new Error('다운로드 실패');
 
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${doc.title}.${downloadFormat}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      triggerBrowserDownload(blob, `${doc.title}.${downloadFormat}`);
     } catch {
       toast.error('다운로드에 실패했습니다.');
     }
@@ -216,14 +223,15 @@ export function useDocumentViewerActions({
         return;
       }
 
-      const { context, fileName } = await res.json();
-      const blob = new Blob([context], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      a.click();
-      URL.revokeObjectURL(url);
+      const blob = await res.blob();
+      const disposition = res.headers.get('Content-Disposition') ?? '';
+      const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+      const basicMatch = disposition.match(/filename="?([^"]+)"?/i);
+      const fileName = utf8Match?.[1]
+        ? decodeURIComponent(utf8Match[1])
+        : (basicMatch?.[1] ?? (lang === 'ko' ? 'AI_컨텍스트_국문.txt' : 'AI_Context_EN.txt'));
+
+      triggerBrowserDownload(blob, fileName);
     } catch {
       toast.error(lang === 'ko' ? '다운로드 실패' : 'Download failed');
     }
