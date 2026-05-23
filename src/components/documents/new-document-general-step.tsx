@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { createTemplateBundle } from '@/lib/templates/template-schema';
 import { renderTemplatePreviewHtml } from '@/lib/templates/template-preview';
 import type { TemplateItem } from '@/components/documents/page-types';
@@ -57,6 +58,7 @@ export function NewDocumentGeneralStep({
   onSetAiAssistPrompt,
   onSetCustomStructure,
 }: NewDocumentGeneralStepProps) {
+  const [previewOpen, setPreviewOpen] = useState(false);
   const previewBaseBundle = selectedTemplateItem
     ? createTemplateBundle({
         name: selectedTemplateItem.name,
@@ -81,7 +83,8 @@ export function NewDocumentGeneralStep({
   const aiFields = templateFields.filter((field) => field.aiAssist);
 
   return (
-    <div className="grid md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-6">
+    <>
+    <div className="grid md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-6">
       <div className="space-y-5">
         <div>
           <p className="text-sm font-medium text-foreground" style={{ marginBottom: 8 }}>{isWorklogTemplate ? '수동 입력' : '문서 기본 정보'}</p>
@@ -181,6 +184,23 @@ export function NewDocumentGeneralStep({
       </div>
 
       <div className="space-y-5">
+        {selectedTemplateItem && (
+          <div className="rounded-2xl border border-border bg-surface-secondary px-4 py-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-sm font-medium text-foreground">템플릿 양식 미리보기</p>
+                <p className="mt-1 text-xs text-foreground-secondary">새 문서 미리보기는 팝업에서 확인합니다.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(true)}
+                className="inline-flex items-center justify-center rounded-xl bg-foreground px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary"
+              >
+                미리보기 열기
+              </button>
+            </div>
+          </div>
+        )}
         <div className="flex flex-col h-full">
           <p className="text-sm text-foreground-secondary" style={{ marginBottom: 10 }}>추가 지시사항 (선택)</p>
           <textarea
@@ -228,27 +248,41 @@ export function NewDocumentGeneralStep({
           </div>
         )}
       </div>
-
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-foreground">템플릿 양식 미리보기</p>
-          <p className="text-xs text-foreground-secondary">입력값은 생성 시 양식 기준으로 반영됩니다.</p>
-        </div>
-        {selectedTemplateItem ? (
-          <div className="rounded-2xl border border-border bg-surface-secondary p-3">
-            <iframe
-              title="selected-template-preview"
-              src={previewSrc}
-              srcDoc={previewSrc ? undefined : previewDoc}
-              className="h-[720px] w-full rounded-xl border border-border bg-white"
-            />
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-border bg-surface-tertiary px-4 py-10 text-center text-sm text-foreground-secondary">
-            직접 작성 문서는 템플릿 양식 미리보기가 없습니다.
-          </div>
-        )}
-      </div>
     </div>
+    {previewOpen && selectedTemplateItem && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="new-doc-template-preview-title">
+        <div className="mx-4 flex max-h-[88vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
+          <div className="flex items-center justify-between border-b border-border px-6 py-5">
+            <div>
+              <h2 id="new-doc-template-preview-title" className="text-lg font-semibold text-foreground">{selectedTemplateItem.name}</h2>
+              <p className="mt-1 text-sm text-foreground-secondary">{selectedTemplateItem.description || '템플릿 미리보기'}</p>
+            </div>
+            <button onClick={() => setPreviewOpen(false)} className="rounded-lg p-1 text-foreground-secondary hover:bg-surface-secondary">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            <div className="rounded-2xl border border-border bg-surface-secondary p-3">
+              <iframe
+                title="selected-template-preview-modal"
+                src={previewSrc}
+                srcDoc={previewSrc ? undefined : previewDoc}
+                className="h-[720px] w-full rounded-xl border border-border bg-white"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end border-t border-border px-6 py-4">
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(false)}
+              className="rounded-xl border border-border px-5 py-2.5 text-sm text-foreground-secondary transition-colors hover:bg-surface-secondary"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
