@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { DocumentCommentPanel } from '@/components/documents/DocumentCommentPanel';
 import { DocumentOpsSummary } from '@/components/documents/document-ops-summary';
+import { HtmlPreviewFrame } from '@/components/documents/html-preview-frame';
 import type { DocumentItem } from '@/components/documents/page-types';
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
 
@@ -203,9 +204,9 @@ export function DocumentViewerModal({
                     </div>
                   )}
                   {!isDraft || proposalViewMode === 'preview' ? (
-                    <iframe
+                    <HtmlPreviewFrame
                       title="proposal-preview"
-                      srcDoc={proposalHtml}
+                      html={proposalHtml}
                       className="h-full min-h-[640px] w-full rounded-xl border border-border bg-white"
                     />
                   ) : (

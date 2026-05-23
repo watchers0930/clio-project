@@ -1,4 +1,5 @@
 import { Spinner } from '@/components/ui';
+import { HtmlPreviewFrame } from '@/components/documents/html-preview-frame';
 import { getContractSchema } from '@/lib/contract-fields';
 import type { DocumentItem, SourceFile, TemplateItem } from '@/components/documents/page-types';
 import { isWorklogTemplateName, WORKLOG_FIELDS } from '@/lib/templates/worklog';
@@ -457,9 +458,9 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
               {(outputFormat === 'docx' || outputFormat === 'pdf' || outputFormat === 'hwpx') && (
                 <div className={`bg-surface-secondary rounded-xl p-4 ${selectedTemplateItem?.name === '제안서' ? '' : 'max-h-60 overflow-y-auto'}`}>
                   {selectedTemplateItem?.name === '제안서' ? (
-                    <iframe
+                    <HtmlPreviewFrame
                       title="generated-proposal-preview"
-                      srcDoc={generatedProposalHtml}
+                      html={generatedProposalHtml}
                       className="h-[480px] w-full rounded-lg border border-border bg-white"
                     />
                   ) : (
