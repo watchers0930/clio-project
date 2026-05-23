@@ -225,13 +225,14 @@ export default function DocumentViewerPage() {
   const isDraft = doc.status === 'draft' || doc.status === '초안';
   const isMeetingDoc = /회의|회의록|meeting/i.test(doc.title ?? '');
   void isMeetingDoc;
+  const isProposalPage = doc.template_name === '제안서';
   const navigateToDocument = (docId: string) => router.push(`/documents/${docId}`);
 
   return (
-    <div className="flex flex-col gap-4 bg-surface-secondary p-4 lg:min-h-full lg:flex-row lg:gap-[20px] lg:p-[20px]">
+    <div className={`bg-surface-secondary p-4 lg:p-[20px] ${isProposalPage ? 'min-h-full' : 'flex flex-col gap-4 lg:min-h-full lg:flex-row lg:gap-[20px]'}`}>
 
       {/* ── 좌측: 문서 뷰어 ── */}
-      <div className="flex min-w-0 flex-1 flex-col gap-4 lg:gap-[20px]">
+      <div className={`min-w-0 flex-1 ${isProposalPage ? 'mx-auto flex max-w-[1280px] flex-col gap-4' : 'flex flex-col gap-4 lg:gap-[20px]'}`}>
         <DocumentViewerHeader
           doc={doc}
           isDraft={isDraft}
@@ -246,8 +247,10 @@ export default function DocumentViewerPage() {
           onEditDraft={() => router.push('/documents')}
         />
 
-        <DocumentViewerOverviewSection doc={doc} isDraft={isDraft} onNavigateDocument={navigateToDocument} />
-        {doc.template_name !== '제안서' ? (
+        {!isProposalPage ? (
+          <DocumentViewerOverviewSection doc={doc} isDraft={isDraft} onNavigateDocument={navigateToDocument} />
+        ) : null}
+        {!isProposalPage ? (
           <DocumentViewerOpsSections doc={doc} onNavigateDocument={navigateToDocument} onOpenShare={() => setShareOpen(true)} />
         ) : null}
         <DocumentViewerContent
@@ -261,15 +264,17 @@ export default function DocumentViewerPage() {
       </div>
 
       {/* ── 우측: 댓글 패널 (항상 표시) ── */}
-      <div id="document-comment-panel" className="w-full lg:w-[340px] flex-shrink-0 self-start overflow-hidden rounded-2xl border border-border bg-white">
-        <DocumentCommentPanel
-          documentId={id}
-          inline
-          documentContent={doc?.content ?? ''}
-          onClose={() => router.push('/documents')}
-          onReflected={() => fetchDoc()}
-        />
-      </div>
+      {!isProposalPage ? (
+        <div id="document-comment-panel" className="w-full lg:w-[340px] flex-shrink-0 self-start overflow-hidden rounded-2xl border border-border bg-white">
+          <DocumentCommentPanel
+            documentId={id}
+            inline
+            documentContent={doc?.content ?? ''}
+            onClose={() => router.push('/documents')}
+            onReflected={() => fetchDoc()}
+          />
+        </div>
+      ) : null}
 
       {/* 버전 패널 */}
       {versionPanelOpen && (
