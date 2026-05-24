@@ -168,7 +168,7 @@ export async function generateDocumentContent(params: {
     : `"${templateName}" 문서를 완성하세요.`;
 
   const model = isProposalTemplate
-    ? anthropic('claude-sonnet-4-5-20250514')
+    ? anthropic('claude-sonnet-4-6')
     : openai('gpt-4o');
 
   const { text } = await generateText({
