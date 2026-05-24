@@ -52,7 +52,7 @@ async function generateProposalBySections(params: {
 6. **이 섹션을 최대한 충실하고 상세하게** 작성합니다. 분량 제한 없이 평가위원이 납득할 깊이를 확보합니다.
 7. 각 H3 항목은 서술형(4~8문단)으로 전개합니다. 배경→현황→방안→기대효과 흐름을 따릅니다.
 8. 표가 적절한 곳에는 5~8행의 상세 표를 포함합니다.
-9. Mermaid 다이어그램을 적극 활용합니다 (아키텍처 graph TD, 흐름 graph LR 등).
+9. Mermaid 다이어그램을 적극 활용합니다. 기본 방향은 가로(graph LR), 노드 5개 이상이면 두 줄로 분리합니다.
 10. AS-IS 분석은 수치화, 기대효과는 정량적 KPI, 차별점은 구체적 비교로 서술합니다.`;
 
   const sectionPromises = templateBundle.sections.map(async (section) => {
@@ -185,7 +185,7 @@ export async function generateDocumentContent(params: {
 ## 섹션 3 "수행 범위 및 세부 내용" 규칙
 - **3.1 WBS 표**: 대분류-중분류-소분류-산출물-비고 5열, 10행 이상.
 - **3.2 세부 수행 내용**: 핵심 모듈을 ####(H4)로 분리, 모듈마다 기능 목록 표 + Mermaid 플로우차트(\`\`\`mermaid graph LR)로 처리 흐름을 표현합니다.
-- **3.3 시스템 구성도**: Mermaid 플로우차트(graph TD)로 아키텍처를 표현합니다. \`\`\`mermaid 코드블록을 사용합니다.
+- **3.3 시스템 구성도**: Mermaid 플로우차트(graph LR)로 아키텍처를 표현합니다. \`\`\`mermaid 코드블록을 사용합니다.
 - **3.4 데이터 흐름**: Mermaid 플로우차트(graph LR)로 데이터 흐름을 표현합니다. \`\`\`mermaid 코드블록 + 외부 연동 표를 포함합니다.
 - **3.5 기능 요구사항 매트릭스**: 요구사항ID/분류/요구사항명/우선순위/관련모듈 5열, 7행 이상.
 
@@ -197,12 +197,19 @@ export async function generateDocumentContent(params: {
 ## 다이어그램 활용 규칙
 - Mermaid 다이어그램을 **적극적으로 활용**합니다. 다음 섹션에 반드시 포함합니다:
   - 2.3 추진 방향: AS-IS → TO-BE 전환 흐름 (graph LR)
-  - 2.4 핵심 성공 요인: CSF 간 관계도 (graph TD)
+  - 2.4 핵심 성공 요인: CSF 간 관계도 (graph LR)
   - 3.2 세부 수행 내용: 모듈별 처리 흐름 (graph LR)
-  - 3.3 시스템 구성도: 전체 아키텍처 (graph TD)
+  - 3.3 시스템 구성도: 전체 아키텍처 (graph LR)
   - 3.4 데이터 흐름: 시스템 간 데이터 흐름 (graph LR)
   - 4.1 수행 방법론: 방법론 단계 흐름 (graph LR)
-  - 5.1 수행 조직: 조직도 (graph TD)
+  - 5.1 수행 조직: 조직도 (graph LR)
+- **방향 규칙**: 기본은 **가로(graph LR)**를 사용합니다. 세로(graph TD)는 계층이 3단 이상일 때만 사용합니다.
+- **가독성 규칙**: 노드가 5개 이상이면 중간에 줄바꿈 노드를 두어 두 줄로 분리합니다. 예시:
+  \`\`\`mermaid
+  graph LR
+    A[분석] --> B[설계] --> C[개발]
+    C --> D[테스트] --> E[배포]
+  \`\`\`
 - 모든 다이어그램은 \`\`\`mermaid 코드블록을 사용합니다.
 
 ## 핵심 성공 요인(CSF) 작성 규칙
