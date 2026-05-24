@@ -16,6 +16,8 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
+    const templateId = searchParams.get('templateId');
+    const limit = searchParams.get('limit');
 
     const supabase = await createServerSupabaseClient();
     if (!supabase) {
@@ -39,6 +41,12 @@ export async function GET(request: NextRequest) {
 
     if (status) {
       query = query.eq('status', status);
+    }
+    if (templateId) {
+      query = query.eq('template_id', templateId);
+    }
+    if (limit) {
+      query = query.limit(Number(limit));
     }
 
     const { data: rows, error } = await query;

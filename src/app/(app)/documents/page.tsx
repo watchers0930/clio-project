@@ -132,6 +132,9 @@ export default function DocumentsPage() {
         originDocumentId={state.originDocumentId}
         originContext={state.originContext}
         creationContextTitle={state.creationContextTitle}
+        referenceDocId={state.referenceDocId}
+        referenceDocuments={state.referenceDocuments}
+        onSetReferenceDocId={state.setReferenceDocId}
         onClose={state.resetModal}
         onBack={() => {
           if (state.step === 1 || state.step === 5) state.resetModal();

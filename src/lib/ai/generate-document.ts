@@ -20,14 +20,49 @@ import {
   generatePptxReplacements,
 } from './generate-document-helpers';
 
+/**
+ * 참조 제안서의 섹션 제목에서 번호를 제거한 키워드로 매칭.
+ * 예: "1. 제안 개요" → 참조 문서의 "1. 제안 개요" 또는 "제안 개요" 매칭
+ */
+function findMatchingReference(
+  referenceSections: Map<string, string> | undefined,
+  sectionTitle: string,
+): string | null {
+  if (!referenceSections?.size) return null;
+
+  // 정확히 일치하는 경우
+  if (referenceSections.has(sectionTitle)) {
+    return referenceSections.get(sectionTitle) ?? null;
+  }
+
+  // 번호 제거 후 매칭 (양쪽 모두)
+  const normalize = (t: string) => t.replace(/^\d+\.\s*/, '').trim();
+  const normalizedTarget = normalize(sectionTitle);
+
+  for (const [key, value] of referenceSections) {
+    if (normalize(key) === normalizedTarget) return value;
+  }
+
+  // 부분 키워드 매칭
+  for (const [key, value] of referenceSections) {
+    const normalizedKey = normalize(key);
+    if (normalizedTarget.includes(normalizedKey) || normalizedKey.includes(normalizedTarget)) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
 async function generateProposalBySections(params: {
   templateName: string;
   templateBundle: TemplateBundle;
   sourceChunks: string[];
   instructions?: string;
   documentInputs?: Record<string, string>;
+  referenceSections?: Map<string, string>;
 }): Promise<string> {
-  const { templateBundle, sourceChunks, instructions, documentInputs } = params;
+  const { templateBundle, sourceChunks, instructions, documentInputs, referenceSections } = params;
   const model = openai('gpt-4o');
 
   let contextText = '';
@@ -56,10 +91,12 @@ async function generateProposalBySections(params: {
 10. AS-IS 분석은 수치화, 기대효과는 정량적 KPI, 차별점은 구체적 비교로 서술합니다.`;
 
   const sectionPromises = templateBundle.sections.map(async (section) => {
+    const refContent = findMatchingReference(referenceSections, section.title);
     const sectionSystem = `${sharedSystem}\n\n## 현재 작성 섹션: ${section.title}\n\n## 작성 지시\n${section.prompt}`;
     const sectionUser = [
       `## 기본정보\n${fieldValues}`,
       `## 참조 자료\n${contextText || '(참조 자료 없음)'}`,
+      refContent ? `## 참조 제안서 (형식 가이드)\n아래는 이전에 작성된 우수 제안서의 해당 섹션입니다. **이 형식과 구조(표 형태, 다이어그램 패턴, 문단 구성, 문체)를 참고**하되, 내용은 위 기본정보와 참조 자료를 기반으로 새로 작성하세요.\n\n${refContent}` : '',
       instructions ? `## 추가 지시사항\n${instructions}` : '',
       `"${section.title}" 섹션을 작성하세요.`,
       '- ## (H2) 제목 없이 ### (H3) 하위 항목부터 바로 시작합니다.',
@@ -97,8 +134,9 @@ export async function generateDocumentContent(params: {
   sourceChunks: string[];
   instructions?: string;
   documentInputs?: Record<string, string>;
+  referenceSections?: Map<string, string>;
 }): Promise<string> {
-  const { templateName, templateContent, templateBundle, templateFileText, sourceChunks, instructions, documentInputs } = params;
+  const { templateName, templateContent, templateBundle, templateFileText, sourceChunks, instructions, documentInputs, referenceSections } = params;
   if (isWorklogTemplateName(templateName)) {
     const reportDate = documentInputs?.report_date || '';
     const author = documentInputs?.author || '';
@@ -132,6 +170,7 @@ export async function generateDocumentContent(params: {
       sourceChunks,
       instructions,
       documentInputs,
+      referenceSections,
     });
   }
 
@@ -314,6 +353,7 @@ export async function generateForFormat(params: {
   sourceChunks: string[];
   instructions?: string;
   documentInputs?: Record<string, string>;
+  referenceSections?: Map<string, string>;
 }): Promise<GenerationResult> {
   const { format, templateName, ...rest } = params;
   const title = templateName;
@@ -382,6 +422,7 @@ export async function generateForFormat(params: {
             sourceChunks: rest.sourceChunks,
             instructions: rest.instructions,
             documentInputs: rest.documentInputs,
+            referenceSections: rest.referenceSections,
           });
         }
         result.templateBundle = rest.templateBundle;
@@ -399,6 +440,7 @@ export async function generateForFormat(params: {
           sourceChunks: rest.sourceChunks,
           instructions: rest.instructions,
           documentInputs: rest.documentInputs,
+          referenceSections: rest.referenceSections,
         }),
         templateBundle: rest.templateBundle,
         documentInputs: rest.documentInputs,
@@ -424,6 +466,7 @@ export async function generateForFormat(params: {
               sourceChunks: rest.sourceChunks,
               instructions: rest.instructions,
               documentInputs: rest.documentInputs,
+              referenceSections: rest.referenceSections,
             });
           }
           hwpxResult.templateBundle = rest.templateBundle;
@@ -442,6 +485,7 @@ export async function generateForFormat(params: {
           sourceChunks: rest.sourceChunks,
           instructions: rest.instructions,
           documentInputs: rest.documentInputs,
+          referenceSections: rest.referenceSections,
         }),
         templateBundle: rest.templateBundle,
         documentInputs: rest.documentInputs,
@@ -459,6 +503,7 @@ export async function generateForFormat(params: {
           sourceChunks: rest.sourceChunks,
           instructions: rest.instructions,
           documentInputs: rest.documentInputs,
+          referenceSections: rest.referenceSections,
         }),
         templateBundle: rest.templateBundle,
         documentInputs: rest.documentInputs,

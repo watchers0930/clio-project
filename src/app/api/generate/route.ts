@@ -21,6 +21,7 @@ import {
   buildInstructionMeta,
   buildDocumentInsertPayload,
   buildTheme,
+  loadReferenceContent,
   loadSourceChunks,
   loadTemplateContext,
   loadUserGenerationContext,
@@ -215,6 +216,7 @@ export async function POST(request: NextRequest) {
       documentInputs,
       aiAssist = false,
       aiAssistPrompt,
+      referenceDocId,
     } = body;
 
     const theme = buildTheme(font);
@@ -246,6 +248,12 @@ export async function POST(request: NextRequest) {
     const { tmpl, templateBundle, templateName, templateFileText, templateBuffer, templateFileName } = templateContext;
     format = templateContext.format;
     const isProposalTemplate = isProposalTemplateName(templateName);
+
+    // 참조 제안서 콘텐츠 로드
+    let referenceSections: Map<string, string> | null = null;
+    if (referenceDocId && isProposalTemplate) {
+      referenceSections = await loadReferenceContent(supabase, referenceDocId);
+    }
 
     if (templateFileName) {
       const ext = templateFileName.split('.').pop()?.toLowerCase() ?? '';
@@ -359,6 +367,7 @@ export async function POST(request: NextRequest) {
       sourceChunks,
       instructions: generationInstructions,
       documentInputs: resolvedDocumentInputs,
+      referenceSections: referenceSections ?? undefined,
     });
 
     const dateStr = todayStr;

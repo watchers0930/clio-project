@@ -221,6 +221,48 @@ export async function loadTemplateContext(
   return { tmpl, templateBundle, templateName, templateFileText, templateBuffer, templateFileName, format: resolvedFormat };
 }
 
+/**
+ * 참조 제안서의 마크다운 콘텐츠를 ## 기준으로 섹션 분리하여 반환.
+ * 섹션당 최대 3,000자로 절삭하여 토큰 예산을 관리합니다.
+ */
+export async function loadReferenceContent(
+  supabase: SupabaseClient,
+  referenceDocId: string,
+): Promise<Map<string, string> | null> {
+  const { data } = await supabase
+    .from('documents')
+    .select('content')
+    .eq('id', referenceDocId)
+    .single();
+
+  if (!data?.content) return null;
+
+  // PROPOSAL_INPUTS 코멘트 제거
+  const content = (data.content as string).replace(/<!--PROPOSAL_INPUTS:.*?-->\n?/, '');
+  const sections = new Map<string, string>();
+  const lines = content.split('\n');
+  let currentTitle = '';
+  let currentBody: string[] = [];
+
+  for (const line of lines) {
+    const h2Match = line.match(/^##\s+(.+)/);
+    if (h2Match) {
+      if (currentTitle) {
+        sections.set(currentTitle, currentBody.join('\n').slice(0, 3000));
+      }
+      currentTitle = h2Match[1].trim();
+      currentBody = [];
+    } else {
+      currentBody.push(line);
+    }
+  }
+  if (currentTitle) {
+    sections.set(currentTitle, currentBody.join('\n').slice(0, 3000));
+  }
+
+  return sections.size > 0 ? sections : null;
+}
+
 export function buildInstructionMeta(userName: string, userDept: string, instructions?: string) {
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;

@@ -6,6 +6,7 @@ import { isWorklogTemplateName, WORKLOG_FIELDS } from '@/lib/templates/worklog';
 import { NewDocumentGeneralStep } from '@/components/documents/new-document-general-step';
 import { DOCUMENT_RELATION_LABELS, TEMPLATE_ICONS } from '@/components/documents/document-page-constants';
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
+import { ReferenceDocumentPicker } from '@/components/documents/reference-document-picker';
 
 function getAllowedOutputFormats(templateFile: TemplateItem['templateFile'] | null, isContract: boolean) {
   if (isContract) return ['hwpx'] as const;
@@ -45,6 +46,9 @@ interface NewDocumentModalProps {
   originDocumentId: string | null;
   originContext: string | null;
   creationContextTitle: string;
+  referenceDocId: string | null;
+  referenceDocuments: DocumentItem[];
+  onSetReferenceDocId: (id: string | null) => void;
   onClose: () => void;
   onBack: () => void;
   onNext: () => void;
@@ -97,6 +101,9 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
     originDocumentId,
     originContext,
     creationContextTitle,
+    referenceDocId,
+    referenceDocuments,
+    onSetReferenceDocId,
     onClose,
     onBack,
     onNext,
@@ -126,6 +133,7 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
 
   const selectedTemplateItem = templates.find((template) => template.id === selectedTemplate);
   const isWorklogTemplate = isWorklogTemplateName(selectedTemplateItem?.name);
+  const isProposalTemplate = selectedTemplateItem?.name === '제안서';
   const contractSchema = selectedTemplateItem ? getContractSchema(selectedTemplateItem.name) : null;
   const allowedOutputFormats = getAllowedOutputFormats(selectedTemplateItem?.templateFile ?? null, Boolean(contractSchema));
   const templateFields = selectedTemplateItem?.templateFields
@@ -302,6 +310,13 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
                   ))}
                 </div>
               )}
+              {isProposalTemplate && (
+                <ReferenceDocumentPicker
+                  referenceDocId={referenceDocId}
+                  referenceDocuments={referenceDocuments}
+                  onSetReferenceDocId={onSetReferenceDocId}
+                />
+              )}
             </div>
           )}
 
@@ -413,6 +428,14 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
                   <span className="text-foreground-secondary">출력 포맷</span>
                   <span className="text-foreground font-medium">{outputFormat.toUpperCase()}</span>
                 </div>
+                {referenceDocId && (
+                  <div className="flex justify-between">
+                    <span className="text-foreground-secondary">참조 제안서</span>
+                    <span className="text-foreground font-medium truncate ml-4 max-w-[240px]">
+                      {referenceDocuments.find((d) => d.id === referenceDocId)?.title ?? '선택됨'}
+                    </span>
+                  </div>
+                )}
                 {Object.entries(documentInputs).filter(([, value]) => value).length > 0 && (
                   <div>
                     <span className="text-foreground-secondary">기본 정보</span>
