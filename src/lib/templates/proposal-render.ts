@@ -26,6 +26,14 @@ function markdownFragmentToHtml(md: string) {
   let html = md.trim();
   if (!html) return '<p class="preview-empty">내용이 비어 있습니다.</p>';
 
+  // Mermaid 블록 추출 → 플레이스홀더 교체
+  const mermaidBlocks: string[] = [];
+  html = html.replace(/^```mermaid\n([\s\S]*?)\n```$/gm, (_match, code: string) => {
+    const index = mermaidBlocks.length;
+    mermaidBlocks.push(code);
+    return `%%MERMAID_PLACEHOLDER_${index}%%`;
+  });
+
   html = escapeHtml(html);
   html = html.replace(/((?:^\|.+\|[ \t]*$\n?)+)/gm, (m) => convertMarkdownTable(m));
   html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
@@ -37,12 +45,19 @@ function markdownFragmentToHtml(md: string) {
   html = html.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
   html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
 
-  return html
+  let result = html
     .split(/\n{2,}/)
     .map((block) => block.trim())
     .filter(Boolean)
-    .map((block) => (/^<(h1|h2|h3|h4|ul|table)/.test(block) ? block : `<p>${block.replace(/\n/g, '<br/>')}</p>`))
+    .map((block) => (/^<(h1|h2|h3|h4|ul|table)|^%%MERMAID_PLACEHOLDER_/.test(block) ? block : `<p>${block.replace(/\n/g, '<br/>')}</p>`))
     .join('\n');
+
+  // Mermaid 플레이스홀더 → <div class="mermaid"> 복원
+  for (let i = 0; i < mermaidBlocks.length; i++) {
+    result = result.replace(`%%MERMAID_PLACEHOLDER_${i}%%`, `<div class="mermaid">${mermaidBlocks[i]}</div>`);
+  }
+
+  return result;
 }
 
 function normalizeTitle(value: string) {
@@ -168,6 +183,8 @@ export function renderProposalDocumentHtml({
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"><\/script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'neutral', fontFamily: 'Paperlogy' });<\/script>
 </head>
 <body>${bodyHtml}</body>
 </html>`;
