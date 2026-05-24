@@ -212,6 +212,7 @@ export function NewDocumentGeneralStep({
             className="w-full px-4 py-3 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
           />
         </div>
+        <div style={{ height: 20 }} />
         <div className="rounded-2xl border border-border-tint bg-primary-tint p-4">
           <label className="flex items-center gap-3">
             <input
