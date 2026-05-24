@@ -201,6 +201,7 @@ export function NewDocumentGeneralStep({
             </div>
           </div>
         )}
+        {selectedTemplateItem && <div style={{ height: 20 }} />}
         <div className="flex flex-col">
           <p className="text-sm text-foreground-secondary" style={{ marginBottom: 10 }}>추가 지시사항 (선택)</p>
           <textarea
