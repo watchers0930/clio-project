@@ -76,10 +76,6 @@ export default function DocumentsPage() {
         downloadFormat={state.downloadFormat}
         fontOptions={FONT_OPTIONS}
         downloadFormatOptions={DOWNLOAD_FORMAT_OPTIONS}
-        designPrompt={state.designPrompt}
-        designPromptLang={state.designPromptLang}
-        loadingDesignPrompt={state.loadingDesignPrompt}
-        copiedDesignPrompt={state.copiedDesignPrompt}
         onChangeTitle={state.setEditTitle}
         onChangeContent={state.setEditContent}
         onToggleComments={() => state.setShowViewerComments((value: boolean) => !value)}
@@ -104,9 +100,6 @@ export default function DocumentsPage() {
           state.setTodoExtractInitial([]);
           state.setTodoExtractOpen(true);
         }}
-        onGenerateDesignPrompt={state.handleDesignPrompt}
-        onCopyDesignPrompt={state.handleCopyDesignPrompt}
-        onDownloadAiContext={state.handleDownloadAiContext}
         onCommentsReflected={() => {
           state.setShowViewerComments(false);
           state.loadDocs();

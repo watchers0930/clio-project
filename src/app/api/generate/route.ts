@@ -30,7 +30,7 @@ import {
 import { getWorklogDocumentTitle, isWorklogTemplateName } from '@/lib/templates/worklog';
 import { isProposalTemplateName } from '@/lib/templates/proposal';
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 /**
  * 같은 섹션(연속 행)의 내용을 첫 셀에 합치고 나머지 비우기.
@@ -587,7 +587,7 @@ export async function POST(request: NextRequest) {
             createdAt: dateStr,
             status: '초안',
             sourceCount: (sourceFileIds ?? []).length,
-            content: generationResult.markdown,
+            content: markdownContent,
             versionNumber: (newDoc as { version_number?: number | null }).version_number ?? 1,
             parentId: (newDoc as { parent_id?: string | null }).parent_id ?? null,
             originDocumentId: (newDoc as { origin_document_id?: string | null }).origin_document_id ?? null,
@@ -622,7 +622,7 @@ export async function POST(request: NextRequest) {
             createdAt: dateStr,
             status: '초안',
             sourceCount: (sourceFileIds ?? []).length,
-            content: generationResult.markdown,
+            content: markdownContent,
             versionNumber: (newDoc as { version_number?: number | null }).version_number ?? 1,
             parentId: (newDoc as { parent_id?: string | null }).parent_id ?? null,
             originDocumentId: (newDoc as { origin_document_id?: string | null }).origin_document_id ?? null,
@@ -641,7 +641,7 @@ export async function POST(request: NextRequest) {
           createdAt: dateStr,
           status: '초안',
           sourceCount: (sourceFileIds ?? []).length,
-          content: generationResult.markdown,
+          content: markdownContent,
           versionNumber: (newDoc as { version_number?: number | null }).version_number ?? 1,
           parentId: (newDoc as { parent_id?: string | null }).parent_id ?? null,
           originDocumentId: (newDoc as { origin_document_id?: string | null }).origin_document_id ?? null,

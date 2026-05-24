@@ -32,11 +32,6 @@ export function useDocumentViewerActions({
   const [saving, setSaving] = useState(false);
   const [qualityCheckDocId, setQualityCheckDocId] = useState<string | null>(null);
   const [showViewerComments, setShowViewerComments] = useState(false);
-  const [designPrompt, setDesignPrompt] = useState<string | null>(null);
-  const [designPromptLang, setDesignPromptLang] = useState<'ko' | 'en'>('ko');
-  const [loadingDesignPrompt, setLoadingDesignPrompt] = useState(false);
-  const [copiedDesignPrompt, setCopiedDesignPrompt] = useState(false);
-
   const triggerBrowserDownload = (blob: Blob, fileName: string) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -56,8 +51,6 @@ export function useDocumentViewerActions({
     setEditContent(doc.content ?? '');
     setEditTitle(doc.title);
     setShowViewerComments(false);
-    setDesignPrompt(null);
-    setCopiedDesignPrompt(false);
   }, []);
 
   const handleSave = async () => {
@@ -146,42 +139,6 @@ export function useDocumentViewerActions({
     });
   };
 
-  const handleDesignPrompt = async (lang: 'ko' | 'en') => {
-    if (!viewDoc) return;
-
-    setLoadingDesignPrompt(true);
-    setDesignPrompt(null);
-    setDesignPromptLang(lang);
-    setCopiedDesignPrompt(false);
-    try {
-      const res = await fetch(`/api/documents/${viewDoc.id}/design-prompt`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lang }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setDesignPrompt(data.prompt);
-      } else {
-        const err = await res.json().catch(() => null);
-        toast.error(err?.error ?? '프롬프트 생성 실패');
-      }
-    } catch {
-      toast.error('네트워크 오류');
-    } finally {
-      setLoadingDesignPrompt(false);
-    }
-  };
-
-  const handleCopyDesignPrompt = async () => {
-    if (!designPrompt) return;
-
-    await navigator.clipboard.writeText(designPrompt);
-    setCopiedDesignPrompt(true);
-    setTimeout(() => setCopiedDesignPrompt(false), 2000);
-  };
-
   const handleDownload = async (doc: Document) => {
     try {
       if (downloadFormat === 'pdf') {
@@ -262,10 +219,6 @@ export function useDocumentViewerActions({
     saving,
     qualityCheckDocId,
     showViewerComments,
-    designPrompt,
-    designPromptLang,
-    loadingDesignPrompt,
-    copiedDesignPrompt,
     isEdited,
     isDraft,
     setViewDoc,
@@ -277,8 +230,6 @@ export function useDocumentViewerActions({
     handleSave,
     handleComplete,
     handleRevertToDraft,
-    handleDesignPrompt,
-    handleCopyDesignPrompt,
     handleDownload,
     handleDownloadAiContext,
     handleViewerClose,

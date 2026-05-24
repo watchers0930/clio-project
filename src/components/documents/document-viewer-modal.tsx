@@ -17,10 +17,6 @@ interface DocumentViewerModalProps {
   downloadFormat: string;
   fontOptions: string[];
   downloadFormatOptions: readonly string[];
-  designPrompt: string | null;
-  designPromptLang: 'ko' | 'en';
-  loadingDesignPrompt: boolean;
-  copiedDesignPrompt: boolean;
   onChangeTitle: (value: string) => void;
   onChangeContent: (value: string) => void;
   onToggleComments: () => void;
@@ -39,9 +35,6 @@ interface DocumentViewerModalProps {
   onDownload: (doc: DocumentItem) => void;
   onOpenQualityCheck: (docId: string) => void;
   onOpenTodoExtract: () => void;
-  onGenerateDesignPrompt: (lang: 'ko' | 'en') => void;
-  onCopyDesignPrompt: () => void;
-  onDownloadAiContext: (docId: string, lang: 'ko' | 'en') => void;
   onCommentsReflected: () => void;
 }
 
@@ -58,10 +51,6 @@ export function DocumentViewerModal({
   downloadFormat,
   fontOptions,
   downloadFormatOptions,
-  designPrompt,
-  designPromptLang,
-  loadingDesignPrompt,
-  copiedDesignPrompt,
   onChangeTitle,
   onChangeContent,
   onToggleComments,
@@ -80,9 +69,6 @@ export function DocumentViewerModal({
   onDownload,
   onOpenQualityCheck,
   onOpenTodoExtract,
-  onGenerateDesignPrompt,
-  onCopyDesignPrompt,
-  onDownloadAiContext,
   onCommentsReflected,
 }: DocumentViewerModalProps) {
   const [proposalViewMode, setProposalViewMode] = useState<'preview' | 'edit'>('preview');
@@ -231,51 +217,6 @@ export function DocumentViewerModal({
                 </div>
               )}
             </div>
-
-            {isProposal && (
-              <div className="border-t border-border px-4 py-3 shrink-0 sm:px-6 sm:py-4">
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <span className="text-sm font-medium text-foreground">AI 디자인 프롬프트</span>
-                  <span className="text-[10px] px-2 py-1 rounded-full bg-gradient-to-r from-primary to-purple-500 text-white font-medium">GenSpark / Gamma / Canva</span>
-                  <div className="flex flex-wrap gap-2">
-                    <button onClick={() => onGenerateDesignPrompt('ko')} disabled={loadingDesignPrompt} className="px-3 py-2 rounded-lg text-xs font-medium border border-primary text-primary hover:bg-primary-tint disabled:opacity-50 transition-colors">
-                      {loadingDesignPrompt && designPromptLang === 'ko' ? '생성 중...' : '국문 프롬프트'}
-                    </button>
-                    <button onClick={() => onGenerateDesignPrompt('en')} disabled={loadingDesignPrompt} className="px-3 py-2 rounded-lg text-xs font-medium border border-purple-600 text-purple-600 hover:bg-purple-50 disabled:opacity-50 transition-colors">
-                      {loadingDesignPrompt && designPromptLang === 'en' ? 'Generating...' : 'English Prompt'}
-                    </button>
-                  </div>
-                </div>
-                {designPrompt && (
-                  <div className="mt-3">
-                    <div className="bg-surface-secondary rounded-xl p-4 max-h-40 overflow-y-auto">
-                      <pre className="text-xs text-foreground whitespace-pre-wrap leading-relaxed font-sans">{designPrompt}</pre>
-                    </div>
-                    <button onClick={onCopyDesignPrompt} className="mt-3 flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-foreground text-white hover:bg-primary transition-colors">
-                      {copiedDesignPrompt ? '복사 완료!' : '클립보드에 복사'}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {isProposal && (
-              <div className="border-t border-border px-4 py-3 shrink-0 sm:px-6 sm:py-4">
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <span className="text-sm font-medium text-foreground">AI 컨텍스트 다운로드</span>
-                  <span className="text-[10px] px-2 py-1 rounded-full bg-gradient-to-r from-[#34c759] to-[#30d158] text-white font-medium">ChatGPT / Gemini / Claude</span>
-                  <span className="text-xs text-foreground-secondary">다른 AI 도구용 텍스트 파일</span>
-                  <div className="flex flex-wrap gap-2">
-                    <button onClick={() => onDownloadAiContext(viewDoc.id, 'ko')} className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium border border-success text-success hover:bg-success/5 transition-colors">
-                      국문 다운로드
-                    </button>
-                    <button onClick={() => onDownloadAiContext(viewDoc.id, 'en')} className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium border border-success text-success hover:bg-success/5 transition-colors">
-                      English Download
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
 
             <div className="flex shrink-0 flex-col gap-3 border-t border-border px-4 py-4 min-w-0 sm:px-6 sm:py-4">
               <div className="flex flex-wrap gap-2.5">

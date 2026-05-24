@@ -7,11 +7,27 @@ function escapeHtml(value: string) {
     .replace(/>/g, '&gt;');
 }
 
+function convertMarkdownTable(tableBlock: string): string {
+  const rows = tableBlock.trim().split('\n').filter((r) => r.trim());
+  if (rows.length < 2) return tableBlock;
+  const parseRow = (row: string) =>
+    row.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
+  const headerCells = parseRow(rows[0]);
+  const isSeparator = /^[\s|:\-]+$/.test(rows[1]);
+  const dataRows = rows.slice(isSeparator ? 2 : 1);
+  const thead = `<thead><tr>${headerCells.map((c) => `<th>${c}</th>`).join('')}</tr></thead>`;
+  const tbody = dataRows.length > 0
+    ? `<tbody>${dataRows.map((row) => `<tr>${parseRow(row).map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>`
+    : '';
+  return `<table>${thead}${tbody}</table>`;
+}
+
 function markdownFragmentToHtml(md: string) {
   let html = md.trim();
   if (!html) return '<p class="preview-empty">내용이 비어 있습니다.</p>';
 
   html = escapeHtml(html);
+  html = html.replace(/((?:^\|.+\|[ \t]*$\n?)+)/gm, (m) => convertMarkdownTable(m));
   html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
   html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
   html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
@@ -24,7 +40,7 @@ function markdownFragmentToHtml(md: string) {
     .split(/\n{2,}/)
     .map((block) => block.trim())
     .filter(Boolean)
-    .map((block) => (/^<(h1|h2|h3|ul)/.test(block) ? block : `<p>${block.replace(/\n/g, '<br/>')}</p>`))
+    .map((block) => (/^<(h1|h2|h3|ul|table)/.test(block) ? block : `<p>${block.replace(/\n/g, '<br/>')}</p>`))
     .join('\n');
 }
 
@@ -66,6 +82,7 @@ function findSectionBody(markdownSections: Array<{ title: string; body: string }
   const normalizedTarget = normalizeTitle(title);
   const matched = markdownSections.find((section) => {
     const normalizedSection = normalizeTitle(section.title);
+    if (!normalizedSection) return false;
     return normalizedSection === normalizedTarget
       || normalizedSection.includes(normalizedTarget)
       || normalizedTarget.includes(normalizedSection);
