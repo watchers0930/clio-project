@@ -201,13 +201,13 @@ export function NewDocumentGeneralStep({
             </div>
           </div>
         )}
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col">
           <p className="text-sm text-foreground-secondary" style={{ marginBottom: 10 }}>추가 지시사항 (선택)</p>
           <textarea
             value={instructions}
             onChange={(e) => onSetInstructions(e.target.value)}
             placeholder="예: 핵심 수치 위주로 요약해 주세요. 표 형태로 정리해 주세요."
-            rows={14}
+            rows={10}
             className="w-full px-4 py-3 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
           />
         </div>
