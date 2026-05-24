@@ -88,7 +88,16 @@ async function generateProposalBySections(params: {
 7. 각 H3 항목은 서술형(4~8문단)으로 전개합니다. 배경→현황→방안→기대효과 흐름을 따릅니다.
 8. 표가 적절한 곳에는 5~8행의 상세 표를 포함합니다.
 9. Mermaid 다이어그램을 적극 활용합니다. 기본 방향은 가로(graph LR), 노드 5개 이상이면 두 줄로 분리합니다.
-10. AS-IS 분석은 수치화, 기대효과는 정량적 KPI, 차별점은 구체적 비교로 서술합니다.`;
+10. AS-IS 분석은 수치화, 기대효과는 정량적 KPI, 차별점은 구체적 비교로 서술합니다.
+
+## Mermaid 작성 필수 규칙 (반드시 준수)
+- 한글·특수문자가 포함된 노드는 반드시 큰따옴표로 감쌉니다: A["현황 분석"] --> B["시스템 설계"]
+- 소괄호·대괄호 등 특수문자가 노드 텍스트에 포함되면 큰따옴표 필수: C["PM(프로젝트 매니저)"]
+- 노드 ID는 영문·숫자만 사용합니다: A, B1, node1 (한글 ID 금지)
+- subgraph 제목도 큰따옴표로 감쌉니다: subgraph "수행 조직"
+- 화살표는 --> 또는 --- 만 사용합니다. ==> 사용 금지
+- graph LR 또는 graph TD만 사용합니다. flowchart 키워드 사용 금지
+- 노드 안에서 줄바꿈 시 <br/>을 사용합니다`;
 
   const sectionPromises = templateBundle.sections.map(async (section) => {
     const refContent = findMatchingReference(referenceSections, section.title);

@@ -346,7 +346,7 @@ function buildProposalHtml(sections: TemplateSectionDefinition[]) {
     '        </div>',
     '      </div>',
     '      <div class="cover-approval">',
-    '        <div class="approval-item"><strong>작성</strong><div class="approval-line"></div></div>',
+    '        <div class="approval-item"><strong>작성</strong><div class="approval-line">{{author}}</div></div>',
     '        <div class="approval-item"><strong>검토</strong><div class="approval-line"></div></div>',
     '        <div class="approval-item"><strong>승인</strong><div class="approval-line"></div></div>',
     '      </div>',

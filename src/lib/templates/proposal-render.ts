@@ -165,6 +165,7 @@ export function renderProposalDocumentHtml({
     scope_summary: mergedInputs.scope_summary?.trim() || scopeBody.split('\n').find(Boolean) || '[핵심 수행 범위]',
     special_notes: mergedInputs.special_notes?.trim() || understandingBody.split('\n').find(Boolean) || '[특기사항]',
     source_file_summary: mergedInputs.source_file_summary?.trim() || '[참조 문서 요약]',
+    author: mergedInputs.author?.trim() || '',
   };
 
   bundle.sections.forEach((section) => {
@@ -184,7 +185,19 @@ export function renderProposalDocumentHtml({
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"><\/script>
-<script>mermaid.initialize({ startOnLoad: true, theme: 'neutral', fontFamily: 'Paperlogy' });<\/script>
+<script>
+mermaid.initialize({ startOnLoad: false, theme: 'neutral', fontFamily: 'Paperlogy' });
+document.addEventListener('DOMContentLoaded', async () => {
+  for (const el of document.querySelectorAll('.mermaid')) {
+    try {
+      const { svg } = await mermaid.render('m' + Math.random().toString(36).slice(2, 8), el.textContent);
+      el.innerHTML = svg;
+    } catch {
+      el.innerHTML = '<pre style="background:#f5f5f5;padding:12px;border-radius:8px;font-size:12px;white-space:pre-wrap;color:#666">' + el.textContent + '<\/pre>';
+    }
+  }
+});
+<\/script>
 </head>
 <body>${bodyHtml}</body>
 </html>`;
