@@ -20,6 +20,75 @@ import {
   generatePptxReplacements,
 } from './generate-document-helpers';
 
+async function generateProposalBySections(params: {
+  templateName: string;
+  templateBundle: TemplateBundle;
+  sourceChunks: string[];
+  instructions?: string;
+  documentInputs?: Record<string, string>;
+}): Promise<string> {
+  const { templateBundle, sourceChunks, instructions, documentInputs } = params;
+  const model = openai('gpt-4o');
+
+  let contextText = '';
+  for (const chunk of sourceChunks) {
+    if (contextText.length + chunk.length > MAX_CONTEXT_CHARS) break;
+    contextText += `${chunk}\n---\n`;
+  }
+
+  const fieldValues = templateBundle.fields
+    .map((f) => `- ${f.label}: ${documentInputs?.[f.key] || '[미입력]'}`)
+    .join('\n');
+  const title = documentInputs?.report_title?.trim() || params.templateName;
+
+  const sharedSystem = `당신은 공공기관 제출용 제안서 작성 전문 AI입니다. 한국어로 작성합니다.
+
+## 핵심 규칙
+1. 입력된 기본정보를 최우선 사실로 사용합니다.
+2. 문체는 공공기관 제출용으로 간결하고 공식적으로 유지합니다.
+3. 불필요한 마케팅·과장·추측성 표현을 쓰지 않습니다.
+4. 순수 마크다운만 출력합니다. 단, Mermaid 다이어그램은 \`\`\`mermaid 코드블록으로 포함합니다.
+5. 확인되지 않은 비용·일정·인력 실명은 [확인필요]로 남깁니다.
+6. **이 섹션을 최대한 충실하고 상세하게** 작성합니다. 분량 제한 없이 평가위원이 납득할 깊이를 확보합니다.
+7. 각 H3 항목은 서술형(4~8문단)으로 전개합니다. 배경→현황→방안→기대효과 흐름을 따릅니다.
+8. 표가 적절한 곳에는 5~8행의 상세 표를 포함합니다.
+9. Mermaid 다이어그램을 적극 활용합니다 (아키텍처 graph TD, 흐름 graph LR 등).
+10. AS-IS 분석은 수치화, 기대효과는 정량적 KPI, 차별점은 구체적 비교로 서술합니다.`;
+
+  const sectionPromises = templateBundle.sections.map(async (section) => {
+    const sectionSystem = `${sharedSystem}\n\n## 현재 작성 섹션: ${section.title}\n\n## 작성 지시\n${section.prompt}`;
+    const sectionUser = [
+      `## 기본정보\n${fieldValues}`,
+      `## 참조 자료\n${contextText || '(참조 자료 없음)'}`,
+      instructions ? `## 추가 지시사항\n${instructions}` : '',
+      `"${section.title}" 섹션을 작성하세요.`,
+      '- ## (H2) 제목 없이 ### (H3) 하위 항목부터 바로 시작합니다.',
+      '- 각 H3 항목마다 4~8문단으로 충분히 서술합니다.',
+      '- 다이어그램이 적절한 곳에는 반드시 Mermaid를 포함합니다.',
+    ].filter(Boolean).join('\n\n');
+
+    try {
+      const { text } = await generateText({
+        model,
+        system: sectionSystem,
+        prompt: sectionUser,
+        maxOutputTokens: 16000,
+        temperature: 0.2,
+      });
+      let result = text.trim();
+      if (result.startsWith('```markdown')) result = result.replace(/^```markdown\s*\n?/, '').replace(/\n?```\s*$/, '');
+      else if (result.startsWith('```')) result = result.replace(/^```\w*\s*\n?/, '').replace(/\n?```\s*$/, '');
+      return { title: section.title, content: result };
+    } catch (err) {
+      console.error(`[proposal-sections] ${section.title} failed:`, err);
+      return { title: section.title, content: section.prompt };
+    }
+  });
+
+  const results = await Promise.all(sectionPromises);
+  return [`# ${title}`, '', ...results.map((r) => `## ${r.title}\n\n${r.content}`)].join('\n\n');
+}
+
 export async function generateDocumentContent(params: {
   templateName: string;
   templateContent?: string | null;
@@ -53,6 +122,17 @@ export async function generateDocumentContent(params: {
       '## 차일업무계획',
       tomorrowWork,
     ].filter(Boolean).join('\n');
+  }
+
+  // 제안서: 섹션별 분할 생성 (템플릿 파일 없는 번들 기반)
+  if (isProposalTemplateName(templateName) && templateBundle && !templateFileText) {
+    return generateProposalBySections({
+      templateName,
+      templateBundle,
+      sourceChunks,
+      instructions,
+      documentInputs,
+    });
   }
 
   let trimmedTemplateFileText = templateFileText ?? null;
