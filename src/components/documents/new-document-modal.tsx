@@ -159,14 +159,15 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
     : '';
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="new-doc-title">
-      <div className="mx-4 max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-xl">
-        <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-2xl border-b border-border bg-white px-4 py-4 sm:px-6 sm:py-5">
+      <div className="mx-4 max-h-[92vh] w-full max-w-4xl flex flex-col rounded-2xl bg-white shadow-xl">
+        <div className="shrink-0 flex items-center justify-between rounded-t-2xl border-b border-border bg-white px-4 py-4 sm:px-6 sm:py-5">
           <h2 id="new-doc-title" className="text-[15px] font-semibold text-foreground">새 문서 생성</h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-surface-secondary text-foreground-secondary">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
 
+        <div className="flex-1 min-h-0 overflow-y-auto">
         {step <= 4 && (
           <div className="px-4 py-4 sm:px-6 sm:py-5">
             {originDocumentId && creationContextTitle && relationLabel ? (
@@ -537,8 +538,9 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
             </div>
           )}
         </div>
+        </div>
 
-        <div className="sticky bottom-0 flex flex-col gap-2 border-t border-border bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="shrink-0 flex flex-col gap-2 border-t border-border bg-white rounded-b-2xl px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <button onClick={onBack} className="px-5 py-2 rounded-xl border border-border text-[13px] text-foreground-secondary hover:bg-surface-secondary transition-colors">
             {step === 1 || step === 5 ? '닫기' : '이전'}
           </button>
