@@ -5,6 +5,7 @@
 
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
+import { anthropic } from '@ai-sdk/anthropic';
 import type { GenerationResult, OutputFormat } from '@/lib/renderers/types';
 import type { TemplateBundle } from '@/lib/templates/template-schema';
 import { isWorklogTemplateName } from '@/lib/templates/worklog';
@@ -86,12 +87,19 @@ export async function generateDocumentContent(params: {
 
 ## 핵심 규칙
 1. 입력된 기본정보 7개를 최우선 사실로 사용합니다.
-2. 제공된 섹션 구조와 순서를 그대로 유지합니다.
-3. 참조 문서가 있으면 이를 근거로 각 섹션을 확장 작성합니다.
-4. 확인되지 않은 기관명, 비용, 일정, 인력 실명은 임의 확정하지 말고 [확인필요]로 남깁니다.
-5. 문체는 공공기관 제출용으로 간결하고 공식적으로 유지합니다.
-6. 불필요한 마케팅 표현, 과장 표현, 추측성 표현을 쓰지 않습니다.
-7. 순수 마크다운만 출력합니다.`
+2. 제공된 섹션 구조와 순서를 **반드시** 그대로 유지합니다. 각 섹션은 ## (H2)로, 하위 항목은 ### (H3)로 작성합니다.
+3. **각 섹션은 반드시 하위 항목(H3) 3~4개 이상**을 포함하고, 각 하위 항목은 **2~4개 문단** 이상 구체적으로 작성합니다.
+4. 참조 문서가 있으면 이를 근거로 각 섹션을 확장 작성합니다. 참조 문서가 없어도 입력된 사업명과 제안 목적을 바탕으로 해당 분야의 일반적이고 현실적인 내용을 충실하게 작성합니다.
+5. 적절한 곳에 **마크다운 표, 불릿 목록, 번호 목록**을 적극 활용하여 가독성을 높입니다.
+6. 확인되지 않은 기관명, 비용, 일정, 인력 실명은 임의 확정하지 말고 [확인필요]로 남깁니다.
+7. 문체는 공공기관 제출용으로 간결하고 공식적으로 유지합니다.
+8. 불필요한 마케팅 표현, 과장 표현, 추측성 표현을 쓰지 않습니다.
+9. 순수 마크다운만 출력합니다. 코드블록(백틱) 감싸지 않습니다.
+
+## 분량 기준
+- 전체 제안서: 최소 3000자 이상
+- 각 섹션(H2): 최소 400자 이상
+- 얕은 한두 문장으로 섹션을 마무리하지 마세요. 실무에서 활용 가능한 수준의 구체적 내용을 작성합니다.`
     : hasTemplateBundle
     ? `당신은 한국어 보고서 작성 전문 AI입니다.
 
@@ -135,11 +143,19 @@ export async function generateDocumentContent(params: {
     ? `표준양식의 구조를 그대로 유지하면서 "${templateName}" 문서를 완성하세요.`
     : hasTemplateBundle && isProposalTemplate
     ? `"${templateName}" 문서를 다음 원칙으로 작성하세요.
-1. H1 제목
-2. 목차
-3. 정의된 각 섹션을 H2로 순서대로 작성
-4. 입력 필드와 참조자료를 바탕으로 공공기관 제출용 제안서를 완성
-5. 불명확한 값은 [확인필요]로 표기`
+
+## 필수 구조
+1. **# 제목** (H1) — 입력된 문서 제목
+2. **## 섹션** (H2) — 위 섹션 구조에 정의된 8개 섹션을 순서대로 작성
+3. **### 하위 항목** (H3) — 각 섹션의 prompt에 명시된 하위 항목을 빠짐없이 포함
+
+## 내용 작성 원칙
+- 각 하위 항목(H3)마다 2~4개 문단으로 **구체적이고 실질적인 내용**을 작성합니다
+- 표가 적절한 곳(사업 개요, 산출물, 일정, 인력, 비용 등)에는 반드시 마크다운 표를 사용합니다
+- 목록이 적절한 곳에는 불릿(-) 또는 번호(1.) 목록을 사용합니다
+- 참조 자료가 없더라도 입력된 사업명/제안 목적/수행 범위를 바탕으로 해당 산업 분야의 현실적인 내용을 작성합니다
+- 빈 섹션이나 "내용 없음" 표기 없이 모든 섹션을 충실하게 채웁니다
+- 불명확한 값(금액, 일정, 인력 실명)만 [확인필요]로 표기합니다`
     : hasTemplateBundle
     ? `"${templateName}" 문서를 다음 순서로 작성하세요.
 1. H1 제목
@@ -151,11 +167,15 @@ export async function generateDocumentContent(params: {
     ? `템플릿 구조를 빠짐없이 따라 "${templateName}" 문서를 완성하세요.`
     : `"${templateName}" 문서를 완성하세요.`;
 
+  const model = isProposalTemplate
+    ? anthropic('claude-sonnet-4-5-20250514')
+    : openai('gpt-4o');
+
   const { text } = await generateText({
-    model: openai('gpt-4o'),
+    model,
     system: systemPrompt,
     prompt: userPrompt,
-    maxOutputTokens: 12000,
+    maxOutputTokens: isProposalTemplate ? 16000 : 12000,
     temperature: 0.2,
   });
 

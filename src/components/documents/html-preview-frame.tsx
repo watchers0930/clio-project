@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
+
 interface HtmlPreviewFrameProps {
   html: string;
   title: string;
@@ -7,12 +9,23 @@ interface HtmlPreviewFrameProps {
 }
 
 export function HtmlPreviewFrame({ html, title, className }: HtmlPreviewFrameProps) {
-  const previewUrl = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const prevUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    setBlobUrl(url);
+    prevUrlRef.current = url;
+    return () => { URL.revokeObjectURL(url); };
+  }, [html]);
+
+  if (!blobUrl) return null;
 
   return (
     <iframe
       title={title}
-      src={previewUrl}
+      src={blobUrl}
       className={className}
     />
   );

@@ -543,9 +543,14 @@ export async function POST(request: NextRequest) {
 
     // 마크다운 기반 포맷(DOCX새로생성/HWPX/PDF)은 기존처럼 documents 테이블에도 저장
     if (generationResult.markdown) {
+      // 제안서: documentInputs를 콘텐츠 앞에 HTML 코멘트로 저장 (문서 페이지 렌더 시 사용)
+      const markdownContent = isProposalTemplate
+        ? `<!--PROPOSAL_INPUTS:${JSON.stringify(resolvedDocumentInputs)}-->\n${generationResult.markdown}`
+        : generationResult.markdown;
+
       const payload = buildDocumentInsertPayload({
         title,
-        content: generationResult.markdown,
+        content: markdownContent,
         templateId,
         sourceFileIds,
         instructions,

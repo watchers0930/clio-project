@@ -93,32 +93,45 @@ type RenderProposalDocumentParams = {
   documentInputs?: Record<string, string>;
 };
 
+function extractEmbeddedInputs(content: string): { inputs: Record<string, string>; markdown: string } {
+  const match = content.match(/^<!--PROPOSAL_INPUTS:(.*?)-->\n?/);
+  if (!match) return { inputs: {}, markdown: content };
+  try {
+    return { inputs: JSON.parse(match[1]), markdown: content.slice(match[0].length) };
+  } catch {
+    return { inputs: {}, markdown: content };
+  }
+}
+
 export function renderProposalDocumentHtml({
   title,
   content,
   createdAt,
   documentInputs = {},
 }: RenderProposalDocumentParams) {
+  const { inputs: embeddedInputs, markdown: cleanContent } = extractEmbeddedInputs(content);
+  const mergedInputs = { ...embeddedInputs, ...documentInputs };
+
   const bundle = createProposalTemplateBundle();
-  const markdownSections = parseMarkdownSections(content);
+  const markdownSections = parseMarkdownSections(cleanContent);
   const overviewBody = findSectionBody(markdownSections, '1. 제안 개요');
   const understandingBody = findSectionBody(markdownSections, '2. 사업 이해 및 추진 방향');
   const scopeBody = findSectionBody(markdownSections, '3. 수행 범위 및 세부 내용');
   const cleanedTitle = stripGeneratedSuffix(title);
-  const projectName = documentInputs.project_name?.trim()
+  const projectName = mergedInputs.project_name?.trim()
     || cleanedTitle.replace(/\s*제안서\s*$/u, '').trim()
     || cleanedTitle;
 
   const replacements: Record<string, string> = {
-    report_title: title,
-    report_date: createdAt || new Date().toISOString().slice(0, 10),
-    demand_org: documentInputs.demand_org?.trim() || extractLineValue(content, ['수요기관', '발주기관']) || '[수요기관명]',
-    proposer_name: documentInputs.proposer_name?.trim() || extractLineValue(content, ['제안사', '수행사']) || '[제안사명]',
+    report_title: mergedInputs.report_title?.trim() || title,
+    report_date: createdAt || mergedInputs.report_date || new Date().toISOString().slice(0, 10),
+    demand_org: mergedInputs.demand_org?.trim() || extractLineValue(cleanContent, ['수요기관', '발주기관']) || '[수요기관명]',
+    proposer_name: mergedInputs.proposer_name?.trim() || extractLineValue(cleanContent, ['제안사', '수행사']) || '[제안사명]',
     project_name: projectName || '[사업명]',
-    proposal_objective: documentInputs.proposal_objective?.trim() || overviewBody.split('\n').find(Boolean) || '[제안 목적]',
-    scope_summary: documentInputs.scope_summary?.trim() || scopeBody.split('\n').find(Boolean) || '[핵심 수행 범위]',
-    special_notes: documentInputs.special_notes?.trim() || understandingBody.split('\n').find(Boolean) || '[특기사항]',
-    source_file_summary: documentInputs.source_file_summary?.trim() || '[참조 문서 요약]',
+    proposal_objective: mergedInputs.proposal_objective?.trim() || overviewBody.split('\n').find(Boolean) || '[제안 목적]',
+    scope_summary: mergedInputs.scope_summary?.trim() || scopeBody.split('\n').find(Boolean) || '[핵심 수행 범위]',
+    special_notes: mergedInputs.special_notes?.trim() || understandingBody.split('\n').find(Boolean) || '[특기사항]',
+    source_file_summary: mergedInputs.source_file_summary?.trim() || '[참조 문서 요약]',
   };
 
   bundle.sections.forEach((section) => {
@@ -127,7 +140,10 @@ export function renderProposalDocumentHtml({
     replacements[`${section.key}_body`] = markdownFragmentToHtml(body || section.prompt);
   });
 
-  const bodyHtml = bundle.layoutHtml.replace(/\{\{([^}]+)\}\}/g, (_match, key: string) => replacements[key.trim()] ?? '');
+  const bodyHtml = bundle.layoutHtml.replace(/\{\{([^}]+)\}\}/g, (_match, key: string) => {
+    const val = replacements[key.trim()];
+    return val !== undefined ? val : '';
+  });
 
   return `<!DOCTYPE html>
 <html lang="ko">

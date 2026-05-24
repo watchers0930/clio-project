@@ -221,10 +221,7 @@ export default function DocumentViewerPage() {
 
   if (!doc) return null;
 
-  void handleReuseDocument;
   const isDraft = doc.status === 'draft' || doc.status === '초안';
-  const isMeetingDoc = /회의|회의록|meeting/i.test(doc.title ?? '');
-  void isMeetingDoc;
   const isProposalPage = doc.template_name === '제안서';
   const navigateToDocument = (docId: string) => router.push(`/documents/${docId}`);
 
