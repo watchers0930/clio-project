@@ -28,6 +28,7 @@ function markdownFragmentToHtml(md: string) {
 
   html = escapeHtml(html);
   html = html.replace(/((?:^\|.+\|[ \t]*$\n?)+)/gm, (m) => convertMarkdownTable(m));
+  html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
   html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
   html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
   html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
@@ -40,7 +41,7 @@ function markdownFragmentToHtml(md: string) {
     .split(/\n{2,}/)
     .map((block) => block.trim())
     .filter(Boolean)
-    .map((block) => (/^<(h1|h2|h3|ul|table)/.test(block) ? block : `<p>${block.replace(/\n/g, '<br/>')}</p>`))
+    .map((block) => (/^<(h1|h2|h3|h4|ul|table)/.test(block) ? block : `<p>${block.replace(/\n/g, '<br/>')}</p>`))
     .join('\n');
 }
 
