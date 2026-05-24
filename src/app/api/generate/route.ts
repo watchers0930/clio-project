@@ -30,7 +30,7 @@ import {
 import { getWorklogDocumentTitle, isWorklogTemplateName } from '@/lib/templates/worklog';
 import { isProposalTemplateName } from '@/lib/templates/proposal';
 
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 /**
  * 같은 섹션(연속 행)의 내용을 첫 셀에 합치고 나머지 비우기.
