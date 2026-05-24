@@ -5,7 +5,6 @@
 
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import { anthropic } from '@ai-sdk/anthropic';
 import type { GenerationResult, OutputFormat } from '@/lib/renderers/types';
 import type { TemplateBundle } from '@/lib/templates/template-schema';
 import { isWorklogTemplateName } from '@/lib/templates/worklog';
@@ -167,9 +166,7 @@ export async function generateDocumentContent(params: {
     ? `템플릿 구조를 빠짐없이 따라 "${templateName}" 문서를 완성하세요.`
     : `"${templateName}" 문서를 완성하세요.`;
 
-  const model = isProposalTemplate
-    ? anthropic('claude-sonnet-4-6')
-    : openai('gpt-4o');
+  const model = openai('gpt-4o');
 
   const { text } = await generateText({
     model,
