@@ -27,10 +27,15 @@ function markdownFragmentToHtml(md: string) {
   if (!html) return '<p class="preview-empty">내용이 비어 있습니다.</p>';
 
   // Mermaid 블록 추출 → 플레이스홀더 교체
+  // AI가 들여쓰기/공백 포함할 수 있으므로 유연하게 매칭
   const mermaidBlocks: string[] = [];
-  html = html.replace(/^```mermaid\n([\s\S]*?)\n```$/gm, (_match, code: string) => {
+  html = html.replace(/^[ \t]*```mermaid[ \t]*\n([\s\S]*?)\n[ \t]*```[ \t]*$/gm, (_match, code: string) => {
     const index = mermaidBlocks.length;
-    mermaidBlocks.push(code);
+    // 들여쓰기 제거 (공통 앞 공백 strip)
+    const lines = code.split('\n');
+    const minIndent = lines.filter((l) => l.trim()).reduce((min, l) => Math.min(min, l.match(/^[ \t]*/)?.[0].length ?? 0), Infinity);
+    const dedented = minIndent > 0 && minIndent < Infinity ? lines.map((l) => l.slice(minIndent)).join('\n') : code;
+    mermaidBlocks.push(dedented.trim());
     return `%%MERMAID_PLACEHOLDER_${index}%%`;
   });
 
