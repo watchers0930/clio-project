@@ -377,7 +377,10 @@ export function useDocumentsPage() {
       }
       const data = await res.json();
       if (data.reason === 'no_text') {
-        toast.info('선택한 참조파일에서 텍스트를 추출할 수 없습니다.');
+        const dbg = data.debug;
+        const detail = dbg ? ` (요청 ${dbg.requestedIds}개 / DB ${dbg.foundFiles}개 발견)` : '';
+        console.error('[extract-fields] no_text debug:', dbg);
+        toast.info(`선택한 참조파일에서 텍스트를 추출할 수 없습니다.${detail}`);
         return;
       }
       const extracted = (data.extractedInputs ?? {}) as Record<string, string>;

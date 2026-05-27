@@ -47,10 +47,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { sourceFileSummary } = await loadSourceChunks(supabase, sourceFileIds as string[]);
+    const { sourceFileSummary, sourceChunks, sourceFileNames, sourceFileCount } = await loadSourceChunks(supabase, sourceFileIds as string[]);
 
     if (!sourceFileSummary.trim()) {
-      return NextResponse.json({ extractedInputs: {}, reason: 'no_text' });
+      console.error('[extract-fields] no_text debug:', { requestedIds: sourceFileIds.length, foundFiles: sourceFileCount, fileNames: sourceFileNames, chunksExtracted: sourceChunks.length });
+      return NextResponse.json({ extractedInputs: {}, reason: 'no_text', debug: { requestedIds: sourceFileIds.length, foundFiles: sourceFileCount, fileNames: sourceFileNames } });
     }
 
     const validFields = fields as Array<{ key: string; label: string; placeholder?: string }>;
