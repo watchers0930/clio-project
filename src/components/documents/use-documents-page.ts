@@ -83,6 +83,8 @@ export function useDocumentsPage() {
   const [selectedFont, setSelectedFont] = useState('맑은 고딕');
   const [downloadFormat, setDownloadFormat] = useState<string>('docx');
   const [initializedFromQuery, setInitializedFromQuery] = useState(false);
+  const [extractingFields, setExtractingFields] = useState(false);
+  const [extractedFieldKeys, setExtractedFieldKeys] = useState<Set<string>>(new Set());
 
   const openConfirm = (title: string, description: string | undefined, onConfirm: () => void) => setConfirmState({ open: true, title, description, onConfirm });
   const closeConfirm = () => setConfirmState((state) => ({ ...state, open: false }));
@@ -339,7 +341,55 @@ export function useDocumentsPage() {
     setCreationContextTitle('');
     setReferenceDocId(null);
     setReferenceDocuments([]);
+    setExtractedFieldKeys(new Set());
   };
+
+  const extractFieldsFromSources = useCallback(async () => {
+    if (selectedFiles.size === 0) return;
+    const selectedTemplateItem = templates.find((t) => t.id === selectedTemplate);
+    if (!selectedTemplateItem) return;
+    const resolvedFields = (selectedTemplateItem.templateFields
+      ?? (isWorklogTemplateName(selectedTemplateItem.name) ? [...WORKLOG_FIELDS] : [
+        { key: 'report_title', label: '문서 제목', type: 'text' as const, required: true, placeholder: '예: 2026년 2분기 사업 보고서' },
+        { key: 'subtitle', label: '소제목', type: 'text' as const, placeholder: '예: 경영회의 보고용' },
+      ])) as TemplateFieldDefinition[];
+
+    const targetFields = resolvedFields.filter((f) => !f.autoFill && !f.aiAssist);
+    if (targetFields.length === 0) return;
+
+    setExtractingFields(true);
+    try {
+      const res = await fetch('/api/generate/extract-fields', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceFileIds: Array.from(selectedFiles),
+          fields: targetFields.map((f) => ({ key: f.key, label: f.label, placeholder: f.placeholder })),
+          templateName: selectedTemplateItem.name,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const extracted = (data.extractedInputs ?? {}) as Record<string, string>;
+        const newKeys = new Set<string>();
+        setDocumentInputs((prev) => {
+          const next = { ...prev };
+          for (const [key, value] of Object.entries(extracted)) {
+            if (value && !prev[key]?.trim()) {
+              next[key] = value;
+              newKeys.add(key);
+            }
+          }
+          return next;
+        });
+        setExtractedFieldKeys(newKeys);
+      }
+    } catch {
+      // 추출 실패 시 무시 — 사용자가 수동 입력
+    } finally {
+      setExtractingFields(false);
+    }
+  }, [selectedFiles, templates, selectedTemplate]);
 
   const openCreateModal = () => { resetModal(); setShowModal(true); };
   const toggleFile = (id: string) => setSelectedFiles((prev) => {
@@ -514,8 +564,8 @@ export function useDocumentsPage() {
   };
 
   return {
-    router, loading, docs, showModal, step, selectedTemplate, selectedFiles, instructions, customStructure, documentInputs, aiAssistEnabled, aiAssistPrompt, generating, generatedDoc, outputFormat, generatedDownloadUrl, generatedOutline, contractFormData, dateErrors, fileSearch, fileDeptFilter, fileTypeFilter, uploadingLocalFiles, shareDocId, shareDocTitle, selectedDocIds, viewDoc, editContent, editTitle, saving, qualityCheckDocId, todoExtractOpen, todoExtractInitial, sttModalOpen, showViewerComments, versionPanelDocId, versionItems, versionLoading, confirmState, templates, sourceFiles, selectedFont, downloadFormat, isEdited, isDraft, originDocumentId, originContext, creationContextTitle, referenceDocId, referenceDocuments,
-    loadDocs, setShareDocId, setShareDocTitle, setTodoExtractOpen, setTodoExtractInitial, setSttModalOpen, setShowViewerComments, setQualityCheckDocId, setVersionPanelDocId, setStep, setSelectedTemplate, setSelectedFiles, setInstructions, setCustomStructure, setDocumentInputs, setAiAssistEnabled, setAiAssistPrompt, setOutputFormat, setContractFormData, setFileSearch, setFileDeptFilter, setFileTypeFilter, setEditContent, setEditTitle, setDownloadFormat, setSelectedFont, resetModal, openCreateModal, toggleFile, canNext, handleGenerate, handleDelete, handleBulkDelete, handleDeleteAll, toggleDocSelect, toggleSelectAll, openVersionPanel, openDocModal, handleSave, handleComplete, handleRevertToDraft, handleDownload, handleDownloadAiContext, handleViewerClose, handleDownloadGeneratedFile, handleDateInput, closeConfirm, startReuseDocument, openSearchFromDocument, uploadLocalFiles, setReferenceDocId,
+    router, loading, docs, showModal, step, selectedTemplate, selectedFiles, instructions, customStructure, documentInputs, aiAssistEnabled, aiAssistPrompt, generating, generatedDoc, outputFormat, generatedDownloadUrl, generatedOutline, contractFormData, dateErrors, fileSearch, fileDeptFilter, fileTypeFilter, uploadingLocalFiles, shareDocId, shareDocTitle, selectedDocIds, viewDoc, editContent, editTitle, saving, qualityCheckDocId, todoExtractOpen, todoExtractInitial, sttModalOpen, showViewerComments, versionPanelDocId, versionItems, versionLoading, confirmState, templates, sourceFiles, selectedFont, downloadFormat, isEdited, isDraft, originDocumentId, originContext, creationContextTitle, referenceDocId, referenceDocuments, extractingFields, extractedFieldKeys,
+    loadDocs, setShareDocId, setShareDocTitle, setTodoExtractOpen, setTodoExtractInitial, setSttModalOpen, setShowViewerComments, setQualityCheckDocId, setVersionPanelDocId, setStep, setSelectedTemplate, setSelectedFiles, setInstructions, setCustomStructure, setDocumentInputs, setAiAssistEnabled, setAiAssistPrompt, setOutputFormat, setContractFormData, setFileSearch, setFileDeptFilter, setFileTypeFilter, setEditContent, setEditTitle, setDownloadFormat, setSelectedFont, resetModal, openCreateModal, toggleFile, canNext, handleGenerate, handleDelete, handleBulkDelete, handleDeleteAll, toggleDocSelect, toggleSelectAll, openVersionPanel, openDocModal, handleSave, handleComplete, handleRevertToDraft, handleDownload, handleDownloadAiContext, handleViewerClose, handleDownloadGeneratedFile, handleDateInput, closeConfirm, startReuseDocument, openSearchFromDocument, uploadLocalFiles, setReferenceDocId, extractFieldsFromSources,
     handleVersionNew: (docId: string) => { setNewVersionDocId(docId); setVersionPanelDocId(null); openCreateModal(); },
   };
 }

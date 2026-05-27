@@ -31,6 +31,7 @@ interface NewDocumentGeneralStepProps {
     aiAssist?: boolean;
   }>;
   allowedOutputFormats: readonly string[];
+  extractedFieldKeys?: Set<string>;
   onSetDocumentInputs: (updater: (prev: Record<string, string>) => Record<string, string>) => void;
   onSetOutputFormat: (value: string) => void;
   onSetInstructions: (value: string) => void;
@@ -51,6 +52,7 @@ export function NewDocumentGeneralStep({
   outputFormat,
   templateFields,
   allowedOutputFormats,
+  extractedFieldKeys,
   onSetDocumentInputs,
   onSetOutputFormat,
   onSetInstructions,
@@ -91,8 +93,11 @@ export function NewDocumentGeneralStep({
           <div className="grid grid-cols-1 gap-3">
             {manualFields.map((field) => (
               <div key={field.key}>
-                <label className="block text-xs text-foreground-secondary" style={{ marginBottom: 6 }}>
+                <label className="flex items-center gap-1.5 text-xs text-foreground-secondary" style={{ marginBottom: 6 }}>
                   {field.label} {field.required && <span className="text-danger">*</span>}
+                  {extractedFieldKeys?.has(field.key) && (
+                    <span className="inline-flex items-center rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">참조파일에서 추출</span>
+                  )}
                 </label>
                 {field.type === 'textarea' ? (
                   <textarea

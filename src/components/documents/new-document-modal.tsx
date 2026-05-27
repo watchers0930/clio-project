@@ -48,7 +48,10 @@ interface NewDocumentModalProps {
   creationContextTitle: string;
   referenceDocId: string | null;
   referenceDocuments: DocumentItem[];
+  extractingFields: boolean;
+  extractedFieldKeys: Set<string>;
   onSetReferenceDocId: (id: string | null) => void;
+  onExtractFieldsFromSources: () => Promise<void>;
   onClose: () => void;
   onBack: () => void;
   onNext: () => void;
@@ -103,7 +106,10 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
     creationContextTitle,
     referenceDocId,
     referenceDocuments,
+    extractingFields,
+    extractedFieldKeys,
     onSetReferenceDocId,
+    onExtractFieldsFromSources,
     onClose,
     onBack,
     onNext,
@@ -405,6 +411,7 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
               outputFormat={outputFormat}
               templateFields={templateFields}
               allowedOutputFormats={allowedOutputFormats}
+              extractedFieldKeys={extractedFieldKeys}
               onSetDocumentInputs={onSetDocumentInputs}
               onSetOutputFormat={onSetOutputFormat}
               onSetInstructions={onSetInstructions}
@@ -545,8 +552,17 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
             {step === 1 || step === 5 ? '닫기' : '이전'}
           </button>
           {step < 4 && (
-            <button disabled={!canNext} onClick={onNext} className="px-5 py-2 rounded-xl bg-foreground text-white text-[13px] font-medium hover:bg-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-              다음
+            <button
+              disabled={!canNext || extractingFields}
+              onClick={step === 2 ? async () => { await onExtractFieldsFromSources(); onNext(); } : onNext}
+              className="px-5 py-2 rounded-xl bg-foreground text-white text-[13px] font-medium hover:bg-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {extractingFields ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                  참조파일 분석 중...
+                </span>
+              ) : '다음'}
             </button>
           )}
           {step === 4 && (
