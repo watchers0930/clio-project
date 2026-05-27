@@ -5,10 +5,12 @@
 
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
+import { google } from '@ai-sdk/google';
 import type { GenerationResult, OutputFormat } from '@/lib/renderers/types';
 import type { TemplateBundle } from '@/lib/templates/template-schema';
 import { isWorklogTemplateName } from '@/lib/templates/worklog';
 import { isProposalTemplateName } from '@/lib/templates/proposal';
+import { isBusinessPlanTemplateName } from '@/lib/templates/business-plan';
 import {
   MAX_CONTEXT_CHARS,
   MAX_TEMPLATE_FILE_CHARS,
@@ -135,6 +137,74 @@ async function generateProposalBySections(params: {
   return [`# ${title}`, '', ...results.map((r) => `## ${r.title}\n\n${r.content}`)].join('\n\n');
 }
 
+async function generateBusinessPlanBySections(params: {
+  templateName: string;
+  templateBundle: TemplateBundle;
+  sourceChunks: string[];
+  instructions?: string;
+  documentInputs?: Record<string, string>;
+}): Promise<string> {
+  const { templateBundle, sourceChunks, instructions, documentInputs } = params;
+  const model = google('gemini-2.5-flash');
+
+  let contextText = '';
+  for (const chunk of sourceChunks) {
+    if (contextText.length + chunk.length > MAX_CONTEXT_CHARS) break;
+    contextText += `${chunk}\n---\n`;
+  }
+
+  const fieldValues = templateBundle.fields
+    .map((f) => `- ${f.label}: ${documentInputs?.[f.key] || '[미입력]'}`)
+    .join('\n');
+  const title = documentInputs?.report_title?.trim() || params.templateName;
+
+  const sharedSystem = `당신은 창업 사업계획서 작성 전문 AI입니다. 한국어로 작성합니다.
+
+## 핵심 규칙
+1. 입력된 기본정보를 최우선 사실로 사용합니다.
+2. 창업지원사업 심사위원이 납득할 깊이와 구체성을 확보합니다.
+3. 분량 제한 없이 각 항목을 충실하게 서술합니다.
+4. 각 H3 항목은 4~8문단으로 전개합니다. 배경→현황→방안→기대효과 흐름을 따릅니다.
+5. 표가 적절한 곳에 5~8행 상세 표를 포함합니다 (마크다운 테이블).
+6. 참조 자료의 수치, 실적, 기술 내용을 적극 인용합니다.
+7. 확인되지 않은 수치는 [확인필요]로 표시합니다.
+8. 순수 마크다운만 출력합니다 (Mermaid 없음).
+9. 불필요한 마케팅·과장·추측성 표현을 쓰지 않습니다.
+10. AS-IS 분석은 수치화, 기대효과는 정량적 KPI, 차별점은 구체적 비교로 서술합니다.`;
+
+  const sectionPromises = templateBundle.sections.map(async (section) => {
+    const sectionSystem = `${sharedSystem}\n\n## 현재 작성 섹션: ${section.title}\n\n## 작성 지시\n${section.prompt}`;
+    const sectionUser = [
+      `## 기본정보\n${fieldValues}`,
+      `## 참조 자료\n${contextText || '(참조 자료 없음)'}`,
+      instructions ? `## 추가 지시사항\n${instructions}` : '',
+      `"${section.title}" 섹션을 작성하세요.`,
+      '- ## (H2) 제목 없이 ### (H3) 하위 항목부터 바로 시작합니다.',
+      '- 각 H3 항목마다 4~8문단으로 충분히 서술합니다.',
+    ].filter(Boolean).join('\n\n');
+
+    try {
+      const { text } = await generateText({
+        model,
+        system: sectionSystem,
+        prompt: sectionUser,
+        maxOutputTokens: 16000,
+        temperature: 0.2,
+      });
+      let result = text.trim();
+      if (result.startsWith('```markdown')) result = result.replace(/^```markdown\s*\n?/, '').replace(/\n?```\s*$/, '');
+      else if (result.startsWith('```')) result = result.replace(/^```\w*\s*\n?/, '').replace(/\n?```\s*$/, '');
+      return { title: section.title, content: result };
+    } catch (err) {
+      console.error(`[business-plan-sections] ${section.title} failed:`, err);
+      return { title: section.title, content: section.prompt };
+    }
+  });
+
+  const results = await Promise.all(sectionPromises);
+  return [`# ${title}`, '', ...results.map((r) => `## ${r.title}\n\n${r.content}`)].join('\n\n');
+}
+
 export async function generateDocumentContent(params: {
   templateName: string;
   templateContent?: string | null;
@@ -180,6 +250,17 @@ export async function generateDocumentContent(params: {
       instructions,
       documentInputs,
       referenceSections,
+    });
+  }
+
+  // 사업계획서: Gemini Flash 섹션별 병렬 생성
+  if (isBusinessPlanTemplateName(templateName) && templateBundle && !templateFileText) {
+    return generateBusinessPlanBySections({
+      templateName,
+      templateBundle,
+      sourceChunks,
+      instructions,
+      documentInputs,
     });
   }
 
