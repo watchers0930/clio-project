@@ -354,7 +354,8 @@ export function useDocumentsPage() {
         { key: 'subtitle', label: '소제목', type: 'text' as const, placeholder: '예: 경영회의 보고용' },
       ])) as TemplateFieldDefinition[];
 
-    const targetFields = resolvedFields.filter((f) => !f.autoFill && !f.aiAssist);
+    const AUTO_INPUT_KEYS = new Set(['author', 'author_department', 'author_position', 'report_date', 'report_time']);
+    const targetFields = resolvedFields.filter((f) => !f.autoFill && !f.aiAssist && !AUTO_INPUT_KEYS.has(f.key));
     if (targetFields.length === 0) return;
 
     setExtractingFields(true);
@@ -375,6 +376,10 @@ export function useDocumentsPage() {
         return;
       }
       const data = await res.json();
+      if (data.reason === 'no_text') {
+        toast.info('선택한 참조파일에서 텍스트를 추출할 수 없습니다.');
+        return;
+      }
       const extracted = (data.extractedInputs ?? {}) as Record<string, string>;
       const filledCount = Object.values(extracted).filter((v) => v).length;
       const newKeys = new Set<string>();
@@ -391,6 +396,8 @@ export function useDocumentsPage() {
       setExtractedFieldKeys(newKeys);
       if (filledCount > 0) {
         toast.success(`참조파일에서 ${filledCount}개 항목을 자동 입력했습니다.`);
+      } else {
+        toast.info('참조파일에서 자동 입력할 항목을 찾지 못했습니다.');
       }
     } catch (err) {
       console.error('[extract-fields] fetch error:', err);

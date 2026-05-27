@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     const { sourceFileSummary } = await loadSourceChunks(supabase, sourceFileIds as string[]);
 
     if (!sourceFileSummary.trim()) {
-      return NextResponse.json({ extractedInputs: {} });
+      return NextResponse.json({ extractedInputs: {}, reason: 'no_text' });
     }
 
     const validFields = fields as Array<{ key: string; label: string; placeholder?: string }>;
