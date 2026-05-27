@@ -368,28 +368,37 @@ export function useDocumentsPage() {
           templateName: selectedTemplateItem.name,
         }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        const extracted = (data.extractedInputs ?? {}) as Record<string, string>;
-        const newKeys = new Set<string>();
-        setDocumentInputs((prev) => {
-          const next = { ...prev };
-          for (const [key, value] of Object.entries(extracted)) {
-            if (value && !prev[key]?.trim()) {
-              next[key] = value;
-              newKeys.add(key);
-            }
-          }
-          return next;
-        });
-        setExtractedFieldKeys(newKeys);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        console.error('[extract-fields] API error:', res.status, errData);
+        toast.error(`참조파일 분석 실패: ${errData?.error ?? res.statusText}`);
+        return;
       }
-    } catch {
-      // 추출 실패 시 무시 — 사용자가 수동 입력
+      const data = await res.json();
+      const extracted = (data.extractedInputs ?? {}) as Record<string, string>;
+      const filledCount = Object.values(extracted).filter((v) => v).length;
+      const newKeys = new Set<string>();
+      setDocumentInputs((prev) => {
+        const next = { ...prev };
+        for (const [key, value] of Object.entries(extracted)) {
+          if (value && !prev[key]?.trim()) {
+            next[key] = value;
+            newKeys.add(key);
+          }
+        }
+        return next;
+      });
+      setExtractedFieldKeys(newKeys);
+      if (filledCount > 0) {
+        toast.success(`참조파일에서 ${filledCount}개 항목을 자동 입력했습니다.`);
+      }
+    } catch (err) {
+      console.error('[extract-fields] fetch error:', err);
+      toast.error('참조파일 분석 중 오류가 발생했습니다.');
     } finally {
       setExtractingFields(false);
     }
-  }, [selectedFiles, templates, selectedTemplate]);
+  }, [selectedFiles, templates, selectedTemplate, toast]);
 
   const openCreateModal = () => { resetModal(); setShowModal(true); };
   const toggleFile = (id: string) => setSelectedFiles((prev) => {
