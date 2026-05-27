@@ -10,6 +10,8 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { loadSourceChunks } from '@/app/api/generate/route-helpers';
 
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   const supabase = await createServerSupabaseClient();
   if (!supabase) {
@@ -50,8 +52,8 @@ export async function POST(req: NextRequest) {
     const { sourceFileSummary, sourceChunks, sourceFileNames, sourceFileCount } = await loadSourceChunks(supabase, sourceFileIds as string[]);
 
     if (!sourceFileSummary.trim()) {
-      console.error('[extract-fields] no_text debug:', { requestedIds: sourceFileIds.length, foundFiles: sourceFileCount, fileNames: sourceFileNames, chunksExtracted: sourceChunks.length });
-      return NextResponse.json({ extractedInputs: {}, reason: 'no_text', debug: { requestedIds: sourceFileIds.length, foundFiles: sourceFileCount, fileNames: sourceFileNames } });
+      console.warn('[extract-fields] no_text:', { requestedIds: sourceFileIds.length, foundFiles: sourceFileCount, fileNames: sourceFileNames, chunksExtracted: sourceChunks.length });
+      return NextResponse.json({ extractedInputs: {}, reason: 'no_text' });
     }
 
     const validFields = fields as Array<{ key: string; label: string; placeholder?: string }>;
