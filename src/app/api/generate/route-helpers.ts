@@ -97,12 +97,15 @@ export async function loadSourceChunks(supabase: SupabaseClient, sourceFileIds?:
     return { sourceChunks, sourceFileNames: [], sourceFileSummary: '', sourceFileCount: 0 };
   }
 
-  const { data: srcFiles } = await supabase.from('files').select('id, name, type, storage_path').in('id', sourceFileIds);
-  const { data: chunkRows } = await supabase
+  const { data: srcFiles, error: srcFilesErr } = await supabase.from('files').select('id, name, type, storage_path').in('id', sourceFileIds);
+  if (srcFilesErr) console.error('[loadSourceChunks] files query error:', srcFilesErr.message);
+  const { data: chunkRows, error: chunkErr } = await supabase
     .from('file_chunks')
     .select('file_id, content, chunk_index')
     .in('file_id', sourceFileIds)
-    .order('chunk_index', { ascending: true });
+    .order('chunk_index', { ascending: true })
+    .limit(5000);
+  if (chunkErr) console.error('[loadSourceChunks] chunks query error:', chunkErr.message);
 
   const chunkMap = new Map<string, string[]>();
   for (const chunk of ((chunkRows ?? []) as FileChunkRow[])) {
@@ -121,14 +124,21 @@ export async function loadSourceChunks(supabase: SupabaseClient, sourceFileIds?:
       continue;
     }
 
-    if (!sf.storage_path) continue;
+    if (!sf.storage_path) {
+      console.warn(`[loadSourceChunks] ${sf.name}: no storage_path, skipped`);
+      continue;
+    }
     try {
-      const { data: blob } = await supabase.storage.from('files').download(sf.storage_path);
-      if (!blob) continue;
+      const { data: blob, error: dlErr } = await supabase.storage.from('files').download(sf.storage_path);
+      if (dlErr || !blob) {
+        console.error(`[loadSourceChunks] ${sf.name}: download failed`, dlErr?.message);
+        continue;
+      }
       const text = await extractText(await blob.arrayBuffer(), sf.type ?? '', sf.name);
       if (text.trim()) sourceChunks.push(text.slice(0, 8000));
+      else console.warn(`[loadSourceChunks] ${sf.name}: extracted text is empty`);
     } catch (e) {
-      console.error(`[generate] extract source ${sf.name}:`, e);
+      console.error(`[loadSourceChunks] ${sf.name}: extract error`, e);
     }
   }
 
