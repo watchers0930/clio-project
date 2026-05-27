@@ -6,6 +6,13 @@ import {
   WORKLOG_FIELDS,
 } from '@/lib/templates/worklog';
 import { createProposalTemplateBundle, isProposalTemplateName } from '@/lib/templates/proposal';
+import {
+  isBusinessPlanTemplateName,
+  createBusinessPlanTemplateBundle,
+  BUSINESS_PLAN_FIELDS,
+  BUSINESS_PLAN_OUTLINE,
+  BUSINESS_PLAN_TEMPLATE_HTML,
+} from '@/lib/templates/business-plan';
 
 export interface TemplateFieldDefinition {
   key: string;
@@ -81,6 +88,10 @@ function buildDefaultHtml(name: string, sections: TemplateSectionDefinition[]) {
     return createProposalTemplateBundle().layoutHtml;
   }
 
+  if (isBusinessPlanTemplateName(name)) {
+    return BUSINESS_PLAN_TEMPLATE_HTML;
+  }
+
   if (isWorklogTemplateName(name)) {
     return WORKLOG_TEMPLATE_HTML;
   }
@@ -151,8 +162,34 @@ export function createTemplateBundle(params: {
     };
   }
 
+  if (isBusinessPlanTemplateName(params.name)) {
+    const bpBundle = createBusinessPlanTemplateBundle();
+    const placeholderFields = Array.isArray(params.placeholders)
+      ? params.placeholders
+          .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
+          .map((item, index) => ({
+            key: String(item.key ?? `placeholder_${index + 1}`),
+            label: String(item.label ?? item.key ?? `플레이스홀더 ${index + 1}`),
+            type: 'text' as const,
+            placeholder: typeof item.context === 'string' ? item.context : undefined,
+          }))
+      : [];
+
+    return {
+      ...bpBundle,
+      fields: [
+        ...bpBundle.fields,
+        ...placeholderFields.filter((field) => !bpBundle.fields.some((base) => base.key === field.key)),
+      ],
+    };
+  }
+
   const outline = (params.outline ?? '').trim() || `# ${params.name}\n## 개요\n## 주요 내용\n## 결론`;
-  const resolvedOutline = isWorklogTemplateName(params.name) ? WORKLOG_OUTLINE : outline;
+  const resolvedOutline = isWorklogTemplateName(params.name)
+    ? WORKLOG_OUTLINE
+    : isBusinessPlanTemplateName(params.name)
+      ? BUSINESS_PLAN_OUTLINE
+      : outline;
   const sections = parseOutlineSections(resolvedOutline);
   const placeholderFields = Array.isArray(params.placeholders)
     ? params.placeholders
@@ -165,7 +202,11 @@ export function createTemplateBundle(params: {
         }))
     : [];
 
-  const baseFields: TemplateFieldDefinition[] = isWorklogTemplateName(params.name) ? [...WORKLOG_FIELDS] : DEFAULT_FIELDS;
+  const baseFields: TemplateFieldDefinition[] = isWorklogTemplateName(params.name)
+    ? [...WORKLOG_FIELDS]
+    : isBusinessPlanTemplateName(params.name)
+      ? [...BUSINESS_PLAN_FIELDS]
+      : DEFAULT_FIELDS;
   const fields = [
     ...baseFields,
     ...placeholderFields.filter((field) => !baseFields.some((base) => base.key === field.key)),
@@ -190,7 +231,7 @@ export function parseTemplateBundle(rawContent: string | null | undefined, fallb
     try {
       const parsed = JSON.parse(rawContent) as Partial<TemplateBundle>;
       if (parsed?.mode === 'html-template' && parsed.version === 1) {
-        if (isProposalTemplateName(fallback.name)) {
+        if (isProposalTemplateName(fallback.name) || isBusinessPlanTemplateName(fallback.name)) {
           return createTemplateBundle({
             name: fallback.name,
             description: fallback.description,

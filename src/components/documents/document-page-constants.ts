@@ -16,6 +16,7 @@ export const TEMPLATE_ICONS: Record<string, string> = {
   '기술설계문서': '💡',
   '마케팅_캠페인_기획서': '🎯',
   '채용공고_양식': '👥',
+  '사업계획서': '📋',
 };
 
 export const DOCUMENT_RELATION_LABELS: Record<string, string> = {
