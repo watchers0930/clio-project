@@ -56,13 +56,29 @@ export async function extractText(
 
 // ─── PDF ───────────────────────────────────────────────────
 async function extractPdf(buffer: ArrayBuffer): Promise<string> {
-  const { PDFParse } = await import('pdf-parse');
-  const parser = new PDFParse({ data: Buffer.from(buffer) });
+  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  // port: null → 워커 프로세스 없이 메인 스레드에서 실행 (Next.js 번들링 호환)
+  const worker = new pdfjsLib.PDFWorker({ port: null });
   try {
-    const result = await parser.getText();
-    return result.text;
+    const loadingTask = pdfjsLib.getDocument({
+      data: new Uint8Array(buffer),
+      worker,
+      isEvalSupported: false,
+    });
+    const doc = await loadingTask.promise;
+    const pages: string[] = [];
+    for (let i = 1; i <= doc.numPages; i++) {
+      const page = await doc.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items
+        .map((item) => ('str' in item ? (item as { str: string }).str : ''))
+        .join('');
+      if (pageText.trim()) pages.push(pageText);
+    }
+    doc.destroy();
+    return pages.join('\n');
   } finally {
-    await parser.destroy().catch(() => {});
+    worker.destroy();
   }
 }
 
