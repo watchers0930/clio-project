@@ -48,11 +48,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { sourceFileSummary, sourceChunks, sourceFileNames, sourceFileCount, _debugSteps } = await loadSourceChunks(supabase, sourceFileIds as string[]);
+    const { sourceFileSummary, sourceChunks, sourceFileNames, sourceFileCount } = await loadSourceChunks(supabase, sourceFileIds as string[]);
 
     if (!sourceFileSummary.trim()) {
-      console.warn('[extract-fields] no_text:', { requestedIds: sourceFileIds.length, foundFiles: sourceFileCount, fileNames: sourceFileNames, chunksExtracted: sourceChunks.length, _debugSteps });
-      return NextResponse.json({ extractedInputs: {}, reason: 'no_text', _debug: { requestedIds: sourceFileIds.length, foundFiles: sourceFileCount, fileNames: sourceFileNames, chunksExtracted: sourceChunks.length, steps: _debugSteps } });
+      console.warn('[extract-fields] no_text:', { requestedIds: sourceFileIds.length, foundFiles: sourceFileCount, fileNames: sourceFileNames, chunksExtracted: sourceChunks.length });
+      return NextResponse.json({ extractedInputs: {}, reason: 'no_text' });
     }
 
     const validFields = fields as Array<{ key: string; label: string; placeholder?: string }>;

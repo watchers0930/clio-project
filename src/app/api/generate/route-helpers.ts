@@ -93,31 +93,22 @@ export async function loadUserGenerationContext(supabase: SupabaseClient, authUs
 
 export async function loadSourceChunks(supabase: SupabaseClient, sourceFileIds?: string[]) {
   const sourceChunks: string[] = [];
-  const _debugSteps: string[] = [];
   if (!sourceFileIds?.length) {
-    return { sourceChunks, sourceFileNames: [], sourceFileSummary: '', sourceFileCount: 0, _debugSteps };
+    return { sourceChunks, sourceFileNames: [], sourceFileSummary: '', sourceFileCount: 0 };
   }
 
   // file_chunks와 Storage는 admin client로 접근 (RLS bypass)
   const admin = createAdminSupabaseClient();
 
   const { data: srcFiles, error: srcFilesErr } = await admin.from('files').select('id, name, type, storage_path').in('id', sourceFileIds);
-  if (srcFilesErr) {
-    _debugSteps.push(`files_query_error: ${srcFilesErr.message}`);
-    console.error('[loadSourceChunks] files query error:', srcFilesErr.message);
-  }
+  if (srcFilesErr) console.error('[loadSourceChunks] files query error:', srcFilesErr.message);
   const { data: chunkRows, error: chunkErr } = await admin
     .from('file_chunks')
     .select('file_id, content, chunk_index')
     .in('file_id', sourceFileIds)
     .order('chunk_index', { ascending: true })
     .limit(5000);
-  if (chunkErr) {
-    _debugSteps.push(`chunks_query_error: ${chunkErr.message}`);
-    console.error('[loadSourceChunks] chunks query error:', chunkErr.message);
-  }
-  _debugSteps.push(`files: ${srcFiles?.length ?? 0}, chunks: ${chunkRows?.length ?? 0}`);
-  _debugSteps.push(`storagePaths: ${(srcFiles ?? []).map((f: { name: string; storage_path?: string | null }) => `${f.name}=${f.storage_path ? 'yes' : 'NULL'}`).join(', ')}`);
+  if (chunkErr) console.error('[loadSourceChunks] chunks query error:', chunkErr.message);
 
   const chunkMap = new Map<string, string[]>();
   for (const chunk of ((chunkRows ?? []) as FileChunkRow[])) {
@@ -132,35 +123,24 @@ export async function loadSourceChunks(supabase: SupabaseClient, sourceFileIds?:
     sourceFileNames.push(sf.name);
     const indexedText = chunkMap.get(sf.id)?.join('\n').trim();
     if (indexedText) {
-      _debugSteps.push(`${sf.name}: used_chunks (${indexedText.length} chars)`);
       sourceChunks.push(indexedText.slice(0, 8000));
       continue;
     }
 
     if (!sf.storage_path) {
-      _debugSteps.push(`${sf.name}: NO_STORAGE_PATH`);
       console.warn(`[loadSourceChunks] ${sf.name}: no storage_path, skipped`);
       continue;
     }
     try {
-      _debugSteps.push(`${sf.name}: downloading from ${sf.storage_path}`);
       const { data: blob, error: dlErr } = await admin.storage.from('files').download(sf.storage_path);
       if (dlErr || !blob) {
-        _debugSteps.push(`${sf.name}: download_failed: ${dlErr?.message ?? 'no blob'}`);
         console.error(`[loadSourceChunks] ${sf.name}: download failed`, dlErr?.message);
         continue;
       }
-      _debugSteps.push(`${sf.name}: downloaded, extracting text (type=${sf.type})`);
       const text = await extractText(await blob.arrayBuffer(), sf.type ?? '', sf.name);
-      if (text.trim()) {
-        _debugSteps.push(`${sf.name}: extracted ${text.length} chars`);
-        sourceChunks.push(text.slice(0, 8000));
-      } else {
-        _debugSteps.push(`${sf.name}: extracted_text_empty`);
-        console.warn(`[loadSourceChunks] ${sf.name}: extracted text is empty`);
-      }
+      if (text.trim()) sourceChunks.push(text.slice(0, 8000));
+      else console.warn(`[loadSourceChunks] ${sf.name}: extracted text is empty`);
     } catch (e) {
-      _debugSteps.push(`${sf.name}: extract_error: ${e instanceof Error ? e.message : String(e)}`);
       console.error(`[loadSourceChunks] ${sf.name}: extract error`, e);
     }
   }
@@ -174,7 +154,6 @@ export async function loadSourceChunks(supabase: SupabaseClient, sourceFileIds?:
     sourceFileNames,
     sourceFileSummary,
     sourceFileCount: sourceFileNames.length,
-    _debugSteps,
   };
 }
 
