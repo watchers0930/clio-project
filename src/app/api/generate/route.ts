@@ -585,30 +585,8 @@ export async function POST(request: NextRequest) {
         details: { title, format },
       }).then(() => {}, () => {});
 
-      // PDF는 렌더링된 HTML도 함께 반환
-      if (format === 'pdf') {
-        const rendered = await renderDocument(generationResult, theme);
-        return NextResponse.json({
-          document: buildDocumentSummary({
-            id: newDoc.id,
-            title,
-            templateName,
-            createdAt: dateStr,
-            status: '초안',
-            sourceCount: (sourceFileIds ?? []).length,
-            content: markdownContent,
-            versionNumber: (newDoc as { version_number?: number | null }).version_number ?? 1,
-            parentId: (newDoc as { parent_id?: string | null }).parent_id ?? null,
-            originDocumentId: (newDoc as { origin_document_id?: string | null }).origin_document_id ?? null,
-            originContext: (newDoc as { origin_context?: string | null }).origin_context ?? null,
-          }),
-          format,
-          htmlContent: rendered.buffer.toString('utf-8'),
-        }, { status: 201 });
-      }
-
-      // DOCX/HWPX 마크다운 → 파일 렌더링 → Storage 업로드
-      if (format === 'hwpx' || format === 'docx') {
+      // PDF/DOCX/HWPX 마크다운 → 파일 렌더링 → Storage 업로드
+      if (format === 'pdf' || format === 'hwpx' || format === 'docx') {
         const rendered = await renderDocument(generationResult, theme);
         const filePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
         const { error: upErr } = await supabase.storage
