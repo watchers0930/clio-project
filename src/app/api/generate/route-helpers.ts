@@ -97,9 +97,12 @@ export async function loadSourceChunks(supabase: SupabaseClient, sourceFileIds?:
     return { sourceChunks, sourceFileNames: [], sourceFileSummary: '', sourceFileCount: 0 };
   }
 
+  // file_chunks와 Storage는 admin client로 접근 (RLS bypass)
+  const admin = createAdminSupabaseClient();
+
   const { data: srcFiles, error: srcFilesErr } = await supabase.from('files').select('id, name, type, storage_path').in('id', sourceFileIds);
   if (srcFilesErr) console.error('[loadSourceChunks] files query error:', srcFilesErr.message);
-  const { data: chunkRows, error: chunkErr } = await supabase
+  const { data: chunkRows, error: chunkErr } = await admin
     .from('file_chunks')
     .select('file_id, content, chunk_index')
     .in('file_id', sourceFileIds)
@@ -129,7 +132,7 @@ export async function loadSourceChunks(supabase: SupabaseClient, sourceFileIds?:
       continue;
     }
     try {
-      const { data: blob, error: dlErr } = await supabase.storage.from('files').download(sf.storage_path);
+      const { data: blob, error: dlErr } = await admin.storage.from('files').download(sf.storage_path);
       if (dlErr || !blob) {
         console.error(`[loadSourceChunks] ${sf.name}: download failed`, dlErr?.message);
         continue;
