@@ -100,7 +100,7 @@ export async function loadSourceChunks(supabase: SupabaseClient, sourceFileIds?:
   // file_chunks와 Storage는 admin client로 접근 (RLS bypass)
   const admin = createAdminSupabaseClient();
 
-  const { data: srcFiles, error: srcFilesErr } = await supabase.from('files').select('id, name, type, storage_path').in('id', sourceFileIds);
+  const { data: srcFiles, error: srcFilesErr } = await admin.from('files').select('id, name, type, storage_path').in('id', sourceFileIds);
   if (srcFilesErr) console.error('[loadSourceChunks] files query error:', srcFilesErr.message);
   const { data: chunkRows, error: chunkErr } = await admin
     .from('file_chunks')
