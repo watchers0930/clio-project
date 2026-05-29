@@ -102,6 +102,7 @@ export async function loadSourceChunks(supabase: SupabaseClient, sourceFileIds?:
 
   const { data: srcFiles, error: srcFilesErr } = await admin.from('files').select('id, name, type, storage_path').in('id', sourceFileIds);
   if (srcFilesErr) console.error('[loadSourceChunks] files query error:', srcFilesErr.message);
+  console.log('[loadSourceChunks] requestedIds:', sourceFileIds, 'foundFiles:', srcFiles?.length ?? 0, 'filesErr:', srcFilesErr?.message ?? 'none');
   const { data: chunkRows, error: chunkErr } = await admin
     .from('file_chunks')
     .select('file_id, content, chunk_index')
@@ -109,6 +110,7 @@ export async function loadSourceChunks(supabase: SupabaseClient, sourceFileIds?:
     .order('chunk_index', { ascending: true })
     .limit(5000);
   if (chunkErr) console.error('[loadSourceChunks] chunks query error:', chunkErr.message);
+  console.log('[loadSourceChunks] chunkRows:', chunkRows?.length ?? 0, 'chunkErr:', chunkErr?.message ?? 'none');
 
   const chunkMap = new Map<string, string[]>();
   for (const chunk of ((chunkRows ?? []) as FileChunkRow[])) {
