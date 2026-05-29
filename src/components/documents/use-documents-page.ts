@@ -546,9 +546,20 @@ export function useDocumentsPage() {
 
   const handleDownloadGeneratedFile = async () => {
     if (!generatedDoc || !generatedDownloadUrl) return;
+    const selectedTemplateItem = templates.find((t) => t.id === selectedTemplate);
+    const isHtmlTemplate = selectedTemplateItem?.templateMode === 'html-template';
     try {
       const res = await fetch(generatedDownloadUrl);
       if (!res.ok) throw new Error('다운로드 실패');
+      if (isHtmlTemplate) {
+        const html = await res.text();
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) { toast.error('팝업이 차단되었습니다. 팝업을 허용해 주세요.'); return; }
+        printWindow.document.write(html);
+        printWindow.document.close();
+        printWindow.onload = () => { printWindow.print(); };
+        return;
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
