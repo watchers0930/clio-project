@@ -137,6 +137,40 @@ async function generateProposalBySections(params: {
   return [`# ${title}`, '', ...results.map((r) => `## ${r.title}\n\n${r.content}`)].join('\n\n');
 }
 
+async function generateSectionWithRetry(
+  sectionSystem: string,
+  sectionUser: string,
+  sectionTitle: string,
+): Promise<string> {
+  const models = [
+    { provider: 'gemini', create: () => google('gemini-2.5-flash') },
+    { provider: 'openai', create: () => openai('gpt-4o-mini') },
+  ];
+
+  for (const { provider, create } of models) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const { text } = await generateText({
+          model: create(),
+          system: sectionSystem,
+          prompt: sectionUser,
+          maxOutputTokens: 16000,
+          temperature: 0.2,
+        });
+        let result = text.trim();
+        if (result.startsWith('```markdown')) result = result.replace(/^```markdown\s*\n?/, '').replace(/\n?```\s*$/, '');
+        else if (result.startsWith('```')) result = result.replace(/^```\w*\s*\n?/, '').replace(/\n?```\s*$/, '');
+        if (result.length > 50) return result;
+        console.warn(`[business-plan-sections] ${sectionTitle}: ${provider} attempt ${attempt + 1} returned short text (${result.length} chars)`);
+      } catch (err) {
+        console.error(`[business-plan-sections] ${sectionTitle}: ${provider} attempt ${attempt + 1} failed:`, err);
+      }
+    }
+  }
+
+  return `[이 섹션("${sectionTitle}")은 AI 생성에 실패했습니다. 문서를 다시 생성해주세요.]`;
+}
+
 async function generateBusinessPlanBySections(params: {
   templateName: string;
   templateBundle: TemplateBundle;
@@ -145,7 +179,6 @@ async function generateBusinessPlanBySections(params: {
   documentInputs?: Record<string, string>;
 }): Promise<string> {
   const { templateBundle, sourceChunks, instructions, documentInputs } = params;
-  const model = google('gemini-2.5-flash');
 
   let contextText = '';
   for (const chunk of sourceChunks) {
@@ -183,22 +216,8 @@ async function generateBusinessPlanBySections(params: {
       '- 각 H3 항목마다 4~8문단으로 충분히 서술합니다.',
     ].filter(Boolean).join('\n\n');
 
-    try {
-      const { text } = await generateText({
-        model,
-        system: sectionSystem,
-        prompt: sectionUser,
-        maxOutputTokens: 16000,
-        temperature: 0.2,
-      });
-      let result = text.trim();
-      if (result.startsWith('```markdown')) result = result.replace(/^```markdown\s*\n?/, '').replace(/\n?```\s*$/, '');
-      else if (result.startsWith('```')) result = result.replace(/^```\w*\s*\n?/, '').replace(/\n?```\s*$/, '');
-      return { title: section.title, content: result };
-    } catch (err) {
-      console.error(`[business-plan-sections] ${section.title} failed:`, err);
-      return { title: section.title, content: section.prompt };
-    }
+    const content = await generateSectionWithRetry(sectionSystem, sectionUser, section.title);
+    return { title: section.title, content };
   });
 
   const results = await Promise.all(sectionPromises);
