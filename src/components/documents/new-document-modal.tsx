@@ -8,8 +8,9 @@ import { DOCUMENT_RELATION_LABELS, TEMPLATE_ICONS } from '@/components/documents
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
 import { ReferenceDocumentPicker } from '@/components/documents/reference-document-picker';
 
-function getAllowedOutputFormats(templateFile: TemplateItem['templateFile'] | null, isContract: boolean) {
+function getAllowedOutputFormats(templateFile: TemplateItem['templateFile'] | null, isContract: boolean, templateMode?: string) {
   if (isContract) return ['hwpx'] as const;
+  if (templateMode === 'html-template') return ['pdf'] as const;
   if (!templateFile?.name) return ['docx', 'pdf', 'xlsx', 'pptx'] as const;
 
   const ext = templateFile.name.split('.').pop()?.toLowerCase() ?? '';
@@ -141,7 +142,7 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
   const isWorklogTemplate = isWorklogTemplateName(selectedTemplateItem?.name);
   const isProposalTemplate = selectedTemplateItem?.name === '제안서';
   const contractSchema = selectedTemplateItem ? getContractSchema(selectedTemplateItem.name) : null;
-  const allowedOutputFormats = getAllowedOutputFormats(selectedTemplateItem?.templateFile ?? null, Boolean(contractSchema));
+  const allowedOutputFormats = getAllowedOutputFormats(selectedTemplateItem?.templateFile ?? null, Boolean(contractSchema), selectedTemplateItem?.templateMode);
   const templateFields = selectedTemplateItem?.templateFields
     ?? (isWorklogTemplate ? [...WORKLOG_FIELDS] : [
     { key: 'report_title', label: '문서 제목', type: 'text' as const, required: true, placeholder: '예: 2026년 2분기 사업 보고서' },

@@ -25,8 +25,9 @@ export {
 
 type AllowedOutputFormat = 'docx' | 'hwpx' | 'pdf' | 'xlsx' | 'pptx';
 
-function getAllowedOutputFormats(templateFile: Template['templateFile'] | null | undefined, isContract: boolean): AllowedOutputFormat[] {
+function getAllowedOutputFormats(templateFile: Template['templateFile'] | null | undefined, isContract: boolean, templateMode?: string): AllowedOutputFormat[] {
   if (isContract) return ['hwpx'];
+  if (templateMode === 'html-template') return ['pdf'];
   if (!templateFile?.name) return ['docx', 'pdf', 'xlsx', 'pptx'];
 
   const ext = templateFile.name.split('.').pop()?.toLowerCase() ?? '';
@@ -296,7 +297,7 @@ export function useDocumentsPage() {
   useEffect(() => {
     const selectedTemplateItem = templates.find((template) => template.id === selectedTemplate);
     const isContract = selectedTemplateItem ? isContractTemplate(selectedTemplateItem.name) : false;
-    const allowedFormats = getAllowedOutputFormats(selectedTemplateItem?.templateFile, isContract);
+    const allowedFormats = getAllowedOutputFormats(selectedTemplateItem?.templateFile, isContract, selectedTemplateItem?.templateMode);
 
     if (!allowedFormats.includes(outputFormat as AllowedOutputFormat)) {
       setOutputFormat(allowedFormats[0]);
@@ -443,7 +444,7 @@ export function useDocumentsPage() {
       const finalInstructions = isCustom ? `## 문서 구조:\n${customStructure.trim()}\n\n${instructions.trim() ? `## 추가 지시사항:\n${instructions.trim()}` : ''}` : instructions.trim() || undefined;
       const selectedTemplateItem = templates.find((template) => template.id === selectedTemplate);
       const isContract = selectedTemplateItem ? isContractTemplate(selectedTemplateItem.name) : false;
-      const allowedFormats = getAllowedOutputFormats(selectedTemplateItem?.templateFile, isContract);
+      const allowedFormats = getAllowedOutputFormats(selectedTemplateItem?.templateFile, isContract, selectedTemplateItem?.templateMode);
       const actualFormat = allowedFormats.includes(outputFormat as AllowedOutputFormat) ? outputFormat : allowedFormats[0];
       if (actualFormat !== outputFormat) setOutputFormat(actualFormat);
       const res = await fetch('/api/generate', {
