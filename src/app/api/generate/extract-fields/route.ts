@@ -4,8 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { generateText } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import OpenAI from 'openai';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { loadSourceChunks } from '@/app/api/generate/route-helpers';
@@ -59,13 +58,22 @@ export async function POST(req: NextRequest) {
     const validFields = fields as Array<{ key: string; label: string; placeholder?: string }>;
     const fieldList = validFields.map((f) => `- ${f.key}: ${f.label}${f.placeholder ? ` (예: ${f.placeholder})` : ''}`).join('\n');
 
-    const { text } = await generateText({
-      model: openai('gpt-4o-mini'),
+    const client = new OpenAI();
+    const completion = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
       temperature: 0.2,
-      system: `당신은 문서 분석 어시스턴트입니다. 참조 파일의 내용을 분석하여, 주어진 필드에 적합한 값을 추론합니다.
+      max_tokens: 2000,
+      response_format: { type: 'json_object' },
+      messages: [
+        {
+          role: 'system',
+          content: `당신은 문서 분석 어시스턴트입니다. 참조 파일의 내용을 분석하여, 주어진 필드에 적합한 값을 추론합니다.
 추론이 불가능한 필드는 빈 문자열("")로 남겨주세요. 추측이 아닌 확실한 정보만 채워주세요.
 반드시 JSON 형식으로 응답하세요: { "extractedInputs": { "필드key": "값", ... } }`,
-      prompt: `템플릿: ${typeof templateName === 'string' ? templateName : '문서'}
+        },
+        {
+          role: 'user',
+          content: `템플릿: ${typeof templateName === 'string' ? templateName : '문서'}
 
 다음 참조 파일 내용을 분석하여 아래 필드값을 추론해주세요.
 
@@ -74,13 +82,16 @@ ${sourceFileSummary.slice(0, 4000)}
 
 ## 추론할 필드 목록
 ${fieldList}`,
+        },
+      ],
     });
 
+    const raw = completion.choices[0]?.message?.content ?? '{}';
     let parsed: Record<string, unknown>;
     try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      parsed = JSON.parse(jsonMatch?.[0] ?? '{}');
+      parsed = JSON.parse(raw);
     } catch {
+      console.error('[extract-fields] JSON parse failed:', raw.slice(0, 200));
       return NextResponse.json({ extractedInputs: {} });
     }
 
