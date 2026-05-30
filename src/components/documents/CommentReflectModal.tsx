@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Spinner } from '@/components/ui';
 import { parseSections } from '@/lib/utils/parse-sections';
 import { useToast } from '@/components/ui/toast';
-import { ArrowLeft, Layers, PlusCircle } from 'lucide-react';
+import { ArrowLeft, Layers, PlusCircle, Replace } from 'lucide-react';
 
 interface CommentReflectModalProps {
   documentId: string;
@@ -14,7 +14,7 @@ interface CommentReflectModalProps {
   onReflected: () => void;
 }
 
-type Step = 'select' | 'insert' | 'append';
+type Step = 'select' | 'insert' | 'append' | 'replace';
 
 export function CommentReflectModal({
   documentId,
@@ -27,7 +27,14 @@ export function CommentReflectModal({
   const [step, setStep] = useState<Step>('select');
   const [targetSection, setTargetSection] = useState('');
   const [newSectionTitle, setNewSectionTitle] = useState('');
+  const [findText, setFindText] = useState('');
+  const [replaceText, setReplaceText] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const matchCount = useMemo(() => {
+    if (!findText) return 0;
+    return documentContent.split(findText).length - 1;
+  }, [documentContent, findText]);
 
   const markdownSections = parseSections(documentContent);
   // 파일 기반 문서(HWPX/DOCX): 첫 줄이 라벨이면 보고서 고정 섹션 제공
@@ -42,10 +49,13 @@ export function CommentReflectModal({
     if (loading) return;
     setLoading(true);
     try {
+      const commentIds = selectedComments.map((c) => c.id);
       const body =
         step === 'insert'
-          ? { mode: 'insert', selectedCommentIds: selectedComments.map((c) => c.id), targetSection }
-          : { mode: 'append', selectedCommentIds: selectedComments.map((c) => c.id), newSectionTitle };
+          ? { mode: 'insert', selectedCommentIds: commentIds, targetSection }
+          : step === 'append'
+            ? { mode: 'append', selectedCommentIds: commentIds, newSectionTitle }
+            : { mode: 'replace', selectedCommentIds: commentIds, findText, replaceText };
 
       const res = await fetch(`/api/documents/${documentId}/apply-comments`, {
         method: 'POST',
@@ -118,6 +128,18 @@ export function CommentReflectModal({
                   <p className="text-[11px] text-foreground-secondary mt-0.5 leading-relaxed">AI가 댓글을 정리해 새로운 단락을 원문 하단에 추가합니다.</p>
                 </div>
               </button>
+              <button
+                onClick={() => setStep('replace')}
+                className="w-full flex items-start gap-4 rounded-2xl border border-border px-5 py-5 hover:border-primary hover:bg-primary-tint transition-all text-left"
+              >
+                <div className="w-9 h-9 rounded-xl bg-warning/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Replace size={17} className="text-warning" />
+                </div>
+                <div>
+                  <p className="text-[13px] font-semibold text-foreground">단어/문장 수정</p>
+                  <p className="text-[11px] text-foreground-secondary mt-0.5 leading-relaxed">원문에서 특정 텍스트를 찾아 다른 텍스트로 바꿉니다.</p>
+                </div>
+              </button>
             </div>
           )}
 
@@ -162,6 +184,37 @@ export function CommentReflectModal({
               />
             </div>
           )}
+
+          {/* Step 2c: 단어/문장 수정 */}
+          {step === 'replace' && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-[12px] text-foreground-secondary mb-1.5 block">찾을 텍스트</label>
+                <input
+                  type="text"
+                  value={findText}
+                  onChange={(e) => setFindText(e.target.value)}
+                  placeholder="원문에서 찾을 단어나 문장"
+                  className="w-full rounded-xl border border-border px-4 py-3 text-[13px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:border-primary transition-colors"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="text-[12px] text-foreground-secondary mb-1.5 block">바꿀 텍스트</label>
+                <input
+                  type="text"
+                  value={replaceText}
+                  onChange={(e) => setReplaceText(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && matchCount > 0) handleApply(); }}
+                  placeholder="대체할 단어나 문장"
+                  className="w-full rounded-xl border border-border px-4 py-3 text-[13px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:border-primary transition-colors"
+                />
+              </div>
+              <p className={`text-[12px] ${matchCount > 0 ? 'text-primary' : 'text-foreground-quaternary'}`}>
+                {findText ? (matchCount > 0 ? `${matchCount}건 일치` : '일치 항목 없음') : '찾을 텍스트를 입력하세요'}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* 버튼 */}
@@ -191,6 +244,16 @@ export function CommentReflectModal({
             >
               {loading && <Spinner size="sm" variant="white" />}
               AI로 생성하기
+            </button>
+          )}
+          {step === 'replace' && (
+            <button
+              onClick={handleApply}
+              disabled={matchCount === 0 || loading}
+              className="w-full px-5 py-3 rounded-xl bg-primary text-white text-[13px] font-medium hover:bg-primary-dark transition-colors disabled:opacity-40 flex items-center justify-center gap-2 sm:w-auto"
+            >
+              {loading && <Spinner size="sm" variant="white" />}
+              적용하기
             </button>
           )}
         </div>

@@ -41,6 +41,9 @@ async function loadCommentUserNames(
  *
  * body (모드 2 - 새 단락 생성):
  *   { mode: 'append', selectedCommentIds: string[], newSectionTitle: string }
+ *
+ * body (모드 3 - 단어/문장 수정):
+ *   { mode: 'replace', selectedCommentIds: string[], findText: string, replaceText: string }
  */
 export async function POST(
   req: NextRequest,
@@ -48,9 +51,6 @@ export async function POST(
 ) {
   try {
     const { id: documentId } = await params;
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json({ success: false, error: 'AI 서비스가 설정되지 않았습니다.' }, { status: 503 });
-    }
 
     const supabase = await createServerSupabaseClient();
     if (!supabase) return NextResponse.json({ success: false, error: '서버 오류' }, { status: 503 });
@@ -66,10 +66,12 @@ export async function POST(
 
     const body = await req.json();
     const { mode, selectedCommentIds } = body as {
-      mode: 'insert' | 'append';
+      mode: 'insert' | 'append' | 'replace';
       selectedCommentIds: string[];
       targetSection?: string;
       newSectionTitle?: string;
+      findText?: string;
+      replaceText?: string;
     };
 
     if (!selectedCommentIds || selectedCommentIds.length === 0) {
@@ -112,6 +114,12 @@ export async function POST(
     let updatedContent: string;
 
     // ── 모드 1: 기존 섹션에 삽입 ──
+    if (mode === 'insert' || mode === 'append') {
+      if (!process.env.OPENAI_API_KEY) {
+        return NextResponse.json({ success: false, error: 'AI 서비스가 설정되지 않았습니다.' }, { status: 503 });
+      }
+    }
+
     if (mode === 'insert') {
       const targetSection = body.targetSection as string;
       if (!targetSection) {
@@ -196,6 +204,18 @@ ${feedbackList}
       if (!newSectionContent) return NextResponse.json({ success: false, error: 'AI 생성 실패' }, { status: 500 });
 
       updatedContent = `${doc.content}\n\n## ${newSectionTitle}\n\n${newSectionContent}`;
+    }
+    // ── 모드 3: 단어/문장 수정 (AI 미사용) ──
+    else if (mode === 'replace') {
+      const findText = body.findText as string;
+      const replaceText = (body.replaceText as string) ?? '';
+      if (!findText) {
+        return NextResponse.json({ success: false, error: '찾을 텍스트를 입력해주세요.' }, { status: 400 });
+      }
+      if (!doc.content.includes(findText)) {
+        return NextResponse.json({ success: false, error: '일치하는 텍스트가 없습니다.' }, { status: 400 });
+      }
+      updatedContent = doc.content.replaceAll(findText, replaceText);
     } else {
       return NextResponse.json({ success: false, error: '유효하지 않은 모드입니다.' }, { status: 400 });
     }
