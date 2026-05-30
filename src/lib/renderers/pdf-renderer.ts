@@ -5,6 +5,7 @@
  */
 
 import type { TemplateBundle } from '@/lib/templates/template-schema';
+import { isBusinessPlanTemplateName } from '@/lib/templates/business-plan';
 import type { RenderOutput, CorporateTheme } from './types';
 import { DEFAULT_THEME } from './types';
 import { buildTemplateRenderData, stripFencedCode } from './template-render-data';
@@ -12,6 +13,7 @@ import { buildTemplateRenderData, stripFencedCode } from './template-render-data
 interface RenderPdfOptions {
   templateBundle?: TemplateBundle | null;
   documentInputs?: Record<string, string>;
+  templateName?: string;
 }
 
 function escapeHtml(value: string): string {
@@ -21,12 +23,13 @@ function escapeHtml(value: string): string {
     .replace(/>/g, '&gt;');
 }
 
-function markdownFragmentToHtml(md: string): string {
+function markdownFragmentToHtml(md: string, options?: { indentByHeading?: boolean }): string {
   let html = stripFencedCode(md).trim();
   if (!html) return '';
 
   html = escapeHtml(html);
 
+  html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
   html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
   html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
   html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
@@ -52,12 +55,36 @@ function markdownFragmentToHtml(md: string): string {
     return `<table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table>`;
   });
 
+  const indent = options?.indentByHeading ?? false;
+  let depth = 0;
+
   const blocks = html
     .split(/\n{2,}/)
     .map((block) => block.trim())
     .filter(Boolean)
     .map((block) => {
-      if (/^<(h1|h2|h3|ul|table|hr)/.test(block)) return block;
+      if (indent) {
+        if (/^<h[12]/.test(block)) { depth = 0; }
+        else if (/^<h3/.test(block)) { depth = 1; }
+        else if (/^<h4/.test(block)) { depth = 2; }
+        if (depth > 0) {
+          const pl = `padding-left:${depth * 1.5}em`;
+          if (/^<(h[34])>(.*)<\/\1>$/.test(block)) {
+            return block.replace(/^<(h[34])>/, `<$1 style="${pl}">`);
+          }
+          if (/^<table/.test(block)) {
+            return `<div style="margin-left:${depth * 1.5}em">${block}</div>`;
+          }
+          if (/^<(ul|ol)/.test(block)) {
+            return block.replace(/^<(ul|ol)/, `<$1 style="${pl}"`);
+          }
+          if (/^<p/.test(block) || !/^</.test(block)) {
+            const wrapped = /^<p/.test(block) ? block : `<p>${block.replace(/\n/g, '<br/>')}</p>`;
+            return wrapped.replace(/^<p/, `<p style="${pl}"`);
+          }
+        }
+      }
+      if (/^<(h1|h2|h3|h4|ul|table|hr)/.test(block)) return block;
       return `<p>${block.replace(/\n/g, '<br/>')}</p>`;
     });
 
@@ -110,13 +137,15 @@ function buildTemplateHtml(
   theme: CorporateTheme,
   templateBundle: TemplateBundle,
   documentInputs?: Record<string, string>,
+  templateName?: string,
 ): string {
   const data = buildTemplateRenderData({ markdown, title, templateBundle, documentInputs });
   const replacements = { ...data.replacements };
 
+  const indentByHeading = isBusinessPlanTemplateName(templateName);
   data.sections.forEach((section) => {
     replacements[`${section.key}_title`] = section.title;
-    replacements[`${section.key}_body`] = section.bodyMarkdown ? markdownFragmentToHtml(section.bodyMarkdown) : '<p>[내용 없음]</p>';
+    replacements[`${section.key}_body`] = section.bodyMarkdown ? markdownFragmentToHtml(section.bodyMarkdown, { indentByHeading }) : '<p>[내용 없음]</p>';
   });
 
   const bodyHtml = templateBundle.layoutHtml.replace(/\{\{([^}]+)\}\}/g, (_match, key: string) => {
@@ -258,7 +287,7 @@ export async function renderPdf(
   options?: RenderPdfOptions,
 ): Promise<RenderOutput> {
   const html = options?.templateBundle
-    ? buildTemplateHtml(markdown, title, theme, options.templateBundle, options.documentInputs)
+    ? buildTemplateHtml(markdown, title, theme, options.templateBundle, options.documentInputs, options.templateName)
     : markdownToHtmlDocument(markdown, theme, title);
   const buffer = Buffer.from(html, 'utf-8');
 

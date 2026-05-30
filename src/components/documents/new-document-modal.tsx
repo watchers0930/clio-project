@@ -208,14 +208,6 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
         <div className="flex flex-col gap-[20px] px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
           {step === 1 && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
-              <button
-                onClick={() => { onSetSelectedTemplate('__none__'); onSetCustomStructure(''); }}
-                className={`p-5 rounded-xl border text-left transition-all ${selectedTemplate === '__none__' ? 'border-primary bg-surface-secondary ring-2 ring-primary/30' : 'border-dashed border-border hover:border-primary'}`}
-              >
-                <span className="text-2xl">✏️</span>
-                <h4 className="font-medium text-foreground text-sm mt-2">직접 작성</h4>
-                <p className="text-xs text-foreground-secondary mt-1">문서 구조를 직접 입력하여 생성</p>
-              </button>
               {templates.map((template) => (
                 <button
                   key={template.id}
@@ -233,6 +225,14 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
                   )}
                 </button>
               ))}
+              <button
+                onClick={() => { onSetSelectedTemplate('__none__'); onSetCustomStructure(''); }}
+                className={`p-5 rounded-xl border text-left transition-all ${selectedTemplate === '__none__' ? 'border-primary bg-surface-secondary ring-2 ring-primary/30' : 'border-dashed border-border hover:border-primary'}`}
+              >
+                <span className="text-2xl">✏️</span>
+                <h4 className="font-medium text-foreground text-sm mt-2">직접 작성</h4>
+                <p className="text-xs text-foreground-secondary mt-1">문서 구조를 직접 입력하여 생성</p>
+              </button>
             </div>
           )}
 

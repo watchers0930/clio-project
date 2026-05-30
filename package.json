@@ -1,6 +1,6 @@
 {
   "name": "clio-project",
-  "version": "7.14.6",
+  "version": "7.15.0",
   "private": true,
   "scripts": {
     "dev": "next dev",

@@ -89,6 +89,7 @@ export async function renderDocument(
       return renderPdf(result.markdown, result.title, theme, {
         templateBundle: result.templateBundle,
         documentInputs: result.documentInputs,
+        templateName: result.templateBundle?.outline?.startsWith('# 사업계획서') ? '사업계획서' : undefined,
       });
 
     default:

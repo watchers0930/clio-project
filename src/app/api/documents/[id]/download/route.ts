@@ -396,6 +396,7 @@ export async function GET(
             let rendered = await renderPdf(content, doc.title, theme, {
               templateBundle,
               documentInputs: { author: signerName },
+              templateName,
             });
             if (signatureBuffer) {
               const sigBase64 = signatureBuffer.toString('base64');
@@ -459,20 +460,25 @@ export async function GET(
           });
         }
 
-        // 다운로드: 서명 주입 후 파일 서빙
-        let finalBuffer: Buffer = Buffer.from(fileBuffer);
-        if (!inline && signatureBuffer) {
-          if (ext === 'docx') finalBuffer = Buffer.from(injectSignatureDocx(fileBuffer as unknown as Buffer, signatureBuffer as unknown as Buffer));
-          else if (ext === 'hwpx') finalBuffer = Buffer.from(injectSignatureHwpx(fileBuffer as unknown as Buffer, signatureBuffer as unknown as Buffer, signerName));
+        // PDF 다운로드 요청이면 content 기반 재렌더링으로 넘김 (최신 템플릿 로직 적용)
+        if (format === 'pdf' && (doc.content ?? '').length > 50) {
+          // storage_path 블록을 빠져나가 아래 renderPdf 경로로 진행
+        } else {
+          // 다운로드: 서명 주입 후 파일 서빙
+          let finalBuffer: Buffer = Buffer.from(fileBuffer);
+          if (!inline && signatureBuffer) {
+            if (ext === 'docx') finalBuffer = Buffer.from(injectSignatureDocx(fileBuffer as unknown as Buffer, signatureBuffer as unknown as Buffer));
+            else if (ext === 'hwpx') finalBuffer = Buffer.from(injectSignatureHwpx(fileBuffer as unknown as Buffer, signatureBuffer as unknown as Buffer, signerName));
+          }
+          const fileName = encodeURIComponent(`${doc.title}.${ext}`);
+          return new NextResponse(new Uint8Array(finalBuffer), {
+            headers: {
+              'Content-Type': mimeMap[ext] ?? 'application/octet-stream',
+              'Content-Disposition': `attachment; filename*=UTF-8''${fileName}`,
+              'Content-Length': String(finalBuffer.length),
+            },
+          });
         }
-        const fileName = encodeURIComponent(`${doc.title}.${ext}`);
-        return new NextResponse(new Uint8Array(finalBuffer), {
-          headers: {
-            'Content-Type': mimeMap[ext] ?? 'application/octet-stream',
-            'Content-Disposition': `attachment; filename*=UTF-8''${fileName}`,
-            'Content-Length': String(finalBuffer.length),
-          },
-        });
       }
     }
 
@@ -507,6 +513,7 @@ export async function GET(
       const pdfRendered = await renderPdf(content, doc.title, theme, {
         templateBundle,
         documentInputs: { author: signerName },
+        templateName,
       });
       const pdfFileName = encodeURIComponent(pdfRendered.fileName);
       return new NextResponse(new Uint8Array(pdfRendered.buffer), {
@@ -539,6 +546,7 @@ export async function GET(
         rendered = await renderPdf(content, doc.title, theme, {
           templateBundle,
           documentInputs: { author: signerName },
+          templateName,
         });
         if (signatureBuffer) {
           const sigBase64 = signatureBuffer.toString('base64');

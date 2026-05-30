@@ -213,6 +213,7 @@ async function generateBusinessPlanBySections(params: {
       instructions ? `## 추가 지시사항\n${instructions}` : '',
       `"${section.title}" 섹션을 작성하세요.`,
       '- ## (H2) 제목 없이 ### (H3) 하위 항목부터 바로 시작합니다.',
+      '- N.N 수준 항목은 ### (H3), N.N.N 수준 항목은 #### (H4)로 작성합니다.',
       '- 각 H3 항목마다 4~8문단으로 충분히 서술합니다.',
     ].filter(Boolean).join('\n\n');
 

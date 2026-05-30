@@ -19,6 +19,15 @@ export const TEMPLATE_ICONS: Record<string, string> = {
   '사업계획서': '📋',
 };
 
+/** 템플릿 표시 순서 (여기 없는 항목은 뒤에 이름순 정렬) */
+export const TEMPLATE_DISPLAY_ORDER: string[] = [
+  '사업계획서',
+  '제안서',
+  '업무일지',
+  '주간업무보고서',
+  '회의록',
+];
+
 export const DOCUMENT_RELATION_LABELS: Record<string, string> = {
   meeting_minutes: '회의 기반 문서',
   meeting_followup: '회의 후속 문서',

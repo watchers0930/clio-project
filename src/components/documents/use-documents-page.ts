@@ -22,6 +22,7 @@ export {
   FONT_OPTIONS,
   DOWNLOAD_FORMAT_OPTIONS,
 } from '@/components/documents/document-page-constants';
+import { TEMPLATE_DISPLAY_ORDER } from '@/components/documents/document-page-constants';
 
 type AllowedOutputFormat = 'docx' | 'hwpx' | 'pdf' | 'xlsx' | 'pptx';
 
@@ -144,7 +145,7 @@ export function useDocumentsPage() {
       if (res.ok) {
         const data = await res.json();
         const templateData = data.data ?? data.templates ?? [];
-        setTemplates(templateData.map((template: Record<string, unknown>) => ({
+        const mapped = templateData.map((template: Record<string, unknown>) => ({
           id: template.id as string,
           name: template.name as string,
           description: template.description as string,
@@ -153,7 +154,13 @@ export function useDocumentsPage() {
           templateFile: (template.templateFile as TemplateFile | null) ?? null,
           templateFields: (template.templateFields as Template['templateFields']) ?? [],
           templateSections: (template.templateSections as Template['templateSections']) ?? [],
-        })));
+        }));
+        mapped.sort((a: { name: string }, b: { name: string }) => {
+          const ai = TEMPLATE_DISPLAY_ORDER.indexOf(a.name);
+          const bi = TEMPLATE_DISPLAY_ORDER.indexOf(b.name);
+          return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+        });
+        setTemplates(mapped);
       }
     } catch {
     }
