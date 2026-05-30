@@ -250,8 +250,8 @@ export async function loadReferenceContent(
 
   if (!data?.content) return null;
 
-  // PROPOSAL_INPUTS 코멘트 제거
-  const content = (data.content as string).replace(/<!--PROPOSAL_INPUTS:.*?-->\n?/, '');
+  // PROPOSAL_INPUTS / DOCUMENT_INPUTS 코멘트 제거
+  const content = (data.content as string).replace(/<!--(?:PROPOSAL_INPUTS|DOCUMENT_INPUTS):.*?-->\n?/, '');
   const sections = new Map<string, string>();
   const lines = content.split('\n');
   let currentTitle = '';

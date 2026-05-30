@@ -132,7 +132,7 @@ type RenderProposalDocumentParams = {
 };
 
 function extractEmbeddedInputs(content: string): { inputs: Record<string, string>; markdown: string } {
-  const match = content.match(/^<!--PROPOSAL_INPUTS:(.*?)-->\n?/);
+  const match = content.match(/^<!--(?:PROPOSAL_INPUTS|DOCUMENT_INPUTS):(.*?)-->\n?/);
   if (!match) return { inputs: {}, markdown: content };
   try {
     return { inputs: JSON.parse(match[1]), markdown: content.slice(match[0].length) };

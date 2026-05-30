@@ -381,21 +381,28 @@ export async function GET(
 
         if (inline) {
           // 미리보기: 마크다운 content가 있으면 PDF 렌더, 없으면 원본 파일 서빙
-          const content = doc.content ?? '';
-          const firstLine = content.split('\n')[0];
+          let inlineContent = doc.content ?? '';
+          // 임베드된 documentInputs 추출
+          let inlineInputs: Record<string, string> = {};
+          const inlineInputsMatch = inlineContent.match(/^<!--(?:PROPOSAL_INPUTS|DOCUMENT_INPUTS):(.*?)-->\n?/);
+          if (inlineInputsMatch) {
+            try { inlineInputs = JSON.parse(inlineInputsMatch[1]); } catch { /* ignore */ }
+            inlineContent = inlineContent.slice(inlineInputsMatch[0].length);
+          }
+          const firstLine = inlineContent.split('\n')[0];
           const isLabel = firstLine.startsWith('[') && firstLine.length < 200;
           // 파일 기반 문서에 추가된 마크다운 섹션 추출
-          const appendedLines = content.split('\n').slice(1);
+          const appendedLines = inlineContent.split('\n').slice(1);
           let ai = 0;
           while (ai < appendedLines.length && appendedLines[ai].trim() === '') ai++;
           const appendedMarkdown = appendedLines.slice(ai).join('\n').trim();
 
-          if (!isLabel && content.length > 50) {
+          if (!isLabel && inlineContent.length > 50) {
             // 마크다운 content → PDF 렌더
             const theme: CorporateTheme = { ...DEFAULT_THEME, fontFamily: fontParam, fontFamilyEn: fontFamily };
-            let rendered = await renderPdf(content, doc.title, theme, {
+            let rendered = await renderPdf(inlineContent, doc.title, theme, {
               templateBundle,
-              documentInputs: { author: signerName },
+              documentInputs: { ...inlineInputs, author: signerName },
               templateName,
             });
             if (signatureBuffer) {
@@ -483,7 +490,16 @@ export async function GET(
     }
 
     // storage_path 없으면 기존 방식: content를 렌더링
-    const content = doc.content ?? '';
+    const rawContent = doc.content ?? '';
+    // 콘텐츠에 임베드된 documentInputs 추출 (제안서/사업계획서 표지 정보)
+    let embeddedInputs: Record<string, string> = {};
+    let content = rawContent;
+    const inputsMatch = rawContent.match(/^<!--(?:PROPOSAL_INPUTS|DOCUMENT_INPUTS):(.*?)-->\n?/);
+    if (inputsMatch) {
+      try { embeddedInputs = JSON.parse(inputsMatch[1]); } catch { /* ignore */ }
+      content = rawContent.slice(inputsMatch[0].length);
+    }
+    const mergedDocumentInputs = { ...embeddedInputs, author: signerName };
     const theme: CorporateTheme = {
       ...DEFAULT_THEME,
       fontFamily: fontParam,
@@ -512,7 +528,7 @@ export async function GET(
       // 실제 content → PDF(HTML) 렌더
       const pdfRendered = await renderPdf(content, doc.title, theme, {
         templateBundle,
-        documentInputs: { author: signerName },
+        documentInputs: mergedDocumentInputs,
         templateName,
       });
       const pdfFileName = encodeURIComponent(pdfRendered.fileName);
@@ -545,7 +561,7 @@ export async function GET(
         }
         rendered = await renderPdf(content, doc.title, theme, {
           templateBundle,
-          documentInputs: { author: signerName },
+          documentInputs: mergedDocumentInputs,
           templateName,
         });
         if (signatureBuffer) {
@@ -559,7 +575,7 @@ export async function GET(
       default:
         rendered = await renderDocx(content, doc.title, theme, {
           templateBundle,
-          documentInputs: { author: signerName },
+          documentInputs: mergedDocumentInputs,
         });
         if (signatureBuffer) rendered = { ...rendered, buffer: injectSignatureDocx(rendered.buffer, signatureBuffer) };
         break;

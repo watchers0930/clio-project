@@ -30,6 +30,7 @@ import {
 } from './route-helpers';
 import { getWorklogDocumentTitle, isWorklogTemplateName } from '@/lib/templates/worklog';
 import { isProposalTemplateName } from '@/lib/templates/proposal';
+import { isBusinessPlanTemplateName } from '@/lib/templates/business-plan';
 
 export const maxDuration = 300;
 
@@ -552,9 +553,10 @@ export async function POST(request: NextRequest) {
 
     // 마크다운 기반 포맷(DOCX새로생성/HWPX/PDF)은 기존처럼 documents 테이블에도 저장
     if (generationResult.markdown) {
-      // 제안서: documentInputs를 콘텐츠 앞에 HTML 코멘트로 저장 (문서 페이지 렌더 시 사용)
-      const markdownContent = isProposalTemplate
-        ? `<!--PROPOSAL_INPUTS:${JSON.stringify(resolvedDocumentInputs)}-->\n${generationResult.markdown}`
+      // 제안서/사업계획서: documentInputs를 콘텐츠 앞에 HTML 코멘트로 저장 (다운로드 시 표지 복원용)
+      const shouldEmbedInputs = isProposalTemplate || isBusinessPlanTemplateName(templateName);
+      const markdownContent = shouldEmbedInputs
+        ? `<!--DOCUMENT_INPUTS:${JSON.stringify(resolvedDocumentInputs)}-->\n${generationResult.markdown}`
         : generationResult.markdown;
 
       const payload = buildDocumentInsertPayload({
