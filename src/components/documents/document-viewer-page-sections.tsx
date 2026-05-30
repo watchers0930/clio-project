@@ -1,7 +1,8 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle2, Download, GitBranch, Link2, Printer, Search } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ChevronDown, ChevronRight, Download, GitBranch, Link2, MoreHorizontal, Printer, Search } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import { HtmlPreviewFrame } from '@/components/documents/html-preview-frame';
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
@@ -139,9 +140,22 @@ export function DocumentViewerHeader({
 }: HeaderProps) {
   const statusLabel = isDraft ? '초안' : '완료';
   const statusColor = isDraft ? 'text-foreground-secondary bg-surface-secondary' : 'text-success bg-success/10';
+  const ops = doc.ops;
+
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [moreOpen]);
 
   return (
-    <div className="flex shrink-0 flex-col gap-3.5 rounded-2xl border border-border bg-white px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between lg:px-6">
+    <div className="flex shrink-0 flex-col gap-3.5 rounded-2xl border border-border bg-white px-4 py-4 sm:px-5 xl:flex-row xl:items-center xl:justify-between xl:px-6">
       <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
         <Link href="/documents" className="flex items-center gap-1.5 text-[12px] text-foreground-secondary transition-colors hover:text-foreground">
           <ArrowLeft size={14} />
@@ -149,281 +163,127 @@ export function DocumentViewerHeader({
         </Link>
         <span className="text-border">|</span>
         <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${statusColor}`}>{statusLabel}</span>
-        {(doc.version_number ?? 1) > 1 && (
-          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
-            v{doc.version_number}
-          </span>
-        )}
+        <span className="text-[11px] text-foreground-secondary">
+          댓글 {ops?.commentCount ?? 0} · 공유 {ops?.activeShareCount ?? 0} · v{ops?.latestVersionNumber ?? doc.version_number ?? 1}
+        </span>
       </div>
       <div className="flex flex-wrap items-center gap-2.5">
-        <HeaderActionButton onClick={onOpenShare} icon={<Link2 size={13} />} label="공유" />
-        <HeaderActionButton onClick={onSearchRelated} icon={<Search size={13} />} label="관련 검색" />
+        {isDraft && (
+          <button onClick={onEditDraft} className="flex items-center gap-1.5 rounded-lg bg-foreground px-3.5 py-2 text-[12px] font-medium text-white transition-colors hover:bg-primary">
+            편집하기
+          </button>
+        )}
         {isDraft && (
           <button onClick={onComplete} className="flex items-center gap-1.5 rounded-lg border border-primary px-3.5 py-2 text-[12px] font-medium text-primary transition-colors hover:bg-primary-tint">
             <CheckCircle2 size={13} />
             완료 처리
           </button>
         )}
-        <HeaderActionButton onClick={onOpenVersions} icon={<GitBranch size={13} />} label="버전" />
-        <button onClick={onCreateVersion} className="flex items-center gap-1.5 rounded-lg border border-success/30 bg-success/5 px-3.5 py-2 text-[12px] font-medium text-success transition-colors hover:bg-success/5">
-          <GitBranch size={13} />
-          새 버전
+        <button onClick={onOpenShare} className="flex items-center gap-1.5 rounded-lg bg-primary-tint px-3.5 py-2 text-[12px] font-medium text-primary transition-colors hover:bg-primary/15">
+          <Link2 size={13} />
+          공유
         </button>
-        <HeaderActionButton onClick={onPrint} icon={<Printer size={13} />} label="인쇄" />
         <button onClick={onDownload} disabled={downloading} className="flex items-center gap-1.5 rounded-lg border border-border px-3.5 py-2 text-[12px] text-foreground-secondary transition-colors hover:bg-surface-secondary disabled:opacity-50">
           {downloading ? <Spinner size="sm" /> : <Download size={13} />}
           {downloading ? '변환 중...' : '다운로드'}
         </button>
-        {isDraft && (
-          <button onClick={onEditDraft} className="flex items-center gap-1.5 rounded-lg bg-foreground px-3.5 py-2 text-[12px] font-medium text-white transition-colors hover:bg-primary">
-            편집하기
+        <div ref={moreRef} className="relative">
+          <button onClick={() => setMoreOpen((v) => !v)} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-2 text-[12px] text-foreground-secondary transition-colors hover:bg-surface-secondary">
+            <MoreHorizontal size={15} />
           </button>
-        )}
+          {moreOpen && (
+            <div className="absolute right-0 top-full z-20 mt-1.5 w-40 rounded-xl border border-border bg-white py-1.5 shadow-lg">
+              <MoreMenuItem icon={<Printer size={13} />} label="인쇄" onClick={() => { onPrint(); setMoreOpen(false); }} />
+              <MoreMenuItem icon={<Search size={13} />} label="관련 검색" onClick={() => { onSearchRelated(); setMoreOpen(false); }} />
+              <MoreMenuItem icon={<GitBranch size={13} />} label="버전" onClick={() => { onOpenVersions(); setMoreOpen(false); }} />
+              <MoreMenuItem icon={<GitBranch size={13} />} label="새 버전" onClick={() => { onCreateVersion(); setMoreOpen(false); }} />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-function HeaderActionButton({ onClick, icon, label }: { onClick: () => void; icon: React.ReactNode; label: string }) {
+function MoreMenuItem({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="flex items-center gap-1.5 rounded-lg border border-border px-3.5 py-2 text-[12px] text-foreground-secondary transition-colors hover:bg-surface-secondary">
+    <button onClick={onClick} className="flex w-full items-center gap-2 px-3.5 py-2 text-[12px] text-foreground-secondary transition-colors hover:bg-surface-secondary hover:text-foreground">
       {icon}
       {label}
     </button>
   );
 }
 
-export function DocumentViewerOverviewSection({
-  doc,
-  isDraft,
-  onNavigateDocument,
-}: {
-  doc: DocData;
-  isDraft: boolean;
-  onNavigateDocument: (docId: string) => void;
-}) {
-  const ops = doc.ops;
-  return (
-    <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:gap-[20px]">
-      <div className="rounded-2xl border border-border bg-white px-4 py-4 sm:px-5 sm:py-5 lg:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-secondary">Ops Status</p>
-            <p className="mt-[10px] text-[14px] font-semibold text-foreground">공유, 코멘트, 버전, 재활용 흐름의 현재 상태입니다.</p>
-          </div>
-          <div className="rounded-full bg-surface-secondary px-3 py-1.5 text-[11px] text-foreground-secondary">소스 {doc.source_file_ids?.length ?? 0}개</div>
-        </div>
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4 lg:mt-6 lg:gap-[20px]">
-          <OverviewCard tone="blue" title="코멘트" value={`${ops?.commentCount ?? 0}`} description={`마지막 의견 ${formatDateTimeLabel(ops?.latestCommentAt)}`} />
-          <OverviewCard tone="purple" title="공유 링크" value={`${ops?.activeShareCount ?? 0} 활성`} description={`전체 ${ops?.shareLinkCount ?? 0}개 · 조회 ${ops?.totalShareViews ?? 0}회`} subDescription={`내부 공유 ${ops?.internalShareCount ?? 0}건`} />
-          <OverviewCard tone="green" title="버전" value={`${ops?.latestVersionNumber ?? doc.version_number ?? 1}`} description={`누적 ${ops?.versionCount ?? 1}개 버전이 연결되어 있습니다.`} />
-          <OverviewCard tone="amber" title="후속 작업" value={isDraft ? '검토 공유와 댓글 반영이 우선입니다.' : '공유 확장과 재활용 문서 작성이 우선입니다.'} description={isDraft ? '공유 링크를 만들고 검토 코멘트를 수집한 뒤 버전으로 남기세요.' : '기준 문서로 유지하면서 검색과 후속 생성 흐름에 연결하세요.'} />
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-border bg-white px-4 py-4 sm:px-5 sm:py-5 lg:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-secondary">Related Docs</p>
-            <p className="mt-[10px] text-[14px] font-semibold text-foreground">같이 열어볼 문서</p>
-          </div>
-        </div>
-        <div className="mt-6 flex flex-col gap-4">
-          {(ops?.relatedDocs ?? []).length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border bg-surface-tertiary px-4 py-5 text-[12px] leading-5 text-foreground-secondary">
-              같은 템플릿이나 소스를 공유하는 문서를 아직 찾지 못했습니다. 검색으로 유사 문서를 직접 이어서 확인하세요.
-            </div>
-          ) : (
-            (ops?.relatedDocs ?? []).map((relatedDoc) => (
-              <button key={relatedDoc.id} onClick={() => onNavigateDocument(relatedDoc.id)} className="rounded-xl border border-border bg-surface-tertiary px-4 py-3 text-left transition-colors hover:border-primary hover:bg-white">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="line-clamp-1 text-[13px] font-semibold text-foreground">{relatedDoc.title}</p>
-                  <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-medium text-foreground-secondary">{relatedDoc.relationLabel}</span>
-                </div>
-                <p className="mt-2 text-[11px] text-foreground-secondary">{relatedDoc.createdAt} · v{relatedDoc.versionNumber} · {formatStatusLabel(relatedDoc.status)}</p>
-              </button>
-            ))
-          )}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function OverviewCard({
-  tone,
-  title,
-  value,
-  description,
-  subDescription,
-}: {
-  tone: 'blue' | 'purple' | 'green' | 'amber';
-  title: string;
-  value: string;
-  description: string;
-  subDescription?: string;
-}) {
-  const toneMap = {
-    blue: 'border-border-tint bg-primary-tint text-primary',
-    purple: 'border-purple-200 bg-purple-50 text-purple-500',
-    green: 'border-success/30 bg-success/5 text-success',
-    amber: 'border-warning/30 bg-warning/5 text-warning',
-  };
-  return (
-    <div className={`rounded-xl border px-4 py-3 ${toneMap[tone]}`}>
-      <p className="text-[11px] font-semibold">{title}</p>
-      <p className="mt-[10px] text-[13px] font-semibold text-foreground sm:text-[22px]">{value}</p>
-      <p className="mt-[10px] text-[12px] leading-5 text-foreground-secondary">{description}</p>
-      {subDescription ? <p className="mt-1 text-[11px] text-foreground-secondary">{subDescription}</p> : null}
-    </div>
-  );
-}
-
-interface OpsSectionsProps {
+interface FooterSectionsProps {
   doc: DocData;
   onNavigateDocument: (docId: string) => void;
   onOpenShare: () => void;
 }
 
-export function DocumentViewerOpsSections({ doc, onNavigateDocument, onOpenShare }: OpsSectionsProps) {
+export function DocumentViewerFooterSections({ doc, onNavigateDocument, onOpenShare }: FooterSectionsProps) {
   const ops = doc.ops;
-  const originDocument = ops?.originDocument ?? null;
-  const derivedDocuments = ops?.derivedDocuments ?? [];
+  const relatedDocs = ops?.relatedDocs ?? [];
+  const shareLinks = ops?.shareLinks ?? [];
+  const hasRelated = relatedDocs.length > 0;
+  const hasShareLinks = shareLinks.length > 0;
+
+  if (!hasRelated && !hasShareLinks) return null;
 
   return (
-    <>
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-[20px]">
-        <div className="rounded-2xl border border-border bg-white px-4 py-4 sm:px-5 sm:py-5 lg:px-6">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-secondary">Document Relation</p>
-            <p className="mt-[10px] text-[14px] font-semibold text-foreground">기준 문서와 후속 문서</p>
-          </div>
-          <div className="mt-6 flex flex-col gap-4">
-            {originDocument ? (
-              <button onClick={() => onNavigateDocument(originDocument.id)} className="rounded-xl border border-border-tint bg-primary-tint px-4 py-3 text-left transition-colors hover:border-primary">
-                <p className="text-[11px] font-semibold text-primary">이 문서의 기준 문서</p>
-                <p className="mt-2 text-[13px] font-semibold text-foreground">{originDocument.title}</p>
-                <p className="mt-2 text-[11px] text-foreground-secondary">{originDocument.relationLabel} · {originDocument.createdAt} · v{originDocument.versionNumber}</p>
+    <div className="flex flex-col gap-3">
+      {hasRelated && (
+        <CollapsibleSection title="관련 문서" count={relatedDocs.length}>
+          <div className="flex flex-col gap-3">
+            {relatedDocs.map((rd) => (
+              <button key={rd.id} onClick={() => onNavigateDocument(rd.id)} className="rounded-xl border border-border bg-surface-tertiary px-4 py-3 text-left transition-colors hover:border-primary hover:bg-white">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="line-clamp-1 text-[13px] font-semibold text-foreground">{rd.title}</p>
+                  <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-medium text-foreground-secondary">{rd.relationLabel}</span>
+                </div>
+                <p className="mt-2 text-[11px] text-foreground-secondary">{rd.createdAt} · v{rd.versionNumber} · {formatStatusLabel(rd.status)}</p>
               </button>
-            ) : (
-              <div className="rounded-xl border border-dashed border-border bg-surface-tertiary px-4 py-4 text-[12px] leading-5 text-foreground-secondary">이 문서는 다른 기준 문서와 연결되지 않은 독립 문서입니다.</div>
-            )}
-
-            {derivedDocuments.length > 0 ? (
-              <div className="rounded-xl border border-border bg-surface-tertiary px-4 py-3">
-                <p className="text-[11px] font-semibold text-foreground-secondary">이 문서를 기반으로 만들어진 후속 문서</p>
-                <div className="mt-4 flex flex-col gap-3">
-                  {derivedDocuments.map((relatedDoc) => (
-                    <button key={relatedDoc.id} onClick={() => onNavigateDocument(relatedDoc.id)} className="rounded-xl border border-white bg-white px-3 py-3 text-left transition-colors hover:border-primary">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="line-clamp-1 text-[13px] font-semibold text-foreground">{relatedDoc.title}</p>
-                        <span className="rounded-full bg-primary-tint px-2 py-1 text-[10px] font-medium text-primary">{relatedDoc.relationLabel}</span>
-                      </div>
-                      <p className="mt-2 text-[11px] text-foreground-secondary">{relatedDoc.createdAt} · v{relatedDoc.versionNumber} · {formatStatusLabel(relatedDoc.status)}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
+            ))}
           </div>
-        </div>
+        </CollapsibleSection>
+      )}
 
-        <div className="rounded-2xl border border-border bg-white px-4 py-4 sm:px-5 sm:py-5 lg:px-6">
-          <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-secondary">Share Links</p>
-              <p className="mt-[10px] text-[14px] font-semibold text-foreground">외부 공유 링크 운영</p>
-            </div>
-            <button onClick={onOpenShare} className="rounded-lg border border-border-tint bg-white px-3.5 py-2.5 text-[12px] font-medium text-primary transition-colors hover:bg-primary-tint">링크 생성</button>
-          </div>
-          <div className="mt-6 flex flex-col gap-4">
-            {(ops?.shareLinks ?? []).length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border bg-surface-tertiary px-4 py-5 text-[12px] leading-5 text-foreground-secondary">아직 생성된 공유 링크가 없습니다. 검토 요청이나 외부 전달이 필요하면 링크를 먼저 만드세요.</div>
-            ) : (
-              (ops?.shareLinks ?? []).map((shareLink) => (
-                <div key={shareLink.id} className="rounded-xl border border-border bg-surface-tertiary px-4 py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-medium ${shareLink.isActive ? 'bg-success/5 text-success' : 'bg-surface-secondary text-foreground-secondary'}`}>{shareLink.isActive ? '활성' : '만료'}</span>
-                      {shareLink.hasPassword ? <span className="rounded-full bg-purple-50 px-2.5 py-1 text-[10px] font-medium text-purple-500">비밀번호</span> : null}
-                    </div>
-                    <button onClick={() => navigator.clipboard.writeText(`${window.location.origin}/share/${shareLink.token}`)} className="text-[11px] font-medium text-primary hover:underline">링크 복사</button>
+      {hasShareLinks && (
+        <CollapsibleSection title="공유 링크" count={shareLinks.length} action={<button onClick={onOpenShare} className="text-[11px] font-medium text-primary hover:underline">링크 생성</button>}>
+          <div className="flex flex-col gap-3">
+            {shareLinks.map((sl) => (
+              <div key={sl.id} className="rounded-xl border border-border bg-surface-tertiary px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-medium ${sl.isActive ? 'bg-success/5 text-success' : 'bg-surface-secondary text-foreground-secondary'}`}>{sl.isActive ? '활성' : '만료'}</span>
+                    {sl.hasPassword ? <span className="rounded-full bg-purple-50 px-2.5 py-1 text-[10px] font-medium text-purple-500">비밀번호</span> : null}
                   </div>
-                  <p className="mt-2 truncate font-mono text-[11px] text-foreground-secondary">{`${window.location.origin}/share/${shareLink.token}`}</p>
-                  <p className="mt-2 text-[11px] text-foreground-secondary">생성 {formatDateTimeLabel(shareLink.createdAt)} · 만료 {shareLink.expiresAt ? formatDateTimeLabel(shareLink.expiresAt) : '없음'} · 조회 {shareLink.viewCount}회</p>
+                  <button onClick={() => navigator.clipboard.writeText(`${window.location.origin}/share/${sl.token}`)} className="text-[11px] font-medium text-primary hover:underline">링크 복사</button>
                 </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-border bg-white px-4 py-4 sm:px-5 sm:py-5 lg:px-6">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-secondary">Activity Timeline</p>
-            <p className="mt-[10px] text-[14px] font-semibold text-foreground">최근 운영 이벤트</p>
-          </div>
-          <div className="mt-6 flex flex-col gap-5">
-            {[
-              {
-                label: '최근 공유',
-                value: formatDateTimeLabel(ops?.latestShareAt),
-                description: (ops?.activeShareCount ?? 0) > 0 ? `활성 링크 ${ops?.activeShareCount ?? 0}개가 유지되고 있습니다.` : '아직 활성 공유 링크가 없습니다.',
-              },
-              {
-                label: '최근 코멘트',
-                value: formatDateTimeLabel(ops?.latestCommentAt),
-                description: (ops?.commentCount ?? 0) > 0 ? `누적 ${ops?.commentCount ?? 0}개 코멘트가 문서에 연결되어 있습니다.` : '아직 코멘트가 등록되지 않았습니다.',
-              },
-              {
-                label: '최근 버전 갱신',
-                value: formatDateTimeLabel(ops?.latestVersionAt),
-                description: `현재 v${ops?.latestVersionNumber ?? doc.version_number ?? 1} / 총 ${ops?.versionCount ?? 1}개 버전입니다.`,
-              },
-            ].map((item, index, array) => (
-              <div key={item.label} className="flex gap-4">
-                <div className="flex flex-col items-center">
-                  <div className="mt-1 h-2.5 w-2.5 rounded-full bg-primary" />
-                  {index < array.length - 1 ? <div className="mt-1 h-full w-px bg-border" /> : null}
-                </div>
-                <div className="pb-2">
-                  <p className="text-[12px] font-semibold text-foreground">{item.label}</p>
-                  <p className="mt-1 text-[12px] text-primary">{item.value}</p>
-                  <p className="mt-1 text-[12px] leading-5 text-foreground-secondary">{item.description}</p>
-                </div>
+                <p className="mt-2 truncate font-mono text-[11px] text-foreground-secondary">{`${window.location.origin}/share/${sl.token}`}</p>
+                <p className="mt-2 text-[11px] text-foreground-secondary">생성 {formatDateTimeLabel(sl.createdAt)} · 만료 {sl.expiresAt ? formatDateTimeLabel(sl.expiresAt) : '없음'} · 조회 {sl.viewCount}회</p>
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </CollapsibleSection>
+      )}
+    </div>
+  );
+}
 
-      <section className="rounded-2xl border border-border bg-white px-4 py-4 sm:px-5 sm:py-5 lg:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-secondary">Internal Shares</p>
-            <p className="mt-[10px] text-[14px] font-semibold text-foreground">부서/사용자 공유 대상</p>
-          </div>
-          <button onClick={onOpenShare} className="rounded-lg border border-purple-200 bg-white px-3.5 py-2.5 text-[12px] font-medium text-purple-500 transition-colors hover:bg-purple-50">내부 공유 관리</button>
+function CollapsibleSection({ title, count, action, children }: { title: string; count: number; action?: React.ReactNode; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-2xl border border-border bg-white">
+      <button onClick={() => setOpen((v) => !v)} className="flex w-full items-center justify-between px-4 py-3.5 sm:px-5">
+        <div className="flex items-center gap-2">
+          {open ? <ChevronDown size={14} className="text-foreground-secondary" /> : <ChevronRight size={14} className="text-foreground-secondary" />}
+          <span className="text-[13px] font-semibold text-foreground">{title}</span>
+          <span className="rounded-full bg-surface-secondary px-2 py-0.5 text-[11px] text-foreground-secondary">{count}</span>
         </div>
-        <div className="mt-6 flex flex-col gap-4">
-          {(ops?.internalShares ?? []).length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border bg-surface-tertiary px-5 py-6 text-[12px] leading-5 text-foreground-secondary">아직 사용자나 부서에 직접 공유된 대상이 없습니다. 내부 공유가 필요하면 공유 모달에서 대상을 추가하세요.</div>
-          ) : (
-            (ops?.internalShares ?? []).map((share) => (
-              <div key={share.id} className="rounded-xl border border-border bg-surface-tertiary px-4 py-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-medium ${share.targetType === 'user' ? 'bg-purple-50 text-purple-500' : 'bg-primary-tint text-primary'}`}>{share.targetType === 'user' ? '사용자' : '부서'}</span>
-                    <p className="text-[13px] font-semibold text-foreground">{share.targetName}</p>
-                  </div>
-                  <span className="text-[11px] text-foreground-secondary">{formatDateTimeLabel(share.createdAt)}</span>
-                </div>
-                {share.targetMeta ? <p className="mt-2 text-[11px] text-foreground-secondary">{share.targetMeta}</p> : null}
-              </div>
-            ))
-          )}
-        </div>
-      </section>
-    </>
+        {action && <div onClick={(e) => e.stopPropagation()}>{action}</div>}
+      </button>
+      {open && <div className="border-t border-border px-4 py-4 sm:px-5">{children}</div>}
+    </div>
   );
 }
 
