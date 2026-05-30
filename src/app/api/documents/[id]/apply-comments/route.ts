@@ -72,6 +72,7 @@ export async function POST(
       newSectionTitle?: string;
       findText?: string;
       replaceText?: string;
+      replaceScope?: string;
     };
 
     if (!selectedCommentIds || selectedCommentIds.length === 0) {
@@ -209,13 +210,26 @@ ${feedbackList}
     else if (mode === 'replace') {
       const findText = body.findText as string;
       const replaceText = (body.replaceText as string) ?? '';
+      const replaceScope = body.replaceScope as string | undefined;
       if (!findText) {
         return NextResponse.json({ success: false, error: '찾을 텍스트를 입력해주세요.' }, { status: 400 });
       }
-      if (!doc.content.includes(findText)) {
-        return NextResponse.json({ success: false, error: '일치하는 텍스트가 없습니다.' }, { status: 400 });
+
+      if (replaceScope) {
+        // 특정 섹션 범위 내에서만 치환
+        const sectionContent = extractSectionContent(doc.content, replaceScope);
+        if (!sectionContent || !sectionContent.includes(findText)) {
+          return NextResponse.json({ success: false, error: '해당 섹션에 일치하는 텍스트가 없습니다.' }, { status: 400 });
+        }
+        const replacedSection = sectionContent.replaceAll(findText, replaceText);
+        updatedContent = replaceSectionContent(doc.content, replaceScope, replacedSection);
+      } else {
+        // 전체 문서 치환
+        if (!doc.content.includes(findText)) {
+          return NextResponse.json({ success: false, error: '일치하는 텍스트가 없습니다.' }, { status: 400 });
+        }
+        updatedContent = doc.content.replaceAll(findText, replaceText);
       }
-      updatedContent = doc.content.replaceAll(findText, replaceText);
     } else {
       return NextResponse.json({ success: false, error: '유효하지 않은 모드입니다.' }, { status: 400 });
     }

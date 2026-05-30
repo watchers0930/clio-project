@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { Spinner } from '@/components/ui';
-import { parseSections } from '@/lib/utils/parse-sections';
+import { parseSections, extractSectionContent } from '@/lib/utils/parse-sections';
 import { useToast } from '@/components/ui/toast';
 import { ArrowLeft, Layers, PlusCircle, Replace } from 'lucide-react';
 
@@ -29,12 +29,14 @@ export function CommentReflectModal({
   const [newSectionTitle, setNewSectionTitle] = useState('');
   const [findText, setFindText] = useState('');
   const [replaceText, setReplaceText] = useState('');
+  const [replaceScope, setReplaceScope] = useState('__all__');
   const [loading, setLoading] = useState(false);
 
   const matchCount = useMemo(() => {
     if (!findText) return 0;
-    return documentContent.split(findText).length - 1;
-  }, [documentContent, findText]);
+    const target = replaceScope === '__all__' ? documentContent : extractSectionContent(documentContent, replaceScope);
+    return target.split(findText).length - 1;
+  }, [documentContent, findText, replaceScope]);
 
   const markdownSections = parseSections(documentContent);
   // 파일 기반 문서(HWPX/DOCX): 첫 줄이 라벨이면 보고서 고정 섹션 제공
@@ -55,7 +57,7 @@ export function CommentReflectModal({
           ? { mode: 'insert', selectedCommentIds: commentIds, targetSection }
           : step === 'append'
             ? { mode: 'append', selectedCommentIds: commentIds, newSectionTitle }
-            : { mode: 'replace', selectedCommentIds: commentIds, findText, replaceText };
+            : { mode: 'replace', selectedCommentIds: commentIds, findText, replaceText, replaceScope: replaceScope === '__all__' ? undefined : replaceScope };
 
       const res = await fetch(`/api/documents/${documentId}/apply-comments`, {
         method: 'POST',
@@ -188,6 +190,34 @@ export function CommentReflectModal({
           {/* Step 2c: 단어/문장 수정 */}
           {step === 'replace' && (
             <div className="space-y-3">
+              <div>
+                <label className="text-[12px] text-foreground-secondary mb-1.5 block">적용 범위</label>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    onClick={() => setReplaceScope('__all__')}
+                    className={`px-3 py-1.5 rounded-lg text-[12px] border transition-all ${
+                      replaceScope === '__all__'
+                        ? 'border-primary bg-primary/6 text-primary font-medium'
+                        : 'border-border text-foreground-secondary hover:border-primary/40'
+                    }`}
+                  >
+                    전체 문서
+                  </button>
+                  {sections.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setReplaceScope(s)}
+                      className={`px-3 py-1.5 rounded-lg text-[12px] border transition-all truncate max-w-[180px] ${
+                        replaceScope === s
+                          ? 'border-primary bg-primary/6 text-primary font-medium'
+                          : 'border-border text-foreground-secondary hover:border-primary/40'
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div>
                 <label className="text-[12px] text-foreground-secondary mb-1.5 block">찾을 텍스트</label>
                 <input
