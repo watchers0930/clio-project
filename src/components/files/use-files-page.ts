@@ -324,7 +324,9 @@ export function useFilesPage() {
       .map((result) => (result as PromiseFulfilledResult<{ id: string; ok: boolean; error: string }>).value.id);
     const failed = ids.length - succeeded.length;
 
-    setFiles((prev) => prev.map((file) => succeeded.includes(file.id) ? { ...file, scope: newScope } : file));
+    // 부서 정보도 변경될 수 있으므로 목록 재로드
+    await loadAssets();
+    setSelectedIds(new Set());
 
     if (failed > 0) {
       const firstError = results.find((r) => r.status === 'fulfilled' && !r.value.ok);

@@ -120,7 +120,7 @@ export async function PATCH(
     const admin = createAdminSupabaseClient();
 
     // 파일 존재 확인 (admin 클라이언트로 RLS 우회)
-    const { data: file } = await admin.from('files').select('uploaded_by').eq('id', id).single();
+    const { data: file } = await admin.from('files').select('uploaded_by, department_id').eq('id', id).single();
     if (!file) {
       return NextResponse.json<ApiResponse>({ success: false, error: '파일을 찾을 수 없습니다.' }, { status: 404 });
     }
@@ -131,12 +131,18 @@ export async function PATCH(
       return NextResponse.json<ApiResponse>({ success: false, error: '본인이 업로드한 파일만 수정할 수 있습니다.' }, { status: 403 });
     }
 
-    const { error } = await admin.from('files').update({ scope: newScope }).eq('id', id);
+    // scope 변경 + department_id가 null이면 현재 사용자 부서로 자동 할당
+    const updateData: Record<string, string> = { scope: newScope };
+    if (!file.department_id && roleInfo?.department_id) {
+      updateData.department_id = roleInfo.department_id;
+    }
+
+    const { error } = await admin.from('files').update(updateData).eq('id', id);
     if (error) {
       return NextResponse.json<ApiResponse>({ success: false, error: '공개 범위 수정에 실패했습니다.' }, { status: 500 });
     }
 
-    return NextResponse.json<ApiResponse>({ success: true, data: { id, scope: newScope } });
+    return NextResponse.json<ApiResponse>({ success: true, data: { id, scope: newScope, department_id: updateData.department_id ?? file.department_id } });
   } catch {
     return NextResponse.json<ApiResponse>(
       { success: false, error: '공개 범위 수정 중 오류가 발생했습니다.' },
