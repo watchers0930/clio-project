@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
       uploadDate: f.created_at?.split('T')[0] ?? '',
       status: STATUS_MAP[f.status] ?? f.status,
       scope: (f.scope as string) ?? 'department',
-      isOwner: f.uploaded_by === authUserId,
+      isOwner: f.uploaded_by === authUserId || roleInfo.role === 'admin',
     }));
 
     if (type && type !== '전체') {

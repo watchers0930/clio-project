@@ -286,12 +286,21 @@ export function useFilesPage() {
   };
 
   const bulkChangeScope = async (newScope: 'company' | 'department') => {
-    const ids = files
-      .filter((file) => selectedIds.has(file.id) && file.sourceType !== 'document' && file.isOwner)
+    const selected = files.filter((file) => selectedIds.has(file.id));
+    const ids = selected
+      .filter((file) => file.sourceType !== 'document' && file.isOwner)
       .map((file) => file.id);
 
     if (ids.length === 0) {
-      toast.error('범위를 변경할 수 있는 선택 파일이 없습니다.');
+      const docCount = selected.filter((f) => f.sourceType === 'document').length;
+      const notOwnerCount = selected.filter((f) => f.sourceType !== 'document' && !f.isOwner).length;
+      if (docCount > 0 && notOwnerCount === 0) {
+        toast.error('AI 생성 문서는 범위 변경이 불가합니다. 원본 파일을 선택해주세요.');
+      } else if (notOwnerCount > 0) {
+        toast.error('본인이 업로드한 파일만 범위 변경이 가능합니다.');
+      } else {
+        toast.error('범위를 변경할 수 있는 선택 파일이 없습니다.');
+      }
       return;
     }
 
@@ -301,18 +310,26 @@ export function useFilesPage() {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ scope: newScope }),
-        }).then((r) => ({ id, ok: r.ok }))
+        }).then(async (r) => {
+          if (!r.ok) {
+            const body = await r.json().catch(() => ({}));
+            return { id, ok: false, error: body.error ?? `${r.status}` };
+          }
+          return { id, ok: true, error: '' };
+        })
       )
     );
     const succeeded = results
       .filter((result) => result.status === 'fulfilled' && result.value.ok)
-      .map((result) => (result as PromiseFulfilledResult<{ id: string; ok: boolean }>).value.id);
+      .map((result) => (result as PromiseFulfilledResult<{ id: string; ok: boolean; error: string }>).value.id);
     const failed = ids.length - succeeded.length;
 
     setFiles((prev) => prev.map((file) => succeeded.includes(file.id) ? { ...file, scope: newScope } : file));
 
     if (failed > 0) {
-      toast.error(`${succeeded.length}개 변경 완료, ${failed}개 실패 (본인 파일만 변경 가능)`);
+      const firstError = results.find((r) => r.status === 'fulfilled' && !r.value.ok);
+      const errorMsg = firstError?.status === 'fulfilled' ? firstError.value.error : '';
+      toast.error(`${succeeded.length}개 변경, ${failed}개 실패${errorMsg ? ` (${errorMsg})` : ''}`);
     } else {
       toast.success(`${succeeded.length}개 파일을 ${newScope === 'company' ? '전사' : '부서'}로 변경했습니다.`);
     }

@@ -117,16 +117,21 @@ export async function PATCH(
       return NextResponse.json<ApiResponse>({ success: false, error: 'scope는 company 또는 department여야 합니다.' }, { status: 400 });
     }
 
-    // 본인 파일인지 확인
-    const { data: file } = await supabase.from('files').select('uploaded_by').eq('id', id).single();
+    const admin = createAdminSupabaseClient();
+
+    // 파일 존재 확인 (admin 클라이언트로 RLS 우회)
+    const { data: file } = await admin.from('files').select('uploaded_by').eq('id', id).single();
     if (!file) {
       return NextResponse.json<ApiResponse>({ success: false, error: '파일을 찾을 수 없습니다.' }, { status: 404 });
     }
-    if (file.uploaded_by !== authUserId) {
+
+    // 권한 체크: 본인 파일 또는 admin 역할
+    const roleInfo = await getUserRoleInfo(supabase, authUserId);
+    if (file.uploaded_by !== authUserId && roleInfo?.role !== 'admin') {
       return NextResponse.json<ApiResponse>({ success: false, error: '본인이 업로드한 파일만 수정할 수 있습니다.' }, { status: 403 });
     }
 
-    const { error } = await supabase.from('files').update({ scope: newScope }).eq('id', id);
+    const { error } = await admin.from('files').update({ scope: newScope }).eq('id', id);
     if (error) {
       return NextResponse.json<ApiResponse>({ success: false, error: '공개 범위 수정에 실패했습니다.' }, { status: 500 });
     }
