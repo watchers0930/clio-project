@@ -185,14 +185,6 @@ export default function DocumentViewerPage() {
     }
   };
 
-  const handleReuseDocument = () => {
-    if (!doc) return;
-    const params = new URLSearchParams({ create: 'true' });
-    if (doc.template_id) params.set('template', doc.template_id);
-    if ((doc.source_file_ids ?? []).length > 0) params.set('files', (doc.source_file_ids ?? []).join(','));
-    params.set('instructions', `${doc.title} 문서를 참고해서 후속 문서를 작성하세요.`);
-    router.push(`/documents?${params.toString()}`);
-  };
 
   const handleSearchRelated = () => {
     if (!doc) return;

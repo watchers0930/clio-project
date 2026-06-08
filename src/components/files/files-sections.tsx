@@ -51,6 +51,7 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function FilesHeaderActions(_props: HeaderActionsProps) {
   return (
     <section className="rounded-2xl border border-border bg-white shadow-sm">
@@ -203,7 +204,7 @@ export function FilesListView({
   onOpenCommentsFromFile,
   onOpenSearchFromFile,
   onOpenDocumentsFromFile,
-  onOpenContractRiskFromFile,
+  // onOpenContractRiskFromFile — reserved for future use
 }: FilesContentProps) {
   return (
     <div className="overflow-hidden rounded-[16px] border border-border bg-white shadow-sm">

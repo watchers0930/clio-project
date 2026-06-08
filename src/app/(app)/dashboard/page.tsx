@@ -74,7 +74,7 @@ function UpcomingEventsSlider({ events }: { events: CalendarEvent[] }) {
   const touchRef = useRef<number | null>(null);
   const count = events.length;
 
-  useEffect(() => { setIdx(0); }, [count]);
+  useEffect(() => { setIdx(0); }, [count]); // eslint-disable-line react-hooks/set-state-in-effect -- reset index when event count changes
 
   if (count === 0) {
     return (

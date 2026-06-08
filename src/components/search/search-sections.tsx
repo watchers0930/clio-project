@@ -1,8 +1,6 @@
 'use client';
 
-import { PLATFORM_LABEL } from '@/lib/constants/ui';
 import { FileSearchTab } from './search-file-tab';
-import { FileSearch, ShieldAlert, Sparkles } from 'lucide-react';
 import type { ChatMessage, SearchTab } from './types';
 
 interface HeaderProps {

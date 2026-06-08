@@ -15,7 +15,7 @@ export function HtmlPreviewFrame({ html, title, className }: HtmlPreviewFramePro
   useEffect(() => {
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
-    setBlobUrl(url);
+    setBlobUrl(url); // eslint-disable-line react-hooks/set-state-in-effect -- sync blob URL from external Blob API
     prevUrlRef.current = url;
     return () => { URL.revokeObjectURL(url); };
   }, [html]);
