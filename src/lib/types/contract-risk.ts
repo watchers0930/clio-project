@@ -5,7 +5,7 @@ export type RiskLevel = 'high' | 'medium' | 'low';
 export type Category = 'unfavorable' | 'missing' | 'ambiguous';
 
 // 계약서 유형
-export type ContractType = 'system' | 'maintenance' | 'software' | 'general';
+export type ContractType = 'system' | 'maintenance' | 'software' | 'general' | 'consulting' | 'licensing' | 'construction' | 'outsourcing';
 
 // 분석 입장
 export type Perspective = 'seller_side' | 'buyer_side';

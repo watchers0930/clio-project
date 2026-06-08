@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown, Copy, Check, AlertTriangle, AlertCircle, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CONTRACT_RISK_ITEMS, CATEGORY_LABELS } from '@/lib/contract-risk-items';
@@ -8,6 +8,7 @@ import type { RiskItem } from '@/lib/types/contract-risk';
 
 interface RiskCardProps {
   item: RiskItem;
+  expandOverride?: { expanded: boolean; version: number };
 }
 
 const RISK_CONFIG = {
@@ -18,8 +19,6 @@ const RISK_CONFIG = {
     borderCls: 'border-l-red-500',
     iconCls: 'text-red-500',
     iconBg: 'bg-red-50',
-    labelCls: 'text-red-700',
-    sectionLabel: 'text-red-600',
   },
   medium: {
     label: '중',
@@ -28,8 +27,6 @@ const RISK_CONFIG = {
     borderCls: 'border-l-amber-500',
     iconCls: 'text-amber-500',
     iconBg: 'bg-amber-50',
-    labelCls: 'text-amber-700',
-    sectionLabel: 'text-amber-600',
   },
   low: {
     label: '하',
@@ -38,17 +35,24 @@ const RISK_CONFIG = {
     borderCls: 'border-l-emerald-500',
     iconCls: 'text-emerald-600',
     iconBg: 'bg-emerald-50',
-    labelCls: 'text-emerald-700',
-    sectionLabel: 'text-emerald-700',
   },
 } as const;
 
-export function RiskCard({ item }: RiskCardProps) {
+export function RiskCard({ item, expandOverride }: RiskCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  useEffect(() => {
+    if (expandOverride) setExpanded(expandOverride.expanded);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expandOverride?.version]);
+
   const def = CONTRACT_RISK_ITEMS.find(d => d.id === item.id);
   const cfg = RISK_CONFIG[item.risk_level] ?? RISK_CONFIG.low;
+
+  const preview = item.explanation
+    ? item.explanation.length > 80 ? item.explanation.slice(0, 80) + '…' : item.explanation
+    : null;
 
   const handleCopy = () => {
     const text = [
@@ -71,12 +75,10 @@ export function RiskCard({ item }: RiskCardProps) {
         className="w-full text-left px-5 py-4 flex items-start gap-3.5 hover:bg-surface-tertiary transition-colors"
         onClick={() => setExpanded(v => !v)}
       >
-        {/* 아이콘 */}
         <div className={cn('w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5', cfg.iconBg)}>
           <cfg.Icon size={15} className={cfg.iconCls} />
         </div>
 
-        {/* 내용 */}
         <div className="flex-1 min-w-0">
           <div className="mb-1.5 flex items-center gap-2.5 flex-wrap">
             <span className={cn('text-[11px] font-bold px-2.5 py-1 rounded-lg border leading-none', cfg.badgeCls)}>
@@ -92,9 +94,12 @@ export function RiskCard({ item }: RiskCardProps) {
           <p className="text-[14px] font-semibold text-foreground leading-snug">
             {def?.name ?? item.id}
           </p>
+          {/* 축소 시 미리보기 */}
+          {!expanded && preview && (
+            <p className="mt-1.5 text-[12px] text-foreground-quaternary leading-relaxed line-clamp-1">{preview}</p>
+          )}
         </div>
 
-        {/* 액션 */}
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={e => { e.stopPropagation(); handleCopy(); }}
@@ -103,39 +108,44 @@ export function RiskCard({ item }: RiskCardProps) {
           >
             {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
           </button>
-          <div className={cn('flex h-7 w-7 items-center justify-center rounded-lg transition-transform', expanded && 'rotate-180')}>
+          <div className={cn('flex h-7 w-7 items-center justify-center rounded-lg transition-transform duration-200', expanded && 'rotate-180')}>
             <ChevronDown size={15} className="text-foreground-quaternary" />
           </div>
         </div>
       </button>
 
-      {/* 상세 내용 */}
-      {expanded && (
-        <div className="px-5 pb-5 border-t border-border bg-surface-tertiary space-y-4 pt-4">
-          {item.excerpt && (
-            <div>
-              <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-2">원문 발췌</p>
-              <div className="bg-white border border-border rounded-xl p-3.5 text-[12px] text-foreground-secondary italic leading-relaxed">
-                {item.excerpt}
+      {/* 상세 내용 (애니메이션) */}
+      <div
+        className="grid transition-[grid-template-rows] duration-300 ease-out"
+        style={{ gridTemplateRows: expanded ? '1fr' : '0fr' }}
+      >
+        <div className="overflow-hidden">
+          <div className="px-5 pb-5 border-t border-border bg-surface-tertiary space-y-4 pt-4">
+            {item.excerpt && (
+              <div>
+                <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-2">원문 발췌</p>
+                <div className="bg-white border border-border rounded-xl p-3.5 text-[12px] text-foreground-secondary italic leading-relaxed">
+                  {item.excerpt}
+                </div>
               </div>
-            </div>
-          )}
-          {item.explanation && (
-            <div>
-              <p className="text-[10px] font-bold text-foreground uppercase tracking-widest mb-2">AI 분석</p>
-              <p className="text-[13px] text-foreground leading-relaxed">{item.explanation}</p>
-            </div>
-          )}
-          {item.recommendation && (
-            <div>
-              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-2">권고사항</p>
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5">
-                <p className="text-[13px] text-emerald-800 leading-relaxed">{item.recommendation}</p>
+            )}
+            {item.explanation && (
+              <div>
+                <p className="text-[10px] font-bold text-foreground uppercase tracking-widest mb-2">AI 분석</p>
+                <p className="text-[13px] text-foreground leading-relaxed">{item.explanation}</p>
               </div>
-            </div>
-          )}
+            )}
+            {item.recommendation && (
+              <div>
+                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-2">권고사항</p>
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5">
+                  <p className="text-[13px] text-emerald-800 leading-relaxed">{item.recommendation}</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

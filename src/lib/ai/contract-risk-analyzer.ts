@@ -52,11 +52,15 @@ function buildUserPrompt(
   contractType: ContractType,
   perspective: Perspective,
 ): string {
-  const contractTypeLabel = {
+  const contractTypeLabel: string = {
     system: '시스템구축계약서',
     maintenance: '유지보수계약서',
     software: '소프트웨어개발계약서',
     general: '용역계약서',
+    consulting: '컨설팅계약서',
+    licensing: '라이선싱/사용권계약서',
+    construction: '건설/시공계약서',
+    outsourcing: '아웃소싱계약서',
   }[contractType];
 
   const perspectiveLabel = perspective === 'seller_side' ? '을(공급자/수급인)' : '갑(발주자/도급인)';

@@ -19,19 +19,43 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') ?? '20', 10)));
   const offset = (page - 1) * limit;
 
+  // 검색/필터 파라미터
+  const q = searchParams.get('q')?.trim() ?? '';
+  const contractType = searchParams.get('contract_type') ?? '';
+  const sort = searchParams.get('sort') ?? 'latest';
+
   const admin = createAdminSupabaseClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error, count } = await (admin as any)
+  let query = (admin as any)
     .from('contract_risk_analyses')
     .select('id, file_name, file_type, contract_type, perspective, risk_count, status, created_at', { count: 'exact' })
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1) as {
-      data: unknown[] | null;
-      error: unknown;
-      count: number | null;
-    };
+    .eq('user_id', userId);
+
+  // 파일명 검색 (ilike)
+  if (q) {
+    query = query.ilike('file_name', `%${q}%`);
+  }
+
+  // 계약 유형 필터
+  if (contractType) {
+    query = query.eq('contract_type', contractType);
+  }
+
+  // 정렬
+  if (sort === 'risk_high') {
+    query = query.order('risk_count->high', { ascending: false }).order('created_at', { ascending: false });
+  } else if (sort === 'oldest') {
+    query = query.order('created_at', { ascending: true });
+  } else {
+    query = query.order('created_at', { ascending: false });
+  }
+
+  const { data, error, count } = await query.range(offset, offset + limit - 1) as {
+    data: unknown[] | null;
+    error: unknown;
+    count: number | null;
+  };
 
   if (error) {
     console.error('[contract-risk/history] SELECT error:', error);

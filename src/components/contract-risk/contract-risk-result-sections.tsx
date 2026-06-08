@@ -59,6 +59,7 @@ export function ContractRiskSuggestLayout({
   onSuggestStart,
   onAccept,
   onSkip,
+  onEditRevised,
   acceptedCount,
   outputFormat,
   onFormatChange,
@@ -79,6 +80,7 @@ export function ContractRiskSuggestLayout({
   onSuggestStart: () => void;
   onAccept: (key: string) => void;
   onSkip: (key: string) => void;
+  onEditRevised?: (key: string, text: string) => void;
   acceptedCount: number;
   outputFormat: 'docx' | 'hwpx';
   onFormatChange: (format: 'docx' | 'hwpx') => void;
@@ -135,6 +137,7 @@ export function ContractRiskSuggestLayout({
             suggestion={activeSuggestion}
             onAccept={onAccept}
             onSkip={onSkip}
+            onEditRevised={onEditRevised}
             isLoading={isSuggesting}
           />
         </div>

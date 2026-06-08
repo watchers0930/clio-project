@@ -1,5 +1,6 @@
 'use client';
 
+import { ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { RiskFilterState, RiskLevel, Category } from '@/lib/types/contract-risk';
 
@@ -15,9 +16,11 @@ interface RiskFilterProps {
     missing: number;
     ambiguous: number;
   };
+  isAllExpanded?: boolean;
+  onToggleExpandAll?: () => void;
 }
 
-export function RiskFilter({ filter, onChange, counts }: RiskFilterProps) {
+export function RiskFilter({ filter, onChange, counts, isAllExpanded, onToggleExpandAll }: RiskFilterProps) {
   const levels: { key: RiskLevel | 'all'; label: string; count: number; dot?: string }[] = [
     { key: 'all',    label: '전체',      count: counts.all },
     { key: 'high',   label: '상위',      count: counts.high,   dot: 'bg-red-500' },
@@ -34,8 +37,8 @@ export function RiskFilter({ filter, onChange, counts }: RiskFilterProps) {
 
   return (
     <div className="bg-white border border-border rounded-2xl p-4 space-y-3">
-      {/* 리스크 수준 */}
-      <div className="mb-[5px] flex flex-wrap items-center gap-2 pb-[5px]">
+      {/* 리스크 수준 + 펼치기/접기 */}
+      <div className="flex flex-wrap items-center gap-2">
         {levels.map(btn => (
           <button
             key={btn.key}
@@ -59,8 +62,16 @@ export function RiskFilter({ filter, onChange, counts }: RiskFilterProps) {
             </span>
           </button>
         ))}
+        {onToggleExpandAll && (
+          <button
+            onClick={onToggleExpandAll}
+            className="ml-auto inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-[12px] font-medium text-foreground-secondary hover:border-primary/60 hover:text-foreground transition-all"
+          >
+            <ChevronsUpDown size={13} />
+            {isAllExpanded ? '전체 접기' : '전체 펼치기'}
+          </button>
+        )}
       </div>
-
 
       {/* 유형 */}
       <div className="flex flex-wrap items-center gap-2">

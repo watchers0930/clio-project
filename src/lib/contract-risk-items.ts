@@ -186,6 +186,10 @@ export const CONTRACT_TYPE_LABELS: Record<string, string> = {
   maintenance: '유지보수계약서',
   software: '소프트웨어개발계약서',
   general: '용역계약서 (범용)',
+  consulting: '컨설팅계약서',
+  licensing: '라이선싱/사용권계약서',
+  construction: '건설/시공계약서',
+  outsourcing: '아웃소싱계약서',
 };
 
 export const PERSPECTIVE_LABELS: Record<string, string> = {

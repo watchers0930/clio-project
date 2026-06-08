@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { generateContractRiskReport } from '@/lib/ai/contract-risk-report';
+import { generateContractRiskPdfHtml } from '@/lib/ai/contract-risk-report-pdf';
 import type { ContractRiskAnalysis } from '@/lib/types/contract-risk';
 
 export const maxDuration = 30;
@@ -10,7 +11,7 @@ export const maxDuration = 30;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
@@ -50,6 +51,28 @@ export async function GET(
     return NextResponse.json({ error: '분석이 완료되지 않았습니다.' }, { status: 422 });
   }
 
+  const format = request.nextUrl.searchParams.get('format') ?? 'docx';
+
+  if (format === 'pdf') {
+    try {
+      const html = generateContractRiskPdfHtml(data);
+      const baseName = data.file_name.replace(/\.[^.]+$/, '');
+      const safeFileName = encodeURIComponent(`리스크분석-${baseName}.html`);
+
+      return new NextResponse(html, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Content-Disposition': `attachment; filename*=UTF-8''${safeFileName}`,
+        },
+      });
+    } catch (err) {
+      console.error('[contract-risk/download] PDF report generation error:', err);
+      return NextResponse.json({ error: '리포트 생성 중 오류가 발생했습니다.' }, { status: 500 });
+    }
+  }
+
+  // DOCX format (default)
   let buffer: Buffer;
   try {
     buffer = await generateContractRiskReport(data);

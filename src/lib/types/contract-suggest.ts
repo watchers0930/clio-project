@@ -60,6 +60,7 @@ export type DecisionStatus = 'pending' | 'accepted' | 'skipped';
 
 export interface SuggestionState extends SuggestionItem {
   decision: DecisionStatus;
+  editedRevised?: string;
 }
 
 // ─── 시드 API ────────────────────────────────────────────────────────────────

@@ -10,6 +10,7 @@ interface SuggestionPanelProps {
   suggestion: SuggestionState | null;
   onAccept: (key: string) => void;
   onSkip: (key: string) => void;
+  onEditRevised?: (key: string, text: string) => void;
   isLoading: boolean;
 }
 
@@ -31,7 +32,7 @@ function LoadingSkeleton() {
   );
 }
 
-export function SuggestionPanel({ suggestion, onAccept, onSkip, isLoading }: SuggestionPanelProps) {
+export function SuggestionPanel({ suggestion, onAccept, onSkip, onEditRevised, isLoading }: SuggestionPanelProps) {
   if (isLoading) {
     return (
       <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
@@ -100,7 +101,12 @@ export function SuggestionPanel({ suggestion, onAccept, onSkip, isLoading }: Sug
       )}
 
       {/* 수정 제안 조항 + 이유 */}
-      <RevisedClauseBox revised={suggestion.revised} reason={suggestion.reason} />
+      <RevisedClauseBox
+        revised={suggestion.revised}
+        reason={suggestion.reason}
+        editedRevised={suggestion.editedRevised}
+        onEditRevised={onEditRevised ? (text) => onEditRevised(suggestion.item_key, text) : undefined}
+      />
 
       {/* 액션 버튼 */}
       {suggestion.decision === 'pending' && (
