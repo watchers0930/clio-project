@@ -416,10 +416,11 @@ export function useFilesPage() {
           document.body.removeChild(a);
         }
       } else {
-        toast.error('파일 다운로드에 실패했습니다.');
+        const body = await res.json().catch(() => ({}));
+        toast.error(body.error ?? `다운로드 실패 (${res.status})`);
       }
     } catch {
-      toast.error('다운로드 중 오류가 발생했습니다.');
+      toast.error('다운로드 중 네트워크 오류가 발생했습니다.');
     }
     setTimeout(() => setDownloadToast(null), 2000);
   };

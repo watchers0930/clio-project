@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { canAccessFile, getUserRoleInfo } from '@/lib/permissions';
 
 /**
  * GET /api/files/[id]/download — Signed URL 발급 (60초 유효)
@@ -31,19 +32,18 @@ export async function GET(
       return NextResponse.json({ error: '파일을 찾을 수 없습니다.' }, { status: 404 });
     }
 
-    // 권한 체크: 본인 업로드 or 공유받은 파일
-    if (file.uploaded_by !== authUserId) {
-      const { data: share } = await admin
-        .from('file_shares')
-        .select('id')
-        .eq('file_id', id)
-        .eq('shared_with', authUserId)
-        .gt('expires_at', new Date().toISOString())
-        .limit(1);
+    // 권한 체크: canAccessFile (admin/소유자/같은부서/file_permissions)
+    const roleInfo = await getUserRoleInfo(supabase, authUserId);
+    const hasAccess = await canAccessFile(
+      supabase,
+      authUserId,
+      roleInfo?.role ?? 'user',
+      roleInfo?.department_id ?? null,
+      id,
+    );
 
-      if (!share || share.length === 0) {
-        return NextResponse.json({ error: '접근 권한이 없습니다.' }, { status: 403 });
-      }
+    if (!hasAccess) {
+      return NextResponse.json({ error: '접근 권한이 없습니다.' }, { status: 403 });
     }
 
     // Signed URL 발급
