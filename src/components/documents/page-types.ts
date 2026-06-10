@@ -45,7 +45,7 @@ export interface TemplateItem {
   templateMode?: 'html-template';
   templateHtml?: string;
   templateFile: TemplateFile | null;
-  templateFields?: { key: string; label: string; type: 'text' | 'textarea' | 'date'; required?: boolean; placeholder?: string; autoFill?: 'user' | 'source' | 'document'; aiAssist?: boolean }[];
+  templateFields?: { key: string; label: string; type: 'text' | 'textarea' | 'date'; required?: boolean; placeholder?: string; defaultValue?: string; autoFill?: 'user' | 'source' | 'document'; aiAssist?: boolean }[];
   templateSections?: { key: string; title: string; prompt: string }[];
 }
 

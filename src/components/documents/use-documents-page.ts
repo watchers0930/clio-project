@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { isContractTemplate } from '@/lib/contract-fields';
 import type {
@@ -25,6 +25,15 @@ export {
 import { TEMPLATE_DISPLAY_ORDER } from '@/components/documents/document-page-constants';
 
 type AllowedOutputFormat = 'docx' | 'hwpx' | 'pdf' | 'xlsx' | 'pptx';
+
+function interpolateFieldDefaultValue(value: string, inputs: Record<string, string>, fields: TemplateFieldDefinition[]) {
+  return value.replace(/\{\{([^}]+)\}\}/g, (_match, key: string) => {
+    const normalizedKey = key.trim();
+    const inputValue = inputs[normalizedKey]?.trim();
+    if (inputValue) return inputValue;
+    return fields.find((field) => field.key === normalizedKey)?.placeholder ?? '';
+  });
+}
 
 function getAllowedOutputFormats(templateFile: Template['templateFile'] | null | undefined, isContract: boolean, templateMode?: string): AllowedOutputFormat[] {
   if (isContract) return ['hwpx'];
@@ -87,6 +96,8 @@ export function useDocumentsPage() {
   const [initializedFromQuery, setInitializedFromQuery] = useState(false);
   const [extractingFields, setExtractingFields] = useState(false);
   const [extractedFieldKeys, setExtractedFieldKeys] = useState<Set<string>>(new Set());
+  const previousSelectedTemplateRef = useRef<string | null>(null);
+  const autoDefaultInputValuesRef = useRef<Record<string, string>>({});
 
   const openConfirm = (title: string, description: string | undefined, onConfirm: () => void) => setConfirmState({ open: true, title, description, onConfirm });
   const closeConfirm = () => setConfirmState((state) => ({ ...state, open: false }));
@@ -317,12 +328,55 @@ export function useDocumentsPage() {
       setReferenceDocuments([]);
       setReferenceDocId(null);
     }
+
+    if (previousSelectedTemplateRef.current !== selectedTemplate) {
+      previousSelectedTemplateRef.current = selectedTemplate;
+      const fieldsWithDefaults = selectedTemplateItem?.templateFields?.filter((field) => field.defaultValue) ?? [];
+      autoDefaultInputValuesRef.current = {};
+      if (fieldsWithDefaults.length > 0) {
+        setDocumentInputs((prev) => {
+          const next = { ...prev };
+          for (const field of fieldsWithDefaults) {
+            if (!next[field.key]?.trim()) {
+              const defaultValue = interpolateFieldDefaultValue(field.defaultValue ?? '', next, selectedTemplateItem?.templateFields ?? []);
+              next[field.key] = defaultValue;
+              autoDefaultInputValuesRef.current[field.key] = defaultValue;
+            }
+          }
+          return next;
+        });
+      }
+    }
   }, [selectedTemplate, templates, outputFormat, loadReferenceDocuments]);
+
+  useEffect(() => {
+    const selectedTemplateItem = templates.find((template) => template.id === selectedTemplate);
+    const fieldsWithDefaults = selectedTemplateItem?.templateFields?.filter((field) => field.defaultValue) ?? [];
+    if (fieldsWithDefaults.length === 0) return;
+
+    setDocumentInputs((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const field of fieldsWithDefaults) {
+        const previousAutoValue = autoDefaultInputValuesRef.current[field.key];
+        const hasExistingValue = Object.prototype.hasOwnProperty.call(next, field.key);
+        if (hasExistingValue && next[field.key] !== previousAutoValue) continue;
+        const defaultValue = interpolateFieldDefaultValue(field.defaultValue ?? '', next, selectedTemplateItem?.templateFields ?? []);
+        if (next[field.key] !== defaultValue) {
+          next[field.key] = defaultValue;
+          changed = true;
+        }
+        autoDefaultInputValuesRef.current[field.key] = defaultValue;
+      }
+      return changed ? next : prev;
+    });
+  }, [documentInputs, selectedTemplate, templates]);
 
   const resetModal = () => {
     setShowModal(false);
     setStep(1);
     setSelectedTemplate(null);
+    autoDefaultInputValuesRef.current = {};
     setSelectedFiles(new Set());
     setInstructions('');
     setCustomStructure('');

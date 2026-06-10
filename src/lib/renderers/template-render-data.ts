@@ -139,12 +139,13 @@ export function buildTemplateRenderData(params: {
 
   for (const field of templateBundle.fields) {
     const hasInputValue = Object.prototype.hasOwnProperty.call(documentInputs ?? {}, field.key);
+    const fallbackValue = field.defaultValue || field.placeholder || '';
     const fieldValue = hasInputValue
-      ? (documentInputs?.[field.key] || field.placeholder || replacements[field.key] || '')
-      : (replacements[field.key] || field.placeholder || '');
+      ? (documentInputs?.[field.key] || fallbackValue || replacements[field.key] || '')
+      : (replacements[field.key] || fallbackValue);
     replacements[field.key] = interpolateTemplateValue(fieldValue, replacements);
     if (field.key.endsWith('_items')) {
-      const itemsValue = hasInputValue ? (documentInputs?.[field.key] ?? '') : (field.placeholder || '');
+      const itemsValue = hasInputValue ? (documentInputs?.[field.key] ?? '') : fallbackValue;
       replacements[`${field.key}_html`] = multilineToListItems(interpolateTemplateValue(itemsValue, replacements));
     }
   }

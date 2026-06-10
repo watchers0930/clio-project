@@ -27,6 +27,7 @@ interface NewDocumentGeneralStepProps {
     type: 'text' | 'textarea' | 'date';
     required?: boolean;
     placeholder?: string;
+    defaultValue?: string;
     autoFill?: 'user' | 'source' | 'document';
     aiAssist?: boolean;
   }>;

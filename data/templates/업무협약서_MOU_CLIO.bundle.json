@@ -30,7 +30,8 @@
       "label": "협력의 목적",
       "type": "textarea",
       "required": false,
-      "placeholder": "본 MOU의 목적은 \"{{party_a_name}}\"와 \"{{party_b_name}}\"가 B2B/B2C 사업 분야 경쟁력 강화 및 시장 확대를 위한 전략적 제휴 관계 구축하고, 상호 이익 증진에 기여함을 목적으로 한다."
+      "placeholder": "협력의 목적을 입력하세요.",
+      "defaultValue": "본 MOU의 목적은 \"{{party_a_name}}\"와 \"{{party_b_name}}\"가 B2B/B2C 사업 분야 경쟁력 강화 및 시장 확대를 위한 전략적 제휴 관계 구축하고, 상호 이익 증진에 기여함을 목적으로 한다."
     },
     {
       "key": "party_a_coop_items",
