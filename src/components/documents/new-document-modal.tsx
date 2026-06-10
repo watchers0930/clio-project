@@ -528,7 +528,7 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
               )}
               {generatedDownloadUrl && (
                 <button onClick={onDownloadGeneratedFile} className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-dark transition-colors">
-                  {selectedTemplateItem?.templateMode === 'html-template' ? 'PDF로 저장' : `${outputFormat.toUpperCase()} 파일 다운로드`}
+                  {selectedTemplateItem?.templateMode === 'html-template' ? 'PDF 저장창 열기' : `${outputFormat.toUpperCase()} 파일 다운로드`}
                 </button>
               )}
               {selectedTemplateItem?.name === '제안서' && generatedDoc.id && (

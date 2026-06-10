@@ -142,7 +142,7 @@ export function DocumentsListSection({
                   onClick={() => onDownload(doc)}
                   className="min-h-[48px] flex-1 border-b border-border/60 px-3 py-3 text-[12px] font-medium text-foreground transition-colors hover:bg-surface-secondary sm:border-r sm:border-b-0 sm:border-border/60"
                 >
-                  다운로드
+                  {doc.template === '업무협약서(MOU)' ? 'PDF 저장창' : '다운로드'}
                 </button>
                 <button
                   onClick={() => onOpenShare(doc)}

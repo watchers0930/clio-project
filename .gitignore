@@ -39,6 +39,7 @@ yarn-error.log*
 
 # local tool temp files
 supabase/.temp/
+tmp-mou-convert/
 Icon?
 
 # typescript

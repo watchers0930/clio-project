@@ -217,7 +217,7 @@ export async function GET(
     const { id } = await params;
     const url = new URL(_request.url);
     const fontParam = url.searchParams.get('font') ?? '맑은 고딕';
-    const format = url.searchParams.get('format') ?? 'docx';
+    let format = url.searchParams.get('format') ?? 'docx';
     const fontFamily = FONT_MAP[fontParam] ?? 'Malgun Gothic';
 
     const supabase = await createServerSupabaseClient();
@@ -318,6 +318,9 @@ export async function GET(
         }
       }
     } catch { /* 이름 없으면 그냥 진행 */ }
+    if (templateBundle?.mode === 'html-template') {
+      format = 'pdf';
+    }
     if (!inline) {
       try {
         const adminClient = createAdminSupabaseClient();

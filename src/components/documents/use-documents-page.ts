@@ -452,7 +452,9 @@ export function useDocumentsPage() {
       const selectedTemplateItem = templates.find((template) => template.id === selectedTemplate);
       const isContract = selectedTemplateItem ? isContractTemplate(selectedTemplateItem.name) : false;
       const allowedFormats = getAllowedOutputFormats(selectedTemplateItem?.templateFile, isContract, selectedTemplateItem?.templateMode);
-      const actualFormat = allowedFormats.includes(outputFormat as AllowedOutputFormat) ? outputFormat : allowedFormats[0];
+      const actualFormat = selectedTemplateItem?.templateMode === 'html-template'
+        ? 'pdf'
+        : allowedFormats.includes(outputFormat as AllowedOutputFormat) ? outputFormat : allowedFormats[0];
       if (actualFormat !== outputFormat) setOutputFormat(actualFormat);
       const res = await fetch('/api/generate', {
         method: 'POST',

@@ -248,6 +248,9 @@ export async function POST(request: NextRequest) {
     const templateContext = await loadTemplateContext(supabase, templateId, customStructure, format);
     const { tmpl, templateBundle, templateName, templateFileText, templateBuffer, templateFileName } = templateContext;
     format = templateContext.format;
+    if (templateBundle?.mode === 'html-template') {
+      format = 'pdf';
+    }
     const isProposalTemplate = isProposalTemplateName(templateName);
 
     // 참조 제안서 콘텐츠 로드

@@ -86,6 +86,27 @@ function getSectionBodyFromInputs(sectionTitle: string, documentInputs?: Record<
   return '';
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function multilineToListItems(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((line) => line.trim().replace(/^[-*]\s+/, '').replace(/^\d+[.)]\s+/, ''))
+    .filter(Boolean)
+    .map((line) => `<li><p align="left" style="line-height: 115%; margin-bottom: 0cm">${escapeHtml(line)}</p></li>`)
+    .join('\n');
+}
+
+function interpolateTemplateValue(value: string, replacements: Record<string, string>) {
+  return value.replace(/\{\{([^}]+)\}\}/g, (_match, key: string) => replacements[key.trim()] ?? '');
+}
+
 export function buildTemplateRenderData(params: {
   markdown: string;
   title: string;
@@ -111,10 +132,20 @@ export function buildTemplateRenderData(params: {
 
   Object.entries(documentInputs ?? {}).forEach(([key, value]) => {
     replacements[key] = value || replacements[key] || '';
+    if (key.endsWith('_items')) {
+      replacements[`${key}_html`] = multilineToListItems(value || '');
+    }
   });
 
   for (const field of templateBundle.fields) {
-    replacements[field.key] = documentInputs?.[field.key] || replacements[field.key] || '';
+    const hasInputValue = Object.prototype.hasOwnProperty.call(documentInputs ?? {}, field.key);
+    replacements[field.key] = hasInputValue
+      ? (documentInputs?.[field.key] || field.placeholder || replacements[field.key] || '')
+      : (replacements[field.key] || field.placeholder || '');
+    if (field.key.endsWith('_items')) {
+      const itemsValue = hasInputValue ? (documentInputs?.[field.key] ?? '') : (field.placeholder || '');
+      replacements[`${field.key}_html`] = multilineToListItems(interpolateTemplateValue(itemsValue, replacements));
+    }
   }
 
   const sections = templateBundle.sections.map((section, index) => {

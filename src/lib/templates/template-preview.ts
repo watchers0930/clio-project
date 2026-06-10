@@ -4,7 +4,21 @@ function escapeHtml(value: string) {
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function multilineToListItems(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((line) => line.trim().replace(/^[-*]\s+/, '').replace(/^\d+[.)]\s+/, ''))
+    .filter(Boolean)
+    .map((line) => `<li><p align="left" style="line-height: 115%; margin-bottom: 0cm">${escapeHtml(line)}</p></li>`)
+    .join('\n');
+}
+
+function interpolateTemplateValue(value: string, replacements: Record<string, string>) {
+  return value.replace(/\{\{([^}]+)\}\}/g, (_match, key: string) => replacements[key.trim()] ?? '');
 }
 
 function markdownFragmentToHtml(md: string) {
@@ -54,6 +68,9 @@ export function buildTemplatePreviewData(bundle: TemplateBundle, name: string) {
   for (const field of bundle.fields) {
     if (!replacements[field.key]) {
       replacements[field.key] = field.placeholder || `${field.label} 샘플`;
+    }
+    if (field.key.endsWith('_items')) {
+      replacements[`${field.key}_html`] = multilineToListItems(interpolateTemplateValue(field.placeholder || `${field.label} 샘플`, replacements));
     }
   }
 

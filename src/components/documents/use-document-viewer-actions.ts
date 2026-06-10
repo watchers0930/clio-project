@@ -141,7 +141,8 @@ export function useDocumentViewerActions({
 
   const handleDownload = async (doc: Document) => {
     try {
-      if (downloadFormat === 'pdf') {
+      const effectiveDownloadFormat = doc.template === '업무협약서(MOU)' ? 'pdf' : downloadFormat;
+      if (effectiveDownloadFormat === 'pdf') {
         const res = await fetch(`/api/documents/${doc.id}/download?font=${encodeURIComponent(selectedFont)}&format=pdf`);
         if (!res.ok) throw new Error('다운로드 실패');
 
@@ -157,11 +158,11 @@ export function useDocumentViewerActions({
         return;
       }
 
-      const res = await fetch(`/api/documents/${doc.id}/download?font=${encodeURIComponent(selectedFont)}&format=${downloadFormat}`);
+      const res = await fetch(`/api/documents/${doc.id}/download?font=${encodeURIComponent(selectedFont)}&format=${effectiveDownloadFormat}`);
       if (!res.ok) throw new Error('다운로드 실패');
 
       const blob = await res.blob();
-      triggerBrowserDownload(blob, `${doc.title}.${downloadFormat}`);
+      triggerBrowserDownload(blob, `${doc.title}.${effectiveDownloadFormat}`);
     } catch {
       toast.error('다운로드에 실패했습니다.');
     }

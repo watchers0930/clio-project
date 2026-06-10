@@ -244,6 +244,8 @@ const proposalBundle = createBundle({
   ],
 });
 
+const mouBundle = JSON.parse(fs.readFileSync('/Users/watchers/Desktop/clio-project/data/templates/업무협약서_MOU_CLIO.bundle.json', 'utf8'));
+
 const templateSpecs = [
   {
     names: ['보고서'],
@@ -264,6 +266,13 @@ const templateSpecs = [
     names: ['제안서'],
     description: '제안서 작성용 템플릿',
     bundle: proposalBundle,
+  },
+  {
+    names: ['업무협약서(MOU)', '업무협약서', '사업 협력을 위한 양해각서'],
+    createName: '업무협약서(MOU)',
+    description: '사업 협력을 위한 양해각서 작성용 템플릿',
+    bundle: mouBundle,
+    createIfMissing: true,
   },
 ];
 
@@ -305,6 +314,25 @@ async function main() {
       && template.id !== proposalTarget?.id,
     );
     if (matched.length === 0) {
+      if (spec.createIfMissing) {
+        const payload = {
+          name: spec.createName ?? spec.names[0],
+          description: spec.description,
+          scope: 'company',
+          content: JSON.stringify(spec.bundle),
+          placeholders: [],
+          template_file_id: null,
+        };
+        const { data: inserted, error: insertError } = await supabase
+          .from('templates')
+          .insert(payload)
+          .select('id, name')
+          .single();
+
+        if (insertError) throw insertError;
+        console.log(`[created] ${inserted.name} (${inserted.id}) -> html-template`);
+        continue;
+      }
       console.log(`[skip] ${spec.names.join(', ')} 템플릿 없음`);
       continue;
     }
