@@ -67,7 +67,7 @@ export function buildTemplatePreviewData(bundle: TemplateBundle, name: string) {
 
   for (const field of bundle.fields) {
     if (!replacements[field.key]) {
-      replacements[field.key] = field.placeholder || `${field.label} 샘플`;
+      replacements[field.key] = interpolateTemplateValue(field.placeholder || `${field.label} 샘플`, replacements);
     }
     if (field.key.endsWith('_items')) {
       replacements[`${field.key}_html`] = multilineToListItems(interpolateTemplateValue(field.placeholder || `${field.label} 샘플`, replacements));

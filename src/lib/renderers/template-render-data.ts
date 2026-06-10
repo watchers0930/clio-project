@@ -139,9 +139,10 @@ export function buildTemplateRenderData(params: {
 
   for (const field of templateBundle.fields) {
     const hasInputValue = Object.prototype.hasOwnProperty.call(documentInputs ?? {}, field.key);
-    replacements[field.key] = hasInputValue
+    const fieldValue = hasInputValue
       ? (documentInputs?.[field.key] || field.placeholder || replacements[field.key] || '')
       : (replacements[field.key] || field.placeholder || '');
+    replacements[field.key] = interpolateTemplateValue(fieldValue, replacements);
     if (field.key.endsWith('_items')) {
       const itemsValue = hasInputValue ? (documentInputs?.[field.key] ?? '') : (field.placeholder || '');
       replacements[`${field.key}_html`] = multilineToListItems(interpolateTemplateValue(itemsValue, replacements));
