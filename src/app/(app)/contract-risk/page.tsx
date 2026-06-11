@@ -56,8 +56,8 @@ export default function ContractRiskPage() {
 
   const onFileSelect = (f: File) => {
     const ext = f.name.split('.').pop()?.toLowerCase() ?? '';
-    if (!['docx', 'hwpx', 'hwp', 'pdf'].includes(ext)) {
-      setError('DOCX, HWPX, HWP, PDF 파일만 분석할 수 있습니다.');
+    if (!['docx', 'hwpx', 'pdf'].includes(ext)) {
+      setError('DOCX, HWPX, PDF 파일만 분석할 수 있습니다.');
       return;
     }
     if (f.size > 20 * 1024 * 1024) {

@@ -63,6 +63,7 @@ export function ContractRiskSuggestLayout({
   acceptedCount,
   outputFormat,
   onFormatChange,
+  allowedOutputFormats,
   onDownload,
   isApplying,
   onExit,
@@ -84,6 +85,7 @@ export function ContractRiskSuggestLayout({
   acceptedCount: number;
   outputFormat: 'docx' | 'hwpx';
   onFormatChange: (format: 'docx' | 'hwpx') => void;
+  allowedOutputFormats: ('docx' | 'hwpx')[];
   onDownload: () => void;
   isApplying: boolean;
   onExit: () => void;
@@ -148,6 +150,7 @@ export function ContractRiskSuggestLayout({
         totalCount={suggestions.length}
         outputFormat={outputFormat}
         onFormatChange={onFormatChange}
+        allowedOutputFormats={allowedOutputFormats}
         onDownload={onDownload}
         isApplying={isApplying}
       />

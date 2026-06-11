@@ -41,6 +41,7 @@ export default function ContractRiskResultPage() {
           acceptedCount={state.acceptedCount}
           outputFormat={state.outputFormat}
           onFormatChange={state.setOutputFormat}
+          allowedOutputFormats={state.allowedOutputFormats}
           onDownload={state.handleBulkDownload}
           isApplying={state.isApplying}
           onExit={state.handleExitSuggestMode}
@@ -65,6 +66,7 @@ export default function ContractRiskResultPage() {
       downloading={state.downloading}
       onDownload={state.handleDownload}
       onEnterSuggestMode={state.handleEnterSuggestMode}
+      canApplySuggestions={state.canApplySuggestions}
       onNavigate={(path) => state.router.push(path)}
     />
   );

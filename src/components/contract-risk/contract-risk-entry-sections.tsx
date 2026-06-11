@@ -154,6 +154,15 @@ export function ContractRiskEntryForm(props: EntryFormProps) {
 
         {inputMode === 'upload' ? (
           <div className="p-4 sm:p-5">
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface-secondary px-3.5 py-2.5">
+              <span className="text-[11px] font-semibold text-foreground-secondary">지원 파일 형식</span>
+              {['DOCX', 'HWPX', 'PDF'].map((label) => (
+                <span key={label} className="rounded-lg bg-white px-2 py-1 text-[11px] font-semibold text-primary shadow-sm">
+                  {label}
+                </span>
+              ))}
+              <span className="text-[11px] text-foreground-quaternary">최대 20MB</span>
+            </div>
             <div
               className={cn(
                 'relative cursor-pointer rounded-xl border-2 border-dashed transition-all',
@@ -184,12 +193,12 @@ export function ContractRiskEntryForm(props: EntryFormProps) {
                   </div>
                   <div className="text-center">
                     <p className="text-[13px] font-medium text-foreground-secondary">파일을 끌어다 놓거나 클릭하여 선택</p>
-                    <p className="mt-0.5 text-[11px] text-foreground-quaternary">DOCX · HWPX · HWP · PDF · 최대 20MB</p>
+                    <p className="mt-0.5 text-[11px] text-foreground-quaternary">DOCX · HWPX · PDF · 최대 20MB</p>
                   </div>
                 </div>
               )}
             </div>
-            <input ref={inputRef} type="file" accept=".docx,.hwpx,.hwp,.pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onFileSelect(f); }} />
+            <input ref={inputRef} type="file" accept=".docx,.hwpx,.pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onFileSelect(f); }} />
           </div>
         ) : (
           <div className="p-4 sm:p-5">
@@ -305,4 +314,3 @@ export function ContractRiskHistoryPanel() {
     </div>
   );
 }
-

@@ -8,6 +8,7 @@ interface BulkApplyBarProps {
   totalCount: number;
   outputFormat: 'docx' | 'hwpx';
   onFormatChange: (format: 'docx' | 'hwpx') => void;
+  allowedOutputFormats: ('docx' | 'hwpx')[];
   onDownload: () => void;
   isApplying: boolean;
 }
@@ -17,6 +18,7 @@ export function BulkApplyBar({
   totalCount,
   outputFormat,
   onFormatChange,
+  allowedOutputFormats,
   onDownload,
   isApplying,
 }: BulkApplyBarProps) {
@@ -36,22 +38,28 @@ export function BulkApplyBar({
       <div className="flex-1" />
 
       {/* 파일 형식 선택 */}
-      <div className="flex gap-1.5">
-        {(['docx', 'hwpx'] as const).map((fmt) => (
-          <button
-            key={fmt}
-            onClick={() => onFormatChange(fmt)}
-            className={cn(
-              'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
-              outputFormat === fmt
-                ? 'bg-white text-foreground'
-                : 'text-foreground-quaternary hover:text-white border border-foreground/30',
-            )}
-          >
-            {fmt.toUpperCase()}
-          </button>
-        ))}
-      </div>
+      {allowedOutputFormats.length > 1 ? (
+        <div className="flex gap-1.5">
+          {allowedOutputFormats.map((fmt) => (
+            <button
+              key={fmt}
+              onClick={() => onFormatChange(fmt)}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
+                outputFormat === fmt
+                  ? 'bg-white text-foreground'
+                  : 'text-foreground-quaternary hover:text-white border border-foreground/30',
+              )}
+            >
+              {fmt.toUpperCase()}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <span className="rounded-lg border border-foreground/30 px-3 py-1.5 text-xs font-medium text-foreground-quaternary">
+          {outputFormat.toUpperCase()}
+        </span>
+      )}
 
       {/* 다운로드 버튼 */}
       <button

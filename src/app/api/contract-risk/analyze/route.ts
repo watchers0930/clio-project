@@ -8,7 +8,7 @@ import type { ContractType, Perspective } from '@/lib/types/contract-risk';
 
 export const maxDuration = 60;
 
-const ALLOWED_EXTS = ['docx', 'hwpx', 'hwp', 'pdf', 'txt'];
+const ALLOWED_EXTS = ['docx', 'hwpx', 'pdf', 'txt'];
 const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20MB
 
 export async function POST(request: NextRequest) {
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     .insert({
       user_id: userId,
       file_name: file.name,
-      file_type: ext === 'hwp' ? 'hwpx' : ext,
+      file_type: ext,
       contract_type: contractType,
       perspective,
       status: 'processing',

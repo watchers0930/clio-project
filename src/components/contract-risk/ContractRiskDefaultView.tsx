@@ -18,6 +18,7 @@ interface Props {
   downloading: boolean;
   onDownload: (format?: 'docx' | 'pdf') => void;
   onEnterSuggestMode: () => void;
+  canApplySuggestions: boolean;
   onNavigate: (path: string) => void;
 }
 
@@ -31,6 +32,7 @@ export function ContractRiskDefaultView({
   downloading,
   onDownload,
   onEnterSuggestMode,
+  canApplySuggestions,
   onNavigate,
 }: Props) {
   const [isAllExpanded, setIsAllExpanded] = useState(false);
@@ -62,7 +64,7 @@ export function ContractRiskDefaultView({
             <p className="text-[13px] font-medium text-foreground truncate">{analysis.file_name}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2 shrink-0 justify-end">
-            {total > 0 && (
+            {total > 0 && canApplySuggestions && (
               <button
                 onClick={onEnterSuggestMode}
                 className="flex items-center gap-2 px-4 py-2.5 border border-primary text-primary rounded-xl text-[12px] font-medium hover:bg-primary/5 transition-colors"
@@ -110,7 +112,7 @@ export function ContractRiskDefaultView({
               <p className="text-[12px] text-foreground-quaternary mt-2">분석 결과를 바탕으로 수정 제안, 문서 정리, 파일 재확인까지 한 흐름으로 연결합니다.</p>
             </div>
             <div className="flex flex-wrap gap-2.5">
-              {total > 0 && (
+              {total > 0 && canApplySuggestions && (
                 <button
                   onClick={onEnterSuggestMode}
                   className="px-4 py-2.5 rounded-xl bg-foreground text-white text-[12px] font-medium hover:bg-sidebar-hover transition-colors"
@@ -169,7 +171,7 @@ export function ContractRiskDefaultView({
             </div>
             <p className="text-[13px] text-foreground leading-relaxed">{analysis.risk_result.summary}</p>
             <div className="mt-5 flex flex-wrap gap-2.5">
-              {total > 0 && (
+              {total > 0 && canApplySuggestions && (
                 <button
                   onClick={onEnterSuggestMode}
                   className="inline-flex items-center gap-1.5 text-[12px] font-medium text-primary hover:text-primary transition-colors"

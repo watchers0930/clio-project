@@ -38,7 +38,12 @@ export function useContractRiskResult() {
         }
         return res.json();
       })
-      .then(json => setAnalysis(json.data))
+      .then(json => {
+        const nextAnalysis = json.data as ContractRiskAnalysis;
+        setAnalysis(nextAnalysis);
+        if (nextAnalysis.file_type === 'hwpx') setOutputFormat('hwpx');
+        else setOutputFormat('docx');
+      })
       .catch(e => setError(e.message ?? '오류가 발생했습니다.'))
       .finally(() => setLoading(false));
   }, [id]);
@@ -76,6 +81,11 @@ export function useContractRiskResult() {
 
   const foundItems = useMemo(() => analysis?.risk_result.items.filter(i => i.found) ?? [], [analysis]);
   const total = analysis ? analysis.risk_count.high + analysis.risk_count.medium + analysis.risk_count.low : 0;
+  const canApplySuggestions = analysis?.file_type === 'docx' || analysis?.file_type === 'hwpx';
+  const allowedOutputFormats = useMemo<('docx' | 'hwpx')[]>(() => {
+    if (analysis?.file_type === 'hwpx') return ['hwpx'];
+    return ['docx'];
+  }, [analysis?.file_type]);
 
   // ── DOCX 리포트 다운로드 ──────────────────────────────────────────────
   const handleDownload = useCallback(async (format: 'docx' | 'pdf' = 'docx') => {
@@ -98,12 +108,16 @@ export function useContractRiskResult() {
 
   // ── 수정 제안 모드 진입/퇴장 ──────────────────────────────────────────
   const handleEnterSuggestMode = useCallback(() => {
+    if (!canApplySuggestions) {
+      alert('조항 수정 파일 생성은 DOCX 또는 HWPX 원본에서만 지원합니다.');
+      return;
+    }
     const keys = new Set(foundItems.map(i => i.id));
     setSelectedKeys(keys);
     setSuggestions([]);
     setActiveKey(null);
     setSuggestMode(true);
-  }, [foundItems]);
+  }, [canApplySuggestions, foundItems]);
 
   const handleExitSuggestMode = useCallback(() => {
     setSuggestMode(false);
@@ -246,6 +260,7 @@ export function useContractRiskResult() {
     isSuggesting, isApplying, outputFormat, setOutputFormat, applyError, setApplyError,
     activeSuggestion, acceptedCount,
     // 핸들러
+    canApplySuggestions, allowedOutputFormats,
     handleDownload, handleEnterSuggestMode, handleExitSuggestMode,
     toggleSelect, selectAll, clearAll,
     handleSuggestStart, handleAccept, handleSkip, handleEditRevised, handleBulkDownload,

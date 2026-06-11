@@ -64,9 +64,22 @@ export async function POST(
     return NextResponse.json({ error: 'NOT_FOUND', message: '분석 결과를 찾을 수 없습니다.' }, { status: 404 });
   }
 
+  if (analysis.file_type !== 'docx' && analysis.file_type !== 'hwpx') {
+    return NextResponse.json(
+      { error: 'UNSUPPORTED_FILE_TYPE', message: '조항 수정 파일 생성은 DOCX 또는 HWPX 원본에서만 지원합니다.' },
+      { status: 400 },
+    );
+  }
+
+  if (outputFormat !== analysis.file_type) {
+    return NextResponse.json(
+      { error: 'UNSUPPORTED_OUTPUT_FORMAT', message: '수정 파일은 원본 계약서와 같은 형식으로만 생성할 수 있습니다.' },
+      { status: 400 },
+    );
+  }
+
   // 원본 파일 다운로드 (analyze 라우트에서 contract-risk/{userId}/{id}.{ext}로 업로드됨)
-  const fileExt = analysis.file_type === 'hwpx' ? 'hwpx' : analysis.file_type; // docx|hwpx|pdf
-  const storagePath = `contract-risk/${userId}/${id}.${fileExt}`;
+  const storagePath = `contract-risk/${userId}/${id}.${analysis.file_type}`;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: fileData, error: storageError } = await (admin as any)
     .storage
@@ -91,10 +104,9 @@ export async function POST(
   // 조항 교체 + 파일 재생성
   let result: { buffer: Buffer; notFound: string[] };
   try {
-    if (outputFormat === 'hwpx') {
+    if (analysis.file_type === 'hwpx') {
       result = await replaceClausesInHwpx(originalBuffer, body.suggestions, excerpts);
     } else {
-      // docx (기본) — 원본이 hwpx라도 docx로 출력 요청 시 docx로 변환 시도
       result = await replaceClausesInDocx(originalBuffer, body.suggestions, excerpts);
     }
   } catch (err) {

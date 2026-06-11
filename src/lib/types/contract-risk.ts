@@ -13,6 +13,9 @@ export type Perspective = 'seller_side' | 'buyer_side';
 // 분석 상태
 export type AnalysisStatus = 'pending' | 'processing' | 'done' | 'error';
 
+// 분석 파일 형식
+export type ContractRiskFileType = 'docx' | 'hwpx' | 'pdf' | 'txt';
+
 // 개별 리스크 항목 (AI 분석 결과)
 export interface RiskItem {
   id: string;           // 'A-01', 'B-03', 'C-02' 등
@@ -21,6 +24,7 @@ export interface RiskItem {
   excerpt: string;      // 원문 발췌 (최대 200자, 미탐지 시 빈 문자열)
   explanation: string;  // AI 분석 설명
   recommendation: string; // 권고사항
+  legal_basis?: string; // 판단 근거 법령/조항 요약
 }
 
 // 전체 분석 결과
@@ -41,7 +45,7 @@ export interface ContractRiskAnalysis {
   id: string;
   user_id: string;
   file_name: string;
-  file_type: 'docx' | 'hwpx' | 'pdf';
+  file_type: ContractRiskFileType;
   contract_type: ContractType;
   perspective: Perspective;
   raw_text: string | null;
