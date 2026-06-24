@@ -61,13 +61,13 @@ export default function MemoList({
       {/* 검색 + 새 메모 + 탭 */}
       <div className="flex items-center gap-3 mb-[40px]" style={{ paddingBottom: 10 }}>
         <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-quaternary" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-quaternary pointer-events-none" />
           <input
             type="text"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="메모 검색..."
-            className="w-full pl-9 pr-3 py-2 text-[13px] border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+            className="w-full pl-10 pr-3 py-2 text-[13px] border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
           />
         </div>
 

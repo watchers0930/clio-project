@@ -25,13 +25,13 @@ export function HistorySearchBar({ filter, onChange }: Props) {
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
       {/* 검색 */}
       <div className="relative flex-1">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-quaternary" />
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-quaternary pointer-events-none" />
         <input
           type="text"
           value={filter.q}
           onChange={e => onChange({ ...filter, q: e.target.value })}
           placeholder="파일명 검색..."
-          className="w-full rounded-xl border border-border bg-white py-2.5 pl-9 pr-3 text-[12px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full rounded-xl border border-border bg-white py-2.5 pl-10 pr-3 text-[12px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
 
