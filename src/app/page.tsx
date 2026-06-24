@@ -100,6 +100,7 @@ export default function RootPage() {
               로그인 후 첫 진입점은 문서허브입니다. 가장 자주 쓰는 작업부터 바로 이어서 시작할 수 있습니다.
             </p>
 
+            <div className="h-5" aria-hidden="true" />
             <div className="grid grid-cols-2 gap-3">
               {entryOptions.map((option) => {
                 const Icon = option.icon;
