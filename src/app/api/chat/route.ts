@@ -45,6 +45,8 @@ export async function POST(request: NextRequest) {
     const embedding = await generateEmbedding(message);
     let relevantChunks: Array<{ file_id: string; content: string }> = [];
 
+    let notProcessedFileIds: string[] = [];
+
     if (Array.isArray(fileIds) && fileIds.length > 0) {
       // 파일이 특정된 경우: 해당 파일들만 대상으로 벡터 검색 우선 실행
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -55,6 +57,22 @@ export async function POST(request: NextRequest) {
         match_threshold: 0.1,
       });
       relevantChunks = (filteredChunks ?? []) as Array<{ file_id: string; content: string }>;
+
+      // Fallback 1: 벡터 검색 결과 없음 → similarity 무관하게 해당 파일 청크 직접 조회
+      if (relevantChunks.length === 0) {
+        const { data: rawChunks } = await supabase
+          .from('file_chunks')
+          .select('file_id, content')
+          .in('file_id', fileIds)
+          .order('chunk_index', { ascending: true })
+          .limit(20);
+        relevantChunks = (rawChunks ?? []) as Array<{ file_id: string; content: string }>;
+      }
+
+      // Fallback 2: 청크 자체가 없음 → 미처리 파일 목록 기록
+      if (relevantChunks.length === 0) {
+        notProcessedFileIds = fileIds;
+      }
     } else {
       // 파일 미특정: 전체 내 파일 대상 벡터 검색
       const { data: chunks } = await supabase.rpc('match_file_chunks', {
@@ -97,9 +115,18 @@ export async function POST(request: NextRequest) {
         : '등록된 파일이 없습니다.';
 
     // 6. 시스템 프롬프트 구성
+    const fileNameMap2 = new Map(
+      (userFiles ?? []).map((f: { id: string; name: string }) => [f.id, f.name]),
+    );
+    const notProcessedNames = notProcessedFileIds
+      .map((id) => fileNameMap2.get(id) ?? id)
+      .join(', ');
+
     const systemPrompt = context
       ? `당신은 CLIO 문서관리 시스템의 AI 어시스턴트입니다. 아래 참고 문서와 파일 목록을 바탕으로 사용자의 질문에 한국어로 정확하게 답변하세요. 문서에 없는 내용은 솔직하게 모른다고 말하세요.\n\n[등록된 파일 목록]\n${fileListContext}\n\n[참고 문서 내용]\n${context}`
-      : `당신은 CLIO 문서관리 시스템의 AI 어시스턴트입니다. 관련 문서 내용을 찾지 못했지만 아래 파일 목록 정보를 바탕으로 답변할 수 있습니다.\n\n[등록된 파일 목록]\n${fileListContext}`;
+      : notProcessedFileIds.length > 0
+        ? `당신은 CLIO 문서관리 시스템의 AI 어시스턴트입니다. 사용자가 질문한 파일(${notProcessedNames})은 아직 내용이 처리되지 않아 읽을 수 없습니다. 사용자에게 파일 관리 페이지에서 해당 파일을 재처리한 뒤 다시 질문해달라고 안내하세요.`
+        : `당신은 CLIO 문서관리 시스템의 AI 어시스턴트입니다. 관련 문서 내용을 찾지 못했지만 아래 파일 목록 정보를 바탕으로 답변할 수 있습니다.\n\n[등록된 파일 목록]\n${fileListContext}`;
 
     // 7. GPT-4o-mini 호출
     const openai = new OpenAI({ apiKey });
