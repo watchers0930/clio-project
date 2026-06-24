@@ -190,7 +190,7 @@ function SharedDocSection({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate text-[14px] font-semibold text-foreground">{item.title}</p>
-                <p className="mt-1 text-[12px] text-foreground-secondary">{item.ownerName}</p>
+                <p className="mt-[10px] text-[12px] text-foreground-secondary">{item.ownerName} | {buildShareMeta(item)}</p>
               </div>
               {item.pendingCommentCount > 0 && (
                 <span className="rounded-full bg-purple-50 px-3 py-1 text-[11px] font-semibold text-purple-600">
@@ -198,7 +198,7 @@ function SharedDocSection({
                 </span>
               )}
             </div>
-            <p className="mt-3 text-[12px] leading-5 text-foreground-secondary">{buildShareMeta(item)}</p>
+            <div className="mt-[10px]">
             <DocumentActionRow
               items={[
                 {
@@ -219,6 +219,7 @@ function SharedDocSection({
                 },
               ]}
             />
+            </div>
           </div>
         ))}
       </div>
