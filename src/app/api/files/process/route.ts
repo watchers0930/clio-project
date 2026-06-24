@@ -106,8 +106,8 @@ export async function POST(request: NextRequest) {
     console.log(`[process] ${file.name}: ${text.length}자 → ${chunks.length}개 청크`);
 
     // 5. 임베딩 생성 + 저장
-    const { stored, errors, lastError } = await generateAndStoreChunks(supabase, fileId, chunks);
-    console.log(`[process] ${file.name}: ${stored}개 저장, ${errors}개 실패`, lastError ?? '');
+    const { stored, errors } = await generateAndStoreChunks(supabase, fileId, chunks);
+    console.log(`[process] ${file.name}: ${stored}개 저장, ${errors}개 실패`);
 
     // 6. 상태 업데이트
     const newStatus = errors === 0 ? 'indexed' : (stored > 0 ? 'indexed' : 'error');
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: { fileId, chunks: stored, errors, textLength: text.length, lastError },
+      data: { fileId, chunks: stored, errors, textLength: text.length },
     });
   } catch (err) {
     console.error('[process] unexpected error:', err);

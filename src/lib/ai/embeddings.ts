@@ -46,7 +46,7 @@ export async function generateAndStoreChunks(
   supabase: SupabaseClient,
   fileId: string,
   chunks: TextChunk[],
-): Promise<{ stored: number; errors: number; lastError?: string }> {
+): Promise<{ stored: number; errors: number }> {
   if (chunks.length === 0) return { stored: 0, errors: 0 };
 
   // 기존 청크 삭제 (멱등성 보장 - 재처리 시 안전)
@@ -54,7 +54,6 @@ export async function generateAndStoreChunks(
 
   let stored = 0;
   let errors = 0;
-  let lastError: string | undefined;
 
   // 배치 단위로 처리
   for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
@@ -64,9 +63,12 @@ export async function generateAndStoreChunks(
       const texts = batch.map((c) => c.content);
       const embeddings = await generateBatchEmbeddings(texts);
 
+      // PostgreSQL이 지원하지 않는 유니코드 문자 제거 (NUL 등 제어 문자)
+      const sanitize = (s: string) => s.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '');
+
       const rows = batch.map((chunk, j) => ({
         file_id: fileId,
-        content: chunk.content,
+        content: sanitize(chunk.content),
         chunk_index: chunk.index,
         embedding: JSON.stringify(embeddings[j]),
         token_count: chunk.tokenCount,
@@ -75,15 +77,12 @@ export async function generateAndStoreChunks(
       const { error } = await supabase.from('file_chunks').insert(rows);
       if (error) {
         console.error(`[embeddings] batch ${i} insert error:`, error.message);
-        lastError = `insert:${error.message}`;
         errors += batch.length;
       } else {
         stored += batch.length;
       }
     } catch (err) {
-      const msg = err instanceof Error ? `${err.name}:${err.message}` : String(err);
       console.error(`[embeddings] batch ${i} embedding error:`, err);
-      lastError = `embed:${msg}`;
       errors += batch.length;
     }
 
@@ -93,5 +92,5 @@ export async function generateAndStoreChunks(
     }
   }
 
-  return { stored, errors, lastError };
+  return { stored, errors };
 }
