@@ -53,7 +53,7 @@ export default function LoginPage() {
           <h1 className="text-[36px] font-light tracking-[0.24em] text-foreground md:text-[44px] md:tracking-[0.3em] font-serif">
             CLIO
           </h1>
-          <p className="mt-3 text-[15px] text-foreground-secondary">
+          <p className="mt-3 text-center text-[15px] text-foreground-secondary">
             {PLATFORM_LABEL}
           </p>
           <p className="mx-auto mt-2.5 max-w-[520px] text-center text-[13px] leading-5 text-foreground-tertiary">
