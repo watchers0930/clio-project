@@ -1,7 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+
+export const maxDuration = 60;
 
 type BulkReprocessBody = {
   fileIds?: string[];
@@ -57,18 +59,21 @@ export async function POST(request: NextRequest) {
     const baseUrl = request.nextUrl.origin;
     const secret = (process.env.INTERNAL_API_SECRET || '').trim();
 
-    await Promise.allSettled(
-      targetIds.map((fileId) =>
-        fetch(`${baseUrl}/api/files/process`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Internal-Secret': secret,
-          },
-          body: JSON.stringify({ fileId }),
-        })
-      )
-    );
+    // 응답 먼저 반환 후 background에서 처리 (개별 reprocess와 동일한 패턴)
+    after(async () => {
+      await Promise.allSettled(
+        targetIds.map((fileId) =>
+          fetch(`${baseUrl}/api/files/process`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Internal-Secret': secret,
+            },
+            body: JSON.stringify({ fileId }),
+          }).catch((e) => console.error('[bulk-reprocess] process trigger failed:', fileId, e))
+        )
+      );
+    });
 
     return NextResponse.json({
       success: true,
