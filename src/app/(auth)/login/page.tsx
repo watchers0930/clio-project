@@ -56,7 +56,7 @@ export default function LoginPage() {
           <p className="mt-3 text-[15px] text-foreground-secondary">
             {PLATFORM_LABEL}
           </p>
-          <p className="mx-auto mt-2.5 max-w-[520px] text-[13px] leading-5 text-foreground-tertiary">
+          <p className="mx-auto mt-2.5 max-w-[520px] text-center text-[13px] leading-5 text-foreground-tertiary">
             CLIO는 기업 문서를 한곳에 저장한 뒤, 공유하고, 코멘트를 반영하고,{' '}
             <br className="hidden md:block" />
             다시 검색해 재활용하는 문서 운영 플랫폼입니다.
