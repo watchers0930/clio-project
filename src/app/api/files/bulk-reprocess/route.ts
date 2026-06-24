@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     await admin.from('files').update({ status: 'processing' }).in('id', targetIds);
 
     const baseUrl = request.nextUrl.origin;
-    const secret = (process.env.INTERNAL_API_SECRET || '').trim();
+    const secret = process.env.INTERNAL_API_SECRET || '';
 
     // 응답 먼저 반환 후 background에서 처리 (개별 reprocess와 동일한 패턴)
     after(async () => {
