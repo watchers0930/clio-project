@@ -16,16 +16,10 @@ const AUTO_EXPIRY_EXTRACTION_ENABLED = process.env.ENABLE_AUTO_EXPIRY_EXTRACTION
  */
 export async function POST(request: NextRequest) {
   try {
-    // 내부 호출 인증
-    const internalSecret = process.env.INTERNAL_API_SECRET;
+    // 내부 호출 인증 (env var에 trailing \n 등 whitespace가 있어도 안전하게 trim 비교)
+    const internalSecret = (process.env.INTERNAL_API_SECRET ?? '').trim();
     if (internalSecret) {
-      const providedSecret = request.headers.get('X-Internal-Secret');
-      console.log('[process] auth: envLen=%d, providedLen=%d, match=%s, providedHeader=%s',
-        internalSecret.length,
-        providedSecret?.length ?? -1,
-        String(providedSecret === internalSecret),
-        String(providedSecret?.slice(0, 4))
-      );
+      const providedSecret = (request.headers.get('X-Internal-Secret') ?? '').trim();
       if (providedSecret !== internalSecret) {
         return NextResponse.json({ success: false, error: '인증 실패' }, { status: 403 });
       }
