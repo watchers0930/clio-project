@@ -20,6 +20,12 @@ export async function POST(request: NextRequest) {
     const internalSecret = process.env.INTERNAL_API_SECRET;
     if (internalSecret) {
       const providedSecret = request.headers.get('X-Internal-Secret');
+      console.log('[process] auth: envLen=%d, providedLen=%d, match=%s, providedHeader=%s',
+        internalSecret.length,
+        providedSecret?.length ?? -1,
+        String(providedSecret === internalSecret),
+        String(providedSecret?.slice(0, 4))
+      );
       if (providedSecret !== internalSecret) {
         return NextResponse.json({ success: false, error: '인증 실패' }, { status: 403 });
       }
