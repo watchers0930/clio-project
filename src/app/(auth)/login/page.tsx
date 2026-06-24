@@ -46,7 +46,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-page-bg p-4 md:p-5">
-      <div className="w-full max-w-[740px]">
+      <div className="w-full max-w-[400px]">
 
         {/* Logo */}
         <div className="mb-8 flex flex-col items-center text-center md:mb-10">
@@ -64,7 +64,7 @@ export default function LoginPage() {
         </div>
 
         {/* Login Card */}
-        <div className="rounded-2xl border border-border bg-white px-5 py-7 shadow-sm md:px-36 md:py-14">
+        <div className="rounded-2xl border border-border bg-white px-8 py-10 shadow-sm">
           <h2 className="text-[22px] font-semibold text-foreground">
             로그인
           </h2>
@@ -135,13 +135,6 @@ export default function LoginPage() {
               비밀번호를 잊으셨나요?
             </button>
           </div>
-        </div>
-
-        {/* Demo hint */}
-        <div className="mt-4 rounded-xl border border-border bg-white px-5 py-3.5 text-center shadow-sm">
-          <p className="text-[12px] text-foreground-secondary">
-            테스트 계정이 필요한 경우 관리자에게 발급을 요청하세요.
-          </p>
         </div>
 
         {/* Footer */}
