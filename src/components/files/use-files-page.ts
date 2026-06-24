@@ -35,8 +35,10 @@ export function useFilesPage() {
   const [scrapeUrl, setScrapeUrl] = useState('');
   const [scrapeLoading, setScrapeLoading] = useState(false);
   const [scrapeResult, setScrapeResult] = useState<ScrapeResult | null>(null);
+  const [bulkProgress, setBulkProgress] = useState<{ total: number; done: number; failed: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const initializedFromQueryRef = useRef(false);
+  const bulkIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadAssets = useCallback(async () => {
     const [filesRes, docsRes] = await Promise.all([
@@ -424,6 +426,48 @@ export function useFilesPage() {
     }
   };
 
+  const startBulkPolling = (fileIds: string[]) => {
+    if (bulkIntervalRef.current) clearInterval(bulkIntervalRef.current);
+    const allIds = new Set(fileIds);
+    const pending = new Set(fileIds);
+    let done = 0;
+    let failed = 0;
+    setBulkProgress({ total: fileIds.length, done: 0, failed: 0 });
+
+    bulkIntervalRef.current = setInterval(async () => {
+      try {
+        const res = await fetch('/api/files?limit=500');
+        if (!res.ok) return;
+        const data = await res.json();
+        const rows: FileItem[] = data.files ?? [];
+        const rowMap = new Map(rows.map((r: FileItem) => [r.id, r]));
+
+        // 파일 목록 상태 갱신
+        setFiles((prev) => prev.map((f) => {
+          if (!allIds.has(f.id)) return f;
+          const fresh = rowMap.get(f.id);
+          return fresh ? { ...f, status: fresh.status } : f;
+        }));
+
+        // 완료/오류 집계
+        for (const id of [...pending]) {
+          const fresh = rowMap.get(id);
+          if (!fresh) continue;
+          if (fresh.status === '완료') { done++; pending.delete(id); }
+          else if (fresh.status === '오류') { failed++; pending.delete(id); }
+        }
+
+        setBulkProgress({ total: fileIds.length, done, failed });
+
+        if (pending.size === 0) {
+          clearInterval(bulkIntervalRef.current!);
+          bulkIntervalRef.current = null;
+          setTimeout(() => setBulkProgress(null), 5000);
+        }
+      } catch { /* ignore */ }
+    }, 3000);
+  };
+
   const handleReprocessAllErrors = async () => {
     try {
       const res = await fetch('/api/files/bulk-reprocess', {
@@ -443,6 +487,7 @@ export function useFilesPage() {
       const ids = new Set<string>(data.fileIds ?? []);
       setFiles((prev) => prev.map((file) => ids.has(file.id) ? { ...file, status: '처리중' } : file));
       toast.success(`오류 파일 ${data.reprocessed}개 재처리 시작`);
+      startBulkPolling(data.fileIds ?? []);
     } catch {
       toast.error('오류 파일 재처리 중 오류가 발생했습니다.');
     }
@@ -467,6 +512,7 @@ export function useFilesPage() {
       const ids = new Set<string>(data.fileIds ?? []);
       setFiles((prev) => prev.map((file) => ids.has(file.id) ? { ...file, status: '처리중' } : file));
       toast.success(`미처리 파일 ${data.reprocessed}개 재처리 시작`);
+      startBulkPolling(data.fileIds ?? []);
     } catch {
       toast.error('미처리 파일 재처리 중 오류가 발생했습니다.');
     }
@@ -642,6 +688,7 @@ export function useFilesPage() {
     handleBulkReprocess,
     handleReprocessAllErrors,
     handleReprocessAllUnprocessed,
+    bulkProgress,
     handleDownload,
     handleBulkDownload,
     handleScrape,

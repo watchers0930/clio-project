@@ -83,6 +83,7 @@ function FilesPage() {
     handleBulkReprocess,
     handleReprocessAllErrors,
     handleReprocessAllUnprocessed,
+    bulkProgress,
     handleDownload,
     handleBulkDownload,
     handleScrape,
@@ -268,6 +269,37 @@ function FilesPage() {
           resourceType={shareTarget.type}
           onClose={() => setShareTarget(null)}
         />
+      )}
+
+      {bulkProgress && (
+        <div className="fixed bottom-6 right-6 z-50 w-72 rounded-2xl border border-border bg-white shadow-xl">
+          <div className="flex items-center justify-between px-4 pt-4 pb-2">
+            <div className="flex items-center gap-2">
+              {bulkProgress.done + bulkProgress.failed < bulkProgress.total ? (
+                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
+              ) : (
+                <span className="inline-block h-2 w-2 rounded-full bg-success" />
+              )}
+              <p className="text-sm font-medium text-foreground">파일 재처리 진행 중</p>
+            </div>
+            <span className="font-num text-xs text-foreground-secondary">
+              {bulkProgress.done + bulkProgress.failed}/{bulkProgress.total}
+            </span>
+          </div>
+          <div className="px-4 pb-1">
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-secondary">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-700"
+                style={{ width: `${Math.round(((bulkProgress.done + bulkProgress.failed) / bulkProgress.total) * 100)}%` }}
+              />
+            </div>
+          </div>
+          <div className="flex gap-4 px-4 pb-4 pt-2 text-[11px]">
+            <span className="text-success">완료 {bulkProgress.done}</span>
+            {bulkProgress.failed > 0 && <span className="text-error">오류 {bulkProgress.failed}</span>}
+            <span className="text-foreground-secondary">대기 {bulkProgress.total - bulkProgress.done - bulkProgress.failed}</span>
+          </div>
+        </div>
       )}
     </div>
   );
