@@ -46,7 +46,7 @@ export async function generateAndStoreChunks(
   supabase: SupabaseClient,
   fileId: string,
   chunks: TextChunk[],
-): Promise<{ stored: number; errors: number }> {
+): Promise<{ stored: number; errors: number; lastError?: string }> {
   if (chunks.length === 0) return { stored: 0, errors: 0 };
 
   // 기존 청크 삭제 (멱등성 보장 - 재처리 시 안전)
@@ -54,6 +54,7 @@ export async function generateAndStoreChunks(
 
   let stored = 0;
   let errors = 0;
+  let lastError: string | undefined;
 
   // 배치 단위로 처리
   for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
@@ -74,12 +75,15 @@ export async function generateAndStoreChunks(
       const { error } = await supabase.from('file_chunks').insert(rows);
       if (error) {
         console.error(`[embeddings] batch ${i} insert error:`, error.message);
+        lastError = `insert:${error.message}`;
         errors += batch.length;
       } else {
         stored += batch.length;
       }
     } catch (err) {
+      const msg = err instanceof Error ? `${err.name}:${err.message}` : String(err);
       console.error(`[embeddings] batch ${i} embedding error:`, err);
+      lastError = `embed:${msg}`;
       errors += batch.length;
     }
 
@@ -89,5 +93,5 @@ export async function generateAndStoreChunks(
     }
   }
 
-  return { stored, errors };
+  return { stored, errors, lastError };
 }
