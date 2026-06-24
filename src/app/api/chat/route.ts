@@ -41,20 +41,30 @@ export async function POST(request: NextRequest) {
 
     const myFileIds = new Set((userFiles ?? []).map((f: { id: string }) => f.id));
 
-    // 2. 벡터 검색 (내 파일 청크만)
+    // 2. 벡터 검색
     const embedding = await generateEmbedding(message);
-    const { data: chunks } = await supabase.rpc('match_file_chunks', {
-      query_embedding: embedding,
-      match_count: 12,
-      match_threshold: 0.25,
-    });
+    let relevantChunks: Array<{ file_id: string; content: string }> = [];
 
-    // 3. 내 파일에 속한 청크만 필터 + fileIds 필터 (선택)
-    let relevantChunks = ((chunks ?? []) as Array<{ file_id: string; content: string }>).filter(
-      (c) => myFileIds.has(c.file_id),
-    );
     if (Array.isArray(fileIds) && fileIds.length > 0) {
-      relevantChunks = relevantChunks.filter((c) => fileIds.includes(c.file_id));
+      // 파일이 특정된 경우: 해당 파일들만 대상으로 벡터 검색 우선 실행
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: filteredChunks } = await (supabase as any).rpc('match_file_chunks_filtered', {
+        query_embedding: embedding,
+        filter_file_ids: fileIds,
+        match_count: 16,
+        match_threshold: 0.1,
+      });
+      relevantChunks = (filteredChunks ?? []) as Array<{ file_id: string; content: string }>;
+    } else {
+      // 파일 미특정: 전체 내 파일 대상 벡터 검색
+      const { data: chunks } = await supabase.rpc('match_file_chunks', {
+        query_embedding: embedding,
+        match_count: 12,
+        match_threshold: 0.25,
+      });
+      relevantChunks = ((chunks ?? []) as Array<{ file_id: string; content: string }>).filter(
+        (c) => myFileIds.has(c.file_id),
+      );
     }
 
     // 4. 컨텍스트 구성 (파일명 포함)

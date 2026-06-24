@@ -50,6 +50,7 @@ export default function SearchPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
+  const [pinnedFileIds, setPinnedFileIds] = useState<string[] | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const initializedFromQueryRef = useRef(false);
 
@@ -99,7 +100,7 @@ export default function SearchPage() {
         body: JSON.stringify({
           message: msg,
           history: chatMessages,
-          fileIds: results.length > 0 ? results.map((r) => r.id) : undefined,
+          fileIds: pinnedFileIds ?? (results.length > 0 ? results.map((r) => r.id) : undefined),
         }),
       });
       const data = await res.json();
@@ -203,6 +204,7 @@ export default function SearchPage() {
 
   const startChatFromResult = (result: SearchResult) => {
     setActiveTab('ai');
+    setPinnedFileIds([result.id]);
     setChatInput(`"${result.name}" 문서를 기준으로 핵심 내용을 설명해줘.`);
     toast.success('AI 질의응답 탭으로 이동했습니다.');
   };
@@ -322,7 +324,7 @@ export default function SearchPage() {
             chatEndRef={chatEndRef}
             onChatInputChange={setChatInput}
             onSendChat={() => { void sendChat(); }}
-            onResetChat={() => setChatMessages([])}
+            onResetChat={() => { setChatMessages([]); setPinnedFileIds(null); }}
           />
         )}
       </div>
