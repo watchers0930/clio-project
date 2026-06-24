@@ -357,12 +357,40 @@ export function useFilesPage() {
   const handleReprocess = async (file: FileItem) => {
     try {
       const res = await fetch(`/api/files/${file.id}/reprocess`, { method: 'POST' });
-      if (res.ok) {
-        toast.success(`"${file.name}" 재처리 시작 (완료까지 1분 소요)`);
-        setFiles((prev) => prev.map((item) => item.id === file.id ? { ...item, status: '처리중' } : item));
-      } else {
+      if (!res.ok) {
         toast.error('재처리 요청에 실패했습니다.');
+        return;
       }
+      toast.success(`"${file.name}" 재처리 시작`);
+      setFiles((prev) => prev.map((item) => item.id === file.id ? { ...item, status: '처리중' } : item));
+
+      // 2초마다 상태 폴링 (최대 60초)
+      let attempts = 0;
+      const maxAttempts = 30;
+      const poll = setInterval(async () => {
+        attempts += 1;
+        try {
+          const statusRes = await fetch(`/api/files/${file.id}`);
+          if (!statusRes.ok) return;
+          const data = await statusRes.json();
+          const rawStatus: string = data.status ?? '';
+
+          if (rawStatus === 'indexed' || rawStatus === 'completed') {
+            clearInterval(poll);
+            setFiles((prev) => prev.map((item) => item.id === file.id ? { ...item, status: '완료' } : item));
+            toast.success(`"${file.name}" 처리 완료`);
+          } else if (rawStatus === 'error') {
+            clearInterval(poll);
+            setFiles((prev) => prev.map((item) => item.id === file.id ? { ...item, status: '오류' } : item));
+            toast.error(`"${file.name}" 처리 실패 — 파일 관리에서 재처리 해주세요.`);
+          } else if (attempts >= maxAttempts) {
+            clearInterval(poll);
+            toast.error(`"${file.name}" 처리 시간 초과 — 나중에 다시 확인해주세요.`);
+          }
+        } catch {
+          if (attempts >= maxAttempts) clearInterval(poll);
+        }
+      }, 2000);
     } catch {
       toast.error('재처리 중 오류가 발생했습니다.');
     }

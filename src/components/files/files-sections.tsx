@@ -219,12 +219,13 @@ export function FilesListView({
               <th className="hidden px-6 py-5.5 font-medium sm:table-cell">부서</th>
               <th className="hidden px-6 py-5.5 font-medium md:table-cell">크기</th>
               <th className="hidden px-6 py-5.5 font-medium md:table-cell">업로드일</th>
+              <th className="hidden px-6 py-5.5 font-medium md:table-cell">상태</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {paged.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-14 text-center text-foreground-secondary">검색 결과가 없습니다.</td>
+                <td colSpan={6} className="px-6 py-14 text-center text-foreground-secondary">검색 결과가 없습니다.</td>
               </tr>
             )}
             {paged.map((file) => (
@@ -242,6 +243,12 @@ export function FilesListView({
                 <td className="hidden px-6 py-6 leading-6 text-foreground-secondary sm:table-cell">{file.department}</td>
                 <td className="hidden px-6 py-6 leading-6 text-foreground-secondary md:table-cell">{file.size}</td>
                 <td className="hidden px-6 py-6 leading-6 text-foreground-secondary md:table-cell">{file.uploadDate}</td>
+                <td className="hidden px-6 py-6 md:table-cell">
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${FILE_STATUS_COLOR[file.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                    {file.status === '처리중' && <span className="mr-1 h-1.5 w-1.5 animate-pulse rounded-full bg-warning" />}
+                    {file.status}
+                  </span>
+                </td>
               </tr>
             ))}
           </tbody>
