@@ -148,7 +148,7 @@ export default function ContractRiskPage() {
       />
 
       {/* ── 본문 2열 레이아웃 ────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_320px] lg:gap-6">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[3fr_2fr] lg:gap-6">
 
         {/* ── 왼쪽: 입력 폼 ──────────────────────────────────────────────── */}
         <ContractRiskEntryForm
