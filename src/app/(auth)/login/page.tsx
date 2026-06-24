@@ -46,7 +46,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-page-bg p-4 md:p-5">
-      <div className="w-full max-w-[400px]">
+      <div className="w-full max-w-[500px]">
 
         {/* Logo */}
         <div className="mb-8 flex flex-col items-center text-center md:mb-10">
@@ -62,6 +62,8 @@ export default function LoginPage() {
             다시 검색해 재활용하는 문서 운영 플랫폼입니다.
           </p>
         </div>
+
+        <div className="h-5" aria-hidden="true" />
 
         {/* Login Card */}
         <div className="rounded-2xl border border-border bg-white px-8 py-10 shadow-sm">
