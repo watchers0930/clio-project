@@ -149,8 +149,10 @@ async function extractPdfOcr(buffer: ArrayBuffer): Promise<string> {
     console.log(`[extract-pdf-ocr] OCR 성공: ${text.length}자`);
     return text;
   } catch (err) {
-    console.error('[extract-pdf-ocr] OCR 실패:', err);
-    return '';
+    const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    console.error('[extract-pdf-ocr] OCR 실패:', msg);
+    // 디버그용: 에러 메시지를 텍스트로 반환 (배포 후 확인 용)
+    return `__OCR_ERROR__: ${msg}`;
   }
 }
 
