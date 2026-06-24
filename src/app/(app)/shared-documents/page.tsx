@@ -198,7 +198,7 @@ function SharedDocSection({
                 </span>
               )}
             </div>
-            <div className="mt-[15px]">
+            <div className="mt-[15px] pt-[10px]">
             <DocumentActionRow
               items={[
                 {
