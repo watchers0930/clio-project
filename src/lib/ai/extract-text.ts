@@ -103,12 +103,12 @@ async function extractPdf(buffer: ArrayBuffer): Promise<string> {
   }
 }
 
-// ─── PDF OCR (Claude Vision — Anthropic REST API 직접 호출) ─
+// ─── PDF OCR (GPT-4o Responses API) ────────────────────────
 // 스캔 이미지 PDF 등 텍스트 레이어가 없는 경우 fallback
 async function extractPdfOcr(buffer: ArrayBuffer): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    console.warn('[extract-pdf-ocr] ANTHROPIC_API_KEY 없음, OCR 건너뜀');
+    console.warn('[extract-pdf-ocr] OPENAI_API_KEY 없음, OCR 건너뜀');
     return '';
   }
 
@@ -120,49 +120,32 @@ async function extractPdfOcr(buffer: ArrayBuffer): Promise<string> {
   }
 
   try {
+    const OpenAI = (await import('openai')).default;
+    const client = new OpenAI({ apiKey });
+
     const base64 = Buffer.from(buffer).toString('base64');
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-beta': 'pdfs-2024-09-25',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-5-20251022',
-        max_tokens: 4096,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'document',
-                source: {
-                  type: 'base64',
-                  media_type: 'application/pdf',
-                  data: base64,
-                },
-              },
-              {
-                type: 'text',
-                text: '이 PDF 문서의 모든 텍스트를 추출해주세요. 표, 제목, 본문을 포함한 모든 내용을 순서대로 출력하되, 부연 설명 없이 문서 텍스트만 출력하세요.',
-              },
-            ],
-          },
-        ],
-      }),
+    const response = await client.responses.create({
+      model: 'gpt-4o',
+      input: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'input_file',
+              filename: 'document.pdf',
+              file_data: `data:application/pdf;base64,${base64}`,
+            },
+            {
+              type: 'input_text',
+              text: '이 PDF 문서의 모든 텍스트를 추출해주세요. 표, 제목, 본문을 포함한 모든 내용을 순서대로 출력하되, 부연 설명 없이 문서 텍스트만 출력하세요.',
+            },
+          ],
+        },
+      ],
     });
 
-    if (!response.ok) {
-      const errBody = await response.text();
-      console.error(`[extract-pdf-ocr] API 오류 ${response.status}:`, errBody);
-      return '';
-    }
-
-    const data = await response.json() as { content?: Array<{ type: string; text?: string }> };
-    const text = data.content?.find((c) => c.type === 'text')?.text ?? '';
+    const text = response.output_text ?? '';
     console.log(`[extract-pdf-ocr] OCR 성공: ${text.length}자`);
     return text;
   } catch (err) {
