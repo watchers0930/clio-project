@@ -89,9 +89,66 @@ async function extractPdf(buffer: ArrayBuffer): Promise<string> {
       if (pageText.trim()) pages.push(pageText);
     }
     doc.destroy();
-    return pages.join('\n');
+    const text = pages.join('\n');
+
+    // 텍스트가 없으면 스캔 이미지 PDF → Claude Vision OCR fallback
+    if (!text.trim()) {
+      console.log('[extract-pdf] 텍스트 없음, Claude Vision OCR 시도');
+      return await extractPdfOcr(buffer);
+    }
+
+    return text;
   } finally {
     worker.destroy();
+  }
+}
+
+// ─── PDF OCR (Claude Vision) ────────────────────────────────
+// 스캔 이미지 PDF 등 텍스트 레이어가 없는 경우 fallback
+async function extractPdfOcr(buffer: ArrayBuffer): Promise<string> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    console.warn('[extract-pdf-ocr] ANTHROPIC_API_KEY 없음, OCR 건너뜀');
+    return '';
+  }
+
+  // 20MB 초과 파일은 OCR 비용/시간 문제로 스킵
+  const MAX_OCR_BYTES = 20 * 1024 * 1024;
+  if (buffer.byteLength > MAX_OCR_BYTES) {
+    console.warn(`[extract-pdf-ocr] 파일 크기 초과 (${buffer.byteLength}B), OCR 건너뜀`);
+    return '';
+  }
+
+  try {
+    const { generateText } = await import('ai');
+    const { anthropic } = await import('@ai-sdk/anthropic');
+
+    const { text } = await generateText({
+      model: anthropic('claude-sonnet-4-5-20251022'),
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'file',
+              data: Buffer.from(buffer),
+              mediaType: 'application/pdf',
+            },
+            {
+              type: 'text',
+              text: '이 PDF 문서의 모든 텍스트를 추출해주세요. 표, 제목, 본문을 포함한 모든 내용을 순서대로 출력하되, 부연 설명 없이 문서 텍스트만 출력하세요.',
+            },
+          ],
+        },
+      ],
+      maxOutputTokens: 4096,
+    });
+
+    console.log(`[extract-pdf-ocr] OCR 성공: ${text.length}자`);
+    return text;
+  } catch (err) {
+    console.error('[extract-pdf-ocr] OCR 실패:', err);
+    return '';
   }
 }
 
