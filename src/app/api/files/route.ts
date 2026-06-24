@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { randomUUID } from 'crypto';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
@@ -212,14 +212,21 @@ export async function POST(request: NextRequest) {
         details: { file_name: file.name, size: file.size },
       }).then(() => {}, () => {});
 
-      // 백그라운드 파일 처리 (텍스트 추출 → 청킹 → 임베딩)
+      // 응답 후 파일 처리 (after로 Vercel 함수 종료 후에도 실행 보장)
       const baseUrl = request.nextUrl.origin;
       const internalSecret = process.env.INTERNAL_API_SECRET || '';
-      fetch(`${baseUrl}/api/files/process`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': internalSecret },
-        body: JSON.stringify({ fileId: data.id }),
-      }).then(() => {}, (err) => console.error('[files] process pipeline error:', err));
+      const processFileId = data.id;
+      after(async () => {
+        try {
+          await fetch(`${baseUrl}/api/files/process`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': internalSecret },
+            body: JSON.stringify({ fileId: processFileId }),
+          });
+        } catch (err) {
+          console.error('[files] process pipeline error:', err);
+        }
+      });
 
       return NextResponse.json({ success: true, data }, { status: 201 });
     }

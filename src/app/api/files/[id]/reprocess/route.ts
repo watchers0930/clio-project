@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
@@ -31,14 +31,20 @@ export async function POST(
     await admin.from('file_chunks').delete().eq('file_id', fileId);
     await admin.from('files').update({ status: 'processing' }).eq('id', fileId);
 
-    // process API 호출 (fire-and-forget)
+    // 응답 후 처리 (after로 Vercel 함수 종료 후에도 실행 보장)
     const baseUrl = request.nextUrl.origin;
     const secret = process.env.INTERNAL_API_SECRET || '';
-    fetch(`${baseUrl}/api/files/process`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': secret },
-      body: JSON.stringify({ fileId }),
-    }).then(() => {}, (e) => console.error('[reprocess] process call failed:', e));
+    after(async () => {
+      try {
+        await fetch(`${baseUrl}/api/files/process`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': secret },
+          body: JSON.stringify({ fileId }),
+        });
+      } catch (e) {
+        console.error('[reprocess] process call failed:', e);
+      }
+    });
 
     return NextResponse.json({ success: true });
   } catch (err) {
