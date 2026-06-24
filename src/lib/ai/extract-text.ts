@@ -68,6 +68,9 @@ async function extractPdf(buffer: ArrayBuffer): Promise<string> {
       is2D = true; isIdentity = true;
     };
   }
+  // pdfjs가 ArrayBuffer를 detach할 수 있으므로 OCR fallback용 복사본 보관
+  const bufferForOcr = buffer.slice(0);
+
   const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
   const worker = new pdfjsLib.PDFWorker({ port: null });
   try {
@@ -91,10 +94,10 @@ async function extractPdf(buffer: ArrayBuffer): Promise<string> {
     doc.destroy();
     const text = pages.join('\n');
 
-    // 텍스트가 없으면 스캔 이미지 PDF → Claude Vision OCR fallback
+    // 텍스트가 없으면 스캔 이미지 PDF → GPT-4o OCR fallback
     if (!text.trim()) {
-      console.log('[extract-pdf] 텍스트 없음, Claude Vision OCR 시도');
-      return await extractPdfOcr(buffer);
+      console.log('[extract-pdf] 텍스트 없음, GPT-4o OCR 시도');
+      return await extractPdfOcr(bufferForOcr);
     }
 
     return text;
@@ -149,10 +152,8 @@ async function extractPdfOcr(buffer: ArrayBuffer): Promise<string> {
     console.log(`[extract-pdf-ocr] OCR 성공: ${text.length}자`);
     return text;
   } catch (err) {
-    const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
-    console.error('[extract-pdf-ocr] OCR 실패:', msg);
-    // 디버그용: 에러 메시지를 텍스트로 반환 (배포 후 확인 용)
-    return `__OCR_ERROR__: ${msg}`;
+    console.error('[extract-pdf-ocr] OCR 실패:', err);
+    return '';
   }
 }
 
