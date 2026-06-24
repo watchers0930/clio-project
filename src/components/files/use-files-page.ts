@@ -448,6 +448,30 @@ export function useFilesPage() {
     }
   };
 
+  const handleReprocessAllUnprocessed = async () => {
+    try {
+      const res = await fetch('/api/files/bulk-reprocess', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'all-unprocessed' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error ?? '미처리 파일 재처리에 실패했습니다.');
+        return;
+      }
+      if (!data.reprocessed) {
+        toast.success('미처리 파일이 없습니다.');
+        return;
+      }
+      const ids = new Set<string>(data.fileIds ?? []);
+      setFiles((prev) => prev.map((file) => ids.has(file.id) ? { ...file, status: '처리중' } : file));
+      toast.success(`미처리 파일 ${data.reprocessed}개 재처리 시작`);
+    } catch {
+      toast.error('미처리 파일 재처리 중 오류가 발생했습니다.');
+    }
+  };
+
   const handleDownload = async (file: FileItem) => {
     setDownloadToast(file.name);
     try {
@@ -617,6 +641,7 @@ export function useFilesPage() {
     handleReprocess,
     handleBulkReprocess,
     handleReprocessAllErrors,
+    handleReprocessAllUnprocessed,
     handleDownload,
     handleBulkDownload,
     handleScrape,

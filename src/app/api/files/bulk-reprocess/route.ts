@@ -5,7 +5,7 @@ import { getAuthUserId } from '@/lib/auth-helper';
 
 type BulkReprocessBody = {
   fileIds?: string[];
-  mode?: 'selected' | 'all-errors';
+  mode?: 'selected' | 'all-errors' | 'all-unprocessed';
 };
 
 export async function POST(request: NextRequest) {
@@ -28,6 +28,9 @@ export async function POST(request: NextRequest) {
 
     if (mode === 'all-errors') {
       query = query.eq('status', 'error');
+    } else if (mode === 'all-unprocessed') {
+      // processing(멈춤) + error 상태 모두 대상
+      query = query.in('status', ['processing', 'error']);
     } else {
       const fileIds = Array.from(new Set((body.fileIds ?? []).filter(Boolean)));
       if (fileIds.length === 0) {
