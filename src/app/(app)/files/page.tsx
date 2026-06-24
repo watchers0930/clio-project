@@ -83,6 +83,7 @@ function FilesPage() {
     handleBulkReprocess,
     handleReprocessAllErrors,
     handleReprocessAllUnprocessed,
+    handleReprocessIndexedNoChunks,
     bulkProgress,
     handleDownload,
     handleBulkDownload,
@@ -121,6 +122,7 @@ function FilesPage() {
         resourceFilter={resourceFilter}
         onOpenUpload={() => setShowUpload(true)}
         onReprocessErrors={() => { void handleReprocessAllErrors(); }}
+        onReprocessIndexedNoChunks={() => { void handleReprocessIndexedNoChunks(); }}
         onOpenScrape={() => { setShowScrape(true); setScrapeUrl(''); setScrapeResult(null); }}
         onSearchChange={(value) => { setSearch(value); setPage(1); }}
         onResourceFilterChange={(value) => { setResourceFilter(value); setPage(1); }}
@@ -203,6 +205,7 @@ function FilesPage() {
         resourceFilter={resourceFilter}
         onOpenUpload={() => setShowUpload(true)}
         onReprocessErrors={() => { void handleReprocessAllErrors(); }}
+        onReprocessIndexedNoChunks={() => { void handleReprocessIndexedNoChunks(); }}
         onOpenScrape={() => { setShowScrape(true); setScrapeUrl(''); setScrapeResult(null); }}
         onSearchChange={(value) => { setSearch(value); setPage(1); }}
         onResourceFilterChange={(value) => { setResourceFilter(value); setPage(1); }}

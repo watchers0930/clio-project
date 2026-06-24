@@ -23,6 +23,7 @@ interface FilterBarProps {
   resourceFilter: '전체' | 'file' | 'document' | 'linked';
   onOpenUpload: () => void;
   onReprocessErrors: () => void;
+  onReprocessIndexedNoChunks: () => void;
   onOpenScrape: () => void;
   onSearchChange: (value: string) => void;
   onResourceFilterChange: (value: '전체' | 'file' | 'document' | 'linked') => void;
@@ -122,6 +123,7 @@ export function FilesFilterBar({
   resourceFilter,
   onOpenUpload,
   onReprocessErrors,
+  onReprocessIndexedNoChunks,
   onOpenScrape,
   onSearchChange,
   onResourceFilterChange,
@@ -159,6 +161,19 @@ export function FilesFilterBar({
                   </svg>
                   오류 파일 재처리
                 </button>
+                <button
+                  onClick={onReprocessIndexedNoChunks}
+                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/5 px-3 py-2.5 text-[11px] font-medium text-primary transition-colors hover:bg-primary/10 sm:px-3.5 sm:text-[12px]"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                  </svg>
+                  스캔 PDF OCR
+                </button>
+              </div>
+            )}
+            {mode === 'full' && (
+              <div className="grid grid-cols-1 gap-3">
                 <button
                   onClick={onOpenScrape}
                   className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-border bg-white px-3 py-2.5 text-[11px] font-medium text-foreground-secondary transition-colors hover:bg-surface-secondary sm:px-3.5 sm:text-[12px]"
