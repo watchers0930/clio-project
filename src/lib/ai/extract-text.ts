@@ -56,41 +56,15 @@ export async function extractText(
 
 // ─── PDF ───────────────────────────────────────────────────
 async function extractPdf(buffer: ArrayBuffer): Promise<string> {
-  // Node.js 서버리스 환경에서 pdfjs-dist가 요구하는 DOMMatrix 폴리필
-  if (typeof globalThis.DOMMatrix === 'undefined') {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (globalThis as any).DOMMatrix = class DOMMatrix {
-      m11 = 1; m12 = 0; m13 = 0; m14 = 0;
-      m21 = 0; m22 = 1; m23 = 0; m24 = 0;
-      m31 = 0; m32 = 0; m33 = 1; m34 = 0;
-      m41 = 0; m42 = 0; m43 = 0; m44 = 1;
-      a = 1; b = 0; c = 0; d = 1; e = 0; f = 0;
-      is2D = true; isIdentity = true;
-    };
-  }
-  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  // port: null → 워커 프로세스 없이 메인 스레드에서 실행 (Next.js 번들링 호환)
-  const worker = new pdfjsLib.PDFWorker({ port: null });
+  // pdf-parse v2: Node.js 환경에서 StandardFontDataFactory를 자동으로 파일시스템에서 로드
+  // (standardFontDataUrl / canvas 경고 없이 텍스트 추출 가능)
+  const { PDFParse } = await import('pdf-parse');
+  const parser = new PDFParse({ data: new Uint8Array(buffer) });
   try {
-    const loadingTask = pdfjsLib.getDocument({
-      data: new Uint8Array(buffer),
-      worker,
-      isEvalSupported: false,
-    });
-    const doc = await loadingTask.promise;
-    const pages: string[] = [];
-    for (let i = 1; i <= doc.numPages; i++) {
-      const page = await doc.getPage(i);
-      const content = await page.getTextContent();
-      const pageText = content.items
-        .map((item) => ('str' in item ? (item as { str: string }).str : ''))
-        .join('');
-      if (pageText.trim()) pages.push(pageText);
-    }
-    doc.destroy();
-    return pages.join('\n');
+    const result = await parser.getText();
+    return result.text ?? '';
   } finally {
-    worker.destroy();
+    await parser.destroy();
   }
 }
 
