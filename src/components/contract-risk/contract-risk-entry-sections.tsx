@@ -127,7 +127,7 @@ export function ContractRiskEntryForm(props: EntryFormProps) {
   } = props;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="overflow-hidden rounded-2xl border border-border bg-white">
         <div className="flex border-b border-border">
           <button
@@ -154,7 +154,7 @@ export function ContractRiskEntryForm(props: EntryFormProps) {
 
         {inputMode === 'upload' ? (
           <div className="p-4 sm:p-5">
-            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface-secondary px-3.5 py-2.5">
+            <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface-secondary px-3.5 py-2.5">
               <span className="text-[11px] font-semibold text-foreground-secondary">지원 파일 형식</span>
               {['DOCX', 'HWPX', 'PDF'].map((label) => (
                 <span key={label} className="rounded-lg bg-white px-2 py-1 text-[11px] font-semibold text-primary shadow-sm">
@@ -208,7 +208,7 @@ export function ContractRiskEntryForm(props: EntryFormProps) {
         )}
       </div>
 
-      <div className="rounded-2xl border border-border bg-white p-4 sm:p-5">
+      <div className="rounded-2xl border border-border bg-white p-5 sm:p-6">
         <div className="mb-5">
           <p className="mb-3 text-[12px] font-semibold uppercase tracking-wider text-foreground-quaternary">계약서 유형</p>
           <div className="grid grid-cols-2 gap-2">

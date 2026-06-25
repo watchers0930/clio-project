@@ -70,7 +70,7 @@ export function AnalysisHistory() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <HistorySearchBar filter={filter} onChange={handleFilterChange} />
 
       {/* 비교 바 */}
