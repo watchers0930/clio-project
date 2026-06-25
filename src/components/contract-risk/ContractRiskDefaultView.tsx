@@ -211,7 +211,7 @@ export function ContractRiskDefaultView({
               onToggleExpandAll={handleToggleExpandAll}
             />
 
-            <div className="flex flex-col gap-[10px]">
+            <div className="flex flex-col gap-4">
               {sortedItems.length > 0 ? (
                 sortedItems.map(item => <RiskCard key={item.id} item={item} expandOverride={expandOverride} />)
               ) : (

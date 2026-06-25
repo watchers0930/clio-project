@@ -270,12 +270,12 @@ export function FilesListView({
           </tbody>
         </table>
       </div>
-      <div className="divide-y divide-border md:hidden">
+      <div className="flex flex-col gap-3 md:hidden">
         {paged.length === 0 && (
           <div className="px-5 py-14 text-center text-foreground-secondary">검색 결과가 없습니다.</div>
         )}
         {paged.map((file) => (
-          <div key={file.id} className="px-4 py-5">
+          <div key={file.id} className="rounded-xl border border-border bg-white px-4 py-5">
             <div className="flex items-start gap-3">
               <input type="checkbox" checked={selectedIds.has(file.id)} onChange={() => onToggleSelect(file.id)} className="mt-1 rounded border-border text-primary focus:ring-primary" />
               <div className="min-w-0 flex-1">

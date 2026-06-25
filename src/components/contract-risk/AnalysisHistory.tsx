@@ -70,7 +70,7 @@ export function AnalysisHistory() {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <HistorySearchBar filter={filter} onChange={handleFilterChange} />
 
       {/* 비교 바 */}
@@ -98,7 +98,7 @@ export function AnalysisHistory() {
       )}
 
       {loading ? (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="bg-white border border-border rounded-xl h-[72px] animate-pulse" />
           ))}
@@ -116,7 +116,8 @@ export function AnalysisHistory() {
           </p>
         </div>
       ) : (
-        items.map(item => {
+        <div className="flex flex-col gap-3">
+        {items.map(item => {
           const total = item.risk_count.high + item.risk_count.medium + item.risk_count.low;
           const dateStr = new Date(item.created_at).toLocaleDateString('ko-KR', {
             month: '2-digit',
@@ -190,7 +191,8 @@ export function AnalysisHistory() {
               <ChevronRight size={13} className="text-foreground-quaternary group-hover:text-primary transition-colors shrink-0" />
             </Link>
           );
-        })
+        })}
+        </div>
       )}
     </div>
   );
