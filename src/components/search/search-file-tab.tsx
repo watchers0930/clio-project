@@ -416,7 +416,7 @@ export function FileSearchTab({
                       ]}
                     />
 
-                    <div className="mt-6 flex items-center gap-4 border-t border-surface-secondary pt-4">
+                    <div className="mt-8 flex items-center gap-4 border-t border-surface-secondary pt-5">
                       <button onClick={() => onOpenPreview(result.id)} className="flex items-center gap-1.5 text-sm font-medium text-foreground-secondary transition-colors hover:text-foreground">
                         <EyeIcon />
                         미리보기
