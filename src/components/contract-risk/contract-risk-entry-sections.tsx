@@ -154,7 +154,7 @@ export function ContractRiskEntryForm(props: EntryFormProps) {
 
         {inputMode === 'upload' ? (
           <div className="p-5 sm:p-6">
-            <div className="mb-7 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface-secondary px-3.5 py-2.5">
+            <div className="mb-[10px] flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface-secondary px-3.5 py-2.5">
               <span className="text-[11px] font-semibold text-foreground-secondary">지원 파일 형식</span>
               {['DOCX', 'HWPX', 'PDF'].map((label) => (
                 <span key={label} className="rounded-lg bg-white px-2 py-1 text-[11px] font-semibold text-primary shadow-sm">
