@@ -67,7 +67,8 @@ export default function MemoList({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="메모 검색..."
-            className="w-full pl-10 pr-3 py-2 text-[13px] border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+            style={{ paddingLeft: '2.5rem' }}
+            className="w-full pr-3 py-2 text-[13px] border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
           />
         </div>
 

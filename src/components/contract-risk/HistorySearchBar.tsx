@@ -31,7 +31,8 @@ export function HistorySearchBar({ filter, onChange }: Props) {
           value={filter.q}
           onChange={e => onChange({ ...filter, q: e.target.value })}
           placeholder="파일명 검색..."
-          className="w-full rounded-xl border border-border bg-white py-2.5 pl-10 pr-3 text-[12px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary"
+          style={{ paddingLeft: '2.5rem' }}
+          className="w-full rounded-xl border border-border bg-white py-2.5 pr-3 text-[12px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
 

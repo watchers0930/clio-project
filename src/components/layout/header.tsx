@@ -68,8 +68,9 @@ function Header({
             <input
               type="text"
               placeholder="검색..."
+              style={{ paddingLeft: '2.5rem' }}
               className={cn(
-                'w-[220px] h-[42px] pl-10 pr-4',
+                'w-[220px] h-[42px] pr-4',
                 'rounded-md border border-border bg-page-bg text-sm',
                 'placeholder:text-muted/60',
                 'focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary',

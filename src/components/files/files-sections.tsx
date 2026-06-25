@@ -200,7 +200,8 @@ export function FilesFilterBar({
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder="파일 검색..."
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+                style={{ paddingLeft: '2.5rem' }}
+                className="w-full pr-4 py-3 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           </div>
