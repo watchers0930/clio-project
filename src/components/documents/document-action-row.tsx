@@ -31,7 +31,7 @@ function DocumentActionRowLayout({
   direction: 'row' | 'column';
 }) {
   return (
-    <div className={direction === 'row' ? 'mt-4 flex flex-wrap gap-2.5' : 'flex flex-col gap-2.5'}>
+    <div className={direction === 'row' ? 'mt-4 flex flex-wrap gap-2.5 pb-5' : 'flex flex-col gap-2.5'}>
       {items.map((item) => {
         const variant = item.variant ?? 'secondary';
         return (
