@@ -70,7 +70,7 @@ export function AnalysisHistory() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-6">
       <HistorySearchBar filter={filter} onChange={handleFilterChange} />
 
       {/* 비교 바 */}
