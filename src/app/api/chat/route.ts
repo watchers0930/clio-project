@@ -46,32 +46,35 @@ export async function POST(request: NextRequest) {
     let relevantChunks: Array<{ file_id: string; content: string }> = [];
 
     let notProcessedFileIds: string[] = [];
+    const extraNameMap = new Map<string, string>(); // 문서 ID → 제목 (file_chunks 외 소스)
 
     if (Array.isArray(fileIds) && fileIds.length > 0) {
-      // 파일이 특정된 경우: 해당 파일들만 대상으로 벡터 검색 우선 실행
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: filteredChunks } = await (supabase as any).rpc('match_file_chunks_filtered', {
-        query_embedding: embedding,
-        filter_file_ids: fileIds,
-        match_count: 16,
-        match_threshold: 0.1,
-      });
-      relevantChunks = (filteredChunks ?? []) as Array<{ file_id: string; content: string }>;
+      // Fallback 1: 직접 청크 조회 (file ID 기준)
+      const { data: rawChunks } = await supabase
+        .from('file_chunks')
+        .select('file_id, content')
+        .in('file_id', fileIds)
+        .order('chunk_index', { ascending: true })
+        .limit(20);
+      relevantChunks = (rawChunks ?? []) as Array<{ file_id: string; content: string }>;
 
-      // Fallback 1: 벡터 검색 결과 없음 → similarity 무관하게 해당 파일 청크 직접 조회
+      // Fallback 2: file_chunks에서 못 찾으면 documents 테이블에서 document ID로 조회
       if (relevantChunks.length === 0) {
-        const { data: rawChunks } = await supabase
-          .from('file_chunks')
-          .select('file_id, content')
-          .in('file_id', fileIds)
-          .order('chunk_index', { ascending: true })
-          .limit(20);
-        relevantChunks = (rawChunks ?? []) as Array<{ file_id: string; content: string }>;
-      }
-
-      // Fallback 2: 청크 자체가 없음 → 미처리 파일 목록 기록
-      if (relevantChunks.length === 0) {
-        notProcessedFileIds = fileIds;
+        const { data: docRows } = await supabase
+          .from('documents')
+          .select('id, title, content')
+          .in('id', fileIds);
+        const validDocs = ((docRows ?? []) as Array<{ id: string; title: string; content: string | null }>)
+          .filter((d) => !!d.content);
+        if (validDocs.length > 0) {
+          relevantChunks = validDocs.map((d) => ({
+            file_id: d.id,
+            content: (d.content ?? '').slice(0, 2000),
+          }));
+          for (const d of validDocs) extraNameMap.set(d.id, d.title);
+        } else {
+          notProcessedFileIds = fileIds;
+        }
       }
     } else {
       // 파일 미특정: 전체 내 파일 대상 벡터 검색
@@ -93,9 +96,10 @@ export async function POST(request: NextRequest) {
       const uniqueFileIds = [...new Set(relevantChunks.map((c) => c.file_id))];
       sourceFileIds = uniqueFileIds;
 
-      const fileNameMap = new Map(
-        (userFiles ?? []).map((f: { id: string; name: string }) => [f.id, f.name]),
-      );
+      const fileNameMap = new Map([
+        ...(userFiles ?? []).map((f: { id: string; name: string }) => [f.id, f.name] as [string, string]),
+        ...extraNameMap,
+      ]);
 
       context = relevantChunks
         .map((c) => `[${fileNameMap.get(c.file_id) ?? '문서'}]\n${c.content}`)
@@ -115,9 +119,10 @@ export async function POST(request: NextRequest) {
         : '등록된 파일이 없습니다.';
 
     // 6. 시스템 프롬프트 구성
-    const fileNameMap2 = new Map(
-      (userFiles ?? []).map((f: { id: string; name: string }) => [f.id, f.name]),
-    );
+    const fileNameMap2 = new Map([
+      ...(userFiles ?? []).map((f: { id: string; name: string }) => [f.id, f.name] as [string, string]),
+      ...extraNameMap,
+    ]);
     const notProcessedNames = notProcessedFileIds
       .map((id) => fileNameMap2.get(id) ?? id)
       .join(', ');
