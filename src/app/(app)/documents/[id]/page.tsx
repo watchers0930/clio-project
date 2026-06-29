@@ -217,7 +217,7 @@ export default function DocumentViewerPage() {
   const navigateToDocument = (docId: string) => router.push(`/documents/${docId}`);
 
   return (
-    <div className={`bg-surface-secondary p-4 lg:p-[20px] overflow-x-hidden ${isProposalPage ? 'min-h-full' : 'flex flex-col gap-4 lg:min-h-full lg:flex-row lg:gap-[20px]'}`}>
+    <div className={`bg-surface-secondary p-4 lg:p-[20px] overflow-x-hidden lg:overflow-x-clip ${isProposalPage ? 'min-h-full' : 'flex flex-col gap-4 lg:min-h-full lg:flex-row lg:gap-[20px]'}`}>
 
       {/* ── 좌측: 문서 뷰어 ── */}
       <div className={`min-w-0 flex-1 ${isProposalPage ? 'mx-auto flex max-w-[1280px] flex-col gap-4' : 'flex flex-col gap-4 lg:gap-[20px]'}`}>
@@ -250,7 +250,7 @@ export default function DocumentViewerPage() {
 
       {/* ── 우측: 댓글 패널 (항상 표시) ── */}
       {!isProposalPage ? (
-        <div id="document-comment-panel" className="w-full lg:w-[340px] flex-shrink-0 self-start overflow-hidden rounded-2xl border border-border bg-white">
+        <div id="document-comment-panel" className="w-full lg:w-[340px] flex-shrink-0 self-start lg:sticky lg:top-5 lg:max-h-[calc(100vh-40px)] lg:overflow-y-auto overflow-hidden rounded-2xl border border-border bg-white">
           <DocumentCommentPanel
             documentId={id}
             inline
