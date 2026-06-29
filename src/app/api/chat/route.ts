@@ -46,7 +46,18 @@ export async function POST(request: NextRequest) {
     let relevantChunks: Array<{ file_id: string; content: string }> = [];
 
     let notProcessedFileIds: string[] = [];
-    const extraNameMap = new Map<string, string>(); // 문서 ID → 제목 (file_chunks 외 소스)
+    const extraNameMap = new Map<string, string>(); // 파일/문서 ID → 이름 (uploader 무관)
+
+    // 핀된 파일 ID가 있으면 uploader 무관하게 이름 먼저 확보 (context 라벨용)
+    if (Array.isArray(fileIds) && fileIds.length > 0) {
+      const { data: pinnedFiles } = await supabase
+        .from('files')
+        .select('id, name')
+        .in('id', fileIds);
+      for (const f of (pinnedFiles ?? []) as Array<{ id: string; name: string }>) {
+        extraNameMap.set(f.id, f.name);
+      }
+    }
 
     if (Array.isArray(fileIds) && fileIds.length > 0) {
       // Fallback 1: 직접 청크 조회 (file ID 기준)
@@ -127,8 +138,13 @@ export async function POST(request: NextRequest) {
       .map((id) => fileNameMap2.get(id) ?? id)
       .join(', ');
 
+    // 핀된 파일명 목록 (시스템 프롬프트에 명시)
+    const pinnedFileNames = Array.isArray(fileIds) && fileIds.length > 0
+      ? fileIds.map((id) => fileNameMap2.get(id)).filter(Boolean).join(', ')
+      : '';
+
     const systemPrompt = context
-      ? `당신은 CLIO 문서관리 시스템의 AI 어시스턴트입니다. 아래 참고 문서와 파일 목록을 바탕으로 사용자의 질문에 한국어로 정확하게 답변하세요. 문서에 없는 내용은 솔직하게 모른다고 말하세요.\n\n[등록된 파일 목록]\n${fileListContext}\n\n[참고 문서 내용]\n${context}`
+      ? `당신은 CLIO 문서관리 시스템의 AI 어시스턴트입니다. 아래 제공된 문서 내용을 바탕으로 사용자의 질문에 한국어로 정확하게 답변하세요.${pinnedFileNames ? `\n\n[조회 대상 파일]\n${pinnedFileNames}` : ''}\n\n[참고 문서 내용]\n${context}`
       : notProcessedFileIds.length > 0
         ? `당신은 CLIO 문서관리 시스템의 AI 어시스턴트입니다. 사용자가 질문한 파일(${notProcessedNames})은 아직 내용이 처리되지 않아 읽을 수 없습니다. 사용자에게 파일 관리 페이지에서 해당 파일을 재처리한 뒤 다시 질문해달라고 안내하세요.`
         : `당신은 CLIO 문서관리 시스템의 AI 어시스턴트입니다. 관련 문서 내용을 찾지 못했지만 아래 파일 목록 정보를 바탕으로 답변할 수 있습니다.\n\n[등록된 파일 목록]\n${fileListContext}`;
