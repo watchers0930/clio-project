@@ -10,15 +10,11 @@ import {
   ChevronRight,
   FolderOpen,
   Users,
-  Sparkles,
-  FilePlus,
-  StickyNote,
-  CalendarDays,
-  ShieldAlert,
   FileText,
   LayoutTemplate,
 } from 'lucide-react';
 import { DashboardBottomSection, DashboardMidSection } from '@/components/dashboard/dashboard-sections';
+import { ProcessFlowSection } from '@/components/dashboard/ProcessFlowSection';
 import { getCalendarDays, getEventTypeColor, WEEKDAY_LABELS } from '@/lib/schedule-utils';
 import { DAILY_QUOTES } from '@/lib/constants/ui';
 import type { CalendarEvent } from '@/lib/supabase/types';
@@ -44,16 +40,6 @@ interface DashboardData {
 
 interface RecentFile { id: string; name: string; type: string; department: string; uploadDate: string; status: string; }
 
-/* ── 자주 사용하는 메뉴 (위택스 스타일 원형 아이콘) ── */
-const QUICK_ACTIONS = [
-  { label: '문서허브', href: '/files', icon: FolderOpen, bg: 'bg-blue-50', color: 'text-blue-500', hover: 'hover:bg-blue-100' },
-  { label: 'AI 검색', href: '/search', icon: Sparkles, bg: 'bg-violet-50', color: 'text-violet-500', hover: 'hover:bg-violet-100' },
-  { label: '새 문서', href: '/documents?create=true', icon: FilePlus, bg: 'bg-emerald-50', color: 'text-emerald-500', hover: 'hover:bg-emerald-100' },
-  { label: '계약 리스크', href: '/contract-risk', icon: ShieldAlert, bg: 'bg-amber-50', color: 'text-amber-600', hover: 'hover:bg-amber-100' },
-  { label: '메모', href: '/memos', icon: StickyNote, bg: 'bg-rose-50', color: 'text-rose-500', hover: 'hover:bg-rose-100' },
-  { label: '회의', href: '/meetings', icon: Users, bg: 'bg-cyan-50', color: 'text-cyan-500', hover: 'hover:bg-cyan-100' },
-  { label: '일정', href: '/schedule', icon: CalendarDays, bg: 'bg-indigo-50', color: 'text-indigo-500', hover: 'hover:bg-indigo-100' },
-];
 
 const HERO_STATS = [
   { key: 'total_files' as const, label: '전체 파일', icon: FolderOpen },
@@ -221,26 +207,9 @@ export default function DashboardPage() {
       </section>
 
       {/* ═══════════════════════════════════════
-          자주 사용하는 메뉴 — 원형 아이콘
+          CLIO 활용 흐름 — 프로세스 카드
          ═══════════════════════════════════════ */}
-      <section className="rounded-2xl border border-border bg-white px-6 py-5 shadow-sm sm:px-8">
-        <h2 className="text-[15px] font-bold text-foreground">자주 사용하는 메뉴</h2>
-        <div className="mt-5 flex flex-wrap items-start gap-x-6 gap-y-4 sm:gap-x-8">
-          {QUICK_ACTIONS.map((action) => {
-            const Icon = action.icon;
-            return (
-              <Link key={action.label} href={action.href} className="group flex w-[60px] flex-col items-center gap-2 text-center">
-                <div className={`flex h-[52px] w-[52px] items-center justify-center rounded-full ${action.bg} ${action.hover} transition-all group-hover:shadow-md`}>
-                  <Icon size={22} strokeWidth={1.5} className={action.color} />
-                </div>
-                <span className="break-keep text-[11px] font-medium leading-tight text-foreground-secondary group-hover:text-foreground">
-                  {action.label}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
+      <ProcessFlowSection />
 
       {/* ═══════════════════════════════════════
           이번 달 일정 + 최근 파일

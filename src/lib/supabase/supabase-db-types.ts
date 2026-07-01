@@ -15,6 +15,7 @@ export type DbUser = Record<string, unknown> & {
   avatar_url: string | null;
   is_active: boolean;
   signature_path: string | null;
+  sidebar_menus: string[] | null;
   created_at: string;
 };
 
@@ -350,8 +351,8 @@ export interface Database {
       };
       users: {
         Row: DbUser;
-        Insert: { id: string; email: string; name: string; position?: string; department_id?: string | null; role?: string; avatar_url?: string | null; is_active?: boolean; signature_path?: string | null; created_at?: string };
-        Update: { email?: string; name?: string; position?: string; department_id?: string | null; role?: string; avatar_url?: string | null; is_active?: boolean; signature_path?: string | null };
+        Insert: { id: string; email: string; name: string; position?: string; department_id?: string | null; role?: string; avatar_url?: string | null; is_active?: boolean; signature_path?: string | null; sidebar_menus?: string[] | null; created_at?: string };
+        Update: { email?: string; name?: string; position?: string; department_id?: string | null; role?: string; avatar_url?: string | null; is_active?: boolean; signature_path?: string | null; sidebar_menus?: string[] | null };
         Relationships: [];
       };
       files: {

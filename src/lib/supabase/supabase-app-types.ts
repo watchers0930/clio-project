@@ -32,6 +32,7 @@ export interface User {
   avatar_url: string | null;
   is_active?: boolean;
   signature_path?: string | null;
+  sidebar_menus?: string[] | null;
   created_at: string;
 }
 

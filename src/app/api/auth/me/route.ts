@@ -48,6 +48,8 @@ export async function GET(request: NextRequest) {
           department_id: profile.department_id,
           role: profile.role as User['role'],
           avatar_url: profile.avatar_url,
+          signature_path: profile.signature_path ?? null,
+          sidebar_menus: (profile.sidebar_menus as string[] | null) ?? [],
           created_at: profile.created_at,
         }
       : {

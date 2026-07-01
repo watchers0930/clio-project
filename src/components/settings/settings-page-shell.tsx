@@ -1,15 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Building2, Users, PenLine, FileText } from 'lucide-react';
+import { Building2, Users, PenLine, FileText, LayoutGrid } from 'lucide-react';
 import { Spinner, Tabs, ConfirmDialog } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
 import TemplatesPage from '@/app/(app)/templates/page';
 import { DepartmentModal, UserModal } from '@/components/settings/settings-modals';
-import { DepartmentsSection, SignatureSection, UsersSection } from '@/components/settings/settings-sections';
+import { DepartmentsSection, MenusSection, SignatureSection, UsersSection } from '@/components/settings/settings-sections';
 import type { Department, UserItem } from '@/components/settings/types';
 
-type SettingsTab = 'departments' | 'users' | 'signature' | 'templates';
+type SettingsTab = 'departments' | 'users' | 'signature' | 'templates' | 'menus';
 
 interface SettingsPageShellProps {
   initialTab?: SettingsTab;
@@ -325,6 +325,7 @@ export function SettingsPageShell({ initialTab = 'departments' }: SettingsPageSh
       <div className="overflow-x-auto">
         <Tabs
         tabs={[
+          { id: 'menus', label: '메뉴', icon: <LayoutGrid size={15} /> },
           { id: 'departments', label: '부서', icon: <Building2 size={15} /> },
           { id: 'users', label: '사용자', icon: <Users size={15} /> },
           { id: 'signature', label: '서명', icon: <PenLine size={15} /> },
@@ -335,6 +336,7 @@ export function SettingsPageShell({ initialTab = 'departments' }: SettingsPageSh
         />
       </div>
 
+      {tab === 'menus' && <div><MenusSection /></div>}
       {tab === 'departments' && <div><DepartmentsSection departments={departments} onOpenDeptModal={openDeptModal} onDeleteDept={deleteDept} /></div>}
       {tab === 'users' && (
         <div>
