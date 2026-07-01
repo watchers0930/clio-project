@@ -10,9 +10,6 @@ interface FlowStep {
   href: string;
   cta: string;
   icon: React.ElementType;
-  bg: string;
-  iconColor: string;
-  numBg: string;
 }
 
 const FLOW_STEPS: FlowStep[] = [
@@ -23,9 +20,6 @@ const FLOW_STEPS: FlowStep[] = [
     href: '/files',
     cta: '등록하기',
     icon: FolderOpen,
-    bg: 'bg-blue-50 hover:bg-blue-100',
-    iconColor: 'text-blue-500',
-    numBg: 'bg-blue-500',
   },
   {
     step: 2,
@@ -34,9 +28,6 @@ const FLOW_STEPS: FlowStep[] = [
     href: '/search',
     cta: '검색하기',
     icon: Search,
-    bg: 'bg-violet-50 hover:bg-violet-100',
-    iconColor: 'text-violet-500',
-    numBg: 'bg-violet-500',
   },
   {
     step: 3,
@@ -45,9 +36,6 @@ const FLOW_STEPS: FlowStep[] = [
     href: '/search',
     cta: '물어보기',
     icon: MessageCircle,
-    bg: 'bg-emerald-50 hover:bg-emerald-100',
-    iconColor: 'text-emerald-600',
-    numBg: 'bg-emerald-500',
   },
   {
     step: 4,
@@ -56,9 +44,6 @@ const FLOW_STEPS: FlowStep[] = [
     href: '/documents?create=true',
     cta: '생성하기',
     icon: FilePlus,
-    bg: 'bg-amber-50 hover:bg-amber-100',
-    iconColor: 'text-amber-600',
-    numBg: 'bg-amber-500',
   },
 ];
 
@@ -79,17 +64,14 @@ export function ProcessFlowSection() {
             <div key={step.step} className="flex lg:flex-row items-stretch">
               <Link
                 href={step.href}
-                className={cn(
-                  'group flex flex-col rounded-xl border border-transparent p-4 transition-all flex-1',
-                  step.bg
-                )}
+                className="group flex flex-col rounded-xl border border-primary-tint-strong bg-primary-tint p-4 transition-all flex-1 hover:bg-primary-tint-strong hover:border-primary/20"
               >
                 {/* 번호 + 아이콘 */}
                 <div className="flex items-center gap-2 mb-3">
-                  <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white ${step.numBg}`}>
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white bg-sidebar">
                     {step.step}
                   </span>
-                  <Icon size={18} strokeWidth={1.5} className={step.iconColor} />
+                  <Icon size={18} strokeWidth={1.5} className="text-primary" />
                 </div>
 
                 {/* 텍스트 */}
@@ -97,10 +79,7 @@ export function ProcessFlowSection() {
                 <p className="mt-1 text-[11px] text-foreground-secondary leading-relaxed flex-1">{step.description}</p>
 
                 {/* CTA */}
-                <div className={cn(
-                  'mt-3 inline-flex items-center gap-1 text-[11px] font-semibold transition-colors',
-                  step.iconColor
-                )}>
+                <div className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold text-primary transition-colors">
                   {step.cta}
                   <ArrowRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
                 </div>
@@ -109,7 +88,7 @@ export function ProcessFlowSection() {
               {/* 화살표 구분자 (lg 이상에서만) */}
               {idx < FLOW_STEPS.length - 1 && (
                 <div className="hidden lg:flex items-center justify-center w-6 flex-shrink-0">
-                  <ArrowRight size={14} className="text-foreground-quaternary/60" />
+                  <ArrowRight size={14} className="text-primary/30" />
                 </div>
               )}
             </div>
