@@ -187,25 +187,6 @@ export function FilesFilterBar({
             )}
           </>
         )}
-        {mode !== 'actions-only' && (
-          <div className="grid grid-cols-[minmax(0,116px)_minmax(0,1fr)] gap-3 sm:grid-cols-[minmax(0,140px)_minmax(0,1fr)]">
-            <select value={resourceFilter} onChange={(e) => onResourceFilterChange(e.target.value as '전체' | 'file' | 'document' | 'linked')} className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-              {resourceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </select>
-            <div className="relative min-w-0">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-secondary pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-              </svg>
-              <input
-                value={search}
-                onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="파일 검색..."
-                style={{ paddingLeft: '2.5rem' }}
-                className="w-full pr-4 py-3 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-          </div>
-        )}
       </div>
     </>
   );
