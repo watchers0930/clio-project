@@ -54,7 +54,9 @@ export async function GET(request: NextRequest) {
       creator_name: userMap.get(e.created_by) ?? '',
     }));
 
-    return NextResponse.json({ success: true, data: result });
+    return NextResponse.json({ success: true, data: result }, {
+      headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=120' },
+    });
   } catch (err) {
     console.error('[events/GET] error:', err);
     return NextResponse.json({ success: false, error: '서버 오류' }, { status: 500 });

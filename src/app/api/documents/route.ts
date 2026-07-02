@@ -112,7 +112,9 @@ export async function GET(request: NextRequest) {
       };
     }).sort((a, b) => `${b.createdAt}`.localeCompare(`${a.createdAt}`));
 
-    return NextResponse.json({ documents: docs });
+    return NextResponse.json({ documents: docs }, {
+      headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=120' },
+    });
   } catch {
     return NextResponse.json({ documents: [], error: '문서 목록 조회 중 오류가 발생했습니다.' }, { status: 500 });
   }

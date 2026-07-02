@@ -127,6 +127,8 @@ export async function GET(request: NextRequest) {
       total,
       page,
       limit,
+    }, {
+      headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=120' },
     });
   } catch {
     return NextResponse.json(

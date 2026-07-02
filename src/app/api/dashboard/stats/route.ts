@@ -253,7 +253,9 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    return NextResponse.json<ApiResponse<DashboardStats>>({ success: true, data: stats });
+    return NextResponse.json<ApiResponse<DashboardStats>>({ success: true, data: stats }, {
+      headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=120' },
+    });
   } catch {
     return NextResponse.json<ApiResponse>(
       { success: false, error: '대시보드 통계 조회 중 오류가 발생했습니다.' },
