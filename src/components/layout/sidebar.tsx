@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import {
-  LayoutDashboard,
   Search,
   FolderOpen,
   ArrowRightLeft,
@@ -32,7 +31,6 @@ interface NavItem {
 
 // 항상 표시되는 핵심 메뉴
 const CORE_ITEMS: NavItem[] = [
-  { key: 'dashboard', label: '대시보드', href: '/dashboard', icon: LayoutDashboard, description: '홈 · 전체 현황' },
   { key: 'files', label: '파일 등록', href: '/files', icon: FolderOpen, description: '문서 저장 · 관리' },
   { key: 'search', label: 'AI 검색', href: '/search', icon: Search, description: '검색 · AI 상담' },
   { key: 'documents', label: '새 문서 생성', href: '/documents', icon: FilePlus, description: '초안 작성 · 다운로드' },
@@ -109,7 +107,7 @@ function Sidebar({ collapsed = false, onToggle, mobile = false }: SidebarProps) 
 
   const renderItem = (item: NavItem) => {
     const isActive = pathname === item.href ||
-      (item.href !== '/dashboard' && item.href !== '/settings' && pathname.startsWith(item.href));
+      (item.href !== '/settings' && pathname.startsWith(item.href));
     const Icon = item.icon;
 
     return (
@@ -166,9 +164,9 @@ function Sidebar({ collapsed = false, onToggle, mobile = false }: SidebarProps) 
         'flex items-center h-14 flex-shrink-0',
         collapsed && !mobile ? 'justify-center' : 'px-6'
       )}>
-        <span className="text-[28px] font-light tracking-[0.3em] text-white select-none font-serif">
+        <Link href="/dashboard" className="text-[28px] font-light tracking-[0.3em] text-white select-none font-serif hover:text-white/80 transition-colors">
           {collapsed && !mobile ? 'C' : 'CLIO'}
-        </span>
+        </Link>
       </div>
 
       {/* Nav */}
