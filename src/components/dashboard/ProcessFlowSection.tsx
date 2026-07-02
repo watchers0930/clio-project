@@ -64,24 +64,21 @@ export function ProcessFlowSection() {
             <div key={step.step} className="flex lg:flex-row items-stretch">
               <Link
                 href={step.href}
-                className="group flex flex-col rounded-xl border border-primary-tint-strong bg-primary-tint p-4 transition-all flex-1 hover:bg-primary-tint-strong hover:border-primary/20"
+                className="group flex flex-row items-start gap-3 rounded-xl border border-primary-tint-strong bg-primary-tint p-4 transition-all flex-1 hover:bg-primary-tint-strong hover:border-primary/20"
               >
-                {/* 번호 + 아이콘 */}
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white bg-sidebar">
-                    {step.step}
-                  </span>
-                  <Icon size={18} strokeWidth={1.5} className="text-primary" />
-                </div>
+                {/* 아이콘 */}
+                <Icon size={18} strokeWidth={1.5} className="text-primary mt-0.5 flex-shrink-0" />
 
                 {/* 텍스트 */}
-                <p className="text-[13px] font-bold text-foreground leading-tight">{step.label}</p>
-                <p className="mt-1 text-[11px] text-foreground-secondary leading-relaxed flex-1">{step.description}</p>
+                <div className="flex flex-col min-w-0 flex-1">
+                  <p className="text-[13px] font-bold text-foreground leading-tight">{step.label}</p>
+                  <p className="mt-1 text-[11px] text-foreground-secondary leading-relaxed">{step.description}</p>
 
-                {/* CTA */}
-                <div className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold text-primary transition-colors">
-                  {step.cta}
-                  <ArrowRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
+                  {/* CTA */}
+                  <div className="mt-[10px] inline-flex items-center gap-1 text-[11px] font-semibold text-primary transition-colors">
+                    {step.cta}
+                    <ArrowRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
+                  </div>
                 </div>
               </Link>
 
