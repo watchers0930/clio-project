@@ -32,7 +32,7 @@ export default function LoginPage() {
         let redirectTo = '/';
         if (typeof window !== 'undefined') {
           const params = new URLSearchParams(window.location.search);
-          const redirectPath = params.get('redirect') || '/';
+          const redirectPath = params.get('redirect') || '/dashboard';
           params.delete('redirect');
           const rest = params.toString();
           redirectTo = rest ? `${redirectPath}?${rest}` : redirectPath;
