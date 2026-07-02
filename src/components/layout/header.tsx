@@ -28,7 +28,7 @@ function Header({
   const pageTitle = (() => {
     if (!pathname) return 'CLIO';
     if (pathname.startsWith('/dashboard')) return '대시보드';
-    if (pathname.startsWith('/files')) return '문서허브';
+    if (pathname.startsWith('/files')) return '파일 등록';
     if (pathname.startsWith('/documents')) return '문서 생성';
     if (pathname.startsWith('/shared-documents')) return '공유 문서';
     if (pathname.startsWith('/messages')) return '메시지';

@@ -59,7 +59,7 @@ export function FilesHeaderActions(_props: HeaderActionsProps) {
       <div className="px-6 py-5 sm:px-8 sm:py-6">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-[20px] font-bold text-foreground">문서허브</h1>
+            <h1 className="text-[20px] font-bold text-foreground">파일 등록</h1>
             <p className="mt-1.5 text-[13px] text-foreground-secondary">
               업로드된 문서와 생성 문서를 관리하고 검색, 생성, 검토 흐름으로 이어갑니다.
             </p>
