@@ -57,9 +57,9 @@ export default function LoginPage() {
             {PLATFORM_LABEL}
           </p>
           <p className="mt-2.5 mb-5 text-[13px] leading-5 text-foreground-tertiary">
-            CLIO는 기업 문서를 한곳에 저장한 뒤, 공유하고, 코멘트를 반영하고,{' '}
+            문서를 등록하고, AI로 검색하고, 상담하고, 새 문서를 생성하는{' '}
             <br className="hidden md:block" />
-            다시 검색해 재활용하는 문서 운영 플랫폼입니다.
+            4단계 AI 문서관리 플랫폼입니다.
           </p>
         </div>
 
@@ -71,7 +71,7 @@ export default function LoginPage() {
             로그인
           </h2>
           <p className="mt-2 mb-7 text-[13px] leading-relaxed text-foreground-secondary">
-            로그인 후 첫 진입점은 문서허브이며, 저장한 문서를 기준으로 공유, 검색, 생성 흐름을 이어갈 수 있습니다.
+            로그인하면 파일 등록부터 AI 검색, 새 문서 생성까지 단계별 흐름을 바로 시작할 수 있습니다.
           </p>
 
           <form onSubmit={handleLogin} className="flex flex-col gap-6">
