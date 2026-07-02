@@ -110,7 +110,7 @@ function UpcomingEventsSlider({ events }: { events: CalendarEvent[] }) {
         </div>
       </Link>
       {count > 1 && (
-        <div className="mt-2 flex justify-center gap-1">
+        <div className="mt-[10px] flex justify-center gap-1">
           {events.map((_, i) => (
             <button key={i} onClick={() => setIdx(i)} className={`h-1.5 rounded-full transition-all ${i === idx ? 'w-4 bg-primary' : 'w-1.5 bg-border'}`} />
           ))}
