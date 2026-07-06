@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
 import { isContractTemplate } from '@/lib/contract-fields';
 import { buildDocumentCreateHref } from '@/lib/documents/navigation';
@@ -18,6 +18,7 @@ import type { ChatMessage, SearchResult, SearchTab } from '@/components/search/t
 /* ────────────────────────── page ─────────────────────────── */
 export default function SearchPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const toast = useToast();
 
   // 탭
@@ -52,7 +53,6 @@ export default function SearchPage() {
   const [chatLoading, setChatLoading] = useState(false);
   const [pinnedFileIds, setPinnedFileIds] = useState<string[] | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const initializedFromQueryRef = useRef(false);
 
   // 부서 목록 + 검색 제안어
   useEffect(() => {
@@ -153,23 +153,21 @@ export default function SearchPage() {
   );
 
   useEffect(() => {
-    if (initializedFromQueryRef.current || typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    const initialQuery = params.get('q')?.trim();
-    const ask = params.get('ask')?.trim();
-    const requestedTab = params.get('tab');
+    const q = searchParams.get('q')?.trim();
+    const ask = searchParams.get('ask')?.trim();
+    const requestedTab = searchParams.get('tab');
 
     if (requestedTab === 'ai') setActiveTab('ai');
-    if (initialQuery) {
-      setQuery(initialQuery);
-      void doSearch(initialQuery);
+    if (q) {
+      setQuery(q);
+      void doSearch(q);
     }
     if (ask) {
       setActiveTab('ai');
       setChatInput(ask);
     }
-    initializedFromQueryRef.current = true;
-  }, [doSearch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const sortedResults = [...results].sort((a, b) => {
     switch (sort) {
