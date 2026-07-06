@@ -31,9 +31,9 @@ interface NavItem {
 
 // 항상 표시되는 핵심 메뉴
 const CORE_ITEMS: NavItem[] = [
-  { key: 'files', label: '파일 등록', href: '/files', icon: FolderOpen, description: '문서 저장 · 관리' },
   { key: 'search', label: 'AI 검색', href: '/search', icon: Search, description: '검색 · AI 상담' },
   { key: 'documents', label: '새 문서 생성', href: '/documents', icon: FilePlus, description: '초안 작성 · 다운로드' },
+  { key: 'files', label: '파일 등록', href: '/files', icon: FolderOpen, description: '문서 저장 · 관리' },
 ];
 
 // 설정에서 ON/OFF 가능한 선택 메뉴
