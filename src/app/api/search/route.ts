@@ -246,10 +246,10 @@ export async function POST(request: NextRequest) {
 
         const [fileMatchResult, docMatchResult] = await Promise.all([
           (chunkCount ?? 0) > 0
-            ? sb.rpc('match_file_chunks', { query_embedding: embeddingStr, match_count: 20, match_threshold: 0.3 })
+            ? sb.rpc('match_file_chunks', { query_embedding: embeddingStr, match_count: 15, match_threshold: 0.5 })
             : Promise.resolve({ data: [], error: null }),
           (docEmbedCount ?? 0) > 0 && !isWorkLogTypeSearch
-            ? admin.rpc('match_document_embeddings', { query_embedding: embeddingStr, match_count: 20, match_threshold: 0.25 })
+            ? admin.rpc('match_document_embeddings', { query_embedding: embeddingStr, match_count: 15, match_threshold: 0.45 })
             : Promise.resolve({ data: [], error: null }),
         ]);
 
@@ -398,6 +398,7 @@ export async function POST(request: NextRequest) {
     }
 
     results.sort((a, b) => b.relevance - a.relevance);
+    results = results.filter((r) => r.relevance >= 35);
     results = results.slice(0, 10);
 
     // 검색 1회당 결과 수만큼 OpenAI를 추가 호출하지 않도록 기본 비활성화.
