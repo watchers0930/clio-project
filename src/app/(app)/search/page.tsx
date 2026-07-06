@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { Suspense, useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
 import { isContractTemplate } from '@/lib/contract-fields';
@@ -16,7 +16,7 @@ import { ShareLinkModal } from '@/components/documents/ShareLinkModal';
 import type { ChatMessage, SearchResult, SearchTab } from '@/components/search/types';
 
 /* ────────────────────────── page ─────────────────────────── */
-export default function SearchPage() {
+function SearchPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
@@ -342,5 +342,13 @@ export default function SearchPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={null}>
+      <SearchPageInner />
+    </Suspense>
   );
 }
