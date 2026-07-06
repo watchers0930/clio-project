@@ -152,22 +152,25 @@ function SearchPageInner() {
     [department, fileType],
   );
 
-  useEffect(() => {
-    const q = searchParams.get('q')?.trim();
-    const ask = searchParams.get('ask')?.trim();
-    const requestedTab = searchParams.get('tab');
+  const doSearchRef = useRef(doSearch);
+  useEffect(() => { doSearchRef.current = doSearch; }, [doSearch]);
 
-    if (requestedTab === 'ai') setActiveTab('ai');
-    if (q) {
-      setQuery(q);
-      void doSearch(q);
+  const qParam = searchParams.get('q')?.trim() ?? '';
+  const askParam = searchParams.get('ask')?.trim() ?? '';
+  const tabParam = searchParams.get('tab') ?? '';
+
+  useEffect(() => {
+    if (tabParam === 'ai') setActiveTab('ai');
+    if (qParam) {
+      setQuery(qParam);
+      void doSearchRef.current(qParam);
     }
-    if (ask) {
+    if (askParam) {
       setActiveTab('ai');
-      setChatInput(ask);
+      setChatInput(askParam);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qParam, askParam, tabParam]);
 
   const sortedResults = [...results].sort((a, b) => {
     switch (sort) {
