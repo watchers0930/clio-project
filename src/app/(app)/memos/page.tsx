@@ -10,15 +10,53 @@ import MemoList from '@/components/memos/memo-list';
 import MemoFormModal from '@/components/memos/memo-form-modal';
 import MemoViewModal from '@/components/memos/memo-view-modal';
 import type { MemoFormData } from '@/components/memos/memo-form-modal';
+import { MemoLockModal } from '@/components/memos/memo-lock-modal';
 import type { MemoItem } from '@/lib/supabase/types';
 import type { ExtractedTodo } from '@/components/memos/memo-todo-confirm-modal';
+
+const SESSION_KEY = 'memo_lock_unlocked';
 
 export default function MemosPage() {
   return (
     <Suspense fallback={<MemosPageSkeleton />}>
-      <MemosPageContent />
+      <MemosPageWithLock />
     </Suspense>
   );
+}
+
+function MemosPageWithLock() {
+  const [lockChecked, setLockChecked] = useState(false);
+  const [locked, setLocked] = useState(false);
+
+  useEffect(() => {
+    const unlocked = sessionStorage.getItem(SESSION_KEY) === '1';
+    if (unlocked) { setLockChecked(true); return; }
+
+    fetch('/api/settings/memo-lock')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.enabled) setLocked(true);
+      })
+      .catch(() => {})
+      .finally(() => setLockChecked(true));
+  }, []);
+
+  if (!lockChecked) {
+    return <div className="flex items-center justify-center h-64"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
+  }
+
+  if (locked) {
+    return (
+      <MemoLockModal
+        onUnlock={() => {
+          sessionStorage.setItem(SESSION_KEY, '1');
+          setLocked(false);
+        }}
+      />
+    );
+  }
+
+  return <MemosPageContent />;
 }
 
 function MemosPageContent() {

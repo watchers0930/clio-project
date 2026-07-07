@@ -1,16 +1,17 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Building2, Users, PenLine, FileText, LayoutGrid, Mail } from 'lucide-react';
+import { Building2, Users, PenLine, FileText, LayoutGrid, Mail, Lock } from 'lucide-react';
 import { Spinner, Tabs, ConfirmDialog } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
 import TemplatesPage from '@/app/(app)/templates/page';
 import { DepartmentModal, UserModal } from '@/components/settings/settings-modals';
 import { DepartmentsSection, MenusSection, SignatureSection, UsersSection } from '@/components/settings/settings-sections';
 import { GmailSection } from '@/components/settings/gmail-section';
+import { MemoLockSection } from '@/components/settings/memo-lock-section';
 import type { Department, UserItem } from '@/components/settings/types';
 
-type SettingsTab = 'departments' | 'users' | 'signature' | 'templates' | 'menus' | 'gmail';
+type SettingsTab = 'departments' | 'users' | 'signature' | 'templates' | 'menus' | 'gmail' | 'memo-lock';
 
 interface SettingsPageShellProps {
   initialTab?: SettingsTab;
@@ -335,6 +336,7 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
           { id: 'signature', label: '서명', icon: <PenLine size={15} /> },
           { id: 'templates', label: '템플릿', icon: <FileText size={15} /> },
           { id: 'gmail', label: 'Gmail', icon: <Mail size={15} /> },
+          { id: 'memo-lock', label: '메모 잠금', icon: <Lock size={15} /> },
         ]}
         activeTab={tab}
         onChange={(id) => setTab(id as SettingsTab)}
@@ -372,6 +374,7 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
       )}
       {tab === 'templates' && <div><TemplatesPage /></div>}
       {tab === 'gmail' && <GmailSection successParam={gmailSuccess} errorParam={gmailError} msgParam={gmailMsg} />}
+      {tab === 'memo-lock' && <MemoLockSection />}
 
       <DepartmentModal
         open={showDeptModal}
