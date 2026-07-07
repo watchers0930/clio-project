@@ -272,26 +272,20 @@ function SearchPageInner() {
   };
 
   const openLocalFile = async (result: SearchResult) => {
+    setPreviewLoading(true);
+    setPreviewData(null);
     try {
-      const { loadDirectoryHandle, requestPermission, isFileSystemAccessSupported } = await import('@/lib/local-file-index-db');
-      const { useAuthStore } = await import('@/store/auth-store');
-      const userId = useAuthStore.getState().user?.id;
-      if (!userId || !isFileSystemAccessSupported()) return;
-      const dirHandle = await loadDirectoryHandle(userId);
-      if (!dirHandle) { toast.error('로컬 폴더가 연결되지 않았습니다. 설정에서 폴더를 연결해 주세요.'); return; }
-      await requestPermission(dirHandle);
-      if (!result.localPath) return;
-      const parts = result.localPath.split('/');
-      let cur: FileSystemDirectoryHandle = dirHandle;
-      for (let i = 0; i < parts.length - 1; i++) {
-        cur = await cur.getDirectoryHandle(parts[i]);
+      const res = await fetch(`/api/local-files/${result.id}/preview`);
+      if (!res.ok) {
+        setPreviewData({ name: result.name, text: '미리보기를 불러올 수 없습니다.' });
+        return;
       }
-      const fileHandle = await cur.getFileHandle(parts[parts.length - 1]);
-      const file = await fileHandle.getFile();
-      const text = await file.text().catch(() => '');
-      setPreviewData({ name: result.name, text: text || '이 파일 형식은 브라우저에서 텍스트 미리보기를 지원하지 않습니다.' });
+      const data = await res.json() as { name: string; text: string };
+      setPreviewData({ name: data.name, text: data.text || '내용이 없습니다.' });
     } catch {
       toast.error('파일을 열 수 없습니다.');
+    } finally {
+      setPreviewLoading(false);
     }
   };
 
