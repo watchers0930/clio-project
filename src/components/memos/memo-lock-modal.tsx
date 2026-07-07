@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Lock, Eye, EyeOff } from 'lucide-react';
+import { Lock, Eye, EyeOff, X } from 'lucide-react';
 
 interface Props {
   onUnlock: () => void;
+  onClose?: () => void;
 }
 
-export function MemoLockModal({ onUnlock }: Props) {
+export function MemoLockModal({ onUnlock, onClose }: Props) {
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
@@ -46,6 +47,13 @@ export function MemoLockModal({ onUnlock }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/60 backdrop-blur-sm">
       <div className="mx-4 w-full max-w-sm rounded-2xl bg-white shadow-xl">
+        {onClose && (
+          <div className="flex justify-end px-5 pt-5">
+            <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full text-foreground-secondary hover:bg-surface-secondary">
+              <X size={18} />
+            </button>
+          </div>
+        )}
         <div className="flex flex-col items-center gap-3 px-8 pb-6 pt-8">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-tint text-primary">
             <Lock size={26} />

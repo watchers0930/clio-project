@@ -25,6 +25,7 @@ export default function MemosPage() {
 }
 
 function MemosPageWithLock() {
+  const router = useRouter();
   const [lockChecked, setLockChecked] = useState(false);
   const [locked, setLocked] = useState(false);
 
@@ -52,6 +53,7 @@ function MemosPageWithLock() {
           sessionStorage.setItem(SESSION_KEY, '1');
           setLocked(false);
         }}
+        onClose={() => router.back()}
       />
     );
   }
