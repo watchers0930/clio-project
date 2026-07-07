@@ -93,7 +93,7 @@ export function MemoLockSection() {
         </div>
         <div className="flex-1">
           <h2 className="text-[16px] font-semibold text-foreground">메모 잠금</h2>
-          <p className="mt-1 text-[13px] text-foreground-secondary">
+          <p className="mt-1 text-[13px] text-foreground-secondary" style={{ marginBottom: 20 }}>
             메모 페이지 접근 시 별도 비밀번호를 요구합니다. 탭을 닫으면 다시 잠깁니다.
           </p>
 
