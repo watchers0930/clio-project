@@ -92,12 +92,10 @@ export async function POST(request: NextRequest) {
 
   const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-  // 최근 30일 이메일 (최대 50개)
-  const afterDate = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
+  // 최근 100개 이메일 (날짜 제한 없음)
   const listRes = await gmail.users.messages.list({
     userId: 'me',
-    q: `after:${afterDate}`,
-    maxResults: 50,
+    maxResults: 100,
   });
   const listData = listRes.data;
 

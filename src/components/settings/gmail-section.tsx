@@ -142,7 +142,7 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
             {/* 안내 */}
             <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-100">
               <AlertCircle size={14} className="text-blue-500 mt-0.5 shrink-0" />
-              <p className="text-[12px] text-blue-700">최근 30일 이메일(최대 50개)을 가져와 AI 검색에 포함합니다. 이미 동기화된 이메일은 중복 추가되지 않습니다.</p>
+              <p className="text-[12px] text-blue-700">최근 이메일 최대 100개를 가져와 AI 검색에 포함합니다. 이미 동기화된 이메일은 중복 추가되지 않습니다.</p>
             </div>
 
             {/* 버튼 */}
