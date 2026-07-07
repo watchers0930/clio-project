@@ -30,6 +30,29 @@ export interface LocalSyncState {
   errorMessage: string | null;
 }
 
+interface ElectronAPI {
+  isElectron: boolean;
+  openFolderDialog: () => Promise<string | null>;
+  getFolderPath: () => Promise<string | null>;
+  setFolderPath: (p: string) => Promise<boolean>;
+  listFiles: (folderPath: string) => Promise<Array<{ name: string; path: string; absolutePath: string }>>;
+  readFile: (absolutePath: string) => Promise<{ ok: boolean; data?: string; size?: number; error?: string }>;
+  stat: (absolutePath: string) => Promise<{ ok: boolean; lastModified?: number; size?: number }>;
+}
+
+function getElectronAPI(): ElectronAPI | null {
+  if (typeof window === 'undefined') return null;
+  return (window as Window & { electronAPI?: ElectronAPI }).electronAPI ?? null;
+}
+
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  const bin = atob(base64);
+  const buf = new ArrayBuffer(bin.length);
+  const view = new Uint8Array(buf);
+  for (let i = 0; i < bin.length; i++) view[i] = bin.charCodeAt(i);
+  return buf;
+}
+
 const INITIAL_STATE: LocalSyncState = {
   status: 'idle',
   folderName: null,
@@ -45,19 +68,21 @@ export function useLocalFileSync() {
 
   const [state, setState] = useState<LocalSyncState>(INITIAL_STATE);
   const [handle, setHandle] = useState<FileSystemDirectoryHandle | null>(null);
-  // 서버에서 인덱싱된 파일의 hash 맵 (path → hash)
   const [serverHashes, setServerHashes] = useState<Record<string, string>>({});
 
   const updateState = (partial: Partial<LocalSyncState>) =>
     setState((prev) => ({ ...prev, ...partial }));
 
-  // 앱 로드 시 저장된 핸들 복원
   useEffect(() => {
-    if (!userId || !isFileSystemAccessSupported()) {
-      if (!isFileSystemAccessSupported()) updateState({ status: 'unsupported' });
-      return;
+    if (!userId) return;
+    const eAPI = getElectronAPI();
+    if (eAPI) {
+      void restoreElectron(eAPI);
+    } else if (!isFileSystemAccessSupported()) {
+      updateState({ status: 'unsupported' });
+    } else {
+      void restoreHandle();
     }
-    void restoreHandle();
   }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadIndexedCount = useCallback(async () => {
@@ -70,6 +95,20 @@ export function useLocalFileSync() {
     updateState({ indexedCount: data.files?.length ?? 0 });
   }, []);
 
+  /* ── Electron 복원 ── */
+  const restoreElectron = async (eAPI: ElectronAPI) => {
+    updateState({ status: 'connecting' });
+    const savedPath = await eAPI.getFolderPath();
+    if (savedPath) {
+      const folderName = savedPath.split('/').pop() ?? savedPath;
+      await loadIndexedCount();
+      updateState({ status: 'ready', folderName });
+    } else {
+      updateState({ status: 'idle' });
+    }
+  };
+
+  /* ── 웹 복원 ── */
   const restoreHandle = async () => {
     if (!userId) return;
     updateState({ status: 'connecting' });
@@ -92,17 +131,28 @@ export function useLocalFileSync() {
     }
   };
 
+  /* ── 연결 ── */
   const connect = useCallback(async () => {
     if (!userId) return;
-    try {
-      const dir = await window.showDirectoryPicker({ mode: 'read' });
-      await saveDirectoryHandle(userId, dir);
-      setHandle(dir);
+    const eAPI = getElectronAPI();
+
+    if (eAPI) {
+      const folderPath = await eAPI.openFolderDialog();
+      if (!folderPath) return;
+      const folderName = folderPath.split('/').pop() ?? folderPath;
       await loadIndexedCount();
-      updateState({ status: 'ready', folderName: dir.name, errorMessage: null });
-    } catch (e) {
-      if ((e as Error).name !== 'AbortError') {
-        updateState({ status: 'error', errorMessage: '폴더 연결에 실패했습니다.' });
+      updateState({ status: 'ready', folderName, errorMessage: null });
+    } else {
+      try {
+        const dir = await window.showDirectoryPicker({ mode: 'read' });
+        await saveDirectoryHandle(userId, dir);
+        setHandle(dir);
+        await loadIndexedCount();
+        updateState({ status: 'ready', folderName: dir.name, errorMessage: null });
+      } catch (e) {
+        if ((e as Error).name !== 'AbortError') {
+          updateState({ status: 'error', errorMessage: '폴더 연결에 실패했습니다.' });
+        }
       }
     }
   }, [userId, loadIndexedCount]);
@@ -118,63 +168,95 @@ export function useLocalFileSync() {
     }
   }, [handle, loadIndexedCount]);
 
+  /* ── 동기화 ── */
   const sync = useCallback(async () => {
-    if (!handle || !userId) return;
+    if (!userId) return;
+    const eAPI = getElectronAPI();
     updateState({ status: 'syncing', errorMessage: null, progress: null });
 
     try {
-      const files = await collectFiles(handle);
-      const toProcess = files.filter((f) => {
-        const prev = serverHashes[f.path];
-        return !prev; // hash 비교는 파일 읽기 후 수행
-      });
-
-      let processed = 0;
-      const newHashes: Record<string, string> = { ...serverHashes };
-
-      for (const { handle: fileHandle, path } of files) {
-        updateState({ progress: { current: processed, total: files.length, currentFileName: fileHandle.name } });
-
-        const file = await fileHandle.getFile();
-        const buffer = await file.arrayBuffer();
-        const hash = await hashBuffer(buffer);
-
-        // 변경 없으면 스킵
-        if (serverHashes[path] === hash) {
-          processed++;
-          continue;
-        }
-
-        const form = new FormData();
-        form.append('file', new File([buffer], file.name, { type: file.type }));
-        form.append('filePath', path);
-        form.append('fileHash', hash);
-        form.append('lastModified', String(file.lastModified));
-
-        const res = await fetch('/api/local-files/process', { method: 'POST', body: form });
-        if (res.ok) newHashes[path] = hash;
-
-        processed++;
+      if (eAPI) {
+        await syncElectron(eAPI);
+      } else {
+        if (!handle) return;
+        await syncWeb(handle);
       }
-
-      setServerHashes(newHashes);
       await loadIndexedCount();
-      updateState({
-        status: 'ready',
-        lastSynced: new Date(),
-        progress: null,
-      });
+      updateState({ status: 'ready', lastSynced: new Date(), progress: null });
     } catch (e) {
       updateState({ status: 'error', errorMessage: (e as Error).message, progress: null });
     }
-  }, [handle, userId, serverHashes, loadIndexedCount]);
+  }, [handle, userId, serverHashes, loadIndexedCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const syncElectron = async (eAPI: ElectronAPI) => {
+    const folderPath = await eAPI.getFolderPath();
+    if (!folderPath) throw new Error('폴더 경로가 없습니다.');
+    const files = await eAPI.listFiles(folderPath);
+    const newHashes: Record<string, string> = { ...serverHashes };
+    let processed = 0;
+
+    for (const fileInfo of files) {
+      updateState({ progress: { current: processed, total: files.length, currentFileName: fileInfo.name } });
+
+      const statRes = await eAPI.stat(fileInfo.absolutePath);
+      const readRes = await eAPI.readFile(fileInfo.absolutePath);
+      if (!readRes.ok || !readRes.data) { processed++; continue; }
+
+      const buffer = base64ToArrayBuffer(readRes.data);
+      const hash = await hashBuffer(buffer);
+      if (serverHashes[fileInfo.path] === hash) { processed++; continue; }
+
+      const ext = fileInfo.name.split('.').pop()?.toLowerCase() ?? '';
+      const form = new FormData();
+      form.append('file', new File([buffer], fileInfo.name, { type: `application/${ext}` }));
+      form.append('filePath', fileInfo.path);
+      form.append('fileHash', hash);
+      if (statRes.ok && statRes.lastModified) form.append('lastModified', String(statRes.lastModified));
+
+      const res = await fetch('/api/local-files/process', { method: 'POST', body: form });
+      if (res.ok) newHashes[fileInfo.path] = hash;
+      processed++;
+    }
+    setServerHashes(newHashes);
+  };
+
+  const syncWeb = async (dir: FileSystemDirectoryHandle) => {
+    const files = await collectFiles(dir);
+    const newHashes: Record<string, string> = { ...serverHashes };
+    let processed = 0;
+
+    for (const { handle: fileHandle, path } of files) {
+      updateState({ progress: { current: processed, total: files.length, currentFileName: fileHandle.name } });
+      const file = await fileHandle.getFile();
+      const buffer = await file.arrayBuffer();
+      const hash = await hashBuffer(buffer);
+      if (serverHashes[path] === hash) { processed++; continue; }
+
+      const form = new FormData();
+      form.append('file', new File([buffer], file.name, { type: file.type }));
+      form.append('filePath', path);
+      form.append('fileHash', hash);
+      form.append('lastModified', String(file.lastModified));
+
+      const res = await fetch('/api/local-files/process', { method: 'POST', body: form });
+      if (res.ok) newHashes[path] = hash;
+      processed++;
+    }
+    setServerHashes(newHashes);
+  };
+
+  /* ── 해제 ── */
   const disconnect = useCallback(async () => {
     if (!userId) return;
-    await clearDirectoryHandle(userId);
+    const eAPI = getElectronAPI();
+    if (eAPI) {
+      await eAPI.setFolderPath('');
+    } else {
+      await clearDirectoryHandle(userId);
+    }
     setHandle(null);
     setServerHashes({});
-    updateState({ ...INITIAL_STATE, status: 'idle' });
+    setState({ ...INITIAL_STATE, status: 'idle' });
   }, [userId]);
 
   return { state, connect, grantPermission, sync, disconnect };

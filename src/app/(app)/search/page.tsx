@@ -271,7 +271,23 @@ function SearchPageInner() {
     }
   };
 
+  const openLocalFileNative = async (result: SearchResult) => {
+    // Electron: 네이티브 앱으로 직접 열기
+    const api = (window as Window & { electronAPI?: { openFile: (p: string) => Promise<{ ok: boolean; error: string | null }>; getFolderPath: () => Promise<string | null> } }).electronAPI;
+    if (!api || !result.localPath) return;
+    const folderPath = await api.getFolderPath();
+    if (!folderPath) { toast.error('로컬 폴더가 연결되지 않았습니다.'); return; }
+    const absolutePath = `${folderPath}/${result.localPath}`;
+    const res = await api.openFile(absolutePath);
+    if (!res.ok) toast.error(`파일을 열 수 없습니다: ${res.error ?? ''}`);
+  };
+
   const openLocalFile = async (result: SearchResult) => {
+    // Electron 환경이면 네이티브 앱으로
+    const api = (window as Window & { electronAPI?: { isElectron?: boolean } }).electronAPI;
+    if (api?.isElectron) { void openLocalFileNative(result); return; }
+
+    // 브라우저 환경: DB 청크로 미리보기
     setPreviewLoading(true);
     setPreviewData(null);
     try {
