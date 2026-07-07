@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
   // 받은편지함 기준, 자동 발송(구글알리미·프로모션·업데이트·소셜) 제외
   const listRes = await gmail.users.messages.list({
     userId: 'me',
-    maxResults: 100,
+    maxResults: 50,
     q: 'in:inbox -category:promotions -category:updates -category:social -from:googlealerts-noreply@google.com -from:noreply@google.com -from:no-reply@accounts.google.com',
   });
   const listData = listRes.data;
@@ -117,8 +117,11 @@ export async function POST(request: NextRequest) {
 
   let synced = 0;
   let errors = 0;
+  const startedAt = Date.now();
+  const BUDGET_MS = 45_000; // Vercel 60초 제한 대비 45초 내 종료
 
   for (const msg of messages) {
+    if (Date.now() - startedAt > BUDGET_MS) break;
     if (!msg.id || existingIds.has(msg.id)) continue;
 
     try {
