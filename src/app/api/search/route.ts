@@ -246,7 +246,7 @@ export async function POST(request: NextRequest) {
 
         const [fileMatchResult, docMatchResult] = await Promise.all([
           (chunkCount ?? 0) > 0
-            ? sb.rpc('match_file_chunks', { query_embedding: embeddingStr, match_count: 15, match_threshold: 0.5 })
+            ? sb.rpc('match_file_chunks', { query_embedding: embeddingStr, match_count: 30, match_threshold: 0.3 })
             : Promise.resolve({ data: [], error: null }),
           (docEmbedCount ?? 0) > 0 && !isWorkLogTypeSearch
             ? admin.rpc('match_document_embeddings', { query_embedding: embeddingStr, match_count: 15, match_threshold: 0.45 })
