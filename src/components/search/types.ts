@@ -8,6 +8,7 @@ export interface SearchResult {
   date: string;
   aiSummary: string;
   sourceType?: 'file' | 'document';
+  dataSource?: 'gmail' | 'upload';
   relationLabel?: string | null;
   originDocumentId?: string | null;
   originDocumentTitle?: string | null;

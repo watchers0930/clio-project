@@ -36,7 +36,7 @@ interface AuditLogRow {
   created_at: string;
 }
 
-interface FileRow { id: string; name: string; type: string | null; department_id: string | null; created_at: string; uploaded_by: string | null }
+interface FileRow { id: string; name: string; type: string | null; department_id: string | null; created_at: string; uploaded_by: string | null; source?: string | null }
 interface DocRow {
   id: string;
   title: string;
@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
         }
         if (fileMap.size > 0) {
           const { data: files } = await sb
-            .from('files').select('id, name, type, department_id, created_at, uploaded_by').in('id', Array.from(fileMap.keys()));
+            .from('files').select('id, name, type, department_id, created_at, uploaded_by, source').in('id', Array.from(fileMap.keys()));
           const accessibleFiles = await filterAccessibleFileRows(
             supabase,
             authUserId,
@@ -284,6 +284,7 @@ export async function POST(request: NextRequest) {
               date: f.created_at.split('T')[0],
               aiSummary: '',
               sourceType: 'file',
+              dataSource: f.source === 'gmail' ? 'gmail' : 'upload',
             });
           }
         }
