@@ -164,7 +164,7 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
           </div>
         ) : (
           <div>
-            <div className="p-5 rounded-xl bg-surface border border-border">
+            <div className="p-5 rounded-xl bg-surface border border-border mb-5">
               <h3 className="text-[13px] font-semibold text-foreground mb-3">연결하면 이런 것이 가능합니다</h3>
               <ul className="space-y-2 text-[13px] text-foreground-secondary">
                 <li className="flex items-center gap-2"><CheckCircle size={13} className="text-[#2E6FF2]" /> AI 검색에서 이메일 내용 검색</li>
@@ -175,7 +175,7 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
 
             <a
               href="/api/auth/google"
-              className="mt-5 inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-white border-2 border-border text-[14px] font-semibold text-foreground hover:bg-surface hover:border-[#2E6FF2] transition-all shadow-sm"
+              className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-white border-2 border-border text-[14px] font-semibold text-foreground hover:bg-surface hover:border-[#2E6FF2] transition-all shadow-sm"
             >
               <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
