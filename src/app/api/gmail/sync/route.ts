@@ -56,6 +56,7 @@ async function extractMessageText(gmail: ReturnType<typeof google.gmail>, messag
 
 // POST /api/gmail/sync — 최근 이메일 가져와서 임베딩
 export async function POST(request: NextRequest) {
+  try {
   const supabase = await createServerSupabaseClient();
   if (!supabase) return NextResponse.json({ error: '서버 오류' }, { status: 500 });
 
@@ -93,11 +94,12 @@ export async function POST(request: NextRequest) {
 
   // 최근 30일 이메일 (최대 50개)
   const afterDate = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
-  const { data: listData } = await gmail.users.messages.list({
+  const listRes = await gmail.users.messages.list({
     userId: 'me',
     q: `after:${afterDate}`,
     maxResults: 50,
   });
+  const listData = listRes.data;
 
   const messages = listData.messages ?? [];
   if (messages.length === 0) {
@@ -162,4 +164,9 @@ export async function POST(request: NextRequest) {
   await admin.from('user_google_connections').update({ last_synced_at: new Date().toISOString() }).eq('user_id', userId);
 
   return NextResponse.json({ success: true, synced, errors, total: messages.length });
+  } catch (err) {
+    console.error('[gmail/sync] 치명적 오류:', err);
+    const msg = err instanceof Error ? err.message.slice(0, 200) : String(err).slice(0, 200);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }
