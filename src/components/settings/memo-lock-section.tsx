@@ -92,17 +92,19 @@ export function MemoLockSection() {
           {enabled ? <Lock size={20} /> : <LockOpen size={20} />}
         </div>
         <div className="flex-1">
-          <h2 className="text-[16px] font-semibold text-foreground">메모 잠금</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-[16px] font-semibold text-foreground">메모 잠금</h2>
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${enabled ? 'bg-green-50 text-green-700' : 'bg-surface-secondary text-foreground-secondary'}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${enabled ? 'bg-green-500' : 'bg-foreground-quaternary'}`} />
+              {enabled ? '잠금 활성' : '잠금 비활성'}
+            </span>
+          </div>
           <p className="mt-1 text-[13px] text-foreground-secondary" style={{ marginBottom: 20 }}>
             메모 페이지 접근 시 별도 비밀번호를 요구합니다. 탭을 닫으면 다시 잠깁니다.
           </p>
 
           {mode === 'idle' && (
-            <div className="mt-5 flex flex-wrap items-center gap-3">
-              <span className={`inline-flex h-9 items-center gap-1.5 rounded-xl px-4 text-[13px] font-semibold ${enabled ? 'bg-green-50 text-green-700' : 'bg-surface-secondary text-foreground-secondary'}`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${enabled ? 'bg-green-500' : 'bg-foreground-quaternary'}`} />
-                {enabled ? '잠금 활성' : '잠금 비활성'}
-              </span>
+            <div className="flex flex-wrap items-center gap-3">
               {!enabled ? (
                 <button onClick={() => setMode('set')} className="h-9 rounded-xl bg-primary px-4 text-[13px] font-medium text-white hover:bg-primary-dark">
                   잠금 설정
