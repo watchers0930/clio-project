@@ -23,6 +23,7 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
   const [status, setStatus] = useState<GmailStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [syncDone, setSyncDone] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const toast = useToast();
 
@@ -57,7 +58,9 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
       const data = await res.json();
       if (data.success) {
         toast.success(`동기화 완료 — ${data.synced}개 이메일이 추가되었습니다.`);
+        setSyncDone(true);
         await loadStatus();
+        setTimeout(() => setSyncDone(false), 4000);
       } else {
         toast.error(data.error ?? '동기화 실패');
       }
@@ -146,11 +149,15 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
             <div className="flex gap-3">
               <button
                 onClick={handleSync}
-                disabled={syncing}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#2E6FF2] text-white text-[13px] font-medium hover:bg-[#2560dc] disabled:opacity-50 transition-colors"
+                disabled={syncing || syncDone}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-medium transition-colors disabled:opacity-80 ${
+                  syncDone
+                    ? 'bg-green-500 text-white'
+                    : 'bg-[#2E6FF2] text-white hover:bg-[#2560dc] disabled:opacity-50'
+                }`}
               >
-                {syncing ? <Spinner size="sm" /> : <RefreshCw size={14} />}
-                {syncing ? '동기화 중...' : '지금 동기화'}
+                {syncing ? <Spinner size="sm" /> : syncDone ? <CheckCircle size={14} /> : <RefreshCw size={14} />}
+                {syncing ? '동기화 중...' : syncDone ? '동기화 완료' : '지금 동기화'}
               </button>
               <button
                 onClick={handleDisconnect}
