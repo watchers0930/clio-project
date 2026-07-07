@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Building2, Users, PenLine, FileText, LayoutGrid, Mail, Lock } from 'lucide-react';
+import { Building2, Users, PenLine, FileText, LayoutGrid, Mail, Lock, HardDrive } from 'lucide-react';
 import { Spinner, Tabs, ConfirmDialog } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
 import TemplatesPage from '@/app/(app)/templates/page';
@@ -9,9 +9,10 @@ import { DepartmentModal, UserModal } from '@/components/settings/settings-modal
 import { DepartmentsSection, MenusSection, SignatureSection, UsersSection } from '@/components/settings/settings-sections';
 import { GmailSection } from '@/components/settings/gmail-section';
 import { MemoLockSection } from '@/components/settings/memo-lock-section';
+import { LocalSyncSection } from '@/components/settings/local-sync-section';
 import type { Department, UserItem } from '@/components/settings/types';
 
-type SettingsTab = 'departments' | 'users' | 'signature' | 'templates' | 'menus' | 'gmail' | 'memo-lock';
+type SettingsTab = 'departments' | 'users' | 'signature' | 'templates' | 'menus' | 'gmail' | 'memo-lock' | 'local-sync';
 
 interface SettingsPageShellProps {
   initialTab?: SettingsTab;
@@ -337,6 +338,7 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
           { id: 'templates', label: '템플릿', icon: <FileText size={15} /> },
           { id: 'gmail', label: 'Gmail', icon: <Mail size={15} /> },
           { id: 'memo-lock', label: '메모 잠금', icon: <Lock size={15} /> },
+          { id: 'local-sync', label: '로컬 동기화', icon: <HardDrive size={15} /> },
         ]}
         activeTab={tab}
         onChange={(id) => setTab(id as SettingsTab)}
@@ -375,6 +377,7 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
       {tab === 'templates' && <div><TemplatesPage /></div>}
       {tab === 'gmail' && <GmailSection successParam={gmailSuccess} errorParam={gmailError} msgParam={gmailMsg} />}
       {tab === 'memo-lock' && <MemoLockSection />}
+      {tab === 'local-sync' && <LocalSyncSection />}
 
       <DepartmentModal
         open={showDeptModal}

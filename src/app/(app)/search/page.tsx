@@ -125,23 +125,54 @@ function SearchPageInner() {
       setSearched(true);
       setExpandedSummary(null);
       try {
-        const res = await fetch('/api/search', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: q, department, fileType }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setResults(data.results ?? []);
-          setRecentQueries(data.recentQueries ?? []);
-          setSearchContext(data.searchContext ?? null);
-          setDepartments(data.searchContext?.availableDepartments ?? ['전체']);
-        } else {
-          setResults([]);
-          setRecentQueries([]);
-          setSearchContext(null);
-          setDepartments(['전체']);
+        const [mainRes, localRes] = await Promise.allSettled([
+          fetch('/api/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: q, department, fileType }),
+          }),
+          fetch('/api/local-files/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: q }),
+          }),
+        ]);
+
+        let mainResults: SearchResult[] = [];
+        let recentQs: string[] = [];
+        let ctx = null;
+        let depts = ['전체'];
+
+        if (mainRes.status === 'fulfilled' && mainRes.value.ok) {
+          const data = await mainRes.value.json();
+          mainResults = data.results ?? [];
+          recentQs = data.recentQueries ?? [];
+          ctx = data.searchContext ?? null;
+          depts = data.searchContext?.availableDepartments ?? ['전체'];
         }
+
+        let localResults: SearchResult[] = [];
+        if (localRes.status === 'fulfilled' && localRes.value.ok) {
+          const data = await localRes.value.json() as { results: Array<{ id: string; name: string; path: string; fileType: string; excerpt: string; relevance: number }> };
+          localResults = (data.results ?? []).map((r) => ({
+            id: r.id,
+            name: r.name,
+            excerpt: r.excerpt,
+            relevance: r.relevance,
+            fileType: r.fileType ?? '',
+            department: '',
+            date: '',
+            aiSummary: '',
+            sourceType: 'file' as const,
+            dataSource: 'local' as const,
+            localPath: r.path,
+          }));
+        }
+
+        setResults([...mainResults, ...localResults]);
+        setRecentQueries(recentQs);
+        setSearchContext(ctx);
+        setDepartments(depts);
       } catch {
         setResults([]);
         setRecentQueries([]);
@@ -240,9 +271,37 @@ function SearchPageInner() {
     }
   };
 
+  const openLocalFile = async (result: SearchResult) => {
+    try {
+      const { loadDirectoryHandle, requestPermission, isFileSystemAccessSupported } = await import('@/lib/local-file-index-db');
+      const { useAuthStore } = await import('@/store/auth-store');
+      const userId = useAuthStore.getState().user?.id;
+      if (!userId || !isFileSystemAccessSupported()) return;
+      const dirHandle = await loadDirectoryHandle(userId);
+      if (!dirHandle) { toast.error('로컬 폴더가 연결되지 않았습니다. 설정에서 폴더를 연결해 주세요.'); return; }
+      await requestPermission(dirHandle);
+      if (!result.localPath) return;
+      const parts = result.localPath.split('/');
+      let cur: FileSystemDirectoryHandle = dirHandle;
+      for (let i = 0; i < parts.length - 1; i++) {
+        cur = await cur.getDirectoryHandle(parts[i]);
+      }
+      const fileHandle = await cur.getFileHandle(parts[parts.length - 1]);
+      const file = await fileHandle.getFile();
+      const text = await file.text().catch(() => '');
+      setPreviewData({ name: result.name, text: text || '이 파일 형식은 브라우저에서 텍스트 미리보기를 지원하지 않습니다.' });
+    } catch {
+      toast.error('파일을 열 수 없습니다.');
+    }
+  };
+
   const openResult = (result: SearchResult) => {
     if (result.sourceType === 'document') {
       router.push(`/documents/${result.id}`);
+      return;
+    }
+    if (result.dataSource === 'local') {
+      void openLocalFile(result);
       return;
     }
     if (result.dataSource === 'gmail' && result.externalId) {

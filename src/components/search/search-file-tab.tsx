@@ -365,6 +365,8 @@ export function FileSearchTab({
                         <div className="flex items-center gap-2 mb-1">
                           {result.dataSource === 'gmail' ? (
                             <span className="inline-flex items-center rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-[10px] font-semibold text-red-600">지메일</span>
+                          ) : result.dataSource === 'local' ? (
+                            <span className="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">로컬</span>
                           ) : (
                             <span className="inline-flex items-center rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-semibold text-blue-600">문서허브</span>
                           )}
