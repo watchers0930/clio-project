@@ -84,6 +84,9 @@ export const useAuthStore = create<AuthState>()(
           await supabase.auth.signOut();
         }
 
+        // 메모 잠금 세션 해제 (로그아웃 시 반드시 초기화)
+        sessionStorage.removeItem('memo_lock_unlocked');
+
         apiClient.setToken(null);
         set({ user: null, token: null, error: null });
       },
