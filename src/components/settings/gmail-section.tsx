@@ -106,7 +106,7 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
 
       <div className="px-8 py-6">
         {status?.connected ? (
-          <div>
+          <div className="flex flex-col" style={{ gap: '16px' }}>
             {/* 연결 상태 */}
             <div className="flex items-center gap-3 p-4 rounded-xl bg-green-50 border border-green-200">
               <CheckCircle size={18} className="text-green-600 shrink-0" />
@@ -117,7 +117,7 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
             </div>
 
             {/* 마지막 동기화 */}
-            <div className="grid grid-cols-2 gap-4 mt-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="p-4 rounded-xl bg-surface border border-border">
                 <p className="text-[11px] text-foreground-secondary mb-1">마지막 동기화</p>
                 <p className="text-[13px] font-medium text-foreground">
@@ -137,13 +137,13 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
             </div>
 
             {/* 안내 */}
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-100 mt-4">
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-100">
               <AlertCircle size={14} className="text-blue-500 mt-0.5 shrink-0" />
               <p className="text-[12px] text-blue-700">최근 30일 이메일(최대 50개)을 가져와 AI 검색에 포함합니다. 이미 동기화된 이메일은 중복 추가되지 않습니다.</p>
             </div>
 
             {/* 버튼 */}
-            <div className="flex gap-3 mt-5">
+            <div className="flex gap-3">
               <button
                 onClick={handleSync}
                 disabled={syncing}
