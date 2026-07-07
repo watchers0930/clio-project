@@ -13,6 +13,7 @@ export function MemoLockSection() {
   // 비밀번호 설정 폼
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
+  const [currentPw, setCurrentPw] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [mode, setMode] = useState<'idle' | 'set' | 'change' | 'remove'>('idle');
 
@@ -26,7 +27,20 @@ export function MemoLockSection() {
 
   const save = async () => {
     if (mode === 'remove') {
+      if (!currentPw) { toast.error('현재 비밀번호를 입력해주세요.'); return; }
       setSaving(true);
+      // 현재 비밀번호 검증
+      const verifyRes = await fetch('/api/settings/memo-lock/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: currentPw }),
+      });
+      const verifyData = await verifyRes.json();
+      if (!verifyData.valid) {
+        toast.error('비밀번호가 올바르지 않습니다.');
+        setSaving(false);
+        return;
+      }
       const res = await fetch('/api/settings/memo-lock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -36,6 +50,7 @@ export function MemoLockSection() {
       if (data.success) {
         setEnabled(false);
         setMode('idle');
+        setCurrentPw('');
         toast.success('메모 잠금이 해제되었습니다.');
       } else {
         toast.error(data.error ?? '오류가 발생했습니다.');
@@ -139,12 +154,25 @@ export function MemoLockSection() {
 
           {mode === 'remove' && (
             <div className="mt-5 flex flex-col gap-3 max-w-sm">
-              <p className="text-[13px] text-foreground-secondary">메모 잠금을 해제하면 누구나 메모에 바로 접근할 수 있습니다.</p>
+              <p className="text-[13px] text-foreground-secondary">잠금 해제를 위해 현재 비밀번호를 입력해주세요.</p>
+              <div className="relative">
+                <input
+                  type={showPw ? 'text' : 'password'}
+                  value={currentPw}
+                  onChange={(e) => setCurrentPw(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && void save()}
+                  placeholder="현재 비밀번호"
+                  className="w-full rounded-xl border border-border bg-surface-secondary px-4 py-2.5 pr-10 text-[13px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <button type="button" onClick={() => setShowPw((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-secondary">
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
               <div className="flex gap-2">
                 <button onClick={save} disabled={saving} className="h-9 rounded-xl bg-red-500 px-4 text-[13px] font-medium text-white hover:bg-red-600 disabled:opacity-50">
-                  {saving ? '처리 중...' : '잠금 해제'}
+                  {saving ? '확인 중...' : '잠금 해제'}
                 </button>
-                <button onClick={() => setMode('idle')} className="h-9 rounded-xl border border-border px-4 text-[13px] font-medium text-foreground-secondary hover:bg-surface-secondary">
+                <button onClick={() => { setMode('idle'); setCurrentPw(''); }} className="h-9 rounded-xl border border-border px-4 text-[13px] font-medium text-foreground-secondary hover:bg-surface-secondary">
                   취소
                 </button>
               </div>
