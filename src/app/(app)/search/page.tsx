@@ -13,6 +13,7 @@ import {
   SearchTabs,
 } from '@/components/search/search-sections';
 import { ShareLinkModal } from '@/components/documents/ShareLinkModal';
+import { GmailAttachmentModal } from '@/components/search/gmail-attachment-modal';
 import type { ChatMessage, SearchResult, SearchTab } from '@/components/search/types';
 
 /* ────────────────────────── page ─────────────────────────── */
@@ -38,6 +39,7 @@ function SearchPageInner() {
   const [previewData, setPreviewData] = useState<{ name: string; text: string; truncated?: boolean; totalLength?: number } | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [shareTarget, setShareTarget] = useState<{ id: string; title: string; type: 'document' | 'file' } | null>(null);
+  const [gmailAttachmentTarget, setGmailAttachmentTarget] = useState<{ messageId: string; name: string } | null>(null);
   const [recentQueries, setRecentQueries] = useState<string[]>([]);
   const [searchContext, setSearchContext] = useState<{
     role: string;
@@ -243,7 +245,16 @@ function SearchPageInner() {
       router.push(`/documents/${result.id}`);
       return;
     }
+    if (result.dataSource === 'gmail' && result.externalId) {
+      window.open(`https://mail.google.com/mail/u/0/#inbox/${result.externalId}`, '_blank', 'noopener,noreferrer');
+      return;
+    }
     void openPreview(result.id);
+  };
+
+  const openGmailAttachments = (result: SearchResult) => {
+    if (!result.externalId) return;
+    setGmailAttachmentTarget({ messageId: result.externalId, name: result.name });
   };
 
   const openComments = (result: SearchResult) => {
@@ -306,6 +317,7 @@ function SearchPageInner() {
             onOpenShare={openShare}
             onToggleSummary={(id) => setExpandedSummary(expandedSummary === id ? null : id)}
             onDownloadOriginal={(result) => { void handleDownloadOriginal(result); }}
+            onOpenGmailAttachments={openGmailAttachments}
             onStartChat={startChatFromResult}
             onOpenDocumentsFromResult={(result) => router.push(buildDocumentCreateHref({
               fileIds: [result.id],
@@ -342,6 +354,14 @@ function SearchPageInner() {
           resourceTitle={shareTarget.title}
           resourceType={shareTarget.type}
           onClose={() => setShareTarget(null)}
+        />
+      )}
+
+      {gmailAttachmentTarget && (
+        <GmailAttachmentModal
+          messageId={gmailAttachmentTarget.messageId}
+          emailName={gmailAttachmentTarget.name}
+          onClose={() => setGmailAttachmentTarget(null)}
         />
       )}
     </div>

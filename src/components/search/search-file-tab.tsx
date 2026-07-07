@@ -120,6 +120,7 @@ interface FileTabProps {
   onOpenShare: (result: SearchResult) => void;
   onToggleSummary: (id: string) => void;
   onDownloadOriginal: (result: SearchResult) => void;
+  onOpenGmailAttachments?: (result: SearchResult) => void;
   onStartChat?: (result: SearchResult) => void;
   onOpenDocumentsFromResult: (result: SearchResult) => void;
   onOpenContractRiskFromResult: (result: SearchResult) => void;
@@ -154,6 +155,7 @@ export function FileSearchTab({
   onOpenShare,
   onToggleSummary,
   onDownloadOriginal,
+  onOpenGmailAttachments,
   onOpenDocumentsFromResult,
   onOpenContractRiskFromResult,
   onOpenFiles,
@@ -385,57 +387,93 @@ export function FileSearchTab({
 
                     <div aria-hidden="true" style={{ height: 10 }} />
                     <DocumentActionRow
-                      items={[
-                        {
-                          label: result.sourceType === 'document' ? '문서 열기' : '파일 열기',
-                          onClick: () => onOpenResult(result),
-                          variant: 'primary',
-                          trailing: <ArrowRight size={14} />,
-                        },
-                        {
-                          label: result.sourceType === 'document' ? '코멘트 보기' : 'AI에게 묻기',
-                          onClick: () => onOpenComments(result),
-                          variant: 'secondary',
-                        },
-                        {
-                          label: '공유',
-                          onClick: () => onOpenShare(result),
-                          variant: 'share',
-                        },
-                        {
-                          label: '새 문서 활용',
-                          onClick: () => onOpenDocumentsFromResult(result),
-                          variant: 'secondary',
-                          trailing: <ArrowRight size={14} />,
-                        },
-                        ...(canAnalyzeContract(result)
-                          ? [{
-                              label: '계약 리스크 분석',
-                              onClick: () => onOpenContractRiskFromResult(result),
-                              variant: 'warning' as const,
-                            }]
-                          : []),
-                        {
-                          label: '문서허브 보기',
-                          onClick: onOpenFiles,
-                          variant: 'muted',
-                        },
-                      ]}
+                      items={
+                        result.dataSource === 'gmail'
+                          ? [
+                              {
+                                label: '이메일 열기',
+                                onClick: () => onOpenResult(result),
+                                variant: 'primary' as const,
+                                trailing: <ArrowRight size={14} />,
+                              },
+                              {
+                                label: '첨부파일 받기',
+                                onClick: () => onOpenGmailAttachments?.(result),
+                                variant: 'secondary' as const,
+                              },
+                              {
+                                label: 'AI에게 묻기',
+                                onClick: () => onOpenComments(result),
+                                variant: 'secondary' as const,
+                              },
+                              {
+                                label: '새 문서 활용',
+                                onClick: () => onOpenDocumentsFromResult(result),
+                                variant: 'secondary' as const,
+                                trailing: <ArrowRight size={14} />,
+                              },
+                            ]
+                          : [
+                              {
+                                label: result.sourceType === 'document' ? '문서 열기' : '파일 열기',
+                                onClick: () => onOpenResult(result),
+                                variant: 'primary' as const,
+                                trailing: <ArrowRight size={14} />,
+                              },
+                              {
+                                label: result.sourceType === 'document' ? '코멘트 보기' : 'AI에게 묻기',
+                                onClick: () => onOpenComments(result),
+                                variant: 'secondary' as const,
+                              },
+                              {
+                                label: '공유',
+                                onClick: () => onOpenShare(result),
+                                variant: 'share' as const,
+                              },
+                              {
+                                label: '새 문서 활용',
+                                onClick: () => onOpenDocumentsFromResult(result),
+                                variant: 'secondary' as const,
+                                trailing: <ArrowRight size={14} />,
+                              },
+                              ...(canAnalyzeContract(result)
+                                ? [{
+                                    label: '계약 리스크 분석',
+                                    onClick: () => onOpenContractRiskFromResult(result),
+                                    variant: 'warning' as const,
+                                  }]
+                                : []),
+                              {
+                                label: '문서허브 보기',
+                                onClick: onOpenFiles,
+                                variant: 'muted' as const,
+                              },
+                            ]
+                      }
                     />
 
                     <div className="mt-8 flex items-center gap-4 border-t border-surface-secondary pt-5">
-                      <button onClick={() => onOpenPreview(result.id)} className="flex items-center gap-1.5 text-sm font-medium text-foreground-secondary transition-colors hover:text-foreground">
-                        <EyeIcon />
-                        미리보기
-                      </button>
+                      {result.dataSource !== 'gmail' && (
+                        <button onClick={() => onOpenPreview(result.id)} className="flex items-center gap-1.5 text-sm font-medium text-foreground-secondary transition-colors hover:text-foreground">
+                          <EyeIcon />
+                          미리보기
+                        </button>
+                      )}
                       <button onClick={() => onToggleSummary(result.id)} className="flex items-center gap-1.5 text-sm font-medium text-primary transition-colors">
                         <SparkleIcon />
                         AI 요약 {expandedSummary === result.id ? '접기' : '보기'}
                       </button>
-                      <button onClick={() => onDownloadOriginal(result)} className="flex items-center gap-1.5 text-sm font-medium text-foreground-secondary transition-colors hover:text-foreground">
-                        <DownloadIcon />
-                        원본 다운로드
-                      </button>
+                      {result.dataSource === 'gmail' ? (
+                        <button onClick={() => onOpenGmailAttachments?.(result)} className="flex items-center gap-1.5 text-sm font-medium text-foreground-secondary transition-colors hover:text-foreground">
+                          <DownloadIcon />
+                          첨부파일 받기
+                        </button>
+                      ) : (
+                        <button onClick={() => onDownloadOriginal(result)} className="flex items-center gap-1.5 text-sm font-medium text-foreground-secondary transition-colors hover:text-foreground">
+                          <DownloadIcon />
+                          원본 다운로드
+                        </button>
+                      )}
                     </div>
                   </div>
 

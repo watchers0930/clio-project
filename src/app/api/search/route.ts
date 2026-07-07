@@ -19,6 +19,7 @@ interface SearchResultItem {
   aiSummary: string;
   sourceType: 'file' | 'document';
   dataSource?: 'gmail' | 'upload';
+  externalId?: string | null;
   relationLabel?: string | null;
   originDocumentId?: string | null;
   originDocumentTitle?: string | null;
@@ -37,7 +38,7 @@ interface AuditLogRow {
   created_at: string;
 }
 
-interface FileRow { id: string; name: string; type: string | null; department_id: string | null; created_at: string; uploaded_by: string | null; source?: string | null }
+interface FileRow { id: string; name: string; type: string | null; department_id: string | null; created_at: string; uploaded_by: string | null; source?: string | null; external_id?: string | null }
 interface DocRow {
   id: string;
   title: string;
@@ -265,7 +266,7 @@ export async function POST(request: NextRequest) {
         }
         if (fileMap.size > 0) {
           const { data: files } = await sb
-            .from('files').select('id, name, type, department_id, created_at, uploaded_by, source').in('id', Array.from(fileMap.keys()));
+            .from('files').select('id, name, type, department_id, created_at, uploaded_by, source, external_id').in('id', Array.from(fileMap.keys()));
           const accessibleFiles = await filterAccessibleFileRows(
             supabase,
             authUserId,
@@ -286,6 +287,7 @@ export async function POST(request: NextRequest) {
               aiSummary: '',
               sourceType: 'file',
               dataSource: f.source === 'gmail' ? 'gmail' : 'upload',
+              externalId: f.external_id ?? null,
             });
           }
         }
