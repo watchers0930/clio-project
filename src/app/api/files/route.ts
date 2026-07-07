@@ -64,7 +64,8 @@ export async function GET(request: NextRequest) {
     const deptMap = new Map((depts ?? []).map((d) => [d.id, d.name]));
     const deptIdByName = new Map((depts ?? []).map((d) => [d.name, d.id]));
 
-    let query = createAdminSupabaseClient().from('files').select('*');
+    // Gmail 동기화 파일은 파일 목록에서 제외 (검색에서만 접근)
+    let query = createAdminSupabaseClient().from('files').select('*').or('source.is.null,source.eq.upload');
 
     if (department && department !== '전체') {
       const deptId = deptIdByName.get(department);

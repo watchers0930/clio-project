@@ -92,10 +92,11 @@ export async function POST(request: NextRequest) {
 
   const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-  // 최근 100개 이메일 (날짜 제한 없음)
+  // 받은편지함 기준, 자동 발송(구글알리미·프로모션·업데이트·소셜) 제외
   const listRes = await gmail.users.messages.list({
     userId: 'me',
     maxResults: 100,
+    q: 'in:inbox -category:promotions -category:updates -category:social -from:googlealerts-noreply@google.com -from:noreply@google.com -from:no-reply@accounts.google.com',
   });
   const listData = listRes.data;
 
