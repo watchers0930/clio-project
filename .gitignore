@@ -47,3 +47,4 @@ Icon?
 next-env.d.ts
 .env*.local
 docs/logs/
+dist-electron/
