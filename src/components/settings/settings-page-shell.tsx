@@ -1,21 +1,25 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Building2, Users, PenLine, FileText, LayoutGrid } from 'lucide-react';
+import { Building2, Users, PenLine, FileText, LayoutGrid, Mail } from 'lucide-react';
 import { Spinner, Tabs, ConfirmDialog } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
 import TemplatesPage from '@/app/(app)/templates/page';
 import { DepartmentModal, UserModal } from '@/components/settings/settings-modals';
 import { DepartmentsSection, MenusSection, SignatureSection, UsersSection } from '@/components/settings/settings-sections';
+import { GmailSection } from '@/components/settings/gmail-section';
 import type { Department, UserItem } from '@/components/settings/types';
 
-type SettingsTab = 'departments' | 'users' | 'signature' | 'templates' | 'menus';
+type SettingsTab = 'departments' | 'users' | 'signature' | 'templates' | 'menus' | 'gmail';
 
 interface SettingsPageShellProps {
   initialTab?: SettingsTab;
+  gmailSuccess?: string;
+  gmailError?: string;
+  gmailMsg?: string;
 }
 
-export function SettingsPageShell({ initialTab = 'departments' }: SettingsPageShellProps) {
+export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gmailError, gmailMsg }: SettingsPageShellProps) {
   const [tab, setTab] = useState<SettingsTab>(initialTab);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [users, setUsers] = useState<UserItem[]>([]);
@@ -330,6 +334,7 @@ export function SettingsPageShell({ initialTab = 'departments' }: SettingsPageSh
           { id: 'users', label: '사용자', icon: <Users size={15} /> },
           { id: 'signature', label: '서명', icon: <PenLine size={15} /> },
           { id: 'templates', label: '템플릿', icon: <FileText size={15} /> },
+          { id: 'gmail', label: 'Gmail', icon: <Mail size={15} /> },
         ]}
         activeTab={tab}
         onChange={(id) => setTab(id as SettingsTab)}
@@ -366,6 +371,7 @@ export function SettingsPageShell({ initialTab = 'departments' }: SettingsPageSh
         </div>
       )}
       {tab === 'templates' && <div><TemplatesPage /></div>}
+      {tab === 'gmail' && <GmailSection successParam={gmailSuccess} errorParam={gmailError} msgParam={gmailMsg} />}
 
       <DepartmentModal
         open={showDeptModal}

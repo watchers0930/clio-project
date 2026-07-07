@@ -34,6 +34,21 @@ export type DbFileRecord = Record<string, unknown> & {
   original_name?: string | null;
   mime_type?: string | null;
   metadata?: Record<string, unknown> | null;
+  source?: string | null;
+  external_id?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DbGoogleConnection = {
+  id: string;
+  user_id: string;
+  email: string;
+  access_token: string;
+  refresh_token: string;
+  token_expiry: string | null;
+  last_synced_at: string | null;
+  sync_enabled: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -357,8 +372,14 @@ export interface Database {
       };
       files: {
         Row: DbFileRecord;
-        Insert: { id?: string; name: string; type?: string | null; size?: number; department_id?: string | null; uploaded_by?: string | null; status?: string; storage_path?: string | null; created_at?: string; updated_at?: string };
-        Update: { name?: string; type?: string | null; size?: number; department_id?: string | null; uploaded_by?: string | null; status?: string; scope?: string | null; storage_path?: string | null; updated_at?: string };
+        Insert: { id?: string; name: string; type?: string | null; size?: number; department_id?: string | null; uploaded_by?: string | null; status?: string; storage_path?: string | null; scope?: string | null; source?: string | null; external_id?: string | null; created_at?: string; updated_at?: string };
+        Update: { name?: string; type?: string | null; size?: number; department_id?: string | null; uploaded_by?: string | null; status?: string; scope?: string | null; storage_path?: string | null; source?: string | null; external_id?: string | null; updated_at?: string };
+        Relationships: [];
+      };
+      user_google_connections: {
+        Row: DbGoogleConnection;
+        Insert: { id?: string; user_id: string; email: string; access_token: string; refresh_token: string; token_expiry?: string | null; last_synced_at?: string | null; sync_enabled?: boolean; created_at?: string; updated_at?: string };
+        Update: { email?: string; access_token?: string; refresh_token?: string; token_expiry?: string | null; last_synced_at?: string | null; sync_enabled?: boolean; updated_at?: string };
         Relationships: [];
       };
       file_chunks: {
