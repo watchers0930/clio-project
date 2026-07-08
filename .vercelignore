@@ -1,0 +1,4 @@
+dist-electron/
+electron/
+electron-builder.yml
+.git/
