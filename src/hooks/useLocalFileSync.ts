@@ -142,6 +142,7 @@ export function useLocalFileSync() {
       const folderName = folderPath.split('/').pop() ?? folderPath;
       await loadIndexedCount();
       updateState({ status: 'ready', folderName, errorMessage: null });
+      void sync(); // 연결 후 자동 동기화
     } else {
       try {
         const dir = await window.showDirectoryPicker({ mode: 'read' });
@@ -149,13 +150,14 @@ export function useLocalFileSync() {
         setHandle(dir);
         await loadIndexedCount();
         updateState({ status: 'ready', folderName: dir.name, errorMessage: null });
+        void sync(dir); // 연결 후 자동 동기화 (handle 상태 반영 전에 dir 직접 전달)
       } catch (e) {
         if ((e as Error).name !== 'AbortError') {
           updateState({ status: 'error', errorMessage: '폴더 연결에 실패했습니다.' });
         }
       }
     }
-  }, [userId, loadIndexedCount]);
+  }, [userId, loadIndexedCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const grantPermission = useCallback(async () => {
     if (!handle) return;
@@ -169,7 +171,7 @@ export function useLocalFileSync() {
   }, [handle, loadIndexedCount]);
 
   /* ── 동기화 ── */
-  const sync = useCallback(async () => {
+  const sync = useCallback(async (overrideHandle?: FileSystemDirectoryHandle) => {
     if (!userId) return;
     const eAPI = getElectronAPI();
     updateState({ status: 'syncing', errorMessage: null, progress: null });
@@ -178,8 +180,9 @@ export function useLocalFileSync() {
       if (eAPI) {
         await syncElectron(eAPI);
       } else {
-        if (!handle) return;
-        await syncWeb(handle);
+        const activeHandle = overrideHandle ?? handle;
+        if (!activeHandle) return;
+        await syncWeb(activeHandle);
       }
       await loadIndexedCount();
       updateState({ status: 'ready', lastSynced: new Date(), progress: null });

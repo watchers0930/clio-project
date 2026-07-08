@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Mail, RefreshCw, Unlink, CheckCircle, AlertCircle } from 'lucide-react';
-import { Spinner } from '@/components/ui';
+import { Badge, Spinner } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
 
 interface GmailStatus {
@@ -96,14 +96,19 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
   return (
     <div className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden">
       <div className="px-8 py-6 border-b border-border">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#1B1F2B] flex items-center justify-center">
-            <Mail size={18} className="text-white" />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-[#1B1F2B] flex items-center justify-center">
+              <Mail size={18} className="text-white" />
+            </div>
+            <div>
+              <h2 className="text-[15px] font-semibold text-foreground">Gmail 연동</h2>
+              <p className="text-[12px] text-foreground-secondary">Gmail을 연결하면 이메일이 AI 검색에 포함됩니다.</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-[15px] font-semibold text-foreground">Gmail 연동</h2>
-            <p className="text-[12px] text-foreground-secondary">Gmail을 연결하면 이메일이 AI 검색에 포함됩니다.</p>
-          </div>
+          <Badge variant="info" className="w-fit">
+            개인 계정 직접 연결
+          </Badge>
         </div>
       </div>
 
@@ -142,7 +147,9 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
             {/* 안내 */}
             <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-100">
               <AlertCircle size={14} className="text-blue-500 mt-0.5 shrink-0" />
-              <p className="text-[12px] text-blue-700">최근 이메일 최대 100개를 가져와 AI 검색에 포함합니다. 이미 동기화된 이메일은 중복 추가되지 않습니다.</p>
+              <p className="text-[12px] text-blue-700">
+                최근 이메일 최대 100개를 가져와 AI 검색에 포함합니다. 이미 동기화된 이메일은 중복 추가되지 않습니다.
+              </p>
             </div>
 
             {/* 버튼 */}
@@ -170,7 +177,7 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
             </div>
           </div>
         ) : (
-          <div>
+          <div className="flex flex-col gap-5">
             <div className="p-5 rounded-xl bg-surface border border-border mb-5">
               <h3 className="text-[13px] font-semibold text-foreground mb-3">연결하면 이런 것이 가능합니다</h3>
               <ul className="space-y-2 text-[13px] text-foreground-secondary">
@@ -178,6 +185,22 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
                 <li className="flex items-center gap-2"><CheckCircle size={13} className="text-[#2E6FF2]" /> 첨부파일 정보를 검색 컨텍스트에 포함</li>
                 <li className="flex items-center gap-2"><CheckCircle size={13} className="text-[#2E6FF2]" /> 최근 30일 이메일 자동 동기화</li>
               </ul>
+            </div>
+
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <div className="flex items-start gap-2">
+                <AlertCircle size={14} className="mt-0.5 shrink-0 text-amber-700" />
+                <div className="min-w-0">
+                  <p className="text-[12px] font-semibold text-amber-900">연결이 막히는 경우</p>
+                  <p className="mt-1 text-[12px] leading-5 text-amber-800">
+                    Google Cloud Console에서 OAuth 동의 화면이 Testing이면, 등록된 test user만 연결할 수 있습니다.
+                    개인이 직접 연결하려면 앱을 External로 두고 Production으로 게시해야 합니다.
+                  </p>
+                  <p className="mt-2 text-[12px] leading-5 text-amber-800">
+                    현재 요청 권한은 gmail.readonly입니다. 이 권한은 Google 검증 대상이라, 공개 배포 전에는 OAuth 설정과 검증 상태를 맞춰야 합니다.
+                  </p>
+                </div>
+              </div>
             </div>
 
             <a

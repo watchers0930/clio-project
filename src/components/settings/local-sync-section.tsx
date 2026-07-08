@@ -37,7 +37,8 @@ export function LocalSyncSection() {
                 {state.folderName ? `📁 ${state.folderName}` : '로컬 폴더 미연결'}
               </p>
               <p className="mt-0.5 text-xs text-[#6B7280]">
-                {state.status === 'ready' && `파일 ${state.indexedCount}개 인덱싱됨 · 마지막 동기화: ${formatDate(state.lastSynced)}`}
+                {state.status === 'ready' && state.indexedCount === 0 && !state.lastSynced && '동기화 중 오류가 발생했거나 지원하지 않는 파일만 있습니다.'}
+                {state.status === 'ready' && (state.indexedCount > 0 || state.lastSynced) && `파일 ${state.indexedCount}개 인덱싱됨 · 마지막 동기화: ${formatDate(state.lastSynced)}`}
                 {state.status === 'idle' && '연결된 폴더가 없습니다'}
                 {state.status === 'connecting' && '연결 확인 중...'}
                 {state.status === 'requesting-permission' && '접근 권한이 필요합니다'}
