@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Spinner } from '@/components/ui';
 import { startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
+import { getCalendarDays } from '@/lib/schedule-utils';
 import CalendarHeader from '@/components/schedule/calendar-header';
 import CalendarGrid from '@/components/schedule/calendar-grid';
 import EventFormModal from '@/components/schedule/event-form-modal';
@@ -123,6 +124,14 @@ export default function SchedulePage() {
 
   const activeTodoCount = todos.filter((t) => t.status === 'active').length;
   const completedTodoCount = todos.filter((t) => t.status === 'completed').length;
+  const visibleCalendarDays = useMemo(() => getCalendarDays(year, month), [year, month]);
+  const visibleCalendarStart = visibleCalendarDays[0];
+  const visibleCalendarEnd = visibleCalendarDays[visibleCalendarDays.length - 1];
+  const visibleTodos = todos.filter((todo) => {
+    if (!todo.due_date) return false;
+    const dueDate = new Date(`${todo.due_date}T00:00:00`);
+    return dueDate >= visibleCalendarStart && dueDate <= visibleCalendarEnd;
+  });
   const scheduleFocus =
     selectedEvent?.title ||
     todos.find((t) => t.status === 'active')?.title ||
@@ -203,6 +212,7 @@ export default function SchedulePage() {
                 year={year}
                 month={month}
                 events={events}
+                todos={todos}
                 selectedDate={selectedDate}
                 onDateClick={(date) => {
                   setSelectedDate(date);
@@ -214,6 +224,10 @@ export default function SchedulePage() {
                   setSelectedDate(null);
                   setEventModalOpen(true);
                 }}
+                onTodoClick={(todo) => {
+                  setSelectedTodo(todo);
+                  setTodoModalOpen(true);
+                }}
               />
             </>
           )}
@@ -221,7 +235,7 @@ export default function SchedulePage() {
 
         <aside className="min-w-0 rounded-xl border border-border bg-white p-4 shadow-sm xl:sticky xl:top-24 xl:self-start">
           <TodoList
-            todos={todos}
+            todos={visibleTodos}
             filter={todoFilter}
             onFilterChange={setTodoFilter}
             onAdd={() => { setSelectedTodo(null); setTodoModalOpen(true); }}

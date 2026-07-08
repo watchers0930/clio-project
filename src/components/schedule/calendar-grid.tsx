@@ -3,15 +3,17 @@
 import { isSameDay } from 'date-fns';
 import { WEEKDAY_LABELS, getCalendarDays } from '@/lib/schedule-utils';
 import CalendarCell from './calendar-cell';
-import type { CalendarEvent } from '@/lib/supabase/types';
+import type { CalendarEvent, TodoItem } from '@/lib/supabase/types';
 
 interface CalendarGridProps {
   year: number;
   month: number;
   events: CalendarEvent[];
+  todos?: TodoItem[];
   selectedDate: Date | null;
   onDateClick: (date: Date) => void;
   onEventClick: (event: CalendarEvent) => void;
+  onTodoClick?: (todo: TodoItem) => void;
 }
 
 const WEEKDAY_COLORS = ['#ff3b30', '#1B1F2B', '#1B1F2B', '#1B1F2B', '#1B1F2B', '#1B1F2B', '#2E6FF2'];
@@ -20,9 +22,11 @@ export default function CalendarGrid({
   year,
   month,
   events,
+  todos = [],
   selectedDate,
   onDateClick,
   onEventClick,
+  onTodoClick,
 }: CalendarGridProps) {
   const days = getCalendarDays(year, month);
   const currentMonth = new Date(year, month);
@@ -33,6 +37,12 @@ export default function CalendarGrid({
       const end = new Date(e.end_at);
       return date >= new Date(start.getFullYear(), start.getMonth(), start.getDate()) &&
              date <= new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    });
+
+  const getTodosForDate = (date: Date) =>
+    todos.filter((todo) => {
+      if (!todo.due_date) return false;
+      return isSameDay(new Date(`${todo.due_date}T00:00:00`), date);
     });
 
   return (
@@ -58,9 +68,11 @@ export default function CalendarGrid({
             date={day}
             currentMonth={currentMonth}
             events={getEventsForDate(day)}
+            todos={getTodosForDate(day)}
             isSelected={selectedDate ? isSameDay(day, selectedDate) : false}
             onClick={onDateClick}
             onEventClick={onEventClick}
+            onTodoClick={onTodoClick}
           />
         ))}
       </div>
