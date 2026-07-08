@@ -85,14 +85,16 @@ export function useLocalFileSync() {
     }
   }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loadIndexedCount = useCallback(async () => {
+  const loadIndexedCount = useCallback(async (): Promise<number> => {
     const res = await fetch('/api/local-files/list');
-    if (!res.ok) return;
+    if (!res.ok) return 0;
     const data = await res.json() as { files: Array<{ file_path: string; file_hash?: string }> };
     const hashes: Record<string, string> = {};
     (data.files ?? []).forEach((f) => { if (f.file_hash) hashes[f.file_path] = f.file_hash; });
     setServerHashes(hashes);
-    updateState({ indexedCount: data.files?.length ?? 0 });
+    const count = data.files?.length ?? 0;
+    updateState({ indexedCount: count });
+    return count;
   }, []);
 
   /* ── Electron 복원 ── */
@@ -163,12 +165,13 @@ export function useLocalFileSync() {
     if (!handle) return;
     const perm = await requestPermission(handle);
     if (perm === 'granted') {
-      await loadIndexedCount();
+      const count = await loadIndexedCount();
       updateState({ status: 'ready' });
+      if (!count) void sync(handle); // 인덱싱 파일 없으면 자동 동기화
     } else {
       updateState({ status: 'error', errorMessage: '접근 권한이 거부되었습니다.' });
     }
-  }, [handle, loadIndexedCount]);
+  }, [handle, loadIndexedCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── 동기화 ── */
   const sync = useCallback(async (overrideHandle?: FileSystemDirectoryHandle) => {
