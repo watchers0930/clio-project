@@ -54,7 +54,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '추출된 텍스트 없음' }, { status: 422 });
   }
 
-  const chunks = chunkText(text);
+  // 파일명을 텍스트 앞에 포함해 파일명 기반 벡터 검색도 가능하게
+  const textWithMeta = `파일명: ${file.name}\n\n${text}`;
+  const chunks = chunkText(textWithMeta);
   if (chunks.length === 0) {
     return NextResponse.json({ error: '청킹 결과 없음' }, { status: 422 });
   }

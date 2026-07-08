@@ -25,7 +25,7 @@ win:
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
-  installerLanguages: [Korean]
+  installerLanguages: [ko]
   language: 1042
 
 dmg:
