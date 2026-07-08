@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { generateEmbedding } from '@/lib/ai/embeddings';
 
-const MATCH_THRESHOLD = 0.3;
+const MATCH_THRESHOLD = 0.15;
 const MATCH_COUNT = 5;
 
 interface LocalChunkRow {
@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
   const { query } = await req.json() as { query: string };
   if (!query?.trim()) return NextResponse.json({ results: [] });
 
-  // 벡터 검색 + 파일명 키워드 검색 병행
-  const [embeddingResult, nameSearchResult] = await Promise.allSettled([
+  // 파일명 검색 + 청크 내용 키워드 검색 + 벡터 검색 병행
+  const [embeddingResult, nameSearchResult, contentSearchResult] = await Promise.allSettled([
     generateEmbedding(query),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase as any)
@@ -42,12 +42,19 @@ export async function POST(req: NextRequest) {
       .eq('user_id', userId)
       .ilike('file_name', `%${query}%`)
       .limit(MATCH_COUNT),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
+      .from('local_file_chunks')
+      .select('local_file_id, content, local_file_index!inner(file_name, file_path, file_type, user_id)')
+      .eq('local_file_index.user_id', userId)
+      .ilike('content', `%${query}%`)
+      .limit(MATCH_COUNT),
   ]);
 
   const seen = new Set<string>();
   const results: ReturnType<typeof makeResult>[] = [];
 
-  // 파일명 매칭 결과 먼저 (정확도 높음)
+  // 1. 파일명 매칭 결과 먼저 (정확도 높음)
   if (nameSearchResult.status === 'fulfilled') {
     const nameRows = (nameSearchResult.value.data ?? []) as FileIndexRow[];
     for (const row of nameRows) {
@@ -57,7 +64,22 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 벡터 검색 결과 추가 (중복 제외)
+  // 2. 청크 내용 키워드 검색 (파일명 미매칭 시 보완)
+  if (contentSearchResult.status === 'fulfilled') {
+    const chunkRows = (contentSearchResult.value.data ?? []) as Array<{
+      local_file_id: string;
+      content: string;
+      local_file_index: { file_name: string; file_path: string; file_type: string };
+    }>;
+    for (const row of chunkRows) {
+      if (seen.has(row.local_file_id)) continue;
+      seen.add(row.local_file_id);
+      const idx = row.local_file_index;
+      results.push(makeResult(row.local_file_id, idx.file_name, idx.file_path, idx.file_type, row.content.slice(0, 200), 80));
+    }
+  }
+
+  // 3. 벡터 검색 결과 추가 (중복 제외)
   if (embeddingResult.status === 'fulfilled') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any).rpc('match_local_file_chunks', {
