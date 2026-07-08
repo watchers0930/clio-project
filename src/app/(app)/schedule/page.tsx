@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { CalendarDays, CheckSquare } from 'lucide-react';
-import { Spinner, Tabs } from '@/components/ui';
+import { Spinner } from '@/components/ui';
 import { startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import CalendarHeader from '@/components/schedule/calendar-header';
 import CalendarGrid from '@/components/schedule/calendar-grid';
@@ -13,11 +12,8 @@ import TodoList from '@/components/schedule/todo-list';
 import TodoFormModal from '@/components/schedule/todo-form-modal';
 import type { CalendarEvent, TodoItem, TodoStatus, TodoPriority } from '@/lib/supabase/types';
 
-type Tab = 'calendar' | 'todo';
-
 export default function SchedulePage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<Tab>('calendar');
   const [loading, setLoading] = useState(true);
 
   // 캘린더 상태
@@ -184,66 +180,56 @@ export default function SchedulePage() {
         </div>
       </section>
 
-      <div>
-        <Tabs
-          className=""
-          tabs={[
-            { id: 'calendar', label: '캘린더', icon: <CalendarDays size={14} /> },
-            { id: 'todo', label: '할일', icon: <CheckSquare size={14} />, count: activeTodoCount || undefined },
-          ]}
-          activeTab={activeTab}
-          onChange={(id) => setActiveTab(id as Tab)}
-        />
-      </div>
-
       {/* 콘텐츠 */}
-      <div>
-      {activeTab === 'calendar' ? (
-        loading ? (
-          <div className="flex justify-center py-20">
-            <Spinner size="lg" />
-          </div>
-        ) : (
-          <>
-            <CalendarHeader
-              year={year}
-              month={month}
-              onPrev={goPrevMonth}
-              onNext={goNextMonth}
-              onToday={goToday}
-              departments={departments}
-              selectedDept={selectedDept}
-              onDeptChange={setSelectedDept}
-            />
-            <CalendarGrid
-              year={year}
-              month={month}
-              events={events}
-              selectedDate={selectedDate}
-              onDateClick={(date) => {
-                setSelectedDate(date);
-                setSelectedEvent(null);
-                setEventModalOpen(true);
-              }}
-              onEventClick={(event) => {
-                setSelectedEvent(event);
-                setSelectedDate(null);
-                setEventModalOpen(true);
-              }}
-            />
-          </>
-        )
-      ) : (
-        <TodoList
-          todos={todos}
-          filter={todoFilter}
-          onFilterChange={setTodoFilter}
-          onAdd={() => { setSelectedTodo(null); setTodoModalOpen(true); }}
-          onToggle={handleToggleTodo}
-          onEdit={(todo) => { setSelectedTodo(todo); setTodoModalOpen(true); }}
-          onDelete={handleDeleteTodo}
-        />
-      )}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,7fr)_minmax(300px,3fr)]">
+        <section className="min-w-0">
+          {loading ? (
+            <div className="flex justify-center py-20">
+              <Spinner size="lg" />
+            </div>
+          ) : (
+            <>
+              <CalendarHeader
+                year={year}
+                month={month}
+                onPrev={goPrevMonth}
+                onNext={goNextMonth}
+                onToday={goToday}
+                departments={departments}
+                selectedDept={selectedDept}
+                onDeptChange={setSelectedDept}
+              />
+              <CalendarGrid
+                year={year}
+                month={month}
+                events={events}
+                selectedDate={selectedDate}
+                onDateClick={(date) => {
+                  setSelectedDate(date);
+                  setSelectedEvent(null);
+                  setEventModalOpen(true);
+                }}
+                onEventClick={(event) => {
+                  setSelectedEvent(event);
+                  setSelectedDate(null);
+                  setEventModalOpen(true);
+                }}
+              />
+            </>
+          )}
+        </section>
+
+        <aside className="min-w-0 rounded-xl border border-border bg-white p-4 shadow-sm xl:sticky xl:top-24 xl:self-start">
+          <TodoList
+            todos={todos}
+            filter={todoFilter}
+            onFilterChange={setTodoFilter}
+            onAdd={() => { setSelectedTodo(null); setTodoModalOpen(true); }}
+            onToggle={handleToggleTodo}
+            onEdit={(todo) => { setSelectedTodo(todo); setTodoModalOpen(true); }}
+            onDelete={handleDeleteTodo}
+          />
+        </aside>
       </div>
 
       {/* 일정 모달 */}

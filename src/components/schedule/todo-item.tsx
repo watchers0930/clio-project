@@ -19,13 +19,13 @@ export default function TodoItemRow({ todo, onToggle, onEdit, onDelete }: TodoIt
 
   return (
     <div
-      className="flex items-center gap-3 px-5 py-3.5 border-b border-border last:border-0 hover:bg-surface-tertiary transition-colors group"
+      className="group flex items-start gap-3 border-b border-border px-4 py-3.5 transition-colors last:border-0 hover:bg-surface-tertiary"
       style={{ opacity: isCompleted ? 0.55 : 1 }}
     >
       {/* 체크박스 */}
       <button
         onClick={() => onToggle(todo.id)}
-        className="w-[18px] h-[18px] rounded flex items-center justify-center flex-shrink-0 border-2 transition-colors"
+        className="mt-0.5 flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center rounded border-2 transition-colors"
         style={{
           borderColor: isCompleted ? '#2E6FF2' : '#E2E5EA',
           backgroundColor: isCompleted ? '#2E6FF2' : 'transparent',
@@ -48,31 +48,33 @@ export default function TodoItemRow({ todo, onToggle, onEdit, onDelete }: TodoIt
         {todo.description && (
           <p className="text-[11px] text-foreground-secondary truncate mt-0.5">{todo.description}</p>
         )}
+
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {/* 마감일 */}
+          {todo.due_date && (
+            <span
+              className="text-[12px] font-num"
+              style={{ color: isOverdue ? '#ff3b30' : '#7C8494', fontWeight: isOverdue ? 600 : 400 }}
+            >
+              {format(new Date(todo.due_date + 'T00:00:00'), 'M/d (EEE)', { locale: ko })}
+            </span>
+          )}
+
+          {/* 우선순위 뱃지 */}
+          <span
+            className="rounded-full px-2.5 py-1 text-[10px] font-medium"
+            style={{
+              backgroundColor: getPriorityColor(todo.priority as TodoPriority) + '14',
+              color: getPriorityColor(todo.priority as TodoPriority),
+            }}
+          >
+            {getPriorityLabel(todo.priority as TodoPriority)}
+          </span>
+        </div>
       </div>
 
-      {/* 마감일 */}
-      {todo.due_date && (
-        <span
-          className="text-[12px] flex-shrink-0 font-num"
-          style={{ color: isOverdue ? '#ff3b30' : '#7C8494', fontWeight: isOverdue ? 600 : 400 }}
-        >
-          {format(new Date(todo.due_date + 'T00:00:00'), 'M/d (EEE)', { locale: ko })}
-        </span>
-      )}
-
-      {/* 우선순위 뱃지 */}
-      <span
-        className="text-[10px] font-medium px-2.5 py-1 rounded-full flex-shrink-0"
-        style={{
-          backgroundColor: getPriorityColor(todo.priority as TodoPriority) + '14',
-          color: getPriorityColor(todo.priority as TodoPriority),
-        }}
-      >
-        {getPriorityLabel(todo.priority as TodoPriority)}
-      </span>
-
       {/* 액션 */}
-      <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+      <div className="flex flex-shrink-0 gap-1.5 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100">
         <button onClick={() => onEdit(todo)} className="p-1.5 rounded hover:bg-surface-secondary">
           <Pencil size={13} className="text-foreground-secondary" />
         </button>
