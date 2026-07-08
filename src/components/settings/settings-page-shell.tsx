@@ -11,6 +11,7 @@ import { GmailSection } from '@/components/settings/gmail-section';
 import { MemoLockSection } from '@/components/settings/memo-lock-section';
 import { LocalSyncSection } from '@/components/settings/local-sync-section';
 import type { Department, UserItem } from '@/components/settings/types';
+import { useAuthStore } from '@/store/auth-store';
 
 type SettingsTab = 'departments' | 'users' | 'signature' | 'templates' | 'menus' | 'gmail' | 'memo-lock' | 'local-sync';
 
@@ -22,6 +23,8 @@ interface SettingsPageShellProps {
 }
 
 export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gmailError, gmailMsg }: SettingsPageShellProps) {
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'admin';
   const [tab, setTab] = useState<SettingsTab>(initialTab);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [users, setUsers] = useState<UserItem[]>([]);
@@ -333,7 +336,7 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
         tabs={[
           { id: 'menus', label: '메뉴', icon: <LayoutGrid size={15} /> },
           { id: 'departments', label: '부서', icon: <Building2 size={15} /> },
-          { id: 'users', label: '사용자', icon: <Users size={15} /> },
+          ...(isAdmin ? [{ id: 'users', label: '사용자', icon: <Users size={15} /> }] : []),
           { id: 'signature', label: '서명', icon: <PenLine size={15} /> },
           { id: 'templates', label: '템플릿', icon: <FileText size={15} /> },
           { id: 'gmail', label: 'Gmail', icon: <Mail size={15} /> },
@@ -347,7 +350,7 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
 
       {tab === 'menus' && <div><MenusSection /></div>}
       {tab === 'departments' && <div><DepartmentsSection departments={departments} onOpenDeptModal={openDeptModal} onDeleteDept={deleteDept} /></div>}
-      {tab === 'users' && (
+      {tab === 'users' && isAdmin && (
         <div>
         <UsersSection
           users={users}
