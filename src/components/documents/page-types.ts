@@ -12,6 +12,7 @@ export interface DocumentItem {
   parentId?: string | null;
   originDocumentId?: string | null;
   originContext?: string | null;
+  outputFormat?: string | null;
 }
 
 export interface VersionItem {

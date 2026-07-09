@@ -32,6 +32,7 @@ type DocumentInsertPayload = {
   version_number?: number;
   origin_document_id?: string;
   origin_context?: string;
+  output_format?: string;
 };
 
 type FileChunkRow = {
@@ -297,6 +298,7 @@ export function buildDocumentInsertPayload(params: {
   versionFields?: VersionFields;
   originDocumentId?: string | null;
   originContext?: string | null;
+  outputFormat?: string | null;
 }): DocumentInsertPayload {
   const payload: DocumentInsertPayload = {
     title: params.title,
@@ -313,6 +315,7 @@ export function buildDocumentInsertPayload(params: {
   if (typeof params.versionFields?.version_number === 'number') payload.version_number = params.versionFields.version_number;
   if (params.originDocumentId) payload.origin_document_id = params.originDocumentId;
   if (params.originContext) payload.origin_context = params.originContext;
+  if (params.outputFormat) payload.output_format = params.outputFormat;
 
   return payload;
 }

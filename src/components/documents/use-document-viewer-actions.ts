@@ -141,7 +141,7 @@ export function useDocumentViewerActions({
 
   const handleDownload = async (doc: Document) => {
     try {
-      const effectiveDownloadFormat = doc.template === '업무협약서(MOU)' ? 'pdf' : downloadFormat;
+      const effectiveDownloadFormat = doc.template === '업무협약서(MOU)' ? 'pdf' : (doc.outputFormat ?? downloadFormat);
       if (effectiveDownloadFormat === 'pdf') {
         const res = await fetch(`/api/documents/${doc.id}/download?font=${encodeURIComponent(selectedFont)}&format=pdf`);
         if (!res.ok) throw new Error('다운로드 실패');

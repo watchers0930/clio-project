@@ -608,31 +608,46 @@ export function useDocumentsPage() {
   };
 
   const handleDownloadGeneratedFile = async () => {
-    if (!generatedDoc || !generatedDownloadUrl) return;
+    if (!generatedDoc) return;
     const selectedTemplateItem = templates.find((t) => t.id === selectedTemplate);
     const isHtmlTemplate = selectedTemplateItem?.templateMode === 'html-template';
     try {
-      const res = await fetch(generatedDownloadUrl);
-      if (!res.ok) throw new Error('다운로드 실패');
-      if (isHtmlTemplate) {
-        const html = await res.text();
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) { toast.error('팝업이 차단되었습니다. 팝업을 허용해 주세요.'); return; }
-        printWindow.document.write(html);
-        printWindow.document.close();
-        printWindow.onload = () => { printWindow.print(); };
-        return;
+      if (generatedDownloadUrl) {
+        const res = await fetch(generatedDownloadUrl);
+        if (!res.ok) throw new Error('다운로드 실패');
+        if (isHtmlTemplate) {
+          const html = await res.text();
+          const printWindow = window.open('', '_blank');
+          if (!printWindow) { toast.error('팝업이 차단되었습니다. 팝업을 허용해 주세요.'); return; }
+          printWindow.document.write(html);
+          printWindow.document.close();
+          printWindow.onload = () => { printWindow.print(); };
+          return;
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const extension = (generatedDownloadUrl.split('?')[0] ?? '').split('.').pop() || outputFormat;
+        a.download = `${generatedDoc.title}.${extension}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        // signed URL이 없는 경우 document ID로 직접 다운로드
+        const res = await fetch(`/api/documents/${generatedDoc.id}/download?format=${outputFormat}`);
+        if (!res.ok) throw new Error('다운로드 실패');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${generatedDoc.title}.${outputFormat}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
       }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const extension = (generatedDownloadUrl.split('?')[0] ?? '').split('.').pop() || outputFormat;
-      a.download = `${generatedDoc.title}.${extension}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
     } catch {
       toast.error('다운로드에 실패했습니다.');
     }

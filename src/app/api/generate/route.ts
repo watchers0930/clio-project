@@ -153,6 +153,7 @@ function buildDocumentSummary(params: {
   parentId?: string | null;
   originDocumentId?: string | null;
   originContext?: string | null;
+  outputFormat?: string | null;
 }) {
   return {
     id: params.id,
@@ -166,6 +167,7 @@ function buildDocumentSummary(params: {
     parentId: params.parentId ?? null,
     originDocumentId: params.originDocumentId ?? null,
     originContext: params.originContext ?? null,
+    outputFormat: params.outputFormat ?? null,
   };
 }
 
@@ -326,6 +328,7 @@ export async function POST(request: NextRequest) {
             parentId: (newDoc as { parent_id?: string | null } | null)?.parent_id ?? null,
             originDocumentId: (newDoc as { origin_document_id?: string | null } | null)?.origin_document_id ?? null,
             originContext: (newDoc as { origin_context?: string | null } | null)?.origin_context ?? null,
+            outputFormat: format,
           }),
             format: 'hwpx',
             mode: 'contract-direct',
@@ -439,6 +442,7 @@ export async function POST(request: NextRequest) {
               parentId: (newDoc as { parent_id?: string | null } | null)?.parent_id ?? null,
               originDocumentId: (newDoc as { origin_document_id?: string | null } | null)?.origin_document_id ?? null,
               originContext: (newDoc as { origin_context?: string | null } | null)?.origin_context ?? null,
+              outputFormat: format,
             }),
             format,
             downloadUrl: signedUrl,
@@ -494,6 +498,7 @@ export async function POST(request: NextRequest) {
             parentId: (newDoc as { parent_id?: string | null } | null)?.parent_id ?? null,
             originDocumentId: (newDoc as { origin_document_id?: string | null } | null)?.origin_document_id ?? null,
             originContext: (newDoc as { origin_context?: string | null } | null)?.origin_context ?? null,
+            outputFormat: format,
           }),
           format,
           downloadUrl: signedUrl,
@@ -543,6 +548,7 @@ export async function POST(request: NextRequest) {
               parentId: (newDoc as { parent_id?: string | null } | null)?.parent_id ?? null,
               originDocumentId: (newDoc as { origin_document_id?: string | null } | null)?.origin_document_id ?? null,
               originContext: (newDoc as { origin_context?: string | null } | null)?.origin_context ?? null,
+              outputFormat: format,
             }),
             format,
             downloadUrl: signedUrl,
@@ -573,6 +579,7 @@ export async function POST(request: NextRequest) {
         versionFields,
         originDocumentId,
         originContext,
+        outputFormat: format,
       });
       const { data: newDoc, error } = await supabase.from('documents').insert(payload).select().single();
 
@@ -619,6 +626,7 @@ export async function POST(request: NextRequest) {
             parentId: (newDoc as { parent_id?: string | null }).parent_id ?? null,
             originDocumentId: (newDoc as { origin_document_id?: string | null }).origin_document_id ?? null,
             originContext: (newDoc as { origin_context?: string | null }).origin_context ?? null,
+            outputFormat: format,
           }),
           format,
           downloadUrl: fileUrl?.signedUrl ?? null,
@@ -638,6 +646,7 @@ export async function POST(request: NextRequest) {
           parentId: (newDoc as { parent_id?: string | null }).parent_id ?? null,
           originDocumentId: (newDoc as { origin_document_id?: string | null }).origin_document_id ?? null,
           originContext: (newDoc as { origin_context?: string | null }).origin_context ?? null,
+          outputFormat: format,
         }),
         format,
       }, { status: 201 });
@@ -676,6 +685,7 @@ export async function POST(request: NextRequest) {
           parentId: (newDoc as { parent_id?: string | null } | null)?.parent_id ?? null,
           originDocumentId: (newDoc as { origin_document_id?: string | null } | null)?.origin_document_id ?? null,
           originContext: (newDoc as { origin_context?: string | null } | null)?.origin_context ?? null,
+          outputFormat: format,
         }),
         format,
         downloadUrl: signedUrl,

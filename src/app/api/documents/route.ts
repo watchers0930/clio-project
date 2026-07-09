@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     let query = createAdminSupabaseClient()
       .from('documents')
-      .select('*, templates:template_id(name), version_number, parent_id, origin_document_id, origin_context')
+      .select('*, templates:template_id(name), version_number, parent_id, origin_document_id, origin_context, output_format')
       .order('created_at', { ascending: false });
 
     if (status) {
@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
       parent_id?: string | null;
       origin_document_id?: string | null;
       origin_context?: string | null;
+      output_format?: string | null;
       templates?: { name: string } | null;
     };
 
@@ -109,6 +110,7 @@ export async function GET(request: NextRequest) {
         parentId: d.parent_id ?? null,
         originDocumentId: d.origin_document_id ?? null,
         originContext: d.origin_context ?? null,
+        outputFormat: d.output_format ?? null,
       };
     }).sort((a, b) => `${b.createdAt}`.localeCompare(`${a.createdAt}`));
 
