@@ -12,6 +12,10 @@ import {
   type TemplateBundle,
   type TemplateFieldDefinition,
 } from '@/lib/templates/template-schema';
+import {
+  createEmploymentCertificateTemplateBundle,
+  EMPLOYMENT_CERTIFICATE_TEMPLATE_NAME,
+} from '@/lib/templates/employment-certificate';
 import { extractTemplateFileInnerHtml } from '@/lib/templates/template-file-preview';
 import type { DbTemplate } from '@/lib/supabase/types';
 
@@ -75,6 +79,8 @@ type TemplateRowWithJoins = DbTemplate & {
   departments?: TemplateDepartmentJoin;
   template_file?: TemplateFileJoin;
 };
+
+const BUILTIN_EMPLOYMENT_CERTIFICATE_TEMPLATE_ID = '__builtin_employment_certificate__';
 
 function mergeTemplateFields(
   baseFields: TemplateFieldDefinition[],
@@ -200,6 +206,27 @@ export async function GET(request: NextRequest) {
         } : null,
       };
     });
+
+    if (!tplList.some((template) => template.name === EMPLOYMENT_CERTIFICATE_TEMPLATE_NAME)) {
+      const bundle = createEmploymentCertificateTemplateBundle();
+      tplList.push({
+        id: BUILTIN_EMPLOYMENT_CERTIFICATE_TEMPLATE_ID,
+        name: EMPLOYMENT_CERTIFICATE_TEMPLATE_NAME,
+        description: '직원 재직 사실 증명서 발급용 템플릿',
+        content: bundle.outline,
+        department: '전사',
+        departmentId: null,
+        scope: '전사 공용',
+        placeholders: [],
+        templateMode: bundle.mode,
+        templateHtml: bundle.layoutHtml,
+        templateFields: bundle.fields,
+        templateSections: bundle.sections,
+        lastUpdated: '',
+        usageCount: 0,
+        templateFile: null,
+      });
+    }
 
     return NextResponse.json({ templates: tplList });
   } catch {

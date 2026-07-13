@@ -13,6 +13,13 @@ import {
   BUSINESS_PLAN_OUTLINE,
   BUSINESS_PLAN_TEMPLATE_HTML,
 } from '@/lib/templates/business-plan';
+import {
+  createEmploymentCertificateTemplateBundle,
+  EMPLOYMENT_CERTIFICATE_FIELDS,
+  EMPLOYMENT_CERTIFICATE_OUTLINE,
+  EMPLOYMENT_CERTIFICATE_TEMPLATE_HTML,
+  isEmploymentCertificateTemplateName,
+} from '@/lib/templates/employment-certificate';
 
 export interface TemplateFieldDefinition {
   key: string;
@@ -95,6 +102,10 @@ function buildDefaultHtml(name: string, sections: TemplateSectionDefinition[]) {
 
   if (isWorklogTemplateName(name)) {
     return WORKLOG_TEMPLATE_HTML;
+  }
+
+  if (isEmploymentCertificateTemplateName(name)) {
+    return EMPLOYMENT_CERTIFICATE_TEMPLATE_HTML;
   }
 
   const tocItems = sections
@@ -185,11 +196,35 @@ export function createTemplateBundle(params: {
     };
   }
 
+  if (isEmploymentCertificateTemplateName(params.name)) {
+    const certificateBundle = createEmploymentCertificateTemplateBundle();
+    const placeholderFields = Array.isArray(params.placeholders)
+      ? params.placeholders
+          .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
+          .map((item, index) => ({
+            key: String(item.key ?? `placeholder_${index + 1}`),
+            label: String(item.label ?? item.key ?? `플레이스홀더 ${index + 1}`),
+            type: 'text' as const,
+            placeholder: typeof item.context === 'string' ? item.context : undefined,
+          }))
+      : [];
+
+    return {
+      ...certificateBundle,
+      fields: [
+        ...certificateBundle.fields,
+        ...placeholderFields.filter((field) => !certificateBundle.fields.some((base) => base.key === field.key)),
+      ],
+    };
+  }
+
   const outline = (params.outline ?? '').trim() || `# ${params.name}\n## 개요\n## 주요 내용\n## 결론`;
   const resolvedOutline = isWorklogTemplateName(params.name)
     ? WORKLOG_OUTLINE
     : isBusinessPlanTemplateName(params.name)
       ? BUSINESS_PLAN_OUTLINE
+      : isEmploymentCertificateTemplateName(params.name)
+        ? EMPLOYMENT_CERTIFICATE_OUTLINE
       : outline;
   const sections = parseOutlineSections(resolvedOutline);
   const placeholderFields = Array.isArray(params.placeholders)
@@ -207,6 +242,8 @@ export function createTemplateBundle(params: {
     ? [...WORKLOG_FIELDS]
     : isBusinessPlanTemplateName(params.name)
       ? [...BUSINESS_PLAN_FIELDS]
+      : isEmploymentCertificateTemplateName(params.name)
+        ? [...EMPLOYMENT_CERTIFICATE_FIELDS]
       : DEFAULT_FIELDS;
   const fields = [
     ...baseFields,

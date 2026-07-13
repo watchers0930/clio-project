@@ -6,7 +6,7 @@ import { Spinner } from '@/components/ui';
 import type { CalendarEvent, EventType } from '@/lib/supabase/types';
 import { getEventTypeLabel } from '@/lib/schedule-utils';
 
-const EVENT_TYPES: EventType[] = ['meeting', 'deadline', 'personal', 'company', 'other'];
+const EVENT_TYPES: EventType[] = ['meeting', 'deadline', 'personal', 'company', 'cancelled', 'other'];
 
 interface EventFormModalProps {
   open: boolean;

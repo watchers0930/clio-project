@@ -8,9 +8,10 @@ import { DOCUMENT_RELATION_LABELS, TEMPLATE_ICONS } from '@/components/documents
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
 import { ReferenceDocumentPicker } from '@/components/documents/reference-document-picker';
 
-function getAllowedOutputFormats(templateFile: TemplateItem['templateFile'] | null, isContract: boolean, templateMode?: string) {
+function getAllowedOutputFormats(templateFile: TemplateItem['templateFile'] | null, isContract: boolean, templateMode?: string, templateName?: string) {
   if (isContract) return ['hwpx'] as const;
-  if (templateMode === 'html-template') return ['pdf'] as const;
+  if (templateName && /재직\s*증명서/.test(templateName)) return ['pdf'] as const;
+  if (templateMode === 'html-template') return ['docx', 'pdf'] as const;
   if (!templateFile?.name) return ['docx', 'pdf', 'xlsx', 'pptx'] as const;
 
   const ext = templateFile.name.split('.').pop()?.toLowerCase() ?? '';
@@ -35,6 +36,11 @@ interface NewDocumentModalProps {
   generatedDoc: DocumentItem | null;
   outputFormat: string;
   generatedDownloadUrl: string | null;
+  generatedDownloadMeta: {
+    fileName: string | null;
+    extension: string | null;
+    mimeType: string | null;
+  };
   generatedOutline: Record<string, unknown> | null;
   contractFormData: Record<string, string>;
   dateErrors: Record<string, string>;
@@ -93,6 +99,7 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
     generatedDoc,
     outputFormat,
     generatedDownloadUrl,
+    generatedDownloadMeta,
     generatedOutline,
     contractFormData,
     dateErrors,
@@ -142,7 +149,7 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
   const isWorklogTemplate = isWorklogTemplateName(selectedTemplateItem?.name);
   const isProposalTemplate = selectedTemplateItem?.name === '제안서';
   const contractSchema = selectedTemplateItem ? getContractSchema(selectedTemplateItem.name) : null;
-  const allowedOutputFormats = getAllowedOutputFormats(selectedTemplateItem?.templateFile ?? null, Boolean(contractSchema), selectedTemplateItem?.templateMode);
+  const allowedOutputFormats = getAllowedOutputFormats(selectedTemplateItem?.templateFile ?? null, Boolean(contractSchema), selectedTemplateItem?.templateMode, selectedTemplateItem?.name);
   const templateFields = selectedTemplateItem?.templateFields
     ?? (isWorklogTemplate ? [...WORKLOG_FIELDS] : [
     { key: 'report_title', label: '문서 제목', type: 'text' as const, required: true, placeholder: '예: 2026년 2분기 사업 보고서' },
@@ -164,6 +171,7 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
         documentInputs,
       })
     : '';
+  const generatedUsesPrintWindow = generatedDownloadMeta.extension === 'html' || generatedDownloadMeta.mimeType?.startsWith('text/html');
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="new-doc-title">
       <div className="mx-4 max-h-[92vh] w-full max-w-4xl flex flex-col rounded-2xl bg-white shadow-xl">
@@ -529,7 +537,7 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
               )}
               {(generatedDownloadUrl || generatedDoc.id) && (
                 <button onClick={onDownloadGeneratedFile} className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-dark transition-colors">
-                  {selectedTemplateItem?.templateMode === 'html-template' ? 'PDF 저장창 열기' : `${outputFormat.toUpperCase()} 파일 다운로드`}
+                  {generatedUsesPrintWindow ? 'PDF 저장창 열기' : `${outputFormat.toUpperCase()} 파일 다운로드`}
                 </button>
               )}
               {selectedTemplateItem?.name === '제안서' && generatedDoc.id && (

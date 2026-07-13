@@ -141,6 +141,10 @@ function applyWorklogTemplateOverrides(
 
 const VALID_FORMATS: OutputFormat[] = ['docx', 'pdf', 'hwpx', 'xlsx', 'pptx'];
 
+function isMouTemplateName(templateName: string | null | undefined) {
+  return Boolean(templateName && /업무협약서|MOU|양해각서/i.test(templateName));
+}
+
 function buildDocumentSummary(params: {
   id?: string;
   title: string;
@@ -250,9 +254,6 @@ export async function POST(request: NextRequest) {
     const templateContext = await loadTemplateContext(supabase, templateId, customStructure, format);
     const { tmpl, templateBundle, templateName, templateFileText, templateBuffer, templateFileName } = templateContext;
     format = templateContext.format;
-    if (templateBundle?.mode === 'html-template') {
-      format = 'pdf';
-    }
     const isProposalTemplate = isProposalTemplateName(templateName);
 
     // 참조 제안서 콘텐츠 로드
@@ -301,7 +302,7 @@ export async function POST(request: NextRequest) {
         }
         try {
           const content = `[계약서 자동 작성] ${templateName}`;
-          const { newDoc, signedUrl } = await persistCompletedRender({
+          const { newDoc, signedUrl, downloadFileName, downloadExtension, downloadMimeType } = await persistCompletedRender({
             supabase,
             authUserId,
             rendered,
@@ -333,6 +334,9 @@ export async function POST(request: NextRequest) {
             format: 'hwpx',
             mode: 'contract-direct',
             downloadUrl: signedUrl,
+            downloadFileName,
+            downloadExtension,
+            downloadMimeType,
           }, { status: 201 });
         } catch (e) {
           console.error('[generate] Contract upload error:', e);
@@ -415,7 +419,7 @@ export async function POST(request: NextRequest) {
       {
         try {
           const content = generationResult.markdown?.trim() || `[DOCX 양식 채우기] ${templateName}`;
-          const { newDoc, signedUrl } = await persistCompletedRender({
+          const { newDoc, signedUrl, downloadFileName, downloadExtension, downloadMimeType } = await persistCompletedRender({
             supabase,
             authUserId,
             rendered,
@@ -446,6 +450,9 @@ export async function POST(request: NextRequest) {
             }),
             format,
             downloadUrl: signedUrl,
+            downloadFileName,
+            downloadExtension,
+            downloadMimeType,
           }, { status: 201 });
         } catch (e) {
           console.error('[generate] DOCX FormData Storage upload error:', e);
@@ -471,7 +478,7 @@ export async function POST(request: NextRequest) {
       const rendered = await renderDocument(generationResult, theme);
         try {
           const content = generationResult.markdown?.trim() || `[HWPX 양식 채우기] ${templateName}`;
-          const { newDoc, signedUrl } = await persistCompletedRender({
+          const { newDoc, signedUrl, downloadFileName, downloadExtension, downloadMimeType } = await persistCompletedRender({
           supabase,
           authUserId,
           rendered,
@@ -502,6 +509,9 @@ export async function POST(request: NextRequest) {
           }),
           format,
           downloadUrl: signedUrl,
+          downloadFileName,
+          downloadExtension,
+          downloadMimeType,
         }, { status: 201 });
       } catch (e) {
         console.error('[generate] HWPX FormData Storage upload error:', e);
@@ -521,7 +531,7 @@ export async function POST(request: NextRequest) {
       {
         try {
           const content = generationResult.markdown?.trim() || `[DOCX 템플릿 기반] ${templateName}`;
-          const { newDoc, signedUrl } = await persistCompletedRender({
+          const { newDoc, signedUrl, downloadFileName, downloadExtension, downloadMimeType } = await persistCompletedRender({
             supabase,
             authUserId,
             rendered,
@@ -552,6 +562,9 @@ export async function POST(request: NextRequest) {
             }),
             format,
             downloadUrl: signedUrl,
+            downloadFileName,
+            downloadExtension,
+            downloadMimeType,
           }, { status: 201 });
         } catch (e) {
           console.error('[generate] DOCX Storage upload error:', e);
@@ -563,7 +576,7 @@ export async function POST(request: NextRequest) {
     // 마크다운 기반 포맷(DOCX새로생성/HWPX/PDF)은 기존처럼 documents 테이블에도 저장
     if (generationResult.markdown) {
       // 제안서/사업계획서: documentInputs를 콘텐츠 앞에 HTML 코멘트로 저장 (다운로드 시 표지 복원용)
-      const shouldEmbedInputs = isProposalTemplate || isBusinessPlanTemplateName(templateName);
+      const shouldEmbedInputs = isProposalTemplate || isBusinessPlanTemplateName(templateName) || isMouTemplateName(templateName);
       const markdownContent = shouldEmbedInputs
         ? `<!--DOCUMENT_INPUTS:${JSON.stringify(resolvedDocumentInputs)}-->\n${generationResult.markdown}`
         : generationResult.markdown;
@@ -630,6 +643,9 @@ export async function POST(request: NextRequest) {
           }),
           format,
           downloadUrl: fileUrl?.signedUrl ?? null,
+          downloadFileName: rendered.fileName,
+          downloadExtension: rendered.extension,
+          downloadMimeType: rendered.mimeType,
         }, { status: 201 });
       }
 
@@ -658,7 +674,7 @@ export async function POST(request: NextRequest) {
       : `[PPT] ${generationResult.pptxSlides?.length}개 슬라이드`;
 
     try {
-      const { newDoc, signedUrl } = await persistCompletedRender({
+      const { newDoc, signedUrl, downloadFileName, downloadExtension, downloadMimeType } = await persistCompletedRender({
         supabase,
         authUserId,
         rendered,
@@ -689,6 +705,9 @@ export async function POST(request: NextRequest) {
         }),
         format,
         downloadUrl: signedUrl,
+        downloadFileName,
+        downloadExtension,
+        downloadMimeType,
         outline: format === 'xlsx' ? { sheets: generationResult.excelSheets } : { slides: generationResult.pptxSlides },
       }, { status: 201 });
     } catch (e) {

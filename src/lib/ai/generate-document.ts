@@ -11,6 +11,7 @@ import type { TemplateBundle } from '@/lib/templates/template-schema';
 import { isWorklogTemplateName } from '@/lib/templates/worklog';
 import { isProposalTemplateName } from '@/lib/templates/proposal';
 import { isBusinessPlanTemplateName } from '@/lib/templates/business-plan';
+import { isEmploymentCertificateTemplateName } from '@/lib/templates/employment-certificate';
 import {
   MAX_CONTEXT_CHARS,
   MAX_TEMPLATE_FILE_CHARS,
@@ -259,6 +260,32 @@ export async function generateDocumentContent(params: {
       '## 차일업무계획',
       tomorrowWork,
     ].filter(Boolean).join('\n');
+  }
+
+  if (isEmploymentCertificateTemplateName(templateName)) {
+    const title = documentInputs?.report_title?.trim() || templateName;
+    const lines = [
+      `# ${title}`,
+      '',
+      '## 인적사항',
+      `- 성명(한글): ${documentInputs?.employee_name || '[미입력]'}`,
+      `- 주민등록번호: ${documentInputs?.resident_registration_no || ''}`,
+      `- 주소: ${documentInputs?.employee_address || ''}`,
+      '',
+      '## 재직사항 및 제출용도',
+      `- 근무부서: ${documentInputs?.department || ''}`,
+      `- 직위: ${documentInputs?.position || ''}`,
+      `- 재직기간: ${documentInputs?.employment_start_date || '[미입력]'} 부터 ${documentInputs?.employment_end_date || documentInputs?.report_date || ''} 현재까지`,
+      `- 제출용도: ${documentInputs?.purpose || ''}`,
+      '',
+      '## 회사 정보',
+      `- 회사명: ${documentInputs?.company_name || ''}`,
+      `- 대표자: ${documentInputs?.representative_name || ''}`,
+      `- 사업자등록번호: ${documentInputs?.business_registration_no || ''}`,
+      `- 주소: ${documentInputs?.company_address || ''}`,
+      `- 전화: ${documentInputs?.company_phone || ''}`,
+    ];
+    return lines.join('\n');
   }
 
   // 제안서: 섹션별 분할 생성 (템플릿 파일 없는 번들 기반)

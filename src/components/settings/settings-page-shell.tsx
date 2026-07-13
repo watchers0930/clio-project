@@ -339,8 +339,8 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
           ...(isAdmin ? [{ id: 'users', label: '사용자', icon: <Users size={15} /> }] : []),
           { id: 'signature', label: '서명', icon: <PenLine size={15} /> },
           { id: 'templates', label: '템플릿', icon: <FileText size={15} /> },
-          { id: 'gmail', label: 'Gmail', icon: <Mail size={15} /> },
           { id: 'memo-lock', label: '메모 잠금', icon: <Lock size={15} /> },
+          { id: 'gmail', label: 'Gmail', icon: <Mail size={15} /> },
           { id: 'local-sync', label: '로컬 동기화', icon: <HardDrive size={15} /> },
         ]}
         activeTab={tab}

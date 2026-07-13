@@ -116,5 +116,5 @@ export const DEFAULT_THEME: CorporateTheme = {
   primaryColor: '2E6FF2',
   fontFamily: '맑은 고딕',
   fontFamilyEn: 'Malgun Gothic',
-  fontSize: 12,
+  fontSize: 11,
 };

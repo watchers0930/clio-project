@@ -21,6 +21,14 @@ function interpolateTemplateValue(value: string, replacements: Record<string, st
   return value.replace(/\{\{([^}]+)\}\}/g, (_match, key: string) => replacements[key.trim()] ?? '');
 }
 
+function formatKoreanDate(value: string) {
+  const trimmed = value.trim();
+  const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return trimmed;
+  const [, year, month, day] = match;
+  return `${year}년 ${Number(month)}월 ${Number(day)}일`;
+}
+
 function markdownFragmentToHtml(md: string) {
   let html = md.trim();
   if (!html) return '<p class="preview-empty">내용이 비어 있습니다.</p>';
@@ -65,10 +73,15 @@ export function buildTemplatePreviewData(bundle: TemplateBundle, name: string) {
     special_notes: '기관 요청사항, 제외 범위, 작성 메모가 이 영역에 반영됩니다.',
   };
 
+  replacements.report_date_ko = formatKoreanDate(replacements.report_date);
+
   for (const field of bundle.fields) {
     const fallbackValue = field.defaultValue || field.placeholder || `${field.label} 샘플`;
     if (!replacements[field.key]) {
       replacements[field.key] = interpolateTemplateValue(fallbackValue, replacements);
+    }
+    if (field.type === 'date') {
+      replacements[`${field.key}_ko`] = formatKoreanDate(replacements[field.key]);
     }
     if (field.key.endsWith('_items')) {
       replacements[`${field.key}_html`] = multilineToListItems(interpolateTemplateValue(fallbackValue, replacements));

@@ -120,6 +120,7 @@ export default function DocumentsPage() {
         generatedDoc={state.generatedDoc}
         outputFormat={state.outputFormat}
         generatedDownloadUrl={state.generatedDownloadUrl}
+        generatedDownloadMeta={state.generatedDownloadMeta}
         generatedOutline={state.generatedOutline}
         contractFormData={state.contractFormData}
         dateErrors={state.dateErrors}

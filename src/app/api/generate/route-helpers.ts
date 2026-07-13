@@ -5,6 +5,10 @@ import type { DbFileRecord, DbTemplate, DbUser } from '@/lib/supabase/types';
 import type { CorporateTheme, OutputFormat, RenderOutput } from '@/lib/renderers/types';
 import { DEFAULT_THEME } from '@/lib/renderers/types';
 import { parseTemplateBundle, type TemplateBundle } from '@/lib/templates/template-schema';
+import {
+  createEmploymentCertificateTemplateBundle,
+  EMPLOYMENT_CERTIFICATE_TEMPLATE_NAME,
+} from '@/lib/templates/employment-certificate';
 
 const FONT_MAP: Record<string, string> = {
   '맑은 고딕': 'Malgun Gothic',
@@ -40,6 +44,8 @@ type FileChunkRow = {
   content: string;
   chunk_index: number;
 };
+
+const BUILTIN_EMPLOYMENT_CERTIFICATE_TEMPLATE_ID = '__builtin_employment_certificate__';
 
 export function buildTheme(font: unknown): CorporateTheme {
   const fontParam = typeof font === 'string' ? font : '맑은 고딕';
@@ -180,7 +186,16 @@ export async function loadTemplateContext(
   format: OutputFormat;
 }> {
   let tmpl: Pick<DbTemplate, 'name' | 'content' | 'description' | 'placeholders' | 'template_file_id'> | null = null;
-  if (templateId) {
+  if (templateId === BUILTIN_EMPLOYMENT_CERTIFICATE_TEMPLATE_ID) {
+    const bundle = createEmploymentCertificateTemplateBundle();
+    tmpl = {
+      name: EMPLOYMENT_CERTIFICATE_TEMPLATE_NAME,
+      content: JSON.stringify(bundle),
+      description: '직원 재직 사실 증명서 발급용 템플릿',
+      placeholders: [],
+      template_file_id: null,
+    };
+  } else if (templateId) {
     const { data } = await supabase
       .from('templates')
       .select('name, content, description, placeholders, template_file_id')
@@ -309,7 +324,7 @@ export function buildDocumentInsertPayload(params: {
     created_by: params.createdBy,
   };
 
-  if (params.templateId) payload.template_id = params.templateId;
+  if (params.templateId && !params.templateId.startsWith('__builtin_')) payload.template_id = params.templateId;
   if (params.storagePath) payload.storage_path = params.storagePath;
   if (params.versionFields?.parent_id) payload.parent_id = params.versionFields.parent_id;
   if (typeof params.versionFields?.version_number === 'number') payload.version_number = params.versionFields.version_number;
@@ -367,5 +382,12 @@ export async function persistCompletedRender(params: {
     details: { title, storagePath, ...auditDetails },
   }).then(() => {}, () => {});
 
-  return { storagePath, signedUrl: urlData?.signedUrl ?? null, newDoc };
+  return {
+    storagePath,
+    signedUrl: urlData?.signedUrl ?? null,
+    newDoc,
+    downloadFileName: rendered.fileName,
+    downloadExtension: rendered.extension,
+    downloadMimeType: rendered.mimeType,
+  };
 }

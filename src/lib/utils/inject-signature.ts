@@ -46,9 +46,10 @@ export function injectSignatureDocx(docxBuffer: Buffer, sigBuffer: Buffer): Buff
 
     for (const marker of markers) {
       if (docXml.includes(marker)) {
-        // <w:t> 내 텍스트 교체 — 텍스트 노드를 찾아서 교체
+        // <w:t> 내 첫 번째 서명 마커만 교체한다. MOU처럼 양 당사자 서명란이
+        // 함께 있는 문서는 작성자(갑) 위치에만 도장을 넣어야 한다.
         docXml = docXml.replace(
-          new RegExp(`(<w:t[^>]*>)[^<]*(${marker.replace(/[()]/g, '\\$&')})[^<]*(</w:t>)`, 'g'),
+          new RegExp(`(<w:t[^>]*>)[^<]*(${marker.replace(/[()]/g, '\\$&')})[^<]*(</w:t>)`),
           (_, open, _m, close) => `${open}${close}${drawingXml}`
         );
         injected = true;

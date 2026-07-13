@@ -107,6 +107,14 @@ function interpolateTemplateValue(value: string, replacements: Record<string, st
   return value.replace(/\{\{([^}]+)\}\}/g, (_match, key: string) => replacements[key.trim()] ?? '');
 }
 
+function formatKoreanDate(value: string) {
+  const trimmed = value.trim();
+  const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return trimmed;
+  const [, year, month, day] = match;
+  return `${year}년 ${Number(month)}월 ${Number(day)}일`;
+}
+
 export function buildTemplateRenderData(params: {
   markdown: string;
   title: string;
@@ -130,6 +138,10 @@ export function buildTemplateRenderData(params: {
     source_file_summary: documentInputs?.source_file_summary || '',
   };
 
+  if (replacements.report_date) {
+    replacements.report_date_ko = formatKoreanDate(replacements.report_date);
+  }
+
   Object.entries(documentInputs ?? {}).forEach(([key, value]) => {
     replacements[key] = value || replacements[key] || '';
     if (key.endsWith('_items')) {
@@ -144,6 +156,9 @@ export function buildTemplateRenderData(params: {
       ? (documentInputs?.[field.key] || fallbackValue || replacements[field.key] || '')
       : (replacements[field.key] || fallbackValue);
     replacements[field.key] = interpolateTemplateValue(fieldValue, replacements);
+    if (field.type === 'date') {
+      replacements[`${field.key}_ko`] = formatKoreanDate(replacements[field.key]);
+    }
     if (field.key.endsWith('_items')) {
       const itemsValue = hasInputValue ? (documentInputs?.[field.key] ?? '') : fallbackValue;
       replacements[`${field.key}_html`] = multilineToListItems(interpolateTemplateValue(itemsValue, replacements));

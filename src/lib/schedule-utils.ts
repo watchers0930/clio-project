@@ -30,6 +30,7 @@ const EVENT_TYPE_COLORS: Record<EventType, string> = {
   deadline: '#ff3b30',
   personal: '#30d158',
   company: '#ff9f0a',
+  cancelled: '#8E8E93',
   other: '#6e6e73',
 };
 
@@ -39,6 +40,7 @@ const EVENT_TYPE_LABELS: Record<EventType, string> = {
   deadline: '마감',
   personal: '개인',
   company: '전사',
+  cancelled: '취소',
   other: '기타',
 };
 

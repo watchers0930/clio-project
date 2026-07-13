@@ -25,6 +25,11 @@ export {
 import { TEMPLATE_DISPLAY_ORDER } from '@/components/documents/document-page-constants';
 
 type AllowedOutputFormat = 'docx' | 'hwpx' | 'pdf' | 'xlsx' | 'pptx';
+type GeneratedDownloadMeta = {
+  fileName: string | null;
+  extension: string | null;
+  mimeType: string | null;
+};
 
 function interpolateFieldDefaultValue(value: string, inputs: Record<string, string>, fields: TemplateFieldDefinition[]) {
   return value.replace(/\{\{([^}]+)\}\}/g, (_match, key: string) => {
@@ -35,9 +40,10 @@ function interpolateFieldDefaultValue(value: string, inputs: Record<string, stri
   });
 }
 
-function getAllowedOutputFormats(templateFile: Template['templateFile'] | null | undefined, isContract: boolean, templateMode?: string): AllowedOutputFormat[] {
+function getAllowedOutputFormats(templateFile: Template['templateFile'] | null | undefined, isContract: boolean, templateMode?: string, templateName?: string): AllowedOutputFormat[] {
   if (isContract) return ['hwpx'];
-  if (templateMode === 'html-template') return ['pdf'];
+  if (templateName && /재직\s*증명서/.test(templateName)) return ['pdf'];
+  if (templateMode === 'html-template') return ['docx', 'pdf'];
   if (!templateFile?.name) return ['docx', 'pdf', 'xlsx', 'pptx'];
 
   const ext = templateFile.name.split('.').pop()?.toLowerCase() ?? '';
@@ -66,6 +72,11 @@ export function useDocumentsPage() {
   const [generatedDoc, setGeneratedDoc] = useState<Document | null>(null);
   const [outputFormat, setOutputFormat] = useState<string>('docx');
   const [generatedDownloadUrl, setGeneratedDownloadUrl] = useState<string | null>(null);
+  const [generatedDownloadMeta, setGeneratedDownloadMeta] = useState<GeneratedDownloadMeta>({
+    fileName: null,
+    extension: null,
+    mimeType: null,
+  });
   const [generatedOutline, setGeneratedOutline] = useState<Record<string, unknown> | null>(null);
   const [contractFormData, setContractFormData] = useState<Record<string, string>>({});
   const [dateErrors, setDateErrors] = useState<Record<string, string>>({});
@@ -315,7 +326,7 @@ export function useDocumentsPage() {
   useEffect(() => {
     const selectedTemplateItem = templates.find((template) => template.id === selectedTemplate);
     const isContract = selectedTemplateItem ? isContractTemplate(selectedTemplateItem.name) : false;
-    const allowedFormats = getAllowedOutputFormats(selectedTemplateItem?.templateFile, isContract, selectedTemplateItem?.templateMode);
+    const allowedFormats = getAllowedOutputFormats(selectedTemplateItem?.templateFile, isContract, selectedTemplateItem?.templateMode, selectedTemplateItem?.name);
 
     if (!allowedFormats.includes(outputFormat as AllowedOutputFormat)) {
       setOutputFormat(allowedFormats[0]);
@@ -393,6 +404,7 @@ export function useDocumentsPage() {
     setGeneratedDoc(null);
     setOutputFormat('docx');
     setGeneratedDownloadUrl(null);
+    setGeneratedDownloadMeta({ fileName: null, extension: null, mimeType: null });
     setGeneratedOutline(null);
     setFileSearch('');
     setFileDeptFilter('전체');
@@ -499,16 +511,15 @@ export function useDocumentsPage() {
   const handleGenerate = async () => {
     setGenerating(true);
     setGeneratedDownloadUrl(null);
+    setGeneratedDownloadMeta({ fileName: null, extension: null, mimeType: null });
     setGeneratedOutline(null);
     try {
       const isCustom = selectedTemplate === '__none__';
       const finalInstructions = isCustom ? `## 문서 구조:\n${customStructure.trim()}\n\n${instructions.trim() ? `## 추가 지시사항:\n${instructions.trim()}` : ''}` : instructions.trim() || undefined;
       const selectedTemplateItem = templates.find((template) => template.id === selectedTemplate);
       const isContract = selectedTemplateItem ? isContractTemplate(selectedTemplateItem.name) : false;
-      const allowedFormats = getAllowedOutputFormats(selectedTemplateItem?.templateFile, isContract, selectedTemplateItem?.templateMode);
-      const actualFormat = selectedTemplateItem?.templateMode === 'html-template'
-        ? 'pdf'
-        : allowedFormats.includes(outputFormat as AllowedOutputFormat) ? outputFormat : allowedFormats[0];
+      const allowedFormats = getAllowedOutputFormats(selectedTemplateItem?.templateFile, isContract, selectedTemplateItem?.templateMode, selectedTemplateItem?.name);
+      const actualFormat = allowedFormats.includes(outputFormat as AllowedOutputFormat) ? outputFormat : allowedFormats[0];
       if (actualFormat !== outputFormat) setOutputFormat(actualFormat);
       const res = await fetch('/api/generate', {
         method: 'POST',
@@ -541,6 +552,11 @@ export function useDocumentsPage() {
       setGeneratedDoc(newDoc);
       setDocs((prev) => [newDoc, ...prev]);
       if (data.downloadUrl) setGeneratedDownloadUrl(data.downloadUrl);
+      setGeneratedDownloadMeta({
+        fileName: typeof data.downloadFileName === 'string' ? data.downloadFileName : null,
+        extension: typeof data.downloadExtension === 'string' ? data.downloadExtension : null,
+        mimeType: typeof data.downloadMimeType === 'string' ? data.downloadMimeType : null,
+      });
       if (data.outline) setGeneratedOutline(data.outline);
       if (data.format) setOutputFormat(data.format);
       setNewVersionDocId(null);
@@ -609,44 +625,49 @@ export function useDocumentsPage() {
 
   const handleDownloadGeneratedFile = async () => {
     if (!generatedDoc) return;
-    const selectedTemplateItem = templates.find((t) => t.id === selectedTemplate);
-    const isHtmlTemplate = selectedTemplateItem?.templateMode === 'html-template';
+    const opensPrintWindow = generatedDownloadMeta.extension === 'html' || generatedDownloadMeta.mimeType?.startsWith('text/html');
     try {
-      if (generatedDownloadUrl) {
-        const res = await fetch(generatedDownloadUrl);
-        if (!res.ok) throw new Error('다운로드 실패');
-        if (isHtmlTemplate) {
-          const html = await res.text();
-          const printWindow = window.open('', '_blank');
-          if (!printWindow) { toast.error('팝업이 차단되었습니다. 팝업을 허용해 주세요.'); return; }
-          printWindow.document.write(html);
-          printWindow.document.close();
-          printWindow.onload = () => { printWindow.print(); };
-          return;
-        }
-        const blob = await res.blob();
+      if (opensPrintWindow) {
+        const res = generatedDoc.id
+          ? await fetch(`/api/documents/${generatedDoc.id}/download?format=pdf`)
+          : generatedDownloadUrl
+          ? await fetch(generatedDownloadUrl)
+          : null;
+        if (!res?.ok) throw new Error('다운로드 실패');
+        const html = await res.text();
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) { toast.error('팝업이 차단되었습니다. 팝업을 허용해 주세요.'); return; }
+        printWindow.document.write(html);
+        printWindow.document.close();
+        printWindow.onload = () => {
+          setTimeout(() => printWindow.print(), 300);
+        };
+        return;
+      }
+
+      const triggerBrowserDownload = (blob: Blob, fileName: string) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        const extension = (generatedDownloadUrl.split('?')[0] ?? '').split('.').pop() || outputFormat;
-        a.download = `${generatedDoc.title}.${extension}`;
+        a.download = fileName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+      };
+
+      if (generatedDownloadUrl) {
+        const res = await fetch(generatedDownloadUrl);
+        if (!res.ok) throw new Error('다운로드 실패');
+        const blob = await res.blob();
+        const extension = generatedDownloadMeta.extension ?? outputFormat;
+        triggerBrowserDownload(blob, generatedDownloadMeta.fileName ?? `${generatedDoc.title}.${extension}`);
       } else {
         // signed URL이 없는 경우 document ID로 직접 다운로드
         const res = await fetch(`/api/documents/${generatedDoc.id}/download?format=${outputFormat}`);
         if (!res.ok) throw new Error('다운로드 실패');
         const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${generatedDoc.title}.${outputFormat}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        triggerBrowserDownload(blob, generatedDownloadMeta.fileName ?? `${generatedDoc.title}.${outputFormat}`);
       }
     } catch {
       toast.error('다운로드에 실패했습니다.');
@@ -670,7 +691,7 @@ export function useDocumentsPage() {
   };
 
   return {
-    router, loading, docs, showModal, step, selectedTemplate, selectedFiles, instructions, customStructure, documentInputs, aiAssistEnabled, aiAssistPrompt, generating, generatedDoc, outputFormat, generatedDownloadUrl, generatedOutline, contractFormData, dateErrors, fileSearch, fileDeptFilter, fileTypeFilter, uploadingLocalFiles, shareDocId, shareDocTitle, selectedDocIds, viewDoc, editContent, editTitle, saving, qualityCheckDocId, todoExtractOpen, todoExtractInitial, sttModalOpen, showViewerComments, versionPanelDocId, versionItems, versionLoading, confirmState, templates, sourceFiles, selectedFont, downloadFormat, isEdited, isDraft, originDocumentId, originContext, creationContextTitle, referenceDocId, referenceDocuments, extractingFields, extractedFieldKeys,
+    router, loading, docs, showModal, step, selectedTemplate, selectedFiles, instructions, customStructure, documentInputs, aiAssistEnabled, aiAssistPrompt, generating, generatedDoc, outputFormat, generatedDownloadUrl, generatedDownloadMeta, generatedOutline, contractFormData, dateErrors, fileSearch, fileDeptFilter, fileTypeFilter, uploadingLocalFiles, shareDocId, shareDocTitle, selectedDocIds, viewDoc, editContent, editTitle, saving, qualityCheckDocId, todoExtractOpen, todoExtractInitial, sttModalOpen, showViewerComments, versionPanelDocId, versionItems, versionLoading, confirmState, templates, sourceFiles, selectedFont, downloadFormat, isEdited, isDraft, originDocumentId, originContext, creationContextTitle, referenceDocId, referenceDocuments, extractingFields, extractedFieldKeys,
     loadDocs, setShareDocId, setShareDocTitle, setTodoExtractOpen, setTodoExtractInitial, setSttModalOpen, setShowViewerComments, setQualityCheckDocId, setVersionPanelDocId, setStep, setSelectedTemplate, setSelectedFiles, setInstructions, setCustomStructure, setDocumentInputs, setAiAssistEnabled, setAiAssistPrompt, setOutputFormat, setContractFormData, setFileSearch, setFileDeptFilter, setFileTypeFilter, setEditContent, setEditTitle, setDownloadFormat, setSelectedFont, resetModal, openCreateModal, toggleFile, canNext, handleGenerate, handleDelete, handleBulkDelete, handleDeleteAll, toggleDocSelect, toggleSelectAll, openVersionPanel, openDocModal, handleSave, handleComplete, handleRevertToDraft, handleDownload, handleDownloadAiContext, handleViewerClose, handleDownloadGeneratedFile, handleDateInput, closeConfirm, startReuseDocument, openSearchFromDocument, uploadLocalFiles, setReferenceDocId, extractFieldsFromSources,
     handleVersionNew: (docId: string) => { setNewVersionDocId(docId); setVersionPanelDocId(null); openCreateModal(); },
   };

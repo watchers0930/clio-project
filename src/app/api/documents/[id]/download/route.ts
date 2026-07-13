@@ -318,9 +318,6 @@ export async function GET(
         }
       }
     } catch { /* 이름 없으면 그냥 진행 */ }
-    if (templateBundle?.mode === 'html-template') {
-      format = 'pdf';
-    }
     if (!inline) {
       try {
         const adminClient = createAdminSupabaseClient();

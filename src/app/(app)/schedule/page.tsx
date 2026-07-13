@@ -50,7 +50,7 @@ export default function SchedulePage() {
     const params = new URLSearchParams({ start, end });
     if (selectedDept) params.set('department_id', selectedDept);
 
-    fetch(`/api/events?${params}`)
+    fetch(`/api/events?${params}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((res) => { if (res.success) setEvents(res.data ?? []); })
       .then(() => {}, () => {})
@@ -87,17 +87,31 @@ export default function SchedulePage() {
   // 일정 CRUD
   const handleCreateEvent = async (data: EventFormData) => {
     const res = await fetch('/api/events', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-    if ((await res.json()).success) fetchEvents();
+    const json = await res.json();
+    if (json.success) {
+      if (json.data) setEvents((prev) => [...prev, json.data as CalendarEvent]);
+      fetchEvents();
+    }
   };
   const handleUpdateEvent = async (data: EventFormData) => {
     if (!selectedEvent) return;
     const res = await fetch(`/api/events/${selectedEvent.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-    if ((await res.json()).success) fetchEvents();
+    const json = await res.json();
+    if (json.success) {
+      if (json.data) {
+        const updatedEvent = { ...selectedEvent, ...(json.data as CalendarEvent) };
+        setEvents((prev) => prev.map((event) => event.id === updatedEvent.id ? updatedEvent : event));
+      }
+      fetchEvents();
+    }
   };
   const handleDeleteEvent = async () => {
     if (!selectedEvent) return;
     const res = await fetch(`/api/events/${selectedEvent.id}`, { method: 'DELETE' });
-    if ((await res.json()).success) fetchEvents();
+    if ((await res.json()).success) {
+      setEvents((prev) => prev.filter((event) => event.id !== selectedEvent.id));
+      fetchEvents();
+    }
   };
 
   // 할일 CRUD
