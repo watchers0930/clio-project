@@ -252,8 +252,7 @@ const employmentCertificateBundle = createBundle({
 @page{size:A4;margin:0;}
 .employment-cert{position:relative;box-sizing:border-box;width:210mm;height:297mm;min-height:297mm;margin:0 auto;background:#fff;color:#111;overflow:hidden;font-family:Batang,"AppleMyungjo","Nanum Myeongjo","Noto Serif KR",serif;letter-spacing:-2px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 .employment-cert *{box-sizing:border-box;}
-.employment-cert .watermark{position:absolute;left:50%;top:52%;z-index:0;width:82mm;max-height:82mm;object-fit:contain;opacity:.06;transform:translate(-50%,-50%);pointer-events:none;}
-.employment-cert .watermark[src=""]{display:none;}
+.employment-cert .watermark-pattern{position:absolute;inset:-28mm;z-index:0;opacity:.045;background-image:var(--company-logo-watermark);background-repeat:repeat;background-position:center;background-size:44mm auto;transform:rotate(-18deg);transform-origin:center;pointer-events:none;}
 .employment-cert .title{position:absolute;top:35mm;left:0;z-index:1;width:100%;margin:0;text-align:center;font-size:11.5mm;font-weight:700;letter-spacing:-2px;line-height:1;}
 .employment-cert .section{position:absolute;left:32mm;z-index:1;width:154mm;font-size:4.2mm;line-height:1;}
 .employment-cert .section-1{top:67mm;}
@@ -270,12 +269,12 @@ const employmentCertificateBundle = createBundle({
 .employment-cert .period{padding-left:3mm;word-spacing:.9mm;}
 .employment-cert .statement{position:absolute;top:174mm;left:0;z-index:1;width:100%;margin:0;text-align:center;font-size:4.2mm;line-height:1;}
 .employment-cert .date{position:absolute;top:202mm;left:0;z-index:1;width:100%;margin:0;text-align:center;font-size:4.2mm;line-height:1;letter-spacing:0;word-spacing:4mm;}
-.employment-cert .company-info{position:absolute;top:226mm;left:34mm;z-index:1;width:130mm;font-size:4.2mm;line-height:1;}
-.employment-cert .company-row{position:relative;min-height:10.7mm;}
-.employment-cert .company-label{display:inline-block;width:26mm;text-align:justify;text-align-last:justify;white-space:nowrap;}
+.employment-cert .company-info{position:absolute;top:226mm;left:34mm;z-index:1;width:152mm;font-size:4.2mm;line-height:1;}
+.employment-cert .company-row{position:relative;display:grid;grid-template-columns:26mm 1fr;align-items:start;min-height:10.7mm;}
+.employment-cert .company-label{display:block;width:26mm;text-align:justify;text-align-last:justify;white-space:nowrap;}
 .employment-cert .registration-label{letter-spacing:1.35mm;white-space:nowrap;}
-.employment-cert .company-value{display:inline-block;max-width:92mm;padding-left:6mm;letter-spacing:0;line-height:1.35;vertical-align:top;word-break:keep-all;}
-.employment-cert .address-value{max-width:none;white-space:nowrap;}
+.employment-cert .company-value{display:block;min-width:0;padding-left:8mm;letter-spacing:0;line-height:1.35;word-break:keep-all;}
+.employment-cert .address-value{white-space:nowrap;}
 .employment-cert .seal{position:absolute;left:75mm;top:-3.7mm;width:18mm;height:18mm;display:inline-flex;align-items:center;justify-content:center;}
 .employment-cert .seal-text{position:relative;z-index:1;}
 .employment-cert .seal-image{position:absolute;left:50%;top:50%;z-index:2;width:18mm;height:18mm;object-fit:contain;transform:translate(-50%,-50%);}
@@ -283,7 +282,7 @@ const employmentCertificateBundle = createBundle({
 @media print{html,body{width:210mm;height:297mm;min-height:297mm;margin:0!important;padding:0!important;background:#fff;overflow:hidden}.employment-cert{width:210mm;height:297mm;min-height:297mm;margin:0;box-shadow:none;break-after:avoid;page-break-after:avoid;}}
 </style>
 <article class="employment-cert">
-  <img class="watermark" src="{{company_logo_src}}" alt="" />
+  <div class="watermark-pattern" style="--company-logo-watermark:url('{{company_logo_src}}')"></div>
   <h1 class="title">{{report_title}}</h1>
 
   <section class="section section-1">
