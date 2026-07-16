@@ -252,8 +252,10 @@ const employmentCertificateBundle = createBundle({
 @page{size:A4;margin:0;}
 .employment-cert{position:relative;box-sizing:border-box;width:210mm;height:297mm;min-height:297mm;margin:0 auto;background:#fff;color:#111;overflow:hidden;font-family:Batang,"AppleMyungjo","Nanum Myeongjo","Noto Serif KR",serif;letter-spacing:-2px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 .employment-cert *{box-sizing:border-box;}
-.employment-cert .title{position:absolute;top:35mm;left:0;width:100%;margin:0;text-align:center;font-size:11.5mm;font-weight:700;letter-spacing:-2px;line-height:1;}
-.employment-cert .section{position:absolute;left:32mm;width:154mm;font-size:4.2mm;line-height:1;}
+.employment-cert .watermark{position:absolute;left:50%;top:52%;z-index:0;width:82mm;max-height:82mm;object-fit:contain;opacity:.06;transform:translate(-50%,-50%);pointer-events:none;}
+.employment-cert .watermark[src=""]{display:none;}
+.employment-cert .title{position:absolute;top:35mm;left:0;z-index:1;width:100%;margin:0;text-align:center;font-size:11.5mm;font-weight:700;letter-spacing:-2px;line-height:1;}
+.employment-cert .section{position:absolute;left:32mm;z-index:1;width:154mm;font-size:4.2mm;line-height:1;}
 .employment-cert .section-1{top:67mm;}
 .employment-cert .section-2{top:112mm;}
 .employment-cert .section-title{margin:0 0 5mm 2mm;font-size:4.3mm;font-weight:700;line-height:1;}
@@ -266,9 +268,9 @@ const employmentCertificateBundle = createBundle({
 .employment-cert .personal col:nth-child(4),.employment-cert .employment col:nth-child(4){width:33%;}
 .employment-cert .value{padding:0 3mm;letter-spacing:0;white-space:normal;word-break:keep-all;line-height:1.35;}
 .employment-cert .period{padding-left:3mm;word-spacing:.9mm;}
-.employment-cert .statement{position:absolute;top:174mm;left:0;width:100%;margin:0;text-align:center;font-size:4.2mm;line-height:1;}
-.employment-cert .date{position:absolute;top:202mm;left:0;width:100%;margin:0;text-align:center;font-size:4.2mm;line-height:1;letter-spacing:0;word-spacing:4mm;}
-.employment-cert .company-info{position:absolute;top:226mm;left:34mm;width:130mm;font-size:4.2mm;line-height:1;}
+.employment-cert .statement{position:absolute;top:174mm;left:0;z-index:1;width:100%;margin:0;text-align:center;font-size:4.2mm;line-height:1;}
+.employment-cert .date{position:absolute;top:202mm;left:0;z-index:1;width:100%;margin:0;text-align:center;font-size:4.2mm;line-height:1;letter-spacing:0;word-spacing:4mm;}
+.employment-cert .company-info{position:absolute;top:226mm;left:34mm;z-index:1;width:130mm;font-size:4.2mm;line-height:1;}
 .employment-cert .company-row{position:relative;min-height:10.7mm;}
 .employment-cert .company-label{display:inline-block;width:26mm;text-align:justify;text-align-last:justify;white-space:nowrap;}
 .employment-cert .registration-label{letter-spacing:1.35mm;white-space:nowrap;}
@@ -281,6 +283,7 @@ const employmentCertificateBundle = createBundle({
 @media print{html,body{width:210mm;height:297mm;min-height:297mm;margin:0!important;padding:0!important;background:#fff;overflow:hidden}.employment-cert{width:210mm;height:297mm;min-height:297mm;margin:0;box-shadow:none;break-after:avoid;page-break-after:avoid;}}
 </style>
 <article class="employment-cert">
+  <img class="watermark" src="{{company_logo_src}}" alt="" />
   <h1 class="title">{{report_title}}</h1>
 
   <section class="section section-1">

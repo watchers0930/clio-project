@@ -58,6 +58,10 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
   const [sigLoading, setSigLoading] = useState(false);
   const [sigUploading, setSigUploading] = useState(false);
   const sigFileRef = useRef<HTMLInputElement>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoLoading, setLogoLoading] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setTab(initialTab);
@@ -105,6 +109,18 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
       .finally(() => setSigLoading(false));
   }, [tab]);
 
+  useEffect(() => {
+    if (tab !== 'signature') return;
+    setLogoLoading(true);
+    fetch('/api/settings/company-logo')
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) setLogoUrl(data.data?.url ?? null);
+      })
+      .catch(() => {})
+      .finally(() => setLogoLoading(false));
+  }, [tab]);
+
   const uploadSignature = async (file: File) => {
     if (sigUploading) return;
     setSigUploading(true);
@@ -131,6 +147,39 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
         await fetch('/api/auth/signature', { method: 'DELETE' });
         setSigUrl(null);
         toast.success('서명이 삭제되었습니다.');
+      } catch {
+        toast.error('삭제 중 오류가 발생했습니다.');
+      }
+      closeConfirm();
+    });
+  };
+
+  const uploadCompanyLogo = async (file: File) => {
+    if (logoUploading) return;
+    setLogoUploading(true);
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await fetch('/api/settings/company-logo', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.success) {
+        setLogoUrl(data.data?.url ?? null);
+        toast.success('회사 로고가 등록되었습니다.');
+      } else {
+        toast.error(data.error ?? '업로드 실패');
+      }
+    } catch {
+      toast.error('업로드 중 오류가 발생했습니다.');
+    }
+    setLogoUploading(false);
+  };
+
+  const deleteCompanyLogo = () => {
+    openConfirm('회사 로고를 삭제하시겠습니까?', '삭제하면 문서 워터마크가 표시되지 않습니다.', async () => {
+      try {
+        await fetch('/api/settings/company-logo', { method: 'DELETE' });
+        setLogoUrl(null);
+        toast.success('회사 로고가 삭제되었습니다.');
       } catch {
         toast.error('삭제 중 오류가 발생했습니다.');
       }
@@ -371,9 +420,15 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
           sigLoading={sigLoading}
           sigUploading={sigUploading}
           sigUrl={sigUrl}
+          logoLoading={logoLoading}
+          logoUploading={logoUploading}
+          logoUrl={logoUrl}
           sigFileRef={sigFileRef}
+          logoFileRef={logoFileRef}
           onDeleteSignature={deleteSignature}
           onUploadSignature={uploadSignature}
+          onDeleteCompanyLogo={deleteCompanyLogo}
+          onUploadCompanyLogo={uploadCompanyLogo}
         />
         </div>
       )}

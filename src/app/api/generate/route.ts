@@ -22,6 +22,7 @@ import {
   buildDocumentInsertPayload,
   buildTheme,
   loadReferenceContent,
+  loadCompanyLogoBuffer,
   loadSourceChunks,
   loadTemplateContext,
   loadUserGenerationContext,
@@ -250,6 +251,7 @@ export async function POST(request: NextRequest) {
 
     const versionFields = await resolveVersionFields(supabase, parentId);
     const { userName, userPosition, userDept, signatureBuffer } = await loadUserGenerationContext(supabase, authUserId);
+    const companyLogoBuffer = await loadCompanyLogoBuffer();
     const sourceContext = await loadSourceChunks(supabase, sourceFileIds);
     const { sourceChunks, sourceFileNames, sourceFileSummary, sourceFileCount } = sourceContext;
     const templateContext = await loadTemplateContext(supabase, templateId, customStructure, format);
@@ -357,6 +359,7 @@ export async function POST(request: NextRequest) {
       report_time: timeStr,
       report_no: reportNo,
       signature_image_src: signatureBufferToDataUrl(signatureBuffer),
+      company_logo_src: signatureBufferToDataUrl(companyLogoBuffer),
       source_file_names: sourceFileNames.join(', '),
       source_file_count: String(sourceFileCount),
       source_file_summary: sourceFileSummary || (sourceFileCount > 0 ? `${sourceFileNames.join(', ')} 참조` : ''),

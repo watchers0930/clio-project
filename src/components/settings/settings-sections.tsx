@@ -324,21 +324,34 @@ interface SignatureSectionProps {
   sigLoading: boolean;
   sigUploading: boolean;
   sigUrl: string | null;
+  logoLoading: boolean;
+  logoUploading: boolean;
+  logoUrl: string | null;
   sigFileRef: React.RefObject<HTMLInputElement | null>;
+  logoFileRef: React.RefObject<HTMLInputElement | null>;
   onDeleteSignature: () => void;
   onUploadSignature: (file: File) => void;
+  onDeleteCompanyLogo: () => void;
+  onUploadCompanyLogo: (file: File) => void;
 }
 
 export function SignatureSection({
   sigLoading,
   sigUploading,
   sigUrl,
+  logoLoading,
+  logoUploading,
+  logoUrl,
   sigFileRef,
+  logoFileRef,
   onDeleteSignature,
   onUploadSignature,
+  onDeleteCompanyLogo,
+  onUploadCompanyLogo,
 }: SignatureSectionProps) {
   return (
-    <div className="bg-card rounded-2xl border border-border p-8 max-w-lg">
+    <div className="grid gap-5 max-w-lg">
+    <div className="bg-card rounded-2xl border border-border p-8">
       <h2 className="text-[16px] font-semibold mb-1">전자 서명 관리</h2>
       <p className="text-sm text-muted mb-6">문서 다운로드 시 서명란에 자동으로 삽입됩니다. PNG, JPEG, WebP (최대 2MB)</p>
 
@@ -397,6 +410,68 @@ export function SignatureSection({
           event.target.value = '';
         }}
       />
+    </div>
+
+    <div className="bg-card rounded-2xl border border-border p-8">
+      <h2 className="text-[16px] font-semibold mb-1">회사 로고 워터마크</h2>
+      <p className="text-sm text-muted mb-6">재직증명서 중앙 워터마크로 사용됩니다. PNG, JPEG, WebP (최대 2MB)</p>
+
+      {logoLoading ? (
+        <div className="flex items-center justify-center h-32">
+          <Spinner size="lg" />
+        </div>
+      ) : logoUrl ? (
+        <div className="flex flex-col gap-4">
+          <div className="relative border border-border rounded-xl overflow-hidden bg-surface-secondary flex items-center justify-center" style={{ height: 140 }}>
+            <Image src={logoUrl} alt="회사 로고" width={320} height={120} unoptimized style={{ maxHeight: 120, maxWidth: '100%', width: 'auto', objectFit: 'contain' }} />
+          </div>
+          <div className="flex gap-3.5">
+            <button
+              onClick={() => logoFileRef.current?.click()}
+              disabled={logoUploading}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-foreground text-white text-sm font-medium hover:bg-primary transition-colors disabled:opacity-40"
+            >
+              {logoUploading ? <Spinner size="sm" /> : <Upload size={14} />}
+              로고 교체
+            </button>
+            <button
+              onClick={onDeleteCompanyLogo}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors"
+            >
+              <X size={14} /> 삭제
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div
+          onClick={() => logoFileRef.current?.click()}
+          className="border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-primary hover:bg-blue-50/30 transition-colors"
+          style={{ height: 160 }}
+        >
+          {logoUploading ? (
+            <Spinner size="lg" />
+          ) : (
+            <>
+              <Building2 size={28} className="text-muted" />
+              <p className="text-sm text-muted font-medium">클릭하여 회사 로고 등록</p>
+              <p className="text-xs text-muted">PNG · JPEG · WebP, 최대 2MB</p>
+            </>
+          )}
+        </div>
+      )}
+
+      <input
+        ref={logoFileRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) onUploadCompanyLogo(file);
+          event.target.value = '';
+        }}
+      />
+    </div>
     </div>
   );
 }

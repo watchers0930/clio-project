@@ -98,6 +98,22 @@ export async function loadUserGenerationContext(supabase: SupabaseClient, authUs
   return { userName, userPosition, userDept, signatureBuffer };
 }
 
+export async function loadCompanyLogoBuffer() {
+  const adminClient = createAdminSupabaseClient();
+  const logoPaths = ['settings/company-logo.png', 'settings/company-logo.jpg', 'settings/company-logo.webp'];
+
+  for (const path of logoPaths) {
+    try {
+      const { data: logoBlob } = await adminClient.storage.from('files').download(path);
+      if (logoBlob) return Buffer.from(await logoBlob.arrayBuffer());
+    } catch {
+      // Try the next supported extension.
+    }
+  }
+
+  return null;
+}
+
 export async function loadSourceChunks(supabase: SupabaseClient, sourceFileIds?: string[]) {
   const sourceChunks: string[] = [];
   if (!sourceFileIds?.length) {
