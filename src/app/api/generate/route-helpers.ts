@@ -5,6 +5,7 @@ import type { DbFileRecord, DbTemplate, DbUser } from '@/lib/supabase/types';
 import type { CorporateTheme, OutputFormat, RenderOutput } from '@/lib/renderers/types';
 import { DEFAULT_THEME } from '@/lib/renderers/types';
 import { parseTemplateBundle, type TemplateBundle } from '@/lib/templates/template-schema';
+import { loadCompanyLogoContext } from '@/lib/settings/company-logo';
 import {
   createEmploymentCertificateTemplateBundle,
   EMPLOYMENT_CERTIFICATE_TEMPLATE_NAME,
@@ -98,20 +99,9 @@ export async function loadUserGenerationContext(supabase: SupabaseClient, authUs
   return { userName, userPosition, userDept, signatureBuffer };
 }
 
-export async function loadCompanyLogoBuffer() {
+export async function loadCompanyLogoWatermarkContext() {
   const adminClient = createAdminSupabaseClient();
-  const logoPaths = ['settings/company-logo.png', 'settings/company-logo.jpg', 'settings/company-logo.webp'];
-
-  for (const path of logoPaths) {
-    try {
-      const { data: logoBlob } = await adminClient.storage.from('files').download(path);
-      if (logoBlob) return Buffer.from(await logoBlob.arrayBuffer());
-    } catch {
-      // Try the next supported extension.
-    }
-  }
-
-  return null;
+  return loadCompanyLogoContext(adminClient);
 }
 
 export async function loadSourceChunks(supabase: SupabaseClient, sourceFileIds?: string[]) {

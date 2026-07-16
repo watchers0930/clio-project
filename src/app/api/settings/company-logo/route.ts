@@ -3,9 +3,13 @@ import { getAuthUserId } from '@/lib/auth-helper';
 import { isAdmin, getUserRoleInfo } from '@/lib/permissions';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-
-const LOGO_BASE_PATH = 'settings/company-logo';
-const LOGO_PATHS = [`${LOGO_BASE_PATH}.png`, `${LOGO_BASE_PATH}.jpg`, `${LOGO_BASE_PATH}.webp`];
+import {
+  COMPANY_LOGO_PATHS,
+  getCompanyLogoPatternSize,
+  loadCompanyLogoSettings,
+  normalizeCompanyLogoPatternDensity,
+  saveCompanyLogoSettings,
+} from '@/lib/settings/company-logo';
 
 async function requireUser() {
   const supabase = await createServerSupabaseClient();
@@ -35,15 +39,32 @@ export async function GET() {
     if (context.error) return context.error;
 
     const admin = createAdminSupabaseClient();
-    for (const path of LOGO_PATHS) {
+    const settings = await loadCompanyLogoSettings(admin);
+    for (const path of COMPANY_LOGO_PATHS) {
       const { data: blob } = await admin.storage.from('files').download(path);
       if (blob) {
         const { data } = await admin.storage.from('files').createSignedUrl(path, 3600);
-        return NextResponse.json({ success: true, data: { path, url: data?.signedUrl ?? null } });
+        return NextResponse.json({
+          success: true,
+          data: {
+            path,
+            url: data?.signedUrl ?? null,
+            patternDensity: settings.patternDensity,
+            patternSize: getCompanyLogoPatternSize(settings.patternDensity),
+          },
+        });
       }
     }
 
-    return NextResponse.json({ success: true, data: null });
+    return NextResponse.json({
+      success: true,
+      data: {
+        path: null,
+        url: null,
+        patternDensity: settings.patternDensity,
+        patternSize: getCompanyLogoPatternSize(settings.patternDensity),
+      },
+    });
   } catch (err) {
     console.error('[company-logo/GET]', err);
     return NextResponse.json({ success: false, error: '회사 로고 조회 실패' }, { status: 500 });
@@ -65,11 +86,11 @@ export async function POST(request: NextRequest) {
     }
 
     const ext = file.type === 'image/png' ? 'png' : file.type === 'image/jpeg' ? 'jpg' : 'webp';
-    const storagePath = `${LOGO_BASE_PATH}.${ext}`;
+    const storagePath = `settings/company-logo.${ext}`;
     const arrayBuffer = await file.arrayBuffer();
     const admin = createAdminSupabaseClient();
 
-    await admin.storage.from('files').remove(LOGO_PATHS.filter((path) => path !== storagePath));
+    await admin.storage.from('files').remove(COMPANY_LOGO_PATHS.filter((path) => path !== storagePath));
     const { error: uploadErr } = await admin.storage
       .from('files')
       .upload(storagePath, arrayBuffer, { contentType: file.type, upsert: true });
@@ -79,11 +100,48 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: '업로드 실패' }, { status: 500 });
     }
 
+    const settings = await loadCompanyLogoSettings(admin);
     const { data: signed } = await admin.storage.from('files').createSignedUrl(storagePath, 3600);
-    return NextResponse.json({ success: true, data: { path: storagePath, url: signed?.signedUrl ?? null } });
+    return NextResponse.json({
+      success: true,
+      data: {
+        path: storagePath,
+        url: signed?.signedUrl ?? null,
+        patternDensity: settings.patternDensity,
+        patternSize: getCompanyLogoPatternSize(settings.patternDensity),
+      },
+    });
   } catch (err) {
     console.error('[company-logo/POST]', err);
     return NextResponse.json({ success: false, error: '회사 로고 업로드 실패' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const context = await requireAdmin();
+    if (context.error) return context.error;
+
+    const body = await request.json().catch(() => ({}));
+    const patternDensity = normalizeCompanyLogoPatternDensity(body?.patternDensity);
+    const admin = createAdminSupabaseClient();
+    const { error } = await saveCompanyLogoSettings(admin, { patternDensity });
+
+    if (error) {
+      console.error('[company-logo/PATCH] settings:', error.message);
+      return NextResponse.json({ success: false, error: '워터마크 설정 저장 실패' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        patternDensity,
+        patternSize: getCompanyLogoPatternSize(patternDensity),
+      },
+    });
+  } catch (err) {
+    console.error('[company-logo/PATCH]', err);
+    return NextResponse.json({ success: false, error: '워터마크 설정 저장 실패' }, { status: 500 });
   }
 }
 
@@ -93,7 +151,7 @@ export async function DELETE() {
     if (context.error) return context.error;
 
     const admin = createAdminSupabaseClient();
-    await admin.storage.from('files').remove(LOGO_PATHS);
+    await admin.storage.from('files').remove(COMPANY_LOGO_PATHS);
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('[company-logo/DELETE]', err);

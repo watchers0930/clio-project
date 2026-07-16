@@ -327,12 +327,15 @@ interface SignatureSectionProps {
   logoLoading: boolean;
   logoUploading: boolean;
   logoUrl: string | null;
+  logoPatternDensity: 'sparse' | 'normal' | 'dense';
+  logoSettingsSaving: boolean;
   sigFileRef: React.RefObject<HTMLInputElement | null>;
   logoFileRef: React.RefObject<HTMLInputElement | null>;
   onDeleteSignature: () => void;
   onUploadSignature: (file: File) => void;
   onDeleteCompanyLogo: () => void;
   onUploadCompanyLogo: (file: File) => void;
+  onUpdateCompanyLogoPatternDensity: (density: 'sparse' | 'normal' | 'dense') => void;
 }
 
 export function SignatureSection({
@@ -342,13 +345,22 @@ export function SignatureSection({
   logoLoading,
   logoUploading,
   logoUrl,
+  logoPatternDensity,
+  logoSettingsSaving,
   sigFileRef,
   logoFileRef,
   onDeleteSignature,
   onUploadSignature,
   onDeleteCompanyLogo,
   onUploadCompanyLogo,
+  onUpdateCompanyLogoPatternDensity,
 }: SignatureSectionProps) {
+  const densityOptions: Array<{ value: 'sparse' | 'normal' | 'dense'; label: string }> = [
+    { value: 'sparse', label: '적게' },
+    { value: 'normal', label: '보통' },
+    { value: 'dense', label: '많게' },
+  ];
+
   return (
     <div className="grid gap-5 max-w-lg">
     <div className="bg-card rounded-2xl border border-border p-8">
@@ -459,6 +471,32 @@ export function SignatureSection({
           )}
         </div>
       )}
+
+      <div className="mt-5 pt-5 border-t border-border">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <p className="text-sm font-medium text-foreground">패턴 수</p>
+          {logoSettingsSaving ? <Spinner size="sm" /> : null}
+        </div>
+        <div className="grid grid-cols-3 gap-2 rounded-xl bg-surface-secondary p-1">
+          {densityOptions.map((option) => {
+            const active = logoPatternDensity === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onUpdateCompanyLogoPatternDensity(option.value)}
+                disabled={logoSettingsSaving}
+                className={[
+                  'h-9 rounded-lg text-sm font-medium transition-colors disabled:opacity-50',
+                  active ? 'bg-card text-foreground shadow-sm' : 'text-muted hover:text-foreground',
+                ].join(' ')}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <input
         ref={logoFileRef}

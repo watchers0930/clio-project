@@ -59,6 +59,8 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
   const [sigUploading, setSigUploading] = useState(false);
   const sigFileRef = useRef<HTMLInputElement>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoPatternDensity, setLogoPatternDensity] = useState<'sparse' | 'normal' | 'dense'>('normal');
+  const [logoSettingsSaving, setLogoSettingsSaving] = useState(false);
   const [logoLoading, setLogoLoading] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const logoFileRef = useRef<HTMLInputElement>(null);
@@ -115,7 +117,10 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
     fetch('/api/settings/company-logo')
       .then((response) => response.json())
       .then((data) => {
-        if (data.success) setLogoUrl(data.data?.url ?? null);
+        if (data.success) {
+          setLogoUrl(data.data?.url ?? null);
+          setLogoPatternDensity(data.data?.patternDensity ?? 'normal');
+        }
       })
       .catch(() => {})
       .finally(() => setLogoLoading(false));
@@ -185,6 +190,34 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
       }
       closeConfirm();
     });
+  };
+
+  const updateCompanyLogoPatternDensity = async (patternDensity: 'sparse' | 'normal' | 'dense') => {
+    if (logoSettingsSaving) return;
+    const previous = logoPatternDensity;
+    setLogoPatternDensity(patternDensity);
+    setLogoSettingsSaving(true);
+
+    try {
+      const res = await fetch('/api/settings/company-logo', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patternDensity }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLogoPatternDensity(data.data?.patternDensity ?? patternDensity);
+        toast.success('워터마크 패턴 설정이 저장되었습니다.');
+      } else {
+        setLogoPatternDensity(previous);
+        toast.error(data.error ?? '설정 저장 실패');
+      }
+    } catch {
+      setLogoPatternDensity(previous);
+      toast.error('설정 저장 중 오류가 발생했습니다.');
+    } finally {
+      setLogoSettingsSaving(false);
+    }
   };
 
   const openDeptModal = (dept?: Department) => {
@@ -423,12 +456,15 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
           logoLoading={logoLoading}
           logoUploading={logoUploading}
           logoUrl={logoUrl}
+          logoPatternDensity={logoPatternDensity}
+          logoSettingsSaving={logoSettingsSaving}
           sigFileRef={sigFileRef}
           logoFileRef={logoFileRef}
           onDeleteSignature={deleteSignature}
           onUploadSignature={uploadSignature}
           onDeleteCompanyLogo={deleteCompanyLogo}
           onUploadCompanyLogo={uploadCompanyLogo}
+          onUpdateCompanyLogoPatternDensity={updateCompanyLogoPatternDensity}
         />
         </div>
       )}

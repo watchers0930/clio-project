@@ -13,22 +13,7 @@ import { parseTemplateBundle, type TemplateBundle } from '@/lib/templates/templa
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
 import { isProposalTemplateName } from '@/lib/templates/proposal';
 import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
-
-async function loadCompanyLogoBuffer() {
-  const adminClient = createAdminSupabaseClient();
-  const logoPaths = ['settings/company-logo.png', 'settings/company-logo.jpg', 'settings/company-logo.webp'];
-
-  for (const path of logoPaths) {
-    try {
-      const { data: logoBlob } = await adminClient.storage.from('files').download(path);
-      if (logoBlob) return Buffer.from(await logoBlob.arrayBuffer());
-    } catch {
-      // Try the next supported extension.
-    }
-  }
-
-  return null;
-}
+import { loadCompanyLogoContext } from '@/lib/settings/company-logo';
 
 /* ── 한국어 순서 표현(첫째/둘째 등)이 문장 중간에 있으면 앞에 줄바꿈 삽입 ── */
 function normalizeOrdinals(text: string): string {
@@ -358,7 +343,7 @@ export async function GET(
         }
       } catch { /* 서명 없으면 그냥 진행 */ }
     }
-    const companyLogoBuffer = await loadCompanyLogoBuffer();
+    const companyLogoContext = await loadCompanyLogoContext(createAdminSupabaseClient());
 
     const isProposalDocument = isProposalTemplateName(templateName);
     const isEmploymentCertificateDocument = /재직\s*증명서/.test(templateName);
@@ -423,7 +408,8 @@ export async function GET(
               ...inlineInputs,
               author: signerName,
               signature_image_src: signatureBufferToDataUrl(signatureBuffer),
-              company_logo_src: signatureBufferToDataUrl(companyLogoBuffer),
+              company_logo_src: signatureBufferToDataUrl(companyLogoContext.buffer),
+              company_logo_pattern_size: companyLogoContext.patternSize,
             };
             let rendered = await renderPdf(inlineContent, doc.title, theme, {
               templateBundle,
@@ -528,7 +514,8 @@ export async function GET(
       ...embeddedInputs,
       author: signerName,
       signature_image_src: signatureBufferToDataUrl(signatureBuffer),
-      company_logo_src: signatureBufferToDataUrl(companyLogoBuffer),
+      company_logo_src: signatureBufferToDataUrl(companyLogoContext.buffer),
+      company_logo_pattern_size: companyLogoContext.patternSize,
     };
     const theme: CorporateTheme = {
       ...DEFAULT_THEME,

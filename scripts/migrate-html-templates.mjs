@@ -252,7 +252,7 @@ const employmentCertificateBundle = createBundle({
 @page{size:A4;margin:0;}
 .employment-cert{position:relative;box-sizing:border-box;width:210mm;height:297mm;min-height:297mm;margin:0 auto;background:#fff;color:#111;overflow:hidden;font-family:Batang,"AppleMyungjo","Nanum Myeongjo","Noto Serif KR",serif;letter-spacing:-2px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 .employment-cert *{box-sizing:border-box;}
-.employment-cert .watermark-pattern{position:absolute;inset:-28mm;z-index:0;opacity:.045;background-image:var(--company-logo-watermark);background-repeat:repeat;background-position:center;background-size:44mm auto;transform:rotate(-18deg);transform-origin:center;pointer-events:none;}
+.employment-cert .watermark-pattern{position:absolute;inset:-28mm;z-index:0;opacity:.045;background-image:var(--company-logo-watermark);background-repeat:repeat;background-position:center;background-size:var(--company-logo-pattern-size,44mm) auto;transform:rotate(-18deg);transform-origin:center;pointer-events:none;}
 .employment-cert .title{position:absolute;top:35mm;left:0;z-index:1;width:100%;margin:0;text-align:center;font-size:11.5mm;font-weight:700;letter-spacing:-2px;line-height:1;}
 .employment-cert .section{position:absolute;left:32mm;z-index:1;width:154mm;font-size:4.2mm;line-height:1;}
 .employment-cert .section-1{top:67mm;}
@@ -282,7 +282,7 @@ const employmentCertificateBundle = createBundle({
 @media print{html,body{width:210mm;height:297mm;min-height:297mm;margin:0!important;padding:0!important;background:#fff;overflow:hidden}.employment-cert{width:210mm;height:297mm;min-height:297mm;margin:0;box-shadow:none;break-after:avoid;page-break-after:avoid;}}
 </style>
 <article class="employment-cert">
-  <div class="watermark-pattern" style="--company-logo-watermark:url('{{company_logo_src}}')"></div>
+  <div class="watermark-pattern" style="--company-logo-watermark:url('{{company_logo_src}}');--company-logo-pattern-size:{{company_logo_pattern_size}}"></div>
   <h1 class="title">{{report_title}}</h1>
 
   <section class="section section-1">
