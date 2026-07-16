@@ -8,6 +8,7 @@ import { renderPdf } from '@/lib/renderers/pdf-renderer';
 import type { CorporateTheme } from '@/lib/renderers/types';
 import { DEFAULT_THEME } from '@/lib/renderers/types';
 import { injectSignatureDocx, injectSignatureHwpx } from '@/lib/utils/inject-signature';
+import { signatureBufferToDataUrl } from '@/lib/utils/signature-data-url';
 import { parseTemplateBundle, type TemplateBundle } from '@/lib/templates/template-schema';
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
 import { isProposalTemplateName } from '@/lib/templates/proposal';
@@ -217,7 +218,7 @@ export async function GET(
     const { id } = await params;
     const url = new URL(_request.url);
     const fontParam = url.searchParams.get('font') ?? '맑은 고딕';
-    let format = url.searchParams.get('format') ?? 'docx';
+    const format = url.searchParams.get('format') ?? 'docx';
     const fontFamily = FONT_MAP[fontParam] ?? 'Malgun Gothic';
 
     const supabase = await createServerSupabaseClient();
@@ -343,6 +344,7 @@ export async function GET(
     }
 
     const isProposalDocument = isProposalTemplateName(templateName);
+    const isEmploymentCertificateDocument = /재직\s*증명서/.test(templateName);
     const proposalPreviewHtml = isProposalDocument
       ? renderProposalDocumentHtml({
           title: doc.title,
@@ -400,12 +402,17 @@ export async function GET(
           if (!isLabel && inlineContent.length > 50) {
             // 마크다운 content → PDF 렌더
             const theme: CorporateTheme = { ...DEFAULT_THEME, fontFamily: fontParam, fontFamilyEn: fontFamily };
+            const templateDocumentInputs = {
+              ...inlineInputs,
+              author: signerName,
+              signature_image_src: signatureBufferToDataUrl(signatureBuffer),
+            };
             let rendered = await renderPdf(inlineContent, doc.title, theme, {
               templateBundle,
-              documentInputs: { ...inlineInputs, author: signerName },
+              documentInputs: templateDocumentInputs,
               templateName,
             });
-            if (signatureBuffer) {
+            if (signatureBuffer && !isEmploymentCertificateDocument) {
               const sigBase64 = signatureBuffer.toString('base64');
               const sigImg = `<div style="text-align:right;margin-top:32px;padding-right:40px;"><img src="data:image/png;base64,${sigBase64}" style="width:120px;height:60px;object-fit:contain;" alt="서명" /></div>`;
               const htmlStr = rendered.buffer.toString('utf-8');
@@ -499,7 +506,11 @@ export async function GET(
       try { embeddedInputs = JSON.parse(inputsMatch[1]); } catch { /* ignore */ }
       content = rawContent.slice(inputsMatch[0].length);
     }
-    const mergedDocumentInputs = { ...embeddedInputs, author: signerName };
+    const mergedDocumentInputs = {
+      ...embeddedInputs,
+      author: signerName,
+      signature_image_src: signatureBufferToDataUrl(signatureBuffer),
+    };
     const theme: CorporateTheme = {
       ...DEFAULT_THEME,
       fontFamily: fontParam,
@@ -564,7 +575,7 @@ export async function GET(
           documentInputs: mergedDocumentInputs,
           templateName,
         });
-        if (signatureBuffer) {
+        if (signatureBuffer && !isEmploymentCertificateDocument) {
           const sigBase64 = signatureBuffer.toString('base64');
           const sigImg = `<div style="text-align:right;margin-top:32px;padding-right:40px;"><img src="data:image/png;base64,${sigBase64}" style="width:120px;height:60px;object-fit:contain;" alt="서명" /></div>`;
           const htmlStr = rendered.buffer.toString('utf-8');

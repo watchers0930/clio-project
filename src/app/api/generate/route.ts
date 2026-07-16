@@ -31,6 +31,7 @@ import {
 import { getWorklogDocumentTitle, isWorklogTemplateName } from '@/lib/templates/worklog';
 import { isProposalTemplateName } from '@/lib/templates/proposal';
 import { isBusinessPlanTemplateName } from '@/lib/templates/business-plan';
+import { signatureBufferToDataUrl } from '@/lib/utils/signature-data-url';
 
 export const maxDuration = 300;
 
@@ -248,7 +249,7 @@ export async function POST(request: NextRequest) {
     }
 
     const versionFields = await resolveVersionFields(supabase, parentId);
-    const { userName, userPosition, userDept } = await loadUserGenerationContext(supabase, authUserId);
+    const { userName, userPosition, userDept, signatureBuffer } = await loadUserGenerationContext(supabase, authUserId);
     const sourceContext = await loadSourceChunks(supabase, sourceFileIds);
     const { sourceChunks, sourceFileNames, sourceFileSummary, sourceFileCount } = sourceContext;
     const templateContext = await loadTemplateContext(supabase, templateId, customStructure, format);
@@ -355,6 +356,7 @@ export async function POST(request: NextRequest) {
       report_date: todayStr,
       report_time: timeStr,
       report_no: reportNo,
+      signature_image_src: signatureBufferToDataUrl(signatureBuffer),
       source_file_names: sourceFileNames.join(', '),
       source_file_count: String(sourceFileCount),
       source_file_summary: sourceFileSummary || (sourceFileCount > 0 ? `${sourceFileNames.join(', ')} 참조` : ''),

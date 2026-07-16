@@ -268,12 +268,16 @@ const employmentCertificateBundle = createBundle({
 .employment-cert .period{padding-left:3mm;word-spacing:.9mm;}
 .employment-cert .statement{position:absolute;top:174mm;left:0;width:100%;margin:0;text-align:center;font-size:4.2mm;line-height:1;}
 .employment-cert .date{position:absolute;top:202mm;left:0;width:100%;margin:0;text-align:center;font-size:4.2mm;line-height:1;letter-spacing:0;word-spacing:4mm;}
-.employment-cert .company-info{position:absolute;top:239mm;left:34mm;width:130mm;font-size:4.2mm;line-height:1;}
+.employment-cert .company-info{position:absolute;top:226mm;left:34mm;width:130mm;font-size:4.2mm;line-height:1;}
 .employment-cert .company-row{position:relative;min-height:10.7mm;}
 .employment-cert .company-label{display:inline-block;width:26mm;text-align:justify;text-align-last:justify;white-space:nowrap;}
 .employment-cert .registration-label{letter-spacing:1.35mm;white-space:nowrap;}
 .employment-cert .company-value{display:inline-block;max-width:92mm;padding-left:6mm;letter-spacing:0;line-height:1.35;vertical-align:top;word-break:keep-all;}
-.employment-cert .seal{position:absolute;left:75mm;top:0;}
+.employment-cert .address-value{max-width:none;white-space:nowrap;}
+.employment-cert .seal{position:absolute;left:75mm;top:-3.7mm;width:18mm;height:18mm;display:inline-flex;align-items:center;justify-content:center;}
+.employment-cert .seal-text{position:relative;z-index:1;}
+.employment-cert .seal-image{position:absolute;left:50%;top:50%;z-index:2;width:18mm;height:18mm;object-fit:contain;transform:translate(-50%,-50%);}
+.employment-cert .seal-image[src=""]{display:none;}
 @media print{html,body{width:210mm;height:297mm;min-height:297mm;margin:0!important;padding:0!important;background:#fff;overflow:hidden}.employment-cert{width:210mm;height:297mm;min-height:297mm;margin:0;box-shadow:none;break-after:avoid;page-break-after:avoid;}}
 </style>
 <article class="employment-cert">
@@ -326,9 +330,9 @@ const employmentCertificateBundle = createBundle({
 
   <section class="company-info">
     <div class="company-row"><span class="company-label">회 사 명</span><span class="company-value">{{company_name}}</span></div>
-    <div class="company-row"><span class="company-label">대 표 자</span><span class="company-value">{{representative_name}}</span><span class="seal">(인)</span></div>
+    <div class="company-row"><span class="company-label">대 표 자</span><span class="company-value">{{representative_name}}</span><span class="seal"><span class="seal-text">(인)</span><img class="seal-image" src="{{signature_image_src}}" alt="도장" /></span></div>
     <div class="company-row"><span class="company-label registration-label">사업자등록</span><span class="company-value">{{business_registration_no}}</span></div>
-    <div class="company-row"><span class="company-label">주 소</span><span class="company-value">{{company_address}}</span></div>
+    <div class="company-row"><span class="company-label">주 소</span><span class="company-value address-value">{{company_address}}</span></div>
     <div class="company-row"><span class="company-label">전 화</span><span class="company-value">{{company_phone}}</span></div>
   </section>
 </article>
