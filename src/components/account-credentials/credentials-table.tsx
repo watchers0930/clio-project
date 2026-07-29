@@ -21,11 +21,11 @@ export function CredentialsTable() {
       const json = await res.json() as { data?: CredentialRow[] };
       setRows(json.data ?? []);
     } catch {
-      toast.error('데이터를 불러오지 못했습니다.');
+      // 오류 시 빈 목록 유지
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => { void load(); }, [load]);
 
