@@ -17,12 +17,19 @@ export function LockGate({ onUnlocked }: LockGateProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetch('/api/account-credentials/lock')
-      .then((r) => r.json())
-      .then((d: { enabled?: boolean }) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => { controller.abort(); setMode('setup'); }, 5000);
+
+    fetch('/api/account-credentials/lock', { signal: controller.signal })
+      .then(async (r) => {
+        clearTimeout(timer);
+        if (!r.ok) { setMode('setup'); return; }
+        const d = await r.json() as { enabled?: boolean };
         setMode(d.enabled ? 'verify' : 'setup');
       })
-      .catch(() => setMode('verify'));
+      .catch(() => { clearTimeout(timer); setMode('setup'); });
+
+    return () => { clearTimeout(timer); controller.abort(); };
   }, []);
 
   useEffect(() => {
