@@ -16,8 +16,8 @@ export async function PATCH(
   const userId = await getAuthUserId(supabase);
   if (!userId) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
 
-  const body = await request.json() as { site_name?: string; username?: string; password?: string };
-  const { site_name, username, password } = body;
+  const body = await request.json() as { site_name?: string; site_url?: string; username?: string; password?: string };
+  const { site_name, site_url, username, password } = body;
 
   if (!site_name?.trim() || !username?.trim() || !password?.trim()) {
     return NextResponse.json({ error: '사이트명, 아이디, 비밀번호는 필수입니다.' }, { status: 400 });
@@ -29,6 +29,7 @@ export async function PATCH(
     .from('account_credentials')
     .update({
       site_name: site_name.trim(),
+      site_url: (site_url ?? '').trim(),
       username: username.trim(),
       enc_password: encryptPassword(password),
     })

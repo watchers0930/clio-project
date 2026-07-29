@@ -101,21 +101,22 @@ export function CredentialsTable() {
         </div>
 
         {/* 테이블 */}
-        <div className="overflow-x-auto rounded-xl border border-border">
+        <div className="mt-[10px] mb-[10px] overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-[13px]">
             <thead>
               <tr className="bg-surface-secondary">
-                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary w-[220px]">사이트명</th>
-                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary w-[220px]">아이디</th>
-                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary">비밀번호</th>
-                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary w-[120px]">작성일자</th>
-                <th className="px-4 py-3 text-center font-semibold text-foreground-secondary w-[80px]">관리</th>
+                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary w-[150px]">사이트명</th>
+                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary">사이트 주소</th>
+                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary w-[160px]">아이디</th>
+                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary w-[180px]">비밀번호</th>
+                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary w-[110px]">작성일자</th>
+                <th className="px-4 py-3 text-center font-semibold text-foreground-secondary w-[70px]">관리</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border bg-white">
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-16 text-center text-[13px] text-foreground-tertiary">
+                  <td colSpan={6} className="py-16 text-center text-[13px] text-foreground-tertiary">
                     저장된 계정이 없습니다. 계정 추가 버튼을 눌러 등록해주세요.
                   </td>
                 </tr>
@@ -125,6 +126,20 @@ export function CredentialsTable() {
                   return (
                     <tr key={row.id} className="hover:bg-surface-secondary/50 transition-colors">
                       <td className="px-4 py-3 font-medium text-foreground">{row.site_name}</td>
+                      <td className="px-4 py-3 text-foreground-secondary">
+                        {row.site_url ? (
+                          <a
+                            href={row.site_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline break-all"
+                          >
+                            {row.site_url}
+                          </a>
+                        ) : (
+                          <span className="text-foreground-quaternary">—</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-foreground-secondary">{row.username}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">

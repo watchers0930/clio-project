@@ -6,6 +6,7 @@ import { X, Eye, EyeOff } from 'lucide-react';
 export interface CredentialRow {
   id: string;
   site_name: string;
+  site_url: string;
   username: string;
   password: string;
   created_at: string;
@@ -20,6 +21,7 @@ interface Props {
 
 export function CredentialFormModal({ open, editing, onClose, onSaved }: Props) {
   const [siteName, setSiteName] = useState('');
+  const [siteUrl, setSiteUrl] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -29,6 +31,7 @@ export function CredentialFormModal({ open, editing, onClose, onSaved }: Props) 
   useEffect(() => {
     if (open) {
       setSiteName(editing?.site_name ?? '');
+      setSiteUrl(editing?.site_url ?? '');
       setUsername(editing?.username ?? '');
       setPassword(editing?.password ?? '');
       setShowPw(false);
@@ -40,7 +43,7 @@ export function CredentialFormModal({ open, editing, onClose, onSaved }: Props) 
 
   const save = async () => {
     if (!siteName.trim() || !username.trim() || !password.trim()) {
-      setError('모든 항목을 입력해주세요.');
+      setError('사이트명, 아이디, 비밀번호는 필수 항목입니다.');
       return;
     }
     setSaving(true);
@@ -53,13 +56,13 @@ export function CredentialFormModal({ open, editing, onClose, onSaved }: Props) 
       const res = await fetch(url, {
         method: isEdit ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ site_name: siteName, username, password }),
+        body: JSON.stringify({ site_name: siteName, site_url: siteUrl, username, password }),
       });
       const json = await res.json() as { data?: CredentialRow; error?: string; success?: boolean };
       if (!res.ok) { setError(json.error ?? '저장에 실패했습니다.'); return; }
 
       const saved: CredentialRow = isEdit
-        ? { ...editing!, site_name: siteName, username, password }
+        ? { ...editing!, site_name: siteName, site_url: siteUrl, username, password }
         : (json.data as CredentialRow);
       onSaved(saved);
       onClose();
@@ -92,6 +95,18 @@ export function CredentialFormModal({ open, editing, onClose, onSaved }: Props) 
               value={siteName}
               onChange={(e) => setSiteName(e.target.value)}
               placeholder="예) 네이버, 구글, 사내시스템"
+              className="w-full rounded-xl border border-border bg-surface-secondary px-4 py-2.5 text-[13px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-[12px] font-medium text-foreground-secondary">
+              사이트 주소 <span className="text-foreground-quaternary font-normal">(선택)</span>
+            </label>
+            <input
+              type="url"
+              value={siteUrl}
+              onChange={(e) => setSiteUrl(e.target.value)}
+              placeholder="https://example.com"
               className="w-full rounded-xl border border-border bg-surface-secondary px-4 py-2.5 text-[13px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
