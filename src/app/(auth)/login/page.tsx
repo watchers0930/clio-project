@@ -33,7 +33,10 @@ export default function LoginPage() {
         let redirectTo = '/';
         if (typeof window !== 'undefined') {
           const params = new URLSearchParams(window.location.search);
-          const redirectPath = params.get('redirect') || '/dashboard';
+          const raw = params.get('redirect') || '/dashboard';
+          // 잠금 페이지는 로그인 후 자동 진입 금지 → 대시보드로
+          const LOCKED_PATHS = ['/account-credentials', '/memos'];
+          const redirectPath = LOCKED_PATHS.some((p) => raw.startsWith(p)) ? '/dashboard' : raw;
           params.delete('redirect');
           const rest = params.toString();
           redirectTo = rest ? `${redirectPath}?${rest}` : redirectPath;
