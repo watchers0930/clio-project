@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { buildReportDraftHref } from '@/lib/documents/navigation';
-import { ArrowRight, Building2, FileText, PenLine, Plus, Share2, ShieldCheck, Trash2, Upload, Users, Pencil, Save, X, ArrowRightLeft, MessageSquare, CalendarDays, StickyNote, ShieldAlert } from 'lucide-react';
+import { ArrowRight, Building2, FileText, PenLine, Plus, Share2, ShieldCheck, Trash2, Upload, Users, Pencil, Save, X, ArrowRightLeft, MessageSquare, CalendarDays, StickyNote, ShieldAlert, KeyRound } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import type { Department, UserItem } from '@/components/settings/types';
 import { ROLES } from '@/components/settings/types';
@@ -530,6 +530,7 @@ const MENU_OPTIONS: MenuOption[] = [
   { key: 'schedule', label: '일정/할일', description: '월간 캘린더와 할일 목록을 관리합니다', icon: CalendarDays },
   { key: 'memos', label: '메모', description: '아이디어와 메모를 저장하고 연결합니다', icon: StickyNote },
   { key: 'contract-risk', label: '계약 리스크', description: '계약서를 AI로 분석하고 리스크를 검토합니다', icon: ShieldAlert },
+  { key: 'account-credentials', label: '계정관리', description: '사이트 아이디·비밀번호를 암호화하여 안전하게 보관합니다', icon: KeyRound },
 ];
 
 export function MenusSection() {
