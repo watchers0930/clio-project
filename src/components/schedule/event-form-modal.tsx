@@ -15,6 +15,7 @@ interface EventFormModalProps {
   onDelete?: () => Promise<void>;
   event?: CalendarEvent | null;
   defaultDate?: Date | null;
+  defaultEndDate?: Date | null;
   departments: { id: string; name: string }[];
 }
 
@@ -45,6 +46,7 @@ export default function EventFormModal({
   onDelete,
   event,
   defaultDate,
+  defaultEndDate,
   departments,
 }: EventFormModalProps) {
   const isEdit = !!event;
@@ -70,18 +72,28 @@ export default function EventFormModal({
       });
     } else if (defaultDate) {
       const start = new Date(defaultDate);
-      start.setHours(9, 0, 0, 0);
-      const end = new Date(defaultDate);
-      end.setHours(10, 0, 0, 0);
+      const end = defaultEndDate ? new Date(defaultEndDate) : new Date(defaultDate);
+      if (!defaultEndDate) end.setHours(start.getHours() + 1, 0, 0, 0);
+      // 날짜만 다른 경우(드래그 범위) → 종일로 자동 설정
+      const isMultiDay = defaultEndDate && (
+        defaultEndDate.getFullYear() !== defaultDate.getFullYear() ||
+        defaultEndDate.getMonth() !== defaultDate.getMonth() ||
+        defaultEndDate.getDate() !== defaultDate.getDate()
+      );
       setForm({
         title: '', description: '', location: '',
         event_type: 'meeting',
-        start_at: toLocalDatetime(start),
-        end_at: toLocalDatetime(end),
-        all_day: false, department_id: null,
+        start_at: isMultiDay
+          ? toLocalDatetime(start).split('T')[0] + 'T00:00'
+          : toLocalDatetime(start),
+        end_at: isMultiDay
+          ? toLocalDatetime(end).split('T')[0] + 'T23:59'
+          : toLocalDatetime(end),
+        all_day: !!isMultiDay,
+        department_id: null,
       });
     }
-  }, [event, defaultDate, open]);
+  }, [event, defaultDate, defaultEndDate, open]);
 
   const handleSubmit = async () => {
     if (!form.title.trim() || !form.start_at || !form.end_at) return;

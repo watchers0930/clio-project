@@ -7,34 +7,49 @@ import { startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { getCalendarDays } from '@/lib/schedule-utils';
 import CalendarHeader from '@/components/schedule/calendar-header';
 import CalendarGrid from '@/components/schedule/calendar-grid';
+import DayDetailPanel from '@/components/schedule/day-detail-panel';
 import EventFormModal from '@/components/schedule/event-form-modal';
 import type { EventFormData } from '@/components/schedule/event-form-modal';
 import TodoList from '@/components/schedule/todo-list';
 import TodoFormModal from '@/components/schedule/todo-form-modal';
 import type { CalendarEvent, TodoItem, TodoStatus, TodoPriority } from '@/lib/supabase/types';
 
+function toLocalDatetime(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  const h = String(date.getHours()).padStart(2, '0');
+  const min = String(date.getMinutes()).padStart(2, '0');
+  return `${y}-${m}-${d}T${h}:${min}`;
+}
+
 export default function SchedulePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
 
-  // 캘린더 상태
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [eventModalOpen, setEventModalOpen] = useState(false);
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [selectedDept, setSelectedDept] = useState<string | null>(null);
 
-  // 할일 상태
+  // 상세 패널
+  const [detailDate, setDetailDate] = useState<Date | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  // 일정 폼 모달
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [eventModalOpen, setEventModalOpen] = useState(false);
+  const [formDefaultDate, setFormDefaultDate] = useState<Date | null>(null);
+  const [formDefaultEnd, setFormDefaultEnd] = useState<Date | null>(null);
+
+  // 할일
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [todoFilter, setTodoFilter] = useState<TodoStatus | 'all'>('all');
   const [todoModalOpen, setTodoModalOpen] = useState(false);
   const [selectedTodo, setSelectedTodo] = useState<TodoItem | null>(null);
 
-  // 부서 목록 로드
   useEffect(() => {
     fetch('/api/departments')
       .then((r) => r.json())
@@ -42,14 +57,12 @@ export default function SchedulePage() {
       .then(() => {}, () => {});
   }, []);
 
-  // 일정 로드
   const fetchEvents = useCallback(() => {
     setLoading(true);
     const start = startOfMonth(new Date(year, month)).toISOString();
     const end = endOfMonth(new Date(year, month)).toISOString();
     const params = new URLSearchParams({ start, end });
     if (selectedDept) params.set('department_id', selectedDept);
-
     fetch(`/api/events?${params}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((res) => { if (res.success) setEvents(res.data ?? []); })
@@ -58,13 +71,10 @@ export default function SchedulePage() {
   }, [year, month, selectedDept]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchEvents();
-    }, 0);
-    return () => clearTimeout(timer);
+    const t = setTimeout(fetchEvents, 0);
+    return () => clearTimeout(t);
   }, [fetchEvents]);
 
-  // 할일 로드
   const fetchTodos = useCallback(() => {
     fetch('/api/todos?status=all')
       .then((r) => r.json())
@@ -73,48 +83,71 @@ export default function SchedulePage() {
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchTodos();
-    }, 0);
-    return () => clearTimeout(timer);
+    const t = setTimeout(fetchTodos, 0);
+    return () => clearTimeout(t);
   }, [fetchTodos]);
 
-  // 월 이동
   const goNextMonth = () => { const d = addMonths(new Date(year, month), 1); setYear(d.getFullYear()); setMonth(d.getMonth()); };
   const goPrevMonth = () => { const d = subMonths(new Date(year, month), 1); setYear(d.getFullYear()); setMonth(d.getMonth()); };
   const goToday = () => { const t = new Date(); setYear(t.getFullYear()); setMonth(t.getMonth()); };
 
-  // 일정 CRUD
+  // 날짜 클릭 → 상세 패널
+  const handleDateClick = (date: Date) => {
+    setDetailDate(date);
+    setDetailOpen(true);
+  };
+
+  // 이벤트 바 클릭 → 편집 폼 바로 열기
+  const handleEventClick = (event: CalendarEvent) => {
+    setSelectedEvent(event);
+    setFormDefaultDate(null);
+    setFormDefaultEnd(null);
+    setEventModalOpen(true);
+  };
+
+  // 드래그로 날짜 범위 선택 → 생성 폼 (범위 미리채움)
+  const handleRangeSelect = (start: Date, end: Date) => {
+    setSelectedEvent(null);
+    setFormDefaultDate(start);
+    setFormDefaultEnd(end);
+    setEventModalOpen(true);
+  };
+
+  // 상세 패널에서 "수정" 클릭
+  const handleEditEvent = (event: CalendarEvent) => {
+    setSelectedEvent(event);
+    setFormDefaultDate(null);
+    setFormDefaultEnd(null);
+    setEventModalOpen(true);
+  };
+
+  // 상세 패널에서 "새 일정" 클릭
+  const handleCreateFromDetail = () => {
+    setSelectedEvent(null);
+    setFormDefaultDate(detailDate);
+    setFormDefaultEnd(null);
+    setEventModalOpen(true);
+  };
+
   const handleCreateEvent = async (data: EventFormData) => {
     const res = await fetch('/api/events', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     const json = await res.json();
-    if (json.success) {
-      if (json.data) setEvents((prev) => [...prev, json.data as CalendarEvent]);
-      fetchEvents();
-    }
+    if (json.success) fetchEvents();
   };
+
   const handleUpdateEvent = async (data: EventFormData) => {
     if (!selectedEvent) return;
     const res = await fetch(`/api/events/${selectedEvent.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     const json = await res.json();
-    if (json.success) {
-      if (json.data) {
-        const updatedEvent = { ...selectedEvent, ...(json.data as CalendarEvent) };
-        setEvents((prev) => prev.map((event) => event.id === updatedEvent.id ? updatedEvent : event));
-      }
-      fetchEvents();
-    }
+    if (json.success) fetchEvents();
   };
+
   const handleDeleteEvent = async () => {
     if (!selectedEvent) return;
     const res = await fetch(`/api/events/${selectedEvent.id}`, { method: 'DELETE' });
-    if ((await res.json()).success) {
-      setEvents((prev) => prev.filter((event) => event.id !== selectedEvent.id));
-      fetchEvents();
-    }
+    if ((await res.json()).success) fetchEvents();
   };
 
-  // 할일 CRUD
   const handleCreateTodo = async (data: { title: string; description: string; due_date: string; priority: TodoPriority }) => {
     const res = await fetch('/api/todos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     if ((await res.json()).success) fetchTodos();
@@ -138,6 +171,7 @@ export default function SchedulePage() {
 
   const activeTodoCount = todos.filter((t) => t.status === 'active').length;
   const completedTodoCount = todos.filter((t) => t.status === 'completed').length;
+
   const visibleCalendarDays = useMemo(() => getCalendarDays(year, month), [year, month]);
   const visibleCalendarStart = visibleCalendarDays[0];
   const visibleCalendarEnd = visibleCalendarDays[visibleCalendarDays.length - 1];
@@ -146,10 +180,33 @@ export default function SchedulePage() {
     const dueDate = new Date(`${todo.due_date}T00:00:00`);
     return dueDate >= visibleCalendarStart && dueDate <= visibleCalendarEnd;
   });
+
   const scheduleFocus =
     selectedEvent?.title ||
     todos.find((t) => t.status === 'active')?.title ||
     '회의와 실행 일정';
+
+  // 폼 기본값 계산 (범위 드래그 or 날짜 클릭)
+  const formDefaultDateValue = useMemo(() => {
+    if (!formDefaultDate) return null;
+    const d = new Date(formDefaultDate);
+    d.setHours(9, 0, 0, 0);
+    return d;
+  }, [formDefaultDate]);
+
+  const formDefaultEndValue = useMemo(() => {
+    if (formDefaultEnd) {
+      const d = new Date(formDefaultEnd);
+      d.setHours(18, 0, 0, 0);
+      return d;
+    }
+    if (formDefaultDate) {
+      const d = new Date(formDefaultDate);
+      d.setHours(10, 0, 0, 0);
+      return d;
+    }
+    return null;
+  }, [formDefaultDate, formDefaultEnd]);
 
   return (
     <div className="flex flex-col gap-5 pb-10">
@@ -203,7 +260,6 @@ export default function SchedulePage() {
         </div>
       </section>
 
-      {/* 콘텐츠 */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,7fr)_minmax(300px,3fr)]">
         <section className="min-w-0">
           {loading ? (
@@ -227,21 +283,11 @@ export default function SchedulePage() {
                 month={month}
                 events={events}
                 todos={todos}
-                selectedDate={selectedDate}
-                onDateClick={(date) => {
-                  setSelectedDate(date);
-                  setSelectedEvent(null);
-                  setEventModalOpen(true);
-                }}
-                onEventClick={(event) => {
-                  setSelectedEvent(event);
-                  setSelectedDate(null);
-                  setEventModalOpen(true);
-                }}
-                onTodoClick={(todo) => {
-                  setSelectedTodo(todo);
-                  setTodoModalOpen(true);
-                }}
+                selectedDate={detailDate}
+                onDateClick={handleDateClick}
+                onEventClick={handleEventClick}
+                onTodoClick={(todo) => { setSelectedTodo(todo); setTodoModalOpen(true); }}
+                onRangeSelect={handleRangeSelect}
               />
             </>
           )}
@@ -260,14 +306,27 @@ export default function SchedulePage() {
         </aside>
       </div>
 
-      {/* 일정 모달 */}
+      {/* 날짜 상세 패널 */}
+      <DayDetailPanel
+        open={detailOpen}
+        date={detailDate}
+        events={events}
+        todos={todos}
+        onClose={() => setDetailOpen(false)}
+        onEditEvent={handleEditEvent}
+        onEditTodo={(todo) => { setSelectedTodo(todo); setTodoModalOpen(true); }}
+        onCreateEvent={handleCreateFromDetail}
+      />
+
+      {/* 일정 폼 모달 */}
       <EventFormModal
         open={eventModalOpen}
-        onClose={() => { setEventModalOpen(false); setSelectedEvent(null); setSelectedDate(null); }}
+        onClose={() => { setEventModalOpen(false); setSelectedEvent(null); setFormDefaultDate(null); setFormDefaultEnd(null); }}
         onSubmit={selectedEvent ? handleUpdateEvent : handleCreateEvent}
         onDelete={selectedEvent ? handleDeleteEvent : undefined}
         event={selectedEvent}
-        defaultDate={selectedDate}
+        defaultDate={formDefaultDateValue}
+        defaultEndDate={formDefaultEndValue}
         departments={departments}
       />
 

@@ -8,6 +8,7 @@ import { MobileBottomNav } from './mobile-bottom-nav';
 import { ToastRenderer } from '@/components/ui/toast';
 import { useAuthStore } from '@/store/auth-store';
 import { ExpiryAlertProvider } from '@/components/expiry/ExpiryAlertProvider';
+import { EventAlertProvider } from '@/components/schedule/event-alert-provider';
 import { OnboardingModal } from '@/components/common/OnboardingModal';
 
 interface AppLayoutProps {
@@ -38,6 +39,7 @@ function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <ExpiryAlertProvider>
+    <EventAlertProvider>
     <div className="flex h-screen overflow-hidden bg-page-bg">
       {/* Desktop sidebar */}
       <div className="hidden lg:flex flex-shrink-0">
@@ -81,6 +83,7 @@ function AppLayout({ children }: AppLayoutProps) {
       <ToastRenderer />
       <OnboardingModal />
     </div>
+    </EventAlertProvider>
     </ExpiryAlertProvider>
   );
 }
