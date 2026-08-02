@@ -152,7 +152,7 @@ export function CredentialFormModal({ open, editing, onClose, onSaved }: Props) 
             취소
           </button>
           <button
-            onClick={void save}
+            onClick={() => { void save(); }}
             disabled={saving}
             className="h-9 rounded-xl bg-primary px-5 text-[13px] font-medium text-white hover:bg-primary-dark disabled:opacity-50"
           >
