@@ -116,12 +116,12 @@ export function CredentialsTable() {
           <table className="w-full text-[13px]">
             <thead>
               <tr className="bg-surface-secondary">
-                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary w-[150px]">사이트명</th>
+                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary w-[110px]">사이트명</th>
                 <th className="px-4 py-3 text-left font-semibold text-foreground-secondary">사이트 주소</th>
-                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary w-[160px]">아이디</th>
-                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary w-[180px]">비밀번호</th>
-                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary w-[110px]">작성일자</th>
-                <th className="px-4 py-3 text-center font-semibold text-foreground-secondary w-[70px]">관리</th>
+                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary w-[150px]">아이디</th>
+                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary w-[160px]">비밀번호</th>
+                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary w-[100px]">작성일자</th>
+                <th className="px-4 py-3 text-center font-semibold text-foreground-secondary w-[60px]">관리</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border bg-white">
@@ -143,7 +143,7 @@ export function CredentialsTable() {
                             href={row.site_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-primary hover:underline truncate block max-w-[260px]"
+                            className="text-primary hover:underline break-all"
                           >
                             {row.site_url}
                           </a>
