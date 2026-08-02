@@ -113,7 +113,7 @@ export function CredentialsTable() {
 
         {/* 테이블 */}
         <div className="mt-[10px] mb-[10px] overflow-x-auto rounded-xl border border-border">
-          <table className="w-full text-[13px]">
+          <table className="w-full table-fixed text-[13px]">
             <thead>
               <tr className="bg-surface-secondary">
                 <th className="px-4 py-3 text-left font-semibold text-foreground-secondary w-[110px]">사이트명</th>
@@ -143,7 +143,7 @@ export function CredentialsTable() {
                             href={row.site_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-primary hover:underline break-all"
+                            className="text-primary hover:underline truncate block"
                           >
                             {row.site_url}
                           </a>
