@@ -177,7 +177,7 @@ export function CredentialsTable() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-foreground-secondary">{formatDate(row.created_at)}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => openEdit(row)}
