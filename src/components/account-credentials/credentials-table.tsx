@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, EyeOff, Upload } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
 import { CredentialFormModal, type CredentialRow } from './credential-form-modal';
+import { CsvImportModal } from './csv-import-modal';
 
 export function CredentialsTable() {
   const toast = useToast();
@@ -13,6 +14,7 @@ export function CredentialsTable() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<CredentialRow | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [csvModalOpen, setCsvModalOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -91,13 +93,22 @@ export function CredentialsTable() {
               저장된 사이트 계정 정보 — 비밀번호는 암호화되어 보관됩니다.
             </p>
           </div>
-          <button
-            onClick={openAdd}
-            className="flex items-center gap-1.5 h-9 rounded-xl bg-primary px-4 text-[13px] font-medium text-white hover:bg-primary-dark transition-colors"
-          >
-            <Plus size={15} strokeWidth={1.5} />
-            계정 추가
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCsvModalOpen(true)}
+              className="flex items-center gap-1.5 h-9 rounded-xl border border-border px-4 text-[13px] font-medium text-foreground hover:bg-surface-secondary transition-colors"
+            >
+              <Upload size={15} strokeWidth={1.5} />
+              CSV 가져오기
+            </button>
+            <button
+              onClick={openAdd}
+              className="flex items-center gap-1.5 h-9 rounded-xl bg-primary px-4 text-[13px] font-medium text-white hover:bg-primary-dark transition-colors"
+            >
+              <Plus size={15} strokeWidth={1.5} />
+              계정 추가
+            </button>
+          </div>
         </div>
 
         {/* 테이블 */}
@@ -195,6 +206,15 @@ export function CredentialsTable() {
         editing={editingRow}
         onClose={() => setModalOpen(false)}
         onSaved={handleSaved}
+      />
+
+      <CsvImportModal
+        open={csvModalOpen}
+        onClose={() => setCsvModalOpen(false)}
+        onImported={(count) => {
+          toast.success(`${count}개 계정을 가져왔습니다.`);
+          void load();
+        }}
       />
     </>
   );
