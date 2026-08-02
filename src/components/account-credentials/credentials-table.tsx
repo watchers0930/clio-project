@@ -114,20 +114,26 @@ export function CredentialsTable() {
         {/* 테이블 */}
         <div className="mt-[10px] mb-[10px] overflow-x-auto rounded-xl border border-border">
           <table className="w-full table-fixed text-[13px]">
+            <colgroup>
+              <col className="w-[130px]" />
+              <col />
+              <col className="w-[210px]" />
+              <col className="w-[95px]" />
+              <col className="w-[60px]" />
+            </colgroup>
             <thead>
               <tr className="bg-surface-secondary">
-                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary w-[110px]">사이트명</th>
+                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary">사이트명</th>
                 <th className="px-4 py-3 text-left font-semibold text-foreground-secondary">사이트 주소</th>
-                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary w-[150px]">아이디</th>
-                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary w-[160px]">비밀번호</th>
-                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary w-[100px]">작성일자</th>
-                <th className="px-4 py-3 text-center font-semibold text-foreground-secondary w-[60px]">관리</th>
+                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary">아이디 / 비밀번호</th>
+                <th className="px-4 py-3 text-left font-semibold text-foreground-secondary">작성일자</th>
+                <th className="px-4 py-3 text-center font-semibold text-foreground-secondary">관리</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border bg-white">
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center text-[13px] text-foreground-tertiary">
+                  <td colSpan={5} className="py-16 text-center text-[13px] text-foreground-tertiary">
                     저장된 계정이 없습니다. 계정 추가 버튼을 눌러 등록해주세요.
                   </td>
                 </tr>
@@ -136,14 +142,14 @@ export function CredentialsTable() {
                   const visible = visibleIds.has(row.id);
                   return (
                     <tr key={row.id} className="hover:bg-surface-secondary/50 transition-colors">
-                      <td className="px-4 py-3 font-medium text-foreground">{row.site_name}</td>
-                      <td className="px-4 py-3 text-foreground-secondary">
+                      <td className="px-4 py-3 font-medium text-foreground truncate">{row.site_name}</td>
+                      <td className="px-4 py-3 overflow-hidden">
                         {row.site_url ? (
                           <a
                             href={row.site_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-primary hover:underline truncate block"
+                            className="text-primary hover:underline whitespace-nowrap overflow-hidden text-ellipsis block"
                           >
                             {row.site_url}
                           </a>
@@ -151,21 +157,23 @@ export function CredentialsTable() {
                           <span className="text-foreground-quaternary">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-foreground-secondary">{row.username}</td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-foreground-secondary tracking-widest">
-                            {visible ? row.password : '•'.repeat(Math.min(row.password.length, 10))}
-                          </span>
-                          <button
-                            onClick={() => toggleVisible(row.id)}
-                            className="text-foreground-quaternary hover:text-foreground-secondary transition-colors"
-                          >
-                            {visible
-                              ? <EyeOff size={14} strokeWidth={1.5} />
-                              : <Eye size={14} strokeWidth={1.5} />
-                            }
-                          </button>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-foreground-secondary truncate">{row.username}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-foreground-tertiary text-[12px] tracking-widest">
+                              {visible ? row.password : '•'.repeat(Math.min(row.password.length, 10))}
+                            </span>
+                            <button
+                              onClick={() => toggleVisible(row.id)}
+                              className="text-foreground-quaternary hover:text-foreground-secondary transition-colors flex-shrink-0"
+                            >
+                              {visible
+                                ? <EyeOff size={13} strokeWidth={1.5} />
+                                : <Eye size={13} strokeWidth={1.5} />
+                              }
+                            </button>
+                          </div>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-foreground-secondary">{formatDate(row.created_at)}</td>
