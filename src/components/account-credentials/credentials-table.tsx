@@ -143,7 +143,7 @@ export function CredentialsTable() {
                             href={row.site_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-primary hover:underline break-all"
+                            className="text-primary hover:underline truncate block max-w-[260px]"
                           >
                             {row.site_url}
                           </a>
