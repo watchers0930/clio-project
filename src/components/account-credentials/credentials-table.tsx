@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, Eye, EyeOff, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, EyeOff, Upload, Search } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
 import { CredentialFormModal, type CredentialRow } from './credential-form-modal';
 import { CsvImportModal } from './csv-import-modal';
@@ -15,6 +15,9 @@ export function CredentialsTable() {
   const [editingRow, setEditingRow] = useState<CredentialRow | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [csvModalOpen, setCsvModalOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -38,6 +41,15 @@ export function CredentialsTable() {
       return next;
     });
   };
+
+  const filteredRows = query.trim()
+    ? rows.filter((r) => {
+        const q = query.toLowerCase();
+        return r.site_name.toLowerCase().includes(q) || r.site_url.toLowerCase().includes(q) || r.username.toLowerCase().includes(q);
+      })
+    : rows;
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+  const pagedRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const openAdd = () => { setEditingRow(null); setModalOpen(true); };
   const openEdit = (row: CredentialRow) => { setEditingRow(row); setModalOpen(true); };
@@ -94,6 +106,16 @@ export function CredentialsTable() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-quaternary" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+                placeholder="사이트명 · 주소 · 아이디"
+                className="h-9 w-56 rounded-xl border border-border bg-surface-secondary pl-8 pr-3 text-[13px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
             <button
               onClick={() => setCsvModalOpen(true)}
               className="flex items-center gap-1.5 h-9 rounded-xl border border-border px-4 text-[13px] font-medium text-foreground hover:bg-surface-secondary transition-colors"
@@ -134,11 +156,11 @@ export function CredentialsTable() {
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-16 text-center text-[13px] text-foreground-tertiary">
-                    저장된 계정이 없습니다. 계정 추가 버튼을 눌러 등록해주세요.
+                    {query ? `"${query}" 검색 결과가 없습니다.` : '저장된 계정이 없습니다. 계정 추가 버튼을 눌러 등록해주세요.'}
                   </td>
                 </tr>
               ) : (
-                rows.map((row) => {
+                pagedRows.map((row) => {
                   const visible = visibleIds.has(row.id);
                   return (
                     <tr key={row.id} className="hover:bg-surface-secondary/50 transition-colors">
@@ -204,9 +226,43 @@ export function CredentialsTable() {
           </table>
         </div>
 
-        <p className="text-[11px] text-foreground-quaternary">
-          총 {rows.length}개 계정 · 비밀번호는 AES-256 암호화로 저장됩니다.
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] text-foreground-quaternary">
+            {query ? `${filteredRows.length}개 검색됨 (전체 ${rows.length}개)` : `총 ${rows.length}개 계정`} · 비밀번호는 AES-256 암호화로 저장됩니다.
+          </p>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="h-8 w-8 rounded-lg border border-border text-[13px] text-foreground-secondary hover:bg-surface-secondary disabled:opacity-30 transition-colors"
+              >
+                ‹
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={[
+                    'h-8 w-8 rounded-lg text-[13px] transition-colors',
+                    p === page
+                      ? 'bg-primary text-white font-semibold'
+                      : 'border border-border text-foreground-secondary hover:bg-surface-secondary',
+                  ].join(' ')}
+                >
+                  {p}
+                </button>
+              ))}
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="h-8 w-8 rounded-lg border border-border text-[13px] text-foreground-secondary hover:bg-surface-secondary disabled:opacity-30 transition-colors"
+              >
+                ›
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <CredentialFormModal
