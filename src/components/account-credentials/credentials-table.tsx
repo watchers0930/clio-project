@@ -104,13 +104,13 @@ export function CredentialsTable() {
           </div>
           <div className="flex items-center gap-2">
             <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-quaternary" />
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-quaternary pointer-events-none" />
               <input
                 type="text"
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setPage(1); }}
                 placeholder="사이트명 검색"
-                className="h-9 w-56 rounded-xl border border-border bg-surface-secondary pl-9 pr-3 text-[13px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="h-9 w-56 rounded-xl border border-border bg-surface-secondary pl-[34px] pr-3 text-[13px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
             <button
