@@ -43,10 +43,7 @@ export function CredentialsTable() {
   };
 
   const filteredRows = query.trim()
-    ? rows.filter((r) => {
-        const q = query.toLowerCase();
-        return r.site_name.toLowerCase().includes(q) || r.site_url.toLowerCase().includes(q) || r.username.toLowerCase().includes(q);
-      })
+    ? rows.filter((r) => r.site_name.toLowerCase().includes(query.toLowerCase()))
     : rows;
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
   const pagedRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -112,7 +109,7 @@ export function CredentialsTable() {
                 type="text"
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-                placeholder="사이트명 · 주소 · 아이디"
+                placeholder="사이트명 검색"
                 className="h-9 w-56 rounded-xl border border-border bg-surface-secondary pl-8 pr-3 text-[13px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
