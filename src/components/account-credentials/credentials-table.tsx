@@ -115,11 +115,11 @@ export function CredentialsTable() {
         <div className="mt-[10px] mb-[10px] overflow-x-auto rounded-xl border border-border">
           <table className="w-full table-fixed text-[13px]">
             <colgroup>
-              <col className="w-[15%]" />
-              <col className="w-[30%]" />
-              <col className="w-[25%]" />
-              <col className="w-[15%]" />
-              <col className="w-[15%]" />
+              <col className="w-[20%]" />
+              <col className="w-[40%]" />
+              <col className="w-[20%]" />
+              <col className="w-[10%]" />
+              <col className="w-[10%]" />
             </colgroup>
             <thead>
               <tr className="bg-surface-secondary">
