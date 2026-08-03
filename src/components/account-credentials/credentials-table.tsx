@@ -110,7 +110,7 @@ export function CredentialsTable() {
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setPage(1); }}
                 placeholder="사이트명 검색"
-                className="h-9 w-56 rounded-xl border border-border bg-surface-secondary pl-8 pr-3 text-[13px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="h-9 w-56 rounded-xl border border-border bg-surface-secondary pl-9 pr-3 text-[13px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
             <button
