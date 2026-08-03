@@ -231,34 +231,23 @@ export function CredentialsTable() {
             {query ? `${filteredRows.length}개 검색됨 (전체 ${rows.length}개)` : `총 ${rows.length}개 계정`} · 비밀번호는 AES-256 암호화로 저장됩니다.
           </p>
           {totalPages > 1 && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="h-8 w-8 rounded-lg border border-border text-[13px] text-foreground-secondary hover:bg-surface-secondary disabled:opacity-30 transition-colors"
+                className="h-8 px-3 rounded-lg border border-border text-[13px] text-foreground-secondary hover:bg-surface-secondary disabled:opacity-30 transition-colors"
               >
-                ‹
+                이전
               </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  className={[
-                    'h-8 w-8 rounded-lg text-[13px] transition-colors',
-                    p === page
-                      ? 'bg-primary text-white font-semibold'
-                      : 'border border-border text-foreground-secondary hover:bg-surface-secondary',
-                  ].join(' ')}
-                >
-                  {p}
-                </button>
-              ))}
+              <span className="text-[13px] text-foreground-secondary">
+                {page} / {totalPages}
+              </span>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="h-8 w-8 rounded-lg border border-border text-[13px] text-foreground-secondary hover:bg-surface-secondary disabled:opacity-30 transition-colors"
+                className="h-8 px-3 rounded-lg border border-border text-[13px] text-foreground-secondary hover:bg-surface-secondary disabled:opacity-30 transition-colors"
               >
-                ›
+                다음
               </button>
             </div>
           )}
