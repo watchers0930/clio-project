@@ -8,7 +8,7 @@ import {
   type WorkPayment,
   type WorkProject,
 } from '@/lib/work-ledger/types';
-import { expectedProfit, formatKRW, formatNumber, isPaymentOverdue, marginRate, toKoreanMoney } from '@/lib/work-ledger/calc';
+import { expectedProfit, formatKRW, formatNumber, isPaymentOverdue, marginRate, paidTotal, unpaidTotal, toKoreanMoney } from '@/lib/work-ledger/calc';
 
 interface Props {
   projects: WorkProject[];
@@ -56,17 +56,18 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
 
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
-      <table className="w-full min-w-[1180px] text-[13px]">
+      <table className="w-full min-w-[1200px] text-[13px]">
         <thead>
           <tr className="bg-surface-secondary text-foreground-secondary">
             <th className="px-5 py-4 text-center font-semibold">상태</th>
             <th className="px-5 py-4 text-center font-semibold">프로젝트</th>
-            <th className="px-5 py-4 text-center font-semibold">계약총액</th>
-            <th className="px-5 py-4 text-center font-semibold">매입금액</th>
-            <th className="px-5 py-4 text-center font-semibold">예상수익</th>
-            <th className="px-5 py-4 text-center font-semibold">대금 단계</th>
+            <th className="w-[104px] px-3 py-4 text-center font-semibold">계약총액</th>
+            <th className="w-[104px] px-3 py-4 text-center font-semibold">매입금액</th>
+            <th className="w-[104px] px-3 py-4 text-center font-semibold">예상수익</th>
+            <th className="px-5 py-4 text-center font-semibold">지급현황</th>
+            <th className="px-5 py-4 text-center font-semibold">미수금</th>
             <th className="px-5 py-4 text-center font-semibold">비고</th>
-            <th className="px-5 py-4 text-center font-semibold">관리</th>
+            <th className="w-16 px-2 py-4 text-center font-semibold">관리</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border bg-white">
@@ -87,15 +88,15 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
                     {p.due_date && <div className="text-foreground-quaternary">완료예정 {p.due_date}</div>}
                   </div>
                 </td>
-                <td className="px-5 py-6 text-right">
+                <td className="w-[104px] px-3 py-6 text-right">
                   <div className="font-medium text-foreground">{formatKRW(p.contract_amount)}</div>
                   <div className="mt-1 text-[11px] text-foreground-quaternary">{toKoreanMoney(p.contract_amount)}</div>
                 </td>
-                <td className="px-5 py-6 text-right">
+                <td className="w-[104px] px-3 py-6 text-right">
                   <div className="font-medium text-foreground">{formatKRW(p.purchase_amount)}</div>
                   <div className="mt-1 text-[11px] text-foreground-quaternary">{toKoreanMoney(p.purchase_amount)}</div>
                 </td>
-                <td className="px-5 py-6 text-right">
+                <td className="w-[104px] px-3 py-6 text-right">
                   <div className="font-medium text-primary">{formatKRW(expectedProfit(p.contract_amount, p.purchase_amount))}</div>
                   <div className="mt-1 text-[11px] text-foreground-quaternary">{marginRate(p.contract_amount, p.purchase_amount)}%</div>
                 </td>
@@ -103,24 +104,32 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
                   {p.payments.length === 0 ? (
                     <span className="text-[12px] text-foreground-quaternary">—</span>
                   ) : (
-                    <div className="flex flex-col items-start gap-1">
-                      {downs.map((pay, i) => <PaymentChip key={pay.id ?? `d${i}`} payment={pay} />)}
-                      {interims.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {interims.map((pay, i) => <PaymentChip key={pay.id ?? `i${i}`} payment={pay} />)}
-                        </div>
-                      )}
-                      {balances.map((pay, i) => <PaymentChip key={pay.id ?? `b${i}`} payment={pay} />)}
-                    </div>
+                    <>
+                      <div className="flex flex-col items-start gap-1">
+                        {downs.map((pay, i) => <PaymentChip key={pay.id ?? `d${i}`} payment={pay} />)}
+                        {interims.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {interims.map((pay, i) => <PaymentChip key={pay.id ?? `i${i}`} payment={pay} />)}
+                          </div>
+                        )}
+                        {balances.map((pay, i) => <PaymentChip key={pay.id ?? `b${i}`} payment={pay} />)}
+                      </div>
+                      <div className="mt-3 text-[11px] text-foreground-secondary">
+                        지급 <span className="font-medium text-emerald-600">{formatKRW(paidTotal(p))}</span>
+                      </div>
+                    </>
                   )}
+                </td>
+                <td className="px-5 py-6 text-right">
+                  <div className={`font-medium ${unpaidTotal(p) > 0 ? 'text-foreground' : 'text-foreground-quaternary'}`}>{formatKRW(unpaidTotal(p))}</div>
                 </td>
                 <td className="px-5 py-6 align-top">
                   {p.note
                     ? <p className="max-w-[220px] whitespace-pre-wrap break-words text-[12px] text-foreground-secondary line-clamp-3">{p.note}</p>
                     : <span className="text-[12px] text-foreground-quaternary">—</span>}
                 </td>
-                <td className="px-5 py-6">
-                  <div className="flex items-center justify-center gap-3">
+                <td className="w-16 px-2 py-6">
+                  <div className="flex items-center justify-center gap-2">
                     <button onClick={() => onView(p)} className="text-foreground-secondary hover:text-primary transition-colors" title="보기">
                       <Eye size={15} strokeWidth={1.5} />
                     </button>
