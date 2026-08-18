@@ -89,6 +89,7 @@ export function validateWorkProjectInput(raw: unknown): ValidationResult {
       name,
       status,
       client_name: typeof b.client_name === 'string' && b.client_name.trim() ? b.client_name.trim() : null,
+      supplier_name: typeof b.supplier_name === 'string' && b.supplier_name.trim() ? b.supplier_name.trim() : null,
       manager_id,
       contract_date,
       due_date,

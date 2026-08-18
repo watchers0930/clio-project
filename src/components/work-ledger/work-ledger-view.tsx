@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
+import { useAuthStore } from '@/store/auth-store';
 import { useWorkLedger } from '@/hooks/use-work-ledger';
 import { exportWorkLedgerExcel } from '@/lib/work-ledger/excel';
 import type { WorkProject, WorkProjectInput } from '@/lib/work-ledger/types';
@@ -9,6 +10,7 @@ import { WorkLedgerSummary } from './work-ledger-summary';
 import { WorkLedgerFilters, type SortKey, type StatusFilter } from './work-ledger-filters';
 import { WorkLedgerTable } from './work-ledger-table';
 import { WorkProjectFormModal } from './work-project-form-modal';
+import { WorkProjectDetailModal } from './work-project-detail-modal';
 
 /** 미수금 중 가장 빠른 예정일 (정렬용) */
 function nextDue(project: WorkProject): string {
@@ -18,6 +20,7 @@ function nextDue(project: WorkProject): string {
 
 export function WorkLedgerView() {
   const toast = useToast();
+  const currentUserId = useAuthStore((s) => s.user?.id ?? null);
   const { projects, departments, managers, loading, createProject, updateProject, deleteProject } = useWorkLedger();
 
   const [query, setQuery] = useState('');
@@ -25,6 +28,7 @@ export function WorkLedgerView() {
   const [sortKey, setSortKey] = useState<SortKey>('recent');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<WorkProject | null>(null);
+  const [viewing, setViewing] = useState<WorkProject | null>(null);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -82,10 +86,10 @@ export function WorkLedgerView() {
 
   return (
     <>
-      <div className="space-y-5">
+      <div className="space-y-8">
         <div>
           <h2 className="text-[16px] font-semibold text-foreground">작업내역</h2>
-          <p className="mt-0.5 text-[13px] text-foreground-secondary">진행 중인 프로젝트의 계약·수익·수금 일정을 관리합니다.</p>
+          <p className="mt-1 text-[13px] text-foreground-secondary">진행 중인 프로젝트의 계약·수익·수금 일정을 관리합니다.</p>
         </div>
 
         <WorkLedgerSummary projects={projects} />
@@ -102,7 +106,13 @@ export function WorkLedgerView() {
           exportDisabled={visible.length === 0}
         />
 
-        <WorkLedgerTable projects={visible} onEdit={openEdit} onDelete={(p) => void handleDelete(p)} />
+        <WorkLedgerTable
+          projects={visible}
+          currentUserId={currentUserId}
+          onView={setViewing}
+          onEdit={openEdit}
+          onDelete={(p) => void handleDelete(p)}
+        />
 
         <p className="text-[11px] text-foreground-quaternary">
           {query || statusFilter !== 'all' ? `${visible.length}개 표시 (전체 ${projects.length}개)` : `총 ${projects.length}개 작업`}
@@ -116,6 +126,13 @@ export function WorkLedgerView() {
         managers={managers}
         onClose={() => setModalOpen(false)}
         onSubmit={handleSubmit}
+      />
+
+      <WorkProjectDetailModal
+        open={!!viewing}
+        project={viewing}
+        departments={departments}
+        onClose={() => setViewing(null)}
       />
     </>
   );

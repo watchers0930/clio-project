@@ -1,6 +1,6 @@
 // 작업내역 엑셀 내보내기 (클라이언트 다운로드)
 import { STATUS_LABELS, PAYMENT_TYPE_LABELS, type WorkProject } from './types';
-import { expectedProfit, paidTotal, unpaidTotal } from './calc';
+import { expectedProfit, paidTotal, unpaidTotal, toKoreanMoney } from './calc';
 
 /** 대금 단계 요약 텍스트 (예: "계약금 2,000,000(09-01) / 잔금 …") */
 function paymentSummary(project: WorkProject): string {
@@ -24,10 +24,12 @@ export async function exportWorkLedgerExcel(projects: WorkProject[]): Promise<vo
     { header: '상태', key: 'status', width: 10 },
     { header: '프로젝트명', key: 'name', width: 28 },
     { header: '발주처', key: 'client', width: 18 },
+    { header: '매입처', key: 'supplier', width: 18 },
     { header: '담당자', key: 'manager', width: 12 },
     { header: '계약일', key: 'contract_date', width: 13 },
     { header: '완료예정일', key: 'due_date', width: 13 },
     { header: '계약총액', key: 'contract_amount', width: 16 },
+    { header: '계약총액(한글)', key: 'contract_amount_ko', width: 22 },
     { header: '수익률(%)', key: 'margin_rate', width: 11 },
     { header: '예상수익', key: 'expected_profit', width: 16 },
     { header: '수금완료', key: 'paid', width: 16 },
@@ -43,10 +45,12 @@ export async function exportWorkLedgerExcel(projects: WorkProject[]): Promise<vo
       status: STATUS_LABELS[p.status],
       name: p.name,
       client: p.client_name ?? '',
+      supplier: p.supplier_name ?? '',
       manager: p.manager_name ?? '',
       contract_date: p.contract_date ?? '',
       due_date: p.due_date ?? '',
       contract_amount: p.contract_amount,
+      contract_amount_ko: toKoreanMoney(p.contract_amount),
       margin_rate: p.margin_rate,
       expected_profit: expectedProfit(p.contract_amount, p.margin_rate),
       paid: paidTotal(p),

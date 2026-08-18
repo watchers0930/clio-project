@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { PaymentStageEditor } from './payment-stage-editor';
-import { expectedProfit, formatKRW, formatNumber } from '@/lib/work-ledger/calc';
+import { expectedProfit, formatKRW, formatNumber, toKoreanMoney } from '@/lib/work-ledger/calc';
 import {
   STATUS_LABELS,
   type DepartmentOption,
@@ -30,6 +30,7 @@ const EMPTY: WorkProjectInput = {
   name: '',
   status: 'in_progress',
   client_name: null,
+  supplier_name: null,
   manager_id: null,
   contract_date: null,
   due_date: null,
@@ -45,6 +46,7 @@ function toInput(p: WorkProject): WorkProjectInput {
     name: p.name,
     status: p.status,
     client_name: p.client_name,
+    supplier_name: p.supplier_name,
     manager_id: p.manager_id,
     contract_date: p.contract_date,
     due_date: p.due_date,
@@ -136,6 +138,10 @@ export function WorkProjectFormModal({ open, editing, departments, managers, onC
               <input type="text" value={form.client_name ?? ''} onChange={(e) => set('client_name', e.target.value || null)} placeholder="발주처/클라이언트" className={INPUT} />
             </div>
             <div>
+              <label className={LABEL}>매입처</label>
+              <input type="text" value={form.supplier_name ?? ''} onChange={(e) => set('supplier_name', e.target.value || null)} placeholder="공급처/외주처" className={INPUT} />
+            </div>
+            <div>
               <label className={LABEL}>담당자</label>
               <select value={form.manager_id ?? ''} onChange={(e) => set('manager_id', e.target.value || null)} className={INPUT}>
                 <option value="">미지정</option>
@@ -162,6 +168,9 @@ export function WorkProjectFormModal({ open, editing, departments, managers, onC
                 placeholder="0"
                 className={`${INPUT} text-right`}
               />
+              {form.contract_amount > 0 && (
+                <p className="mt-1 text-right text-[11px] text-foreground-tertiary">{toKoreanMoney(form.contract_amount)}</p>
+              )}
             </div>
             <div>
               <label className={LABEL}>수익률(%)</label>
@@ -176,9 +185,12 @@ export function WorkProjectFormModal({ open, editing, departments, managers, onC
                 className={`${INPUT} text-right`}
               />
             </div>
-            <div className="col-span-2 flex items-center justify-between rounded-xl bg-surface-secondary px-4 py-2.5">
+            <div className="col-span-2 flex items-center justify-between rounded-xl bg-surface-secondary px-4 py-3">
               <span className="text-[12px] text-foreground-secondary">회사 예상수익 (자동계산)</span>
-              <span className="text-[15px] font-semibold text-primary">{formatKRW(profit)}</span>
+              <div className="text-right">
+                <span className="text-[15px] font-semibold text-primary">{formatKRW(profit)}</span>
+                <p className="text-[11px] text-foreground-tertiary">{toKoreanMoney(profit)}</p>
+              </div>
             </div>
           </div>
 

@@ -39,6 +39,7 @@ export interface WorkProject {
   name: string;
   status: WorkProjectStatus;
   client_name: string | null;
+  supplier_name: string | null;
   manager_id: string | null;
   manager_name?: string | null;
   contract_date: string | null;
@@ -58,6 +59,7 @@ export interface WorkProjectInput {
   name: string;
   status: WorkProjectStatus;
   client_name: string | null;
+  supplier_name: string | null;
   manager_id: string | null;
   contract_date: string | null;
   due_date: string | null;

@@ -2,7 +2,7 @@
 
 import { Plus, Trash2 } from 'lucide-react';
 import { PAYMENT_TYPE_LABELS, type PaymentType, type WorkPayment } from '@/lib/work-ledger/types';
-import { formatNumber } from '@/lib/work-ledger/calc';
+import { formatKRW, formatNumber, paymentsTotal, toKoreanMoney } from '@/lib/work-ledger/calc';
 
 interface Props {
   payments: WorkPayment[];
@@ -101,6 +101,15 @@ export function PaymentStageEditor({ payments, onChange }: Props) {
               </button>
             </div>
           ))}
+
+          {/* 대금 합계 */}
+          <div className="flex items-center justify-between rounded-lg bg-surface-secondary px-3 py-2.5">
+            <span className="text-[12px] font-medium text-foreground-secondary">대금 합계</span>
+            <div className="text-right">
+              <div className="text-[13px] font-semibold text-foreground">{formatKRW(paymentsTotal(payments))}</div>
+              <div className="text-[11px] text-foreground-tertiary">{toKoreanMoney(paymentsTotal(payments))}</div>
+            </div>
+          </div>
         </div>
       )}
     </div>

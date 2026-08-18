@@ -24,11 +24,11 @@ export function WorkLedgerSummary({ projects }: Props) {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       {cards.map((c) => {
         const Icon = c.icon;
         return (
-          <div key={c.label} className="rounded-xl border border-border bg-white px-4 py-3.5">
+          <div key={c.label} className="rounded-xl border border-border bg-white px-4 py-4">
             <div className="flex items-center gap-2">
               <span
                 className="flex h-7 w-7 items-center justify-center rounded-lg"

@@ -17,6 +17,7 @@ export interface RawWorkProject {
   name: string;
   status: string;
   client_name: string | null;
+  supplier_name: string | null;
   manager_id: string | null;
   contract_date: string | null;
   due_date: string | null;
@@ -56,6 +57,7 @@ export function mapWorkProject(row: RawWorkProject): WorkProject {
     name: row.name,
     status: row.status as WorkProject['status'],
     client_name: row.client_name,
+    supplier_name: row.supplier_name,
     manager_id: row.manager_id,
     manager_name: manager?.name ?? null,
     contract_date: row.contract_date,

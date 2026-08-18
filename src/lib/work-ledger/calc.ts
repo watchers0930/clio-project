@@ -83,3 +83,39 @@ export function formatKRW(value: number): string {
 export function formatNumber(value: number): string {
   return Math.round(value).toLocaleString('ko-KR');
 }
+
+/** 대금 단계 금액 합계 */
+export function paymentsTotal(payments: WorkPayment[]): number {
+  return payments.reduce((sum, p) => sum + p.amount, 0);
+}
+
+const KO_DIGITS = ['', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구'];
+const KO_SMALL = ['', '십', '백', '천'];
+const KO_BIG = ['', '만', '억', '조', '경'];
+
+/** 계약서 표준 한글 금액 표기 (예: 10000000 → "금 일천만원정") */
+export function toKoreanMoney(value: number): string {
+  const n = Math.floor(Math.abs(value));
+  if (n === 0) return '금 영원정';
+  let num = n;
+  let result = '';
+  let bigIdx = 0;
+  while (num > 0) {
+    const chunk = num % 10000;
+    if (chunk > 0) {
+      let chunkStr = '';
+      let c = chunk;
+      let smallIdx = 0;
+      while (c > 0) {
+        const d = c % 10;
+        if (d > 0) chunkStr = KO_DIGITS[d] + KO_SMALL[smallIdx] + chunkStr;
+        c = Math.floor(c / 10);
+        smallIdx += 1;
+      }
+      result = chunkStr + KO_BIG[bigIdx] + result;
+    }
+    num = Math.floor(num / 10000);
+    bigIdx += 1;
+  }
+  return `금 ${result}원정`;
+}

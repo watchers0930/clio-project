@@ -36,6 +36,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       name: input.name,
       status: input.status,
       client_name: input.client_name,
+      supplier_name: input.supplier_name,
       manager_id: input.manager_id,
       contract_date: input.contract_date,
       due_date: input.due_date,
