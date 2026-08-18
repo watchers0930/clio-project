@@ -5,12 +5,13 @@ import Link from 'next/link';
 import { ArrowLeft, TrendingUp, TrendingDown } from 'lucide-react';
 import { formatKRW } from '@/lib/work-ledger/calc';
 import { MonthlyRevenueChart } from './monthly-revenue-chart';
+import { YearlyRevenueChart } from './yearly-revenue-chart';
 
 interface StatsData {
   year: number;
   prevYear: number;
-  monthlyCurrent: number[];
-  monthlyPrevious: number[];
+  monthly: number[];
+  yearly: { year: number; amount: number }[];
   totalCurrent: number;
   totalPrevious: number;
 }
@@ -79,12 +80,9 @@ export function WorkLedgerStats() {
         </div>
       </div>
 
-      <MonthlyRevenueChart
-        monthlyCurrent={stats.monthlyCurrent}
-        monthlyPrevious={stats.monthlyPrevious}
-        year={stats.year}
-        prevYear={stats.prevYear}
-      />
+      <MonthlyRevenueChart monthly={stats.monthly} year={stats.year} />
+
+      <YearlyRevenueChart yearly={stats.yearly} currentYear={stats.year} />
     </div>
   );
 }
