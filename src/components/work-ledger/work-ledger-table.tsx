@@ -56,7 +56,7 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
 
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
-      <table className="w-full min-w-[960px] text-[13px]">
+      <table className="w-full min-w-[1080px] text-[13px]">
         <thead>
           <tr className="bg-surface-secondary text-left text-foreground-secondary">
             <th className="px-5 py-4 font-semibold">상태</th>
@@ -64,6 +64,7 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
             <th className="px-5 py-4 text-right font-semibold">계약총액</th>
             <th className="px-5 py-4 text-right font-semibold">예상수익</th>
             <th className="px-5 py-4 font-semibold">대금 단계</th>
+            <th className="px-5 py-4 font-semibold">비고</th>
             <th className="px-5 py-4 text-center font-semibold">관리</th>
           </tr>
         </thead>
@@ -112,6 +113,11 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
                       합계 <span className="font-medium text-foreground">{formatKRW(paymentsTotal(p.payments))}</span>
                     </div>
                   )}
+                </td>
+                <td className="px-5 py-6 align-top">
+                  {p.note
+                    ? <p className="max-w-[220px] whitespace-pre-wrap break-words text-[12px] text-foreground-secondary line-clamp-3">{p.note}</p>
+                    : <span className="text-[12px] text-foreground-quaternary">—</span>}
                 </td>
                 <td className="px-5 py-6">
                   <div className="flex items-center justify-center gap-3">
