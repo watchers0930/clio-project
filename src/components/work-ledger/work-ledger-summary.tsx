@@ -1,6 +1,6 @@
 'use client';
 
-import { Briefcase, Wallet, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Briefcase, Wallet, TrendingUp, AlertTriangle, CalendarClock } from 'lucide-react';
 import { formatKRW, summarize } from '@/lib/work-ledger/calc';
 import type { WorkProject } from '@/lib/work-ledger/types';
 
@@ -13,6 +13,7 @@ export function WorkLedgerSummary({ projects }: Props) {
 
   const cards = [
     { label: '진행중', value: `${s.activeCount}건`, icon: Briefcase, color: '#2E6FF2' },
+    { label: '진행예정', value: `${s.plannedCount}건`, icon: CalendarClock, color: '#0EA5E9' },
     { label: '총 계약액', value: formatKRW(s.totalContract), icon: Wallet, color: '#12805C' },
     { label: '예상수익 합계', value: formatKRW(s.totalExpectedProfit), icon: TrendingUp, color: '#7C3AED' },
     {
@@ -24,7 +25,7 @@ export function WorkLedgerSummary({ projects }: Props) {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-5 lg:grid-cols-5">
       {cards.map((c) => {
         const Icon = c.icon;
         return (

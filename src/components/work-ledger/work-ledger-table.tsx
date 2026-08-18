@@ -70,6 +70,9 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
         <tbody className="divide-y divide-border bg-white">
           {projects.map((p) => {
             const isOwner = !!currentUserId && p.created_by === currentUserId;
+            const downs = p.payments.filter((x) => x.type === 'down');
+            const interims = p.payments.filter((x) => x.type === 'interim');
+            const balances = p.payments.filter((x) => x.type === 'balance');
             return (
               <tr key={p.id} className="align-top hover:bg-surface-secondary/40 transition-colors">
                 <td className="px-5 py-6"><StatusBadge project={p} /></td>
@@ -91,11 +94,19 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
                   <div className="mt-1 text-[11px] text-foreground-quaternary">{p.margin_rate}%</div>
                 </td>
                 <td className="px-5 py-6">
-                  <div className="flex flex-col items-start gap-2">
-                    {p.payments.length === 0
-                      ? <span className="text-[12px] text-foreground-quaternary">—</span>
-                      : p.payments.map((pay, i) => <PaymentChip key={pay.id ?? i} payment={pay} />)}
-                  </div>
+                  {p.payments.length === 0 ? (
+                    <span className="text-[12px] text-foreground-quaternary">—</span>
+                  ) : (
+                    <div className="flex flex-col items-start gap-2">
+                      {downs.map((pay, i) => <PaymentChip key={pay.id ?? `d${i}`} payment={pay} />)}
+                      {interims.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {interims.map((pay, i) => <PaymentChip key={pay.id ?? `i${i}`} payment={pay} />)}
+                        </div>
+                      )}
+                      {balances.map((pay, i) => <PaymentChip key={pay.id ?? `b${i}`} payment={pay} />)}
+                    </div>
+                  )}
                   {p.payments.length > 0 && (
                     <div className="mt-3 text-[11px] text-foreground-secondary">
                       합계 <span className="font-medium text-foreground">{formatKRW(paymentsTotal(p.payments))}</span>

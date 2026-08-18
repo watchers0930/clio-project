@@ -74,6 +74,7 @@ export interface WorkProjectInput {
 
 export interface WorkLedgerSummary {
   activeCount: number;
+  plannedCount: number;
   totalContract: number;
   totalExpectedProfit: number;
   thisMonthDue: number;

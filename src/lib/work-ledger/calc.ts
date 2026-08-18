@@ -54,12 +54,14 @@ export function thisMonthDueAmount(projects: WorkProject[], now: Date = new Date
 export function summarize(projects: WorkProject[], now: Date = new Date()): WorkLedgerSummary {
   const today = todayStr(now);
   let activeCount = 0;
+  let plannedCount = 0;
   let totalContract = 0;
   let totalExpectedProfit = 0;
   let overdueCount = 0;
 
   for (const project of projects) {
     if (project.status === 'in_progress') activeCount += 1;
+    if (project.status === 'planned') plannedCount += 1;
     totalContract += project.contract_amount;
     totalExpectedProfit += expectedProfit(project.contract_amount, project.margin_rate);
     if (hasOverdue(project, today)) overdueCount += 1;
@@ -67,6 +69,7 @@ export function summarize(projects: WorkProject[], now: Date = new Date()): Work
 
   return {
     activeCount,
+    plannedCount,
     totalContract,
     totalExpectedProfit,
     thisMonthDue: thisMonthDueAmount(projects, now),
