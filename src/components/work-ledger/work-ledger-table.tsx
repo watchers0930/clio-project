@@ -101,7 +101,7 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
                     <div className="flex flex-col items-start gap-1">
                       {downs.map((pay, i) => <PaymentChip key={pay.id ?? `d${i}`} payment={pay} />)}
                       {interims.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
+                        <div className="flex flex-wrap gap-1">
                           {interims.map((pay, i) => <PaymentChip key={pay.id ?? `i${i}`} payment={pay} />)}
                         </div>
                       )}
