@@ -8,7 +8,7 @@ import {
   type WorkPayment,
   type WorkProject,
 } from '@/lib/work-ledger/types';
-import { expectedProfit, formatKRW, formatNumber, isPaymentOverdue, marginRate, paidTotal, receivable, toKoreanMoney } from '@/lib/work-ledger/calc';
+import { expectedProfit, formatKRW, formatNumber, isPaymentOverdue, marginRate, receivable, toKoreanMoney } from '@/lib/work-ledger/calc';
 
 interface Props {
   projects: WorkProject[];
@@ -65,7 +65,7 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
             <th className="w-[104px] px-3 py-4 text-center font-semibold">매입금액</th>
             <th className="w-[104px] px-3 py-4 text-center font-semibold">예상수익</th>
             <th className="px-5 py-4 text-center font-semibold">지급현황</th>
-            <th className="px-5 py-4 text-center font-semibold">미수금</th>
+            <th className="w-[104px] px-3 py-4 text-center font-semibold">미수금</th>
             <th className="px-5 py-4 text-center font-semibold">비고</th>
             <th className="w-16 px-2 py-4 text-center font-semibold">관리</th>
           </tr>
@@ -104,23 +104,18 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
                   {p.payments.length === 0 ? (
                     <span className="text-[12px] text-foreground-quaternary">—</span>
                   ) : (
-                    <>
-                      <div className="flex flex-col items-start gap-1">
-                        {downs.map((pay, i) => <PaymentChip key={pay.id ?? `d${i}`} payment={pay} />)}
-                        {interims.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {interims.map((pay, i) => <PaymentChip key={pay.id ?? `i${i}`} payment={pay} />)}
-                          </div>
-                        )}
-                        {balances.map((pay, i) => <PaymentChip key={pay.id ?? `b${i}`} payment={pay} />)}
-                      </div>
-                      <div className="mt-3 text-[11px] text-foreground-secondary">
-                        지급 <span className="font-medium text-emerald-600">{formatKRW(paidTotal(p))}</span>
-                      </div>
-                    </>
+                    <div className="flex flex-col items-start gap-1">
+                      {downs.map((pay, i) => <PaymentChip key={pay.id ?? `d${i}`} payment={pay} />)}
+                      {interims.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {interims.map((pay, i) => <PaymentChip key={pay.id ?? `i${i}`} payment={pay} />)}
+                        </div>
+                      )}
+                      {balances.map((pay, i) => <PaymentChip key={pay.id ?? `b${i}`} payment={pay} />)}
+                    </div>
                   )}
                 </td>
-                <td className="px-5 py-6 text-right">
+                <td className="w-[104px] px-3 py-6 text-right">
                   <div className={`font-medium ${receivable(p) > 0 ? 'text-foreground' : 'text-foreground-quaternary'}`}>{formatKRW(receivable(p))}</div>
                 </td>
                 <td className="px-5 py-6 align-top">
