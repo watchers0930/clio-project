@@ -1,7 +1,7 @@
 // 작업내역 서버 입력 검증 (순수 함수)
 import type { PaymentType, WorkPayment, WorkProjectInput, WorkProjectStatus } from './types';
 
-const STATUSES: WorkProjectStatus[] = ['in_progress', 'completed', 'on_hold', 'cancelled'];
+const STATUSES: WorkProjectStatus[] = ['planned', 'in_progress', 'completed', 'on_hold', 'cancelled'];
 const PAYMENT_TYPES: PaymentType[] = ['down', 'interim', 'balance'];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 

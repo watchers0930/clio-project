@@ -1,9 +1,10 @@
 // 작업내역(프로젝트 수금 대장) 타입 정의
 
-export type WorkProjectStatus = 'in_progress' | 'completed' | 'on_hold' | 'cancelled';
+export type WorkProjectStatus = 'planned' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled';
 export type PaymentType = 'down' | 'interim' | 'balance';
 
 export const STATUS_LABELS: Record<WorkProjectStatus, string> = {
+  planned: '진행예정',
   in_progress: '진행중',
   completed: '완료',
   on_hold: '보류',
@@ -11,6 +12,7 @@ export const STATUS_LABELS: Record<WorkProjectStatus, string> = {
 };
 
 export const STATUS_COLORS: Record<WorkProjectStatus, string> = {
+  planned: '#0EA5E9',
   in_progress: '#2E6FF2',
   completed: '#12805C',
   on_hold: '#B7791F',
