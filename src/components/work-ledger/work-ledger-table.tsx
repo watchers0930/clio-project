@@ -56,12 +56,13 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
 
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
-      <table className="w-full min-w-[1080px] text-[13px]">
+      <table className="w-full min-w-[1180px] text-[13px]">
         <thead>
           <tr className="bg-surface-secondary text-foreground-secondary">
             <th className="px-5 py-4 text-center font-semibold">상태</th>
             <th className="px-5 py-4 text-center font-semibold">프로젝트</th>
             <th className="px-5 py-4 text-center font-semibold">계약총액</th>
+            <th className="px-5 py-4 text-center font-semibold">매입금액</th>
             <th className="px-5 py-4 text-center font-semibold">예상수익</th>
             <th className="px-5 py-4 text-center font-semibold">대금 단계</th>
             <th className="px-5 py-4 text-center font-semibold">비고</th>
@@ -89,6 +90,10 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
                 <td className="px-5 py-6 text-right">
                   <div className="font-medium text-foreground">{formatKRW(p.contract_amount)}</div>
                   <div className="mt-1 text-[11px] text-foreground-quaternary">{toKoreanMoney(p.contract_amount)}</div>
+                </td>
+                <td className="px-5 py-6 text-right">
+                  <div className="font-medium text-foreground">{formatKRW(p.purchase_amount)}</div>
+                  <div className="mt-1 text-[11px] text-foreground-quaternary">{toKoreanMoney(p.purchase_amount)}</div>
                 </td>
                 <td className="px-5 py-6 text-right">
                   <div className="font-medium text-primary">{formatKRW(expectedProfit(p.contract_amount, p.purchase_amount))}</div>
