@@ -44,7 +44,7 @@ export function PaymentStageEditor({ payments, onChange }: Props) {
   const label = (p: WorkPayment) => (p.type === 'interim' ? `중도금${p.seq}` : PAYMENT_TYPE_LABELS[p.type]);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       <div className="flex items-center justify-between">
         <label className="text-[12px] font-medium text-foreground-secondary">대금 단계</label>
         <div className="flex items-center gap-1.5">
@@ -69,7 +69,7 @@ export function PaymentStageEditor({ payments, onChange }: Props) {
           위 버튼으로 대금 단계를 추가하세요.
         </p>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {payments.map((p, idx) => (
             <div key={idx} className="flex items-center gap-2 rounded-lg border border-border bg-white px-2.5 py-2">
               <span className="w-16 flex-shrink-0 text-[12px] font-medium text-foreground">{label(p)}</span>
