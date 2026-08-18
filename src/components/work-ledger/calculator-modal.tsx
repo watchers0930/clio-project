@@ -110,7 +110,7 @@ export function CalculatorModal({ open, onClose }: Props) {
           <button onClick={onClose} className="text-foreground-secondary hover:text-foreground"><X size={16} strokeWidth={1.5} /></button>
         </div>
         <div className="px-4 pb-4 pt-3">
-          <div className="mb-6 flex h-16 items-end justify-end overflow-x-auto rounded-xl bg-surface-secondary px-4 py-2 text-right text-[26px] font-semibold text-foreground">
+          <div className="mb-2.5 flex h-16 items-end justify-end overflow-x-auto rounded-xl bg-surface-secondary px-4 py-2 text-right text-[26px] font-semibold text-foreground">
             {fmt(display)}
           </div>
           <div className="grid grid-cols-4 gap-2.5">
