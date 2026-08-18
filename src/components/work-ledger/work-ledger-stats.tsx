@@ -80,9 +80,10 @@ export function WorkLedgerStats() {
         </div>
       </div>
 
-      <MonthlyRevenueChart monthly={stats.monthly} year={stats.year} />
-
-      <YearlyRevenueChart yearly={stats.yearly} currentYear={stats.year} />
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <MonthlyRevenueChart monthly={stats.monthly} year={stats.year} />
+        <YearlyRevenueChart yearly={stats.yearly} currentYear={stats.year} />
+      </div>
     </div>
   );
 }
