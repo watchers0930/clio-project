@@ -15,7 +15,7 @@ import {
   marginRate,
   paymentsTotal,
   paidTotal,
-  unpaidTotal,
+  receivable,
   toKoreanMoney,
 } from '@/lib/work-ledger/calc';
 
@@ -122,7 +122,7 @@ export function WorkProjectDetailModal({ open, project, departments, onClose }: 
                       <td className="px-3 py-2 font-semibold text-foreground">합계</td>
                       <td className="px-3 py-2 text-right font-semibold text-foreground">{formatKRW(paymentsTotal(project.payments))}</td>
                       <td className="px-3 py-2 text-[11px] text-foreground-tertiary" colSpan={2}>
-                        수금 {formatKRW(paidTotal(project))} · 미수금 {formatKRW(unpaidTotal(project))}
+                        수금 {formatKRW(paidTotal(project))} · 미수금 {formatKRW(receivable(project))}
                       </td>
                     </tr>
                   </tfoot>

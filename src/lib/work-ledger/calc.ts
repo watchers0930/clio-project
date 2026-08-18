@@ -30,9 +30,14 @@ export function paidTotal(project: WorkProject): number {
   return project.payments.reduce((sum, p) => sum + (p.paid ? p.amount : 0), 0);
 }
 
-/** 프로젝트의 미수금 합계 */
+/** 프로젝트의 미수금 합계 (대금 단계 기준) */
 export function unpaidTotal(project: WorkProject): number {
   return project.payments.reduce((sum, p) => sum + (p.paid ? 0 : p.amount), 0);
+}
+
+/** 미수금 = 계약총액 − 지급 완료 금액 */
+export function receivable(project: WorkProject): number {
+  return project.contract_amount - paidTotal(project);
 }
 
 /** 프로젝트에 연체 대금이 하나라도 있는지 */
