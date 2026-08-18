@@ -8,7 +8,7 @@ import {
   type WorkPayment,
   type WorkProject,
 } from '@/lib/work-ledger/types';
-import { expectedProfit, formatKRW, formatNumber, isPaymentOverdue, marginRate, paymentsTotal, toKoreanMoney } from '@/lib/work-ledger/calc';
+import { expectedProfit, formatKRW, formatNumber, isPaymentOverdue, marginRate, toKoreanMoney } from '@/lib/work-ledger/calc';
 
 interface Props {
   projects: WorkProject[];
@@ -111,11 +111,6 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
                         </div>
                       )}
                       {balances.map((pay, i) => <PaymentChip key={pay.id ?? `b${i}`} payment={pay} />)}
-                    </div>
-                  )}
-                  {p.payments.length > 0 && (
-                    <div className="mt-3 text-[11px] text-foreground-secondary">
-                      합계 <span className="font-medium text-foreground">{formatKRW(paymentsTotal(p.payments))}</span>
                     </div>
                   )}
                 </td>
