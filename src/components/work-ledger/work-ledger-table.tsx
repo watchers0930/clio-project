@@ -36,7 +36,7 @@ function PaymentChip({ payment }: { payment: WorkPayment }) {
       ? 'bg-red-50 text-red-600'
       : 'bg-surface-secondary text-foreground-secondary';
   return (
-    <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] ${cls}`} title={payment.paid ? '수금완료' : overdue ? '연체' : '수금예정'}>
+    <span className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] ${cls}`} title={payment.paid ? '수금완료' : overdue ? '연체' : '수금예정'}>
       <span className="font-medium">{label}</span>
       <span>{formatNumber(payment.amount)}</span>
       {payment.due_date && <span className="opacity-70">({payment.due_date.slice(5)})</span>}
@@ -59,12 +59,12 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
       <table className="w-full min-w-[960px] text-[13px]">
         <thead>
           <tr className="bg-surface-secondary text-left text-foreground-secondary">
-            <th className="px-4 py-3.5 font-semibold">상태</th>
-            <th className="px-4 py-3.5 font-semibold">프로젝트</th>
-            <th className="px-4 py-3.5 text-right font-semibold">계약총액</th>
-            <th className="px-4 py-3.5 text-right font-semibold">예상수익</th>
-            <th className="px-4 py-3.5 font-semibold">대금 단계</th>
-            <th className="px-4 py-3.5 text-center font-semibold">관리</th>
+            <th className="px-5 py-4 font-semibold">상태</th>
+            <th className="px-5 py-4 font-semibold">프로젝트</th>
+            <th className="px-5 py-4 text-right font-semibold">계약총액</th>
+            <th className="px-5 py-4 text-right font-semibold">예상수익</th>
+            <th className="px-5 py-4 font-semibold">대금 단계</th>
+            <th className="px-5 py-4 text-center font-semibold">관리</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border bg-white">
@@ -72,40 +72,40 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
             const isOwner = !!currentUserId && p.created_by === currentUserId;
             return (
               <tr key={p.id} className="align-top hover:bg-surface-secondary/40 transition-colors">
-                <td className="px-4 py-4"><StatusBadge project={p} /></td>
-                <td className="px-4 py-4">
+                <td className="px-5 py-6"><StatusBadge project={p} /></td>
+                <td className="px-5 py-6">
                   <div className="font-medium text-foreground">{p.name}</div>
-                  <div className="mt-1 text-[12px] text-foreground-tertiary">
+                  <div className="mt-2 text-[12px] text-foreground-tertiary">
                     {[
                       p.client_name && `발주 ${p.client_name}`,
                       p.supplier_name && `매입 ${p.supplier_name}`,
                       p.manager_name,
                     ].filter(Boolean).join(' · ') || '—'}
                   </div>
-                  {p.due_date && <div className="mt-0.5 text-[11px] text-foreground-quaternary">완료예정 {p.due_date}</div>}
+                  {p.due_date && <div className="mt-1.5 text-[11px] text-foreground-quaternary">완료예정 {p.due_date}</div>}
                 </td>
-                <td className="px-4 py-4 text-right">
+                <td className="px-5 py-6 text-right">
                   <div className="font-medium text-foreground">{formatKRW(p.contract_amount)}</div>
-                  <div className="text-[11px] text-foreground-quaternary">{toKoreanMoney(p.contract_amount)}</div>
+                  <div className="mt-1 text-[11px] text-foreground-quaternary">{toKoreanMoney(p.contract_amount)}</div>
                 </td>
-                <td className="px-4 py-4 text-right">
+                <td className="px-5 py-6 text-right">
                   <div className="font-medium text-primary">{formatKRW(expectedProfit(p.contract_amount, p.margin_rate))}</div>
-                  <div className="text-[11px] text-foreground-quaternary">{p.margin_rate}%</div>
+                  <div className="mt-1 text-[11px] text-foreground-quaternary">{p.margin_rate}%</div>
                 </td>
-                <td className="px-4 py-4">
-                  <div className="flex flex-wrap gap-1">
+                <td className="px-5 py-6">
+                  <div className="flex flex-wrap gap-2">
                     {p.payments.length === 0
                       ? <span className="text-[12px] text-foreground-quaternary">—</span>
                       : p.payments.map((pay, i) => <PaymentChip key={pay.id ?? i} payment={pay} />)}
                   </div>
                   {p.payments.length > 0 && (
-                    <div className="mt-1.5 text-[11px] text-foreground-secondary">
+                    <div className="mt-3 text-[11px] text-foreground-secondary">
                       합계 <span className="font-medium text-foreground">{formatKRW(paymentsTotal(p.payments))}</span>
                     </div>
                   )}
                 </td>
-                <td className="px-4 py-4">
-                  <div className="flex items-center justify-center gap-2.5">
+                <td className="px-5 py-6">
+                  <div className="flex items-center justify-center gap-3">
                     <button onClick={() => onView(p)} className="text-foreground-secondary hover:text-primary transition-colors" title="보기">
                       <Eye size={15} strokeWidth={1.5} />
                     </button>

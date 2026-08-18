@@ -27,7 +27,7 @@ interface Props {
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex gap-3 py-2.5">
+    <div className="flex gap-3 py-3.5">
       <span className="w-24 flex-shrink-0 text-[12px] text-foreground-tertiary">{label}</span>
       <div className="flex-1 text-[13px] text-foreground">{children}</div>
     </div>
@@ -36,10 +36,10 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 function Money({ value }: { value: number }) {
   return (
-    <span>
-      <span className="font-medium">{formatKRW(value)}</span>
-      <span className="ml-2 text-[11px] text-foreground-tertiary">{toKoreanMoney(value)}</span>
-    </span>
+    <div>
+      <div className="font-medium">{formatKRW(value)}</div>
+      <div className="mt-0.5 text-[11px] text-foreground-tertiary">{toKoreanMoney(value)}</div>
+    </div>
   );
 }
 
@@ -75,8 +75,11 @@ export function WorkProjectDetailModal({ open, project, departments, onClose }: 
             <Row label="완료예정일">{project.due_date ?? '—'}</Row>
             <Row label="계약총액"><Money value={project.contract_amount} /></Row>
             <Row label="예상수익">
-              <Money value={expectedProfit(project.contract_amount, project.margin_rate)} />
-              <span className="ml-2 text-[11px] text-foreground-quaternary">({project.margin_rate}%)</span>
+              <div className="font-medium">
+                {formatKRW(expectedProfit(project.contract_amount, project.margin_rate))}
+                <span className="ml-2 text-[11px] font-normal text-foreground-quaternary">({project.margin_rate}%)</span>
+              </div>
+              <div className="mt-0.5 text-[11px] text-foreground-tertiary">{toKoreanMoney(expectedProfit(project.contract_amount, project.margin_rate))}</div>
             </Row>
             <Row label="확인 팀">{deptNames}</Row>
             {project.note && <Row label="비고"><span className="whitespace-pre-wrap">{project.note}</span></Row>}
