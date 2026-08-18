@@ -2,6 +2,7 @@
 
 import { Eye, Pencil, Trash2 } from 'lucide-react';
 import {
+  PAYMENT_TYPE_LABELS,
   STATUS_COLORS,
   STATUS_LABELS,
   type WorkPayment,
@@ -27,7 +28,13 @@ function StatusBadge({ project }: { project: WorkProject }) {
 }
 
 function PaymentLine({ payment }: { payment: WorkPayment }) {
-  return <div className="font-medium text-emerald-600">{formatNumber(payment.amount)}</div>;
+  const label = payment.type === 'interim' ? `중도금${payment.seq}` : PAYMENT_TYPE_LABELS[payment.type];
+  return (
+    <div>
+      <div className="font-medium text-emerald-600">{formatNumber(payment.amount)}</div>
+      <div className="text-[11px] text-foreground-quaternary">{label}</div>
+    </div>
+  );
 }
 
 export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDelete }: Props) {
@@ -97,7 +104,7 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
                   {p.payments.length === 0 ? (
                     <span className="text-[12px] text-foreground-quaternary">—</span>
                   ) : (
-                    <div className="flex flex-col items-end gap-1">
+                    <div className="flex flex-col items-end gap-2">
                       {p.payments.map((pay, i) => <PaymentLine key={pay.id ?? i} payment={pay} />)}
                     </div>
                   )}
