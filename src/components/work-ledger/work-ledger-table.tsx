@@ -58,14 +58,14 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
     <div className="overflow-x-auto rounded-xl border border-border">
       <table className="w-full min-w-[1080px] text-[13px]">
         <thead>
-          <tr className="bg-surface-secondary text-center text-foreground-secondary">
-            <th className="px-5 py-4 font-semibold">상태</th>
-            <th className="px-5 py-4 font-semibold">프로젝트</th>
-            <th className="px-5 py-4 font-semibold">계약총액</th>
-            <th className="px-5 py-4 font-semibold">예상수익</th>
-            <th className="px-5 py-4 font-semibold">대금 단계</th>
-            <th className="px-5 py-4 font-semibold">비고</th>
-            <th className="px-5 py-4 font-semibold">관리</th>
+          <tr className="bg-surface-secondary text-foreground-secondary">
+            <th className="px-5 py-4 text-center font-semibold">상태</th>
+            <th className="px-5 py-4 text-center font-semibold">프로젝트</th>
+            <th className="px-5 py-4 text-center font-semibold">계약총액</th>
+            <th className="px-5 py-4 text-center font-semibold">예상수익</th>
+            <th className="px-5 py-4 text-center font-semibold">대금 단계</th>
+            <th className="px-5 py-4 text-center font-semibold">비고</th>
+            <th className="px-5 py-4 text-center font-semibold">관리</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border bg-white">
