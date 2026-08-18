@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { ApiResponse } from '@/lib/supabase/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-const ALLOWED_MENUS = ['shared-documents', 'messages', 'meetings', 'schedule', 'memos', 'contract-risk', 'account-credentials'];
+const ALLOWED_MENUS = ['shared-documents', 'messages', 'meetings', 'schedule', 'memos', 'contract-risk', 'account-credentials', 'work-ledger'];
 
 export async function PATCH(request: NextRequest) {
   try {

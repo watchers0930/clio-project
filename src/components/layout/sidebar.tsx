@@ -18,6 +18,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   KeyRound,
+  Briefcase,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -46,6 +47,7 @@ const OPTIONAL_ITEMS: NavItem[] = [
   { key: 'memos', label: '메모', href: '/memos', icon: StickyNote, description: '메모 · 인사이트' },
   { key: 'contract-risk', label: '계약 리스크', href: '/contract-risk', icon: ShieldAlert, description: 'AI 계약 분석' },
   { key: 'account-credentials', label: '계정관리', href: '/account-credentials', icon: KeyRound, description: '사이트 계정 보관' },
+  { key: 'work-ledger', label: '작업내역', href: '/work-ledger', icon: Briefcase, description: '프로젝트 · 수금 관리' },
 ];
 
 interface SidebarProps {
