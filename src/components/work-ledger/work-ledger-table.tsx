@@ -2,13 +2,12 @@
 
 import { Eye, Pencil, Trash2 } from 'lucide-react';
 import {
-  PAYMENT_TYPE_LABELS,
   STATUS_COLORS,
   STATUS_LABELS,
   type WorkPayment,
   type WorkProject,
 } from '@/lib/work-ledger/types';
-import { expectedProfit, formatKRW, formatNumber, isPaymentOverdue, marginRate, receivable, toKoreanMoney } from '@/lib/work-ledger/calc';
+import { expectedProfit, formatKRW, formatNumber, marginRate, receivable, toKoreanMoney } from '@/lib/work-ledger/calc';
 
 interface Props {
   projects: WorkProject[];
@@ -27,22 +26,8 @@ function StatusBadge({ project }: { project: WorkProject }) {
   );
 }
 
-function PaymentChip({ payment }: { payment: WorkPayment }) {
-  const overdue = isPaymentOverdue(payment);
-  const label = payment.type === 'interim' ? `중도금${payment.seq}` : PAYMENT_TYPE_LABELS[payment.type];
-  const cls = payment.paid
-    ? 'bg-emerald-50 text-emerald-700'
-    : overdue
-      ? 'bg-red-50 text-red-600'
-      : 'bg-surface-secondary text-foreground-secondary';
-  return (
-    <span className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] ${cls}`} title={payment.paid ? '수금완료' : overdue ? '연체' : '수금예정'}>
-      <span className="font-medium">{label}</span>
-      <span>{formatNumber(payment.amount)}</span>
-      {payment.due_date && <span className="opacity-70">({payment.due_date.slice(5)})</span>}
-      {payment.paid && <span>✓</span>}
-    </span>
-  );
+function PaymentLine({ payment }: { payment: WorkPayment }) {
+  return <div className="font-medium text-emerald-600">{formatNumber(payment.amount)}</div>;
 }
 
 export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDelete }: Props) {
@@ -56,7 +41,7 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
 
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
-      <table className="w-full min-w-[1200px] text-[13px]">
+      <table className="w-full min-w-[1120px] text-[13px]">
         <thead>
           <tr className="bg-surface-secondary text-foreground-secondary">
             <th className="px-5 py-4 text-center font-semibold">상태</th>
@@ -64,7 +49,7 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
             <th className="w-[104px] px-3 py-4 text-center font-semibold">계약총액</th>
             <th className="w-[104px] px-3 py-4 text-center font-semibold">매입금액</th>
             <th className="w-[104px] px-3 py-4 text-center font-semibold">예상수익</th>
-            <th className="px-5 py-4 text-center font-semibold">지급현황</th>
+            <th className="w-[104px] px-3 py-4 text-center font-semibold">지급현황</th>
             <th className="w-[104px] px-3 py-4 text-center font-semibold">미수금</th>
             <th className="px-5 py-4 text-center font-semibold">비고</th>
             <th className="w-16 px-2 py-4 text-center font-semibold">관리</th>
@@ -73,9 +58,6 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
         <tbody className="divide-y divide-border bg-white">
           {projects.map((p) => {
             const isOwner = !!currentUserId && p.created_by === currentUserId;
-            const downs = p.payments.filter((x) => x.type === 'down');
-            const interims = p.payments.filter((x) => x.type === 'interim');
-            const balances = p.payments.filter((x) => x.type === 'balance');
             return (
               <tr key={p.id} className="align-top hover:bg-surface-secondary/40 transition-colors">
                 <td className="px-5 py-6"><StatusBadge project={p} /></td>
@@ -100,18 +82,12 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
                   <div className="font-medium text-primary">{formatKRW(expectedProfit(p.contract_amount, p.purchase_amount))}</div>
                   <div className="mt-1 text-[11px] text-foreground-quaternary">{marginRate(p.contract_amount, p.purchase_amount)}%</div>
                 </td>
-                <td className="px-5 py-6">
+                <td className="w-[104px] px-3 py-6 text-right">
                   {p.payments.length === 0 ? (
                     <span className="text-[12px] text-foreground-quaternary">—</span>
                   ) : (
-                    <div className="flex flex-col items-start gap-1">
-                      {downs.map((pay, i) => <PaymentChip key={pay.id ?? `d${i}`} payment={pay} />)}
-                      {interims.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {interims.map((pay, i) => <PaymentChip key={pay.id ?? `i${i}`} payment={pay} />)}
-                        </div>
-                      )}
-                      {balances.map((pay, i) => <PaymentChip key={pay.id ?? `b${i}`} payment={pay} />)}
+                    <div className="flex flex-col items-end gap-1">
+                      {p.payments.map((pay, i) => <PaymentLine key={pay.id ?? i} payment={pay} />)}
                     </div>
                   )}
                 </td>
