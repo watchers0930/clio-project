@@ -103,7 +103,6 @@ body {
 table { border-collapse: collapse; width: 100%; }
 th {
   font-weight: 600;
-  text-align: left;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -226,9 +225,6 @@ label {
 /* 작업내역 화면 전용 간격 (전역 유틸리티 영향 없음, 작업내역에만 적용) */
 .work-ledger-page .justify-between {
   padding-top: 20px;
-}
-.work-ledger-page .items-center {
-  padding-bottom: 10px;
 }
 .work-ledger-page .gap-2 {
   padding-top: 10px;
