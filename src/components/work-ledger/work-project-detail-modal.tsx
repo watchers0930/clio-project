@@ -12,6 +12,7 @@ import {
   expectedProfit,
   formatKRW,
   isPaymentOverdue,
+  marginRate,
   paymentsTotal,
   paidTotal,
   unpaidTotal,
@@ -74,12 +75,13 @@ export function WorkProjectDetailModal({ open, project, departments, onClose }: 
             <Row label="계약일">{project.contract_date ?? '—'}</Row>
             <Row label="완료예정일">{project.due_date ?? '—'}</Row>
             <Row label="계약총액"><Money value={project.contract_amount} /></Row>
+            <Row label="매입금액"><Money value={project.purchase_amount} /></Row>
             <Row label="예상수익">
               <div className="font-medium">
-                {formatKRW(expectedProfit(project.contract_amount, project.margin_rate))}
-                <span className="ml-2 text-[11px] font-normal text-foreground-quaternary">({project.margin_rate}%)</span>
+                {formatKRW(expectedProfit(project.contract_amount, project.purchase_amount))}
+                <span className="ml-2 text-[11px] font-normal text-foreground-quaternary">({marginRate(project.contract_amount, project.purchase_amount)}%)</span>
               </div>
-              <div className="mt-0.5 text-[11px] text-foreground-tertiary">{toKoreanMoney(expectedProfit(project.contract_amount, project.margin_rate))}</div>
+              <div className="mt-0.5 text-[11px] text-foreground-tertiary">{toKoreanMoney(expectedProfit(project.contract_amount, project.purchase_amount))}</div>
             </Row>
             <Row label="확인 팀">{deptNames}</Row>
             {project.note && <Row label="비고"><span className="whitespace-pre-wrap">{project.note}</span></Row>}

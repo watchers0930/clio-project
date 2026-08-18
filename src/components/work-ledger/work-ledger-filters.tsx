@@ -1,7 +1,9 @@
 'use client';
 
-import { Plus, Search, Download } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Search, Download, Calculator } from 'lucide-react';
 import { STATUS_LABELS, type WorkProjectStatus } from '@/lib/work-ledger/types';
+import { CalculatorModal } from './calculator-modal';
 
 export type StatusFilter = 'all' | WorkProjectStatus;
 export type SortKey = 'recent' | 'due' | 'amount';
@@ -23,19 +25,32 @@ const CTRL = 'h-9 rounded-xl border border-border bg-white px-3 text-[13px] text
 export function WorkLedgerFilters({
   query, onQuery, statusFilter, onStatusFilter, sortKey, onSortKey, onExport, onAdd, exportDisabled,
 }: Props) {
+  const [showCalc, setShowCalc] = useState(false);
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <div className="relative">
-        <Search size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 z-10 text-foreground-quaternary" />
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => onQuery(e.target.value)}
-          placeholder="프로젝트명·발주처 검색"
-          style={{ paddingLeft: '38px' }}
-          className="h-9 w-60 rounded-xl border border-border bg-surface-secondary pr-3 text-[13px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-1 focus:ring-primary"
-        />
+      <div className="flex items-center gap-2">
+        <div className="relative">
+          <Search size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 z-10 text-foreground-quaternary" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => onQuery(e.target.value)}
+            placeholder="프로젝트명·발주처 검색"
+            style={{ paddingLeft: '38px' }}
+            className="h-9 w-60 rounded-xl border border-border bg-surface-secondary pr-3 text-[13px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowCalc(true)}
+          title="계산기"
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-border text-foreground-secondary hover:bg-surface-secondary transition-colors"
+        >
+          <Calculator size={16} strokeWidth={1.6} />
+        </button>
       </div>
+
+      <CalculatorModal open={showCalc} onClose={() => setShowCalc(false)} />
 
       <div className="flex flex-wrap items-center gap-2">
         <select value={statusFilter} onChange={(e) => onStatusFilter(e.target.value as StatusFilter)} className={CTRL}>

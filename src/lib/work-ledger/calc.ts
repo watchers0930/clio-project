@@ -1,9 +1,15 @@
 // 작업내역 계산 유틸 (순수 함수)
 import type { WorkPayment, WorkProject, WorkLedgerSummary } from './types';
 
-/** 예상수익 금액 = 계약총액 × 수익률(%) */
-export function expectedProfit(contractAmount: number, marginRate: number): number {
-  return Math.round((contractAmount * marginRate) / 100);
+/** 예상수익 금액 = 계약총액 − 매입금액 */
+export function expectedProfit(contractAmount: number, purchaseAmount: number): number {
+  return contractAmount - purchaseAmount;
+}
+
+/** 수익률(%) = 예상수익 ÷ 계약총액 × 100 (소수점 1자리) */
+export function marginRate(contractAmount: number, purchaseAmount: number): number {
+  if (contractAmount <= 0) return 0;
+  return Math.round(((contractAmount - purchaseAmount) / contractAmount) * 1000) / 10;
 }
 
 /** yyyy-mm-dd 문자열 (로컬 기준) */
@@ -63,7 +69,7 @@ export function summarize(projects: WorkProject[], now: Date = new Date()): Work
     if (project.status === 'in_progress') activeCount += 1;
     if (project.status === 'planned') plannedCount += 1;
     totalContract += project.contract_amount;
-    totalExpectedProfit += expectedProfit(project.contract_amount, project.margin_rate);
+    totalExpectedProfit += expectedProfit(project.contract_amount, project.purchase_amount);
     if (hasOverdue(project, today)) overdueCount += 1;
   }
 

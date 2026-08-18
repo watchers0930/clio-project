@@ -1,6 +1,6 @@
 // 작업내역 엑셀 내보내기 (클라이언트 다운로드)
 import { STATUS_LABELS, PAYMENT_TYPE_LABELS, type WorkProject } from './types';
-import { expectedProfit, paidTotal, unpaidTotal, toKoreanMoney } from './calc';
+import { expectedProfit, marginRate, paidTotal, unpaidTotal } from './calc';
 
 /** 대금 단계 요약 텍스트 (예: "계약금 2,000,000(09-01) / 잔금 …") */
 function paymentSummary(project: WorkProject): string {
@@ -29,7 +29,7 @@ export async function exportWorkLedgerExcel(projects: WorkProject[]): Promise<vo
     { header: '계약일', key: 'contract_date', width: 13 },
     { header: '완료예정일', key: 'due_date', width: 13 },
     { header: '계약총액', key: 'contract_amount', width: 16 },
-    { header: '계약총액(한글)', key: 'contract_amount_ko', width: 22 },
+    { header: '매입금액', key: 'purchase_amount', width: 16 },
     { header: '수익률(%)', key: 'margin_rate', width: 11 },
     { header: '예상수익', key: 'expected_profit', width: 16 },
     { header: '수금완료', key: 'paid', width: 16 },
@@ -50,9 +50,9 @@ export async function exportWorkLedgerExcel(projects: WorkProject[]): Promise<vo
       contract_date: p.contract_date ?? '',
       due_date: p.due_date ?? '',
       contract_amount: p.contract_amount,
-      contract_amount_ko: toKoreanMoney(p.contract_amount),
-      margin_rate: p.margin_rate,
-      expected_profit: expectedProfit(p.contract_amount, p.margin_rate),
+      purchase_amount: p.purchase_amount,
+      margin_rate: marginRate(p.contract_amount, p.purchase_amount),
+      expected_profit: expectedProfit(p.contract_amount, p.purchase_amount),
       paid: paidTotal(p),
       unpaid: unpaidTotal(p),
       payments: paymentSummary(p),
@@ -61,7 +61,7 @@ export async function exportWorkLedgerExcel(projects: WorkProject[]): Promise<vo
   }
 
   // 금액 컬럼 천단위 콤마
-  ['contract_amount', 'expected_profit', 'paid', 'unpaid'].forEach((key) => {
+  ['contract_amount', 'purchase_amount', 'expected_profit', 'paid', 'unpaid'].forEach((key) => {
     ws.getColumn(key).numFmt = '#,##0';
   });
 

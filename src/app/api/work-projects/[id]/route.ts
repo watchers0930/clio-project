@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { validateWorkProjectInput } from '@/lib/work-ledger/validate';
 import { mapWorkProject, type RawWorkProject } from '@/lib/work-ledger/map';
+import { marginRate } from '@/lib/work-ledger/calc';
 
 const SELECT = '*, payments:work_project_payments(*), manager:users!manager_id(name)';
 
@@ -41,7 +42,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       contract_date: input.contract_date,
       due_date: input.due_date,
       contract_amount: input.contract_amount,
-      margin_rate: input.margin_rate,
+      purchase_amount: input.purchase_amount,
+      margin_rate: marginRate(input.contract_amount, input.purchase_amount),
       visible_department_ids: input.visible_department_ids,
       note: input.note,
     })

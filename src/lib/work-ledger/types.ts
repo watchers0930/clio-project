@@ -47,6 +47,7 @@ export interface WorkProject {
   contract_date: string | null;
   due_date: string | null;
   contract_amount: number;
+  purchase_amount: number;
   margin_rate: number;
   visible_department_ids: string[];
   note: string | null;
@@ -66,7 +67,7 @@ export interface WorkProjectInput {
   contract_date: string | null;
   due_date: string | null;
   contract_amount: number;
-  margin_rate: number;
+  purchase_amount: number;
   visible_department_ids: string[];
   note: string | null;
   payments: WorkPayment[];

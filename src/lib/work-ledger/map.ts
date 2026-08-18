@@ -22,6 +22,7 @@ export interface RawWorkProject {
   contract_date: string | null;
   due_date: string | null;
   contract_amount: string | number;
+  purchase_amount: string | number;
   margin_rate: string | number;
   visible_department_ids: string[] | null;
   note: string | null;
@@ -63,6 +64,7 @@ export function mapWorkProject(row: RawWorkProject): WorkProject {
     contract_date: row.contract_date,
     due_date: row.due_date,
     contract_amount: num(row.contract_amount),
+    purchase_amount: num(row.purchase_amount),
     margin_rate: num(row.margin_rate),
     visible_department_ids: row.visible_department_ids ?? [],
     note: row.note,

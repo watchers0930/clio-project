@@ -8,7 +8,7 @@ import {
   type WorkPayment,
   type WorkProject,
 } from '@/lib/work-ledger/types';
-import { expectedProfit, formatKRW, formatNumber, isPaymentOverdue, paymentsTotal, toKoreanMoney } from '@/lib/work-ledger/calc';
+import { expectedProfit, formatKRW, formatNumber, isPaymentOverdue, marginRate, paymentsTotal, toKoreanMoney } from '@/lib/work-ledger/calc';
 
 interface Props {
   projects: WorkProject[];
@@ -91,8 +91,8 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
                   <div className="mt-1 text-[11px] text-foreground-quaternary">{toKoreanMoney(p.contract_amount)}</div>
                 </td>
                 <td className="px-5 py-6 text-right">
-                  <div className="font-medium text-primary">{formatKRW(expectedProfit(p.contract_amount, p.margin_rate))}</div>
-                  <div className="mt-1 text-[11px] text-foreground-quaternary">{p.margin_rate}%</div>
+                  <div className="font-medium text-primary">{formatKRW(expectedProfit(p.contract_amount, p.purchase_amount))}</div>
+                  <div className="mt-1 text-[11px] text-foreground-quaternary">{marginRate(p.contract_amount, p.purchase_amount)}%</div>
                 </td>
                 <td className="px-5 py-6">
                   {p.payments.length === 0 ? (

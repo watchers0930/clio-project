@@ -37,8 +37,8 @@ export function validateWorkProjectInput(raw: unknown): ValidationResult {
   if (!isFiniteNumber(b.contract_amount) || b.contract_amount < 0) {
     return { ok: false, error: '계약총액은 0 이상의 숫자여야 합니다.' };
   }
-  if (!isFiniteNumber(b.margin_rate) || b.margin_rate < 0 || b.margin_rate > 100) {
-    return { ok: false, error: '수익률은 0~100 사이여야 합니다.' };
+  if (!isFiniteNumber(b.purchase_amount) || b.purchase_amount < 0) {
+    return { ok: false, error: '매입금액은 0 이상의 숫자여야 합니다.' };
   }
 
   const contract_date = normDate(b.contract_date);
@@ -94,7 +94,7 @@ export function validateWorkProjectInput(raw: unknown): ValidationResult {
       contract_date,
       due_date,
       contract_amount: b.contract_amount,
-      margin_rate: b.margin_rate,
+      purchase_amount: b.purchase_amount,
       visible_department_ids,
       note: typeof b.note === 'string' && b.note.trim() ? b.note.trim() : null,
       payments,

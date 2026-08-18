@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { PaymentStageEditor } from './payment-stage-editor';
-import { expectedProfit, formatKRW, formatNumber, toKoreanMoney } from '@/lib/work-ledger/calc';
+import { expectedProfit, formatKRW, formatNumber, marginRate, toKoreanMoney } from '@/lib/work-ledger/calc';
 import {
   STATUS_LABELS,
   type DepartmentOption,
@@ -35,7 +35,7 @@ const EMPTY: WorkProjectInput = {
   contract_date: null,
   due_date: null,
   contract_amount: 0,
-  margin_rate: 0,
+  purchase_amount: 0,
   visible_department_ids: [],
   note: null,
   payments: [],
@@ -51,7 +51,7 @@ function toInput(p: WorkProject): WorkProjectInput {
     contract_date: p.contract_date,
     due_date: p.due_date,
     contract_amount: p.contract_amount,
-    margin_rate: p.margin_rate,
+    purchase_amount: p.purchase_amount,
     visible_department_ids: p.visible_department_ids,
     note: p.note,
     payments: p.payments.map((pay) => ({ ...pay })),
@@ -84,15 +84,12 @@ export function WorkProjectFormModal({ open, editing, departments, managers, onC
     }));
   };
 
-  const profit = expectedProfit(form.contract_amount, form.margin_rate);
+  const profit = expectedProfit(form.contract_amount, form.purchase_amount);
+  const rate = marginRate(form.contract_amount, form.purchase_amount);
 
   const submit = async () => {
     if (!form.name.trim()) {
       setError('프로젝트명은 필수입니다.');
-      return;
-    }
-    if (form.margin_rate < 0 || form.margin_rate > 100) {
-      setError('수익률은 0~100 사이여야 합니다.');
       return;
     }
     setSaving(true);
@@ -173,20 +170,21 @@ export function WorkProjectFormModal({ open, editing, departments, managers, onC
               )}
             </div>
             <div>
-              <label className={LABEL}>수익률(%)</label>
+              <label className={LABEL}>매입금액</label>
               <input
-                type="number"
-                min={0}
-                max={100}
-                step={0.1}
-                value={form.margin_rate || ''}
-                onChange={(e) => set('margin_rate', Number(e.target.value) || 0)}
+                type="text"
+                inputMode="numeric"
+                value={form.purchase_amount ? formatNumber(form.purchase_amount) : ''}
+                onChange={(e) => set('purchase_amount', Number(e.target.value.replace(/[^0-9]/g, '')) || 0)}
                 placeholder="0"
                 className={`${INPUT} text-right`}
               />
+              {form.purchase_amount > 0 && (
+                <p className="mt-1 text-right text-[11px] text-foreground-tertiary">{toKoreanMoney(form.purchase_amount)}</p>
+              )}
             </div>
             <div className="col-span-2 flex items-center justify-between rounded-xl bg-surface-secondary px-4 py-3">
-              <span className="text-[12px] text-foreground-secondary">회사 예상수익 (자동계산)</span>
+              <span className="text-[12px] text-foreground-secondary">회사 예상수익 <span className="text-foreground-quaternary">(계약총액 − 매입금액 · 수익률 {rate}%)</span></span>
               <div className="text-right">
                 <span className="text-[15px] font-semibold text-primary">{formatKRW(profit)}</span>
                 <p className="text-[11px] text-foreground-tertiary">{toKoreanMoney(profit)}</p>
