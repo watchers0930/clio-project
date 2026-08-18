@@ -75,14 +75,12 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
                 <td className="px-5 py-6"><StatusBadge project={p} /></td>
                 <td className="px-5 py-6">
                   <div className="font-medium text-foreground">{p.name}</div>
-                  <div className="mt-2 text-[12px] text-foreground-tertiary">
-                    {[
-                      p.client_name && `발주 ${p.client_name}`,
-                      p.supplier_name && `매입 ${p.supplier_name}`,
-                      p.manager_name,
-                    ].filter(Boolean).join(' · ') || '—'}
+                  <div className="mt-2 space-y-1 text-[12px] text-foreground-tertiary">
+                    {p.client_name && <div>발주 {p.client_name}</div>}
+                    {p.supplier_name && <div>매입 {p.supplier_name}</div>}
+                    {p.manager_name && <div>담당 {p.manager_name}</div>}
+                    {p.due_date && <div className="text-foreground-quaternary">완료예정 {p.due_date}</div>}
                   </div>
-                  {p.due_date && <div className="mt-1.5 text-[11px] text-foreground-quaternary">완료예정 {p.due_date}</div>}
                 </td>
                 <td className="px-5 py-6 text-right">
                   <div className="font-medium text-foreground">{formatKRW(p.contract_amount)}</div>
@@ -93,7 +91,7 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
                   <div className="mt-1 text-[11px] text-foreground-quaternary">{p.margin_rate}%</div>
                 </td>
                 <td className="px-5 py-6">
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-col items-start gap-2">
                     {p.payments.length === 0
                       ? <span className="text-[12px] text-foreground-quaternary">—</span>
                       : p.payments.map((pay, i) => <PaymentChip key={pay.id ?? i} payment={pay} />)}
