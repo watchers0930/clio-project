@@ -26,13 +26,13 @@ export function WorkLedgerFilters({
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div className="relative">
-        <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-foreground-quaternary" />
+        <Search size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground-quaternary" />
         <input
           type="text"
           value={query}
           onChange={(e) => onQuery(e.target.value)}
           placeholder="프로젝트명·발주처 검색"
-          className="h-9 w-60 rounded-xl border border-border bg-surface-secondary pl-[34px] pr-3 text-[13px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-1 focus:ring-primary"
+          className="h-9 w-60 rounded-xl border border-border bg-surface-secondary pl-10 pr-3 text-[13px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-1 focus:ring-primary"
         />
       </div>
 
