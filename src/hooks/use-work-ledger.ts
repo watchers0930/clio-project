@@ -27,7 +27,19 @@ export function useWorkLedger() {
       const userJson = (await userRes.json()) as { data?: Array<{ id: string; name: string }> };
       setProjects(projJson.data ?? []);
       setDepartments((deptJson.data ?? []).map((d) => ({ id: d.id, name: d.name })));
-      setManagers((userJson.data ?? []).map((u) => ({ id: u.id, name: u.name })));
+
+      // 담당자 후보: 지정된 3명만, 이름 중복 제거 후 지정 순서로 정렬
+      const ALLOWED_MANAGERS = ['김동의', '정순규', '신은수'];
+      const seen = new Set<string>();
+      const managers = (userJson.data ?? [])
+        .filter((u) => {
+          if (!ALLOWED_MANAGERS.includes(u.name) || seen.has(u.name)) return false;
+          seen.add(u.name);
+          return true;
+        })
+        .map((u) => ({ id: u.id, name: u.name }))
+        .sort((a, b) => ALLOWED_MANAGERS.indexOf(a.name) - ALLOWED_MANAGERS.indexOf(b.name));
+      setManagers(managers);
     } catch {
       // 오류 시 기존 목록 유지
     } finally {
