@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 
 interface Props {
@@ -10,11 +10,16 @@ interface Props {
 
 type Op = '+' | '-' | '×' | '÷';
 
+/** 소수점 5자리에서 반올림 (넷째 자리까지 유지, 부동소수 오차 제거) */
+function round5(v: number): number {
+  return Math.round(v * 10000) / 10000;
+}
+
 function compute(a: number, b: number, op: Op): number {
-  if (op === '+') return a + b;
-  if (op === '-') return a - b;
-  if (op === '×') return a * b;
-  return b === 0 ? NaN : a / b;
+  if (op === '+') return round5(a + b);
+  if (op === '-') return round5(a - b);
+  if (op === '×') return round5(a * b);
+  return b === 0 ? NaN : round5(a / b);
 }
 
 function fmt(v: string): string {
@@ -31,8 +36,6 @@ export function CalculatorModal({ open, onClose }: Props) {
   const [prev, setPrev] = useState<number | null>(null);
   const [op, setOp] = useState<Op | null>(null);
   const [waiting, setWaiting] = useState(false);
-
-  if (!open) return null;
 
   const inputDigit = (d: string) => {
     if (display === '오류') { setDisplay(d); setWaiting(false); return; }
@@ -71,6 +74,29 @@ export function CalculatorModal({ open, onClose }: Props) {
     setOp(null);
     setWaiting(true);
   };
+
+  // 키보드(숫자패드 포함) 입력 지원
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      const k = e.key;
+      if (/^[0-9]$/.test(k)) { inputDigit(k); }
+      else if (k === '.') { inputDot(); }
+      else if (k === '+') { chooseOp('+'); }
+      else if (k === '-') { chooseOp('-'); }
+      else if (k === '*') { chooseOp('×'); }
+      else if (k === '/') { e.preventDefault(); chooseOp('÷'); }
+      else if (k === 'Enter' || k === '=') { e.preventDefault(); equals(); }
+      else if (k === 'Backspace') { back(); }
+      else if (k === 'Escape') { onClose(); }
+      else if (k === 'Delete' || k === 'c' || k === 'C') { clearAll(); }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, display, prev, op, waiting]);
+
+  if (!open) return null;
 
   const opBtn = 'rounded-xl bg-primary/10 text-[16px] font-semibold text-primary hover:bg-primary/20 h-12';
   const numBtn = 'rounded-xl bg-surface-secondary text-[16px] font-medium text-foreground hover:bg-border h-12';
