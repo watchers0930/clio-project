@@ -49,15 +49,15 @@ export function PaymentStageEditor({ payments, onChange }: Props) {
         <label className="text-[12px] font-medium text-foreground-secondary">대금 단계</label>
         <div className="flex items-center gap-1.5">
           {!hasDown && (
-            <button type="button" onClick={() => add('down')} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-[12px] text-foreground-secondary hover:bg-surface-secondary">
+            <button type="button" onClick={() => add('down')} className="wl-add-btn flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-[12px] text-foreground-secondary hover:bg-surface-secondary">
               <Plus size={12} /> 계약금
             </button>
           )}
-          <button type="button" onClick={() => add('interim')} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-[12px] text-foreground-secondary hover:bg-surface-secondary">
+          <button type="button" onClick={() => add('interim')} className="wl-add-btn flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-[12px] text-foreground-secondary hover:bg-surface-secondary">
             <Plus size={12} /> 중도금
           </button>
           {!hasBalance && (
-            <button type="button" onClick={() => add('balance')} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-[12px] text-foreground-secondary hover:bg-surface-secondary">
+            <button type="button" onClick={() => add('balance')} className="wl-add-btn flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-[12px] text-foreground-secondary hover:bg-surface-secondary">
               <Plus size={12} /> 잔금
             </button>
           )}
