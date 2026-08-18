@@ -87,6 +87,20 @@ export function formatNumber(value: number): string {
   return Math.round(value).toLocaleString('ko-KR');
 }
 
+/** 만원 단위 축약 표기 (예: 5000000 → "500만") */
+export function formatManwon(value: number): string {
+  if (value === 0) return '0';
+  return `${(value / 10000).toLocaleString('ko-KR')}만`;
+}
+
+/** 오백만원(기본 step) 단위 Y축 눈금 배열 [0, step, 2step, ... top] */
+export function axisTicks(max: number, step = 5_000_000): number[] {
+  const top = Math.max(step, Math.ceil(max / step) * step);
+  const ticks: number[] = [];
+  for (let v = 0; v <= top; v += step) ticks.push(v);
+  return ticks;
+}
+
 /** 대금 단계 금액 합계 */
 export function paymentsTotal(payments: WorkPayment[]): number {
   return payments.reduce((sum, p) => sum + p.amount, 0);
