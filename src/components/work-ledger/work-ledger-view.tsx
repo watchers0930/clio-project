@@ -86,10 +86,10 @@ export function WorkLedgerView() {
 
   return (
     <>
-      <div className="space-y-8">
+      <div className="space-y-10">
         <div>
           <h2 className="text-[16px] font-semibold text-foreground">작업내역</h2>
-          <p className="mt-1 text-[13px] text-foreground-secondary">진행 중인 프로젝트의 계약·수익·수금 일정을 관리합니다.</p>
+          <p className="mt-1.5 text-[13px] text-foreground-secondary">진행 중인 프로젝트의 계약·수익·수금 일정을 관리합니다.</p>
         </div>
 
         <WorkLedgerSummary projects={projects} />

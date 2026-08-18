@@ -86,7 +86,7 @@ export function WorkProjectDetailModal({ open, project, departments, onClose }: 
           </div>
 
           {/* 대금 단계 */}
-          <div className="mt-4">
+          <div className="mt-6">
             <h4 className="mb-2 text-[12px] font-semibold text-foreground-secondary">대금 단계</h4>
             {project.payments.length === 0 ? (
               <p className="text-[12px] text-foreground-quaternary">등록된 대금 단계가 없습니다.</p>

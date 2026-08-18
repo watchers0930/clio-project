@@ -120,7 +120,7 @@ export function WorkProjectFormModal({ open, editing, departments, managers, onC
 
         {/* Body */}
         <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-5">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-6">
             <div className="col-span-2">
               <label className={LABEL}>프로젝트명 *</label>
               <input type="text" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="예) OO청사 신축공사" className={INPUT} />
