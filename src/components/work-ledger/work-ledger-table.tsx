@@ -41,7 +41,18 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
 
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
-      <table className="w-full min-w-[1120px] text-[13px]">
+      <table className="w-full min-w-[1120px] table-fixed text-[13px]">
+        <colgroup>
+          <col style={{ width: '11%' }} />
+          <col style={{ width: '11%' }} />
+          <col style={{ width: '11%' }} />
+          <col style={{ width: '11%' }} />
+          <col style={{ width: '11%' }} />
+          <col style={{ width: '11%' }} />
+          <col style={{ width: '11%' }} />
+          <col style={{ width: '12%' }} />
+          <col style={{ width: '11%' }} />
+        </colgroup>
         <thead>
           <tr className="bg-surface-secondary text-foreground-secondary">
             <th className="px-5 py-4 text-center font-semibold">상태</th>
