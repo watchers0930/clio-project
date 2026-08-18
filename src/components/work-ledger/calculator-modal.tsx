@@ -49,6 +49,14 @@ export function CalculatorModal({ open, onClose }: Props) {
   const clearAll = () => { setDisplay('0'); setPrev(null); setOp(null); setWaiting(false); };
   const back = () => setDisplay(display.length > 1 && display !== '오류' ? display.slice(0, -1) : '0');
   const toggleSign = () => { if (display !== '0' && display !== '오류') setDisplay(display.startsWith('-') ? display.slice(1) : `-${display}`); };
+  const percent = () => {
+    if (display === '오류') return;
+    const cur = parseFloat(display);
+    // 연산 대기 중이면 앞 값의 %로(예: 200+10% → 20), 아니면 값÷100
+    const r = prev !== null && op ? round5((prev * cur) / 100) : round5(cur / 100);
+    setDisplay(String(r));
+    setWaiting(false);
+  };
 
   const chooseOp = (next: Op) => {
     if (display === '오류') return;
@@ -86,6 +94,7 @@ export function CalculatorModal({ open, onClose }: Props) {
       else if (k === '-') { chooseOp('-'); }
       else if (k === '*') { chooseOp('×'); }
       else if (k === '/') { e.preventDefault(); chooseOp('÷'); }
+      else if (k === '%') { percent(); }
       else if (k === 'Enter' || k === '=') { e.preventDefault(); equals(); }
       else if (k === 'Backspace') { back(); }
       else if (k === 'Escape') { onClose(); }
@@ -116,7 +125,7 @@ export function CalculatorModal({ open, onClose }: Props) {
           <div className="grid grid-cols-4 gap-2.5">
             <button onClick={clearAll} className={fnBtn}>C</button>
             <button onClick={toggleSign} className={fnBtn}>±</button>
-            <button onClick={back} className={fnBtn}>⌫</button>
+            <button onClick={percent} className={fnBtn}>%</button>
             <button onClick={() => chooseOp('÷')} className={opBtn}>÷</button>
 
             <button onClick={() => inputDigit('7')} className={numBtn}>7</button>
@@ -134,8 +143,9 @@ export function CalculatorModal({ open, onClose }: Props) {
             <button onClick={() => inputDigit('3')} className={numBtn}>3</button>
             <button onClick={() => chooseOp('+')} className={opBtn}>+</button>
 
-            <button onClick={() => inputDigit('0')} className={`${numBtn} col-span-2`}>0</button>
+            <button onClick={() => inputDigit('0')} className={numBtn}>0</button>
             <button onClick={inputDot} className={numBtn}>.</button>
+            <button onClick={back} className={fnBtn}>⌫</button>
             <button onClick={equals} className="h-12 rounded-xl bg-primary text-[16px] font-semibold text-white hover:bg-primary-dark">=</button>
           </div>
         </div>
