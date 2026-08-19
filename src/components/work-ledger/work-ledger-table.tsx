@@ -8,7 +8,7 @@ import {
   type WorkPayment,
   type WorkProject,
 } from '@/lib/work-ledger/types';
-import { expectedProfit, formatKRW, formatNumber, marginRate, receivable, toKoreanMoney } from '@/lib/work-ledger/calc';
+import { expectedProfit, formatKRW, formatNumber, marginRate, receivable } from '@/lib/work-ledger/calc';
 
 interface Props {
   projects: WorkProject[];
@@ -50,24 +50,24 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
     <div className="overflow-x-auto rounded-xl border border-border">
       <table className="w-full min-w-[1120px] table-fixed text-[13px]">
         <colgroup>
-          <col style={{ width: '11%' }} />
-          <col style={{ width: '11%' }} />
+          <col style={{ width: '5.5%' }} />
+          <col style={{ width: '22%' }} />
           <col style={{ width: '11%' }} />
           <col style={{ width: '11%' }} />
           <col style={{ width: '11%' }} />
           <col style={{ width: '11%' }} />
           <col style={{ width: '11%' }} />
           <col style={{ width: '12%' }} />
-          <col style={{ width: '11%' }} />
+          <col style={{ width: '5.5%' }} />
         </colgroup>
         <thead>
           <tr className="bg-surface-secondary text-foreground-secondary">
-            <th className="px-5 py-4 text-center font-semibold">상태</th>
+            <th className="px-2 py-4 text-center font-semibold">상태</th>
             <th className="px-5 py-4 text-center font-semibold">프로젝트</th>
             <th className="w-[104px] px-3 py-4 text-center font-semibold">계약총액</th>
             <th className="w-[104px] px-3 py-4 text-center font-semibold">매입금액</th>
             <th className="w-[104px] px-3 py-4 text-center font-semibold">예상수익</th>
-            <th className="w-[104px] px-3 py-4 text-center font-semibold">지급현황</th>
+            <th className="w-[104px] px-3 py-4 text-center font-semibold">수금내역</th>
             <th className="w-[104px] px-3 py-4 text-center font-semibold">미수금</th>
             <th className="px-5 py-4 text-center font-semibold">비고</th>
             <th className="w-16 px-2 py-4 text-center font-semibold">관리</th>
@@ -78,7 +78,7 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
             const isOwner = !!currentUserId && p.created_by === currentUserId;
             return (
               <tr key={p.id} className="align-top hover:bg-surface-secondary/40 transition-colors">
-                <td className="px-5 py-6"><StatusBadge project={p} /></td>
+                <td className="px-2 py-6"><StatusBadge project={p} /></td>
                 <td className="px-5 py-6">
                   <div className="font-medium text-foreground">{p.name}</div>
                   <div className="mt-2 space-y-1 text-[12px] text-foreground-tertiary">
@@ -90,11 +90,9 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
                 </td>
                 <td className="w-[104px] px-3 py-6 text-right">
                   <div className="font-medium text-foreground">{formatKRW(p.contract_amount)}</div>
-                  <div className="mt-1 text-[11px] text-foreground-quaternary">{toKoreanMoney(p.contract_amount)}</div>
                 </td>
                 <td className="w-[104px] px-3 py-6 text-right">
                   <div className="font-medium text-foreground">{formatKRW(p.purchase_amount)}</div>
-                  <div className="mt-1 text-[11px] text-foreground-quaternary">{toKoreanMoney(p.purchase_amount)}</div>
                 </td>
                 <td className="w-[104px] px-3 py-6 text-right">
                   <div className="font-medium text-primary">{formatKRW(expectedProfit(p.contract_amount, p.purchase_amount))}</div>
