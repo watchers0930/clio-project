@@ -167,16 +167,20 @@ export function useDocumentsPage() {
       if (res.ok) {
         const data = await res.json();
         const templateData = data.data ?? data.templates ?? [];
-        const mapped = templateData.map((template: Record<string, unknown>) => ({
-          id: template.id as string,
-          name: template.name as string,
-          description: template.description as string,
-          templateMode: (template.templateMode as Template['templateMode']) ?? 'html-template',
-          templateHtml: (template.templateHtml as string | undefined) ?? '',
-          templateFile: (template.templateFile as TemplateFile | null) ?? null,
-          templateFields: (template.templateFields as Template['templateFields']) ?? [],
-          templateSections: (template.templateSections as Template['templateSections']) ?? [],
-        }));
+        // 새 문서 생성에서 노출할 템플릿: 재직증명서 · 회의록만 (DB 데이터는 보존)
+        const ALLOWED_TEMPLATES = ['재직증명서', '회의록'];
+        const mapped = templateData
+          .filter((template: Record<string, unknown>) => ALLOWED_TEMPLATES.includes(template.name as string))
+          .map((template: Record<string, unknown>) => ({
+            id: template.id as string,
+            name: template.name as string,
+            description: template.description as string,
+            templateMode: (template.templateMode as Template['templateMode']) ?? 'html-template',
+            templateHtml: (template.templateHtml as string | undefined) ?? '',
+            templateFile: (template.templateFile as TemplateFile | null) ?? null,
+            templateFields: (template.templateFields as Template['templateFields']) ?? [],
+            templateSections: (template.templateSections as Template['templateSections']) ?? [],
+          }));
         mapped.sort((a: { name: string }, b: { name: string }) => {
           const ai = TEMPLATE_DISPLAY_ORDER.indexOf(a.name);
           const bi = TEMPLATE_DISPLAY_ORDER.indexOf(b.name);
