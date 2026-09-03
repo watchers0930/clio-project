@@ -9,15 +9,17 @@ interface VideoRoomState {
 
 /**
  * 화상회의 방 입장 상태·로직 훅.
- * join(eventId?) → 서버에서 Daily 방/토큰 발급 → 모달 오픈용 상태 세팅.
+ * join(key, eventId?) → 서버에서 Daily 방/토큰 발급 → 모달 오픈용 상태 세팅.
+ * joiningKey 로 어떤 버튼이 로딩 중인지 구분(버튼별 로딩 표시).
  */
 export function useVideoRoom() {
-  const [loading, setLoading] = useState(false);
+  const [joiningKey, setJoiningKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [room, setRoom] = useState<VideoRoomState | null>(null);
 
-  const join = useCallback(async (eventId?: string) => {
-    setLoading(true);
+  const join = useCallback(async (key: string, eventId?: string) => {
+    if (joiningKey) return; // 중복 입장 방지
+    setJoiningKey(key);
     setError(null);
     try {
       const res = await fetch('/api/meetings/rooms', {
@@ -33,14 +35,14 @@ export function useVideoRoom() {
     } catch (err) {
       setError(err instanceof Error ? err.message : '화상회의 입장에 실패했습니다');
     } finally {
-      setLoading(false);
+      setJoiningKey(null);
     }
-  }, []);
+  }, [joiningKey]);
 
   const leave = useCallback(() => {
     setRoom(null);
     setError(null);
   }, []);
 
-  return { loading, error, room, join, leave };
+  return { joiningKey, error, room, join, leave };
 }

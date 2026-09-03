@@ -42,7 +42,7 @@ function MeetingsPageContent() {
   const [events, setEvents] = useState<MeetingEvent[]>([]);
   const [meetingDocs, setMeetingDocs] = useState<MeetingDocument[]>([]);
   const [sttModalOpen, setSttModalOpen] = useState(false);
-  const { loading: videoLoading, error: videoError, room, join, leave } = useVideoRoom();
+  const { joiningKey, error: videoError, room, join, leave } = useVideoRoom();
 
   useEffect(() => {
     setSttModalOpen(searchParams.get('record') === 'true');
@@ -109,12 +109,12 @@ function MeetingsPageContent() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => join()}
-                disabled={videoLoading}
+                onClick={() => join('adhoc')}
+                disabled={joiningKey === 'adhoc'}
                 className="h-9 inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 text-[13px] font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-60"
               >
                 <Video size={15} />
-                {videoLoading ? '준비 중…' : '화상회의 시작'}
+                {joiningKey === 'adhoc' ? '준비 중…' : '화상회의 시작'}
               </button>
               <button
                 onClick={() => router.push('/documents')}
@@ -178,12 +178,12 @@ function MeetingsPageContent() {
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2.5">
                   <button
-                    onClick={() => join(event.id)}
-                    disabled={videoLoading}
+                    onClick={() => join(event.id, event.id)}
+                    disabled={joiningKey === event.id}
                     className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-[12px] font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-60"
                   >
                     <Video size={14} />
-                    화상회의 입장
+                    {joiningKey === event.id ? '준비 중…' : '화상회의 입장'}
                   </button>
                   <button
                     onClick={() => router.push(buildDocumentCreateHref({

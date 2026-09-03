@@ -17,12 +17,16 @@ interface VideoCallModalProps {
 export function VideoCallModal({ isOpen, roomUrl, token, onClose }: VideoCallModalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const callRef = useRef<DailyCall | null>(null);
+  // 실제 입장 성공 여부. 입장 전 error 로 인한 left-meeting 에는 모달을 닫지 않아야
+  // Daily 가 iframe 안에 띄우는 안내(예: 결제수단 필요)를 사용자가 볼 수 있다.
+  const joinedRef = useRef(false);
 
   useEffect(() => {
     if (!isOpen || !roomUrl || !token || !containerRef.current) return;
 
     let cancelled = false;
     const container = containerRef.current;
+    joinedRef.current = false;
 
     (async () => {
       // daily-js 는 브라우저 전용 → 동적 로드
@@ -35,8 +39,11 @@ export function VideoCallModal({ isOpen, roomUrl, token, onClose }: VideoCallMod
         iframeStyle: { width: '100%', height: '100%', border: '0', borderRadius: '12px' },
       });
       callRef.current = frame;
-      frame.on('left-meeting', onClose);
-      await frame.join({ url: roomUrl, token }).catch(() => onClose());
+      frame.on('joined-meeting', () => { joinedRef.current = true; });
+      // 정상 퇴장(입장 성공 후 나가기)일 때만 모달을 닫는다.
+      frame.on('left-meeting', () => { if (joinedRef.current) onClose(); });
+      // 입장 실패 시엔 Daily 가 iframe 안에 원인을 표시하므로 모달을 유지한다.
+      await frame.join({ url: roomUrl, token }).catch(() => {});
     })();
 
     return () => {
