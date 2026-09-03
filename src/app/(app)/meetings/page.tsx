@@ -163,20 +163,18 @@ function MeetingsPageContent() {
         <section className="rounded-2xl border border-border bg-white p-5">
           <p className="text-[16px] font-semibold text-foreground">다가오는 회의</p>
           <p className="mt-1 text-[12px] text-foreground-secondary">일정에서 바로 시작</p>
-          <div className="mt-5 flex flex-col gap-8">
+          <div className="mt-[30px] flex flex-col gap-8">
             {events.length === 0 ? (
               <EmptyCard label="다가오는 회의 일정이 없습니다." />
             ) : events.map((event) => (
-              <div key={event.id} className="rounded-2xl border border-border bg-surface-tertiary p-6">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-[14px] font-semibold text-foreground">{event.title}</p>
-                    <p className="mt-3 text-[12px] text-foreground-secondary">
-                      {event.start_at.split('T')[0]} · {event.location || '장소 미정'} · {event.creator_name || '작성자 미상'}
-                    </p>
-                  </div>
+              <div key={event.id} className="rounded-2xl border border-border bg-surface-tertiary p-5 flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="truncate text-[14px] font-semibold text-foreground">{event.title}</p>
+                  <p className="mt-3 text-[12px] text-foreground-secondary">
+                    {event.start_at.split('T')[0]} · {event.location || '장소 미정'} · {event.creator_name || '작성자 미상'}
+                  </p>
                 </div>
-                <div className="mt-8 flex flex-wrap gap-3">
+                <div className="flex flex-wrap justify-end gap-3 shrink-0">
                   <button
                     onClick={() => join(event.id, event.id)}
                     disabled={joiningKey === event.id}
