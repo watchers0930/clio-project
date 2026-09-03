@@ -37,9 +37,9 @@ export async function startBeautyProcessor(): Promise<BeautyProcessor> {
     ctx.filter = 'none';
     ctx.globalAlpha = 1;
     ctx.drawImage(video, 0, 0, w, h);
-    // 2) 블러+밝기 버전을 낮은 불투명도로 덧입혀 피부 스무딩(소프트 글로우)
-    ctx.filter = 'blur(5px) brightness(1.05) saturate(1.03)';
-    ctx.globalAlpha = 0.5;
+    // 2) 블러+밝기 버전을 덧입혀 피부 스무딩(소프트 글로우) — 강하게
+    ctx.filter = 'blur(9px) brightness(1.1) saturate(1.08) contrast(0.96)';
+    ctx.globalAlpha = 0.7;
     ctx.drawImage(video, 0, 0, w, h);
     // 리셋
     ctx.filter = 'none';
