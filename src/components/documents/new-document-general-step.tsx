@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createTemplateBundle } from '@/lib/templates/template-schema';
 import { renderTemplatePreviewHtml } from '@/lib/templates/template-preview';
 import type { TemplateItem } from '@/components/documents/page-types';
+import { LeaveEmployeePicker } from '@/components/documents/LeaveEmployeePicker';
 
 const AUTO_INPUT_FIELD_KEYS = new Set([
   'author',
@@ -91,6 +92,19 @@ export function NewDocumentGeneralStep({
       <div className="space-y-5">
         <div>
           <p className="text-sm font-medium text-foreground" style={{ marginBottom: 8 }}>{isWorklogTemplate ? '수동 입력' : '문서 기본 정보'}</p>
+          {selectedTemplateItem?.name === '휴가원' && (
+            <div style={{ marginBottom: 12 }}>
+              <LeaveEmployeePicker
+                onSelect={(m, deptName) => onSetDocumentInputs((prev) => ({
+                  ...prev,
+                  department: deptName || prev.department || '',
+                  employee_name: m.name,
+                  hire_date: m.hire_date ?? prev.hire_date ?? '',
+                  emergency_contact: m.phone ?? prev.emergency_contact ?? '',
+                }))}
+              />
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-3">
             {manualFields.map((field) => (
               <div key={field.key}>
