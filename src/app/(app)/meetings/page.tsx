@@ -3,9 +3,11 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Search } from 'lucide-react';
+import { Search, Video } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import { SttModal } from '@/components/meetings/SttModal';
+import { VideoCallModal } from '@/components/meetings/VideoCallModal';
+import { useVideoRoom } from '@/hooks/useVideoRoom';
 import { buildDocumentCreateHref } from '@/lib/documents/navigation';
 
 interface MeetingEvent {
@@ -40,10 +42,15 @@ function MeetingsPageContent() {
   const [events, setEvents] = useState<MeetingEvent[]>([]);
   const [meetingDocs, setMeetingDocs] = useState<MeetingDocument[]>([]);
   const [sttModalOpen, setSttModalOpen] = useState(false);
+  const { loading: videoLoading, error: videoError, room, join, leave } = useVideoRoom();
 
   useEffect(() => {
     setSttModalOpen(searchParams.get('record') === 'true');
   }, [searchParams]);
+
+  useEffect(() => {
+    if (videoError) alert(videoError);
+  }, [videoError]);
 
   useEffect(() => {
     const load = async () => {
@@ -101,6 +108,14 @@ function MeetingsPageContent() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => join()}
+                disabled={videoLoading}
+                className="h-9 inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 text-[13px] font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-60"
+              >
+                <Video size={15} />
+                {videoLoading ? '준비 중…' : '화상회의 시작'}
+              </button>
               <button
                 onClick={() => router.push('/documents')}
                 className="h-9 rounded-xl bg-foreground px-4 text-[13px] font-medium text-white transition-colors hover:bg-primary"
@@ -162,6 +177,14 @@ function MeetingsPageContent() {
                   </div>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2.5">
+                  <button
+                    onClick={() => join(event.id)}
+                    disabled={videoLoading}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-[12px] font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-60"
+                  >
+                    <Video size={14} />
+                    화상회의 입장
+                  </button>
                   <button
                     onClick={() => router.push(buildDocumentCreateHref({
                       originContext: 'meeting_minutes',
@@ -225,6 +248,13 @@ function MeetingsPageContent() {
           </div>
         </section>
       </div>
+
+      <VideoCallModal
+        isOpen={!!room}
+        roomUrl={room?.roomUrl ?? null}
+        token={room?.token ?? null}
+        onClose={leave}
+      />
 
       <SttModal
         isOpen={sttModalOpen}
