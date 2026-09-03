@@ -109,6 +109,8 @@ export async function createMeetingToken(
         room_name: roomName,
         user_name: userName.slice(0, 60),
         is_owner: isOwner,
+        // 모든 참가자가 라이브 자막(트랜스크립션)을 켜고 받을 수 있도록 권한 부여
+        permissions: { canAdmin: ['transcription'] },
         exp,
       },
     }),
