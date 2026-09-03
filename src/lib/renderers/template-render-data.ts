@@ -1,4 +1,5 @@
 import type { TemplateBundle } from '@/lib/templates/template-schema';
+import { computeRemainingLeaveDays } from '@/lib/templates/leave-application';
 
 export interface TemplateRenderSection {
   key: string;
@@ -163,6 +164,13 @@ export function buildTemplateRenderData(params: {
       const itemsValue = hasInputValue ? (documentInputs?.[field.key] ?? '') : fallbackValue;
       replacements[`${field.key}_html`] = multilineToListItems(interpolateTemplateValue(itemsValue, replacements));
     }
+  }
+
+  // 휴가원: 남은 휴가일수 자동계산 (입사일·기사용일수 기반)
+  if (replacements.hire_date) {
+    const used = parseFloat(replacements.used_leave_days || '0') || 0;
+    const baseDate = replacements.report_date || replacements.leave_start_date || '';
+    replacements.remaining_leave_days = String(computeRemainingLeaveDays(replacements.hire_date, used, baseDate));
   }
 
   const sections = templateBundle.sections.map((section, index) => {

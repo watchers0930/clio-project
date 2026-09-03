@@ -10,6 +10,10 @@ import {
   createEmploymentCertificateTemplateBundle,
   EMPLOYMENT_CERTIFICATE_TEMPLATE_NAME,
 } from '@/lib/templates/employment-certificate';
+import {
+  createLeaveApplicationTemplateBundle,
+  LEAVE_APPLICATION_TEMPLATE_NAME,
+} from '@/lib/templates/leave-application';
 
 const FONT_MAP: Record<string, string> = {
   '맑은 고딕': 'Malgun Gothic',
@@ -47,6 +51,7 @@ type FileChunkRow = {
 };
 
 const BUILTIN_EMPLOYMENT_CERTIFICATE_TEMPLATE_ID = '__builtin_employment_certificate__';
+const BUILTIN_LEAVE_APPLICATION_TEMPLATE_ID = '__builtin_leave_application__';
 
 export function buildTheme(font: unknown): CorporateTheme {
   const fontParam = typeof font === 'string' ? font : '맑은 고딕';
@@ -198,6 +203,15 @@ export async function loadTemplateContext(
       name: EMPLOYMENT_CERTIFICATE_TEMPLATE_NAME,
       content: JSON.stringify(bundle),
       description: '직원 재직 사실 증명서 발급용 템플릿',
+      placeholders: [],
+      template_file_id: null,
+    };
+  } else if (templateId === BUILTIN_LEAVE_APPLICATION_TEMPLATE_ID) {
+    const bundle = createLeaveApplicationTemplateBundle();
+    tmpl = {
+      name: LEAVE_APPLICATION_TEMPLATE_NAME,
+      content: JSON.stringify(bundle),
+      description: '휴가 신청서 (남은 휴가일수 자동계산)',
       placeholders: [],
       template_file_id: null,
     };

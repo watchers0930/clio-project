@@ -19,6 +19,7 @@ export const TEMPLATE_ICONS: Record<string, string> = {
   '사업계획서': '📋',
   '업무협약서(MOU)': '📄',
   '재직증명서': '📄',
+  '휴가원': '🌴',
 };
 
 /** 템플릿 표시 순서 (여기 없는 항목은 뒤에 이름순 정렬) */
@@ -27,6 +28,7 @@ export const TEMPLATE_DISPLAY_ORDER: string[] = [
   '제안서',
   '업무협약서(MOU)',
   '재직증명서',
+  '휴가원',
   '주간업무보고서',
   '업무일지',
   '회의록',
