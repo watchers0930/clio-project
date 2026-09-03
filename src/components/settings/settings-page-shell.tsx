@@ -54,6 +54,9 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
   const [userRole, setUserRole] = useState('user');
   const [userHireDate, setUserHireDate] = useState('');
   const [userPhone, setUserPhone] = useState('');
+  const [userResidentNo, setUserResidentNo] = useState('');
+  const [userAddress, setUserAddress] = useState('');
+  const [userPosition, setUserPosition] = useState('');
   const [userSaving, setUserSaving] = useState(false);
 
   const [sigUrl, setSigUrl] = useState<string | null>(null);
@@ -274,6 +277,9 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
     setUserRole(user?.role ?? 'user');
     setUserHireDate((user as { hire_date?: string | null } | undefined)?.hire_date ?? '');
     setUserPhone((user as { phone?: string | null } | undefined)?.phone ?? '');
+    setUserResidentNo((user as { resident_no?: string | null } | undefined)?.resident_no ?? '');
+    setUserAddress((user as { address?: string | null } | undefined)?.address ?? '');
+    setUserPosition((user as { position?: string | null } | undefined)?.position ?? '');
     setShowUserModal(true);
   };
 
@@ -294,6 +300,9 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
             role: userRole,
             hireDate: userHireDate || null,
             phone: userPhone || null,
+            residentNo: userResidentNo || null,
+            address: userAddress || null,
+            position: userPosition || null,
           }),
         });
         const json = await res.json();
@@ -323,6 +332,9 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
             role: userRole,
             hireDate: userHireDate || null,
             phone: userPhone || null,
+            residentNo: userResidentNo || null,
+            address: userAddress || null,
+            position: userPosition || null,
           }),
         });
         const json = await res.json();
@@ -504,6 +516,9 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
         userRole={userRole}
         userHireDate={userHireDate}
         userPhone={userPhone}
+        userResidentNo={userResidentNo}
+        userAddress={userAddress}
+        userPosition={userPosition}
         userSaving={userSaving}
         departments={departments}
         onClose={() => setShowUserModal(false)}
@@ -515,6 +530,9 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
         onChangeUserRole={setUserRole}
         onChangeUserHireDate={setUserHireDate}
         onChangeUserPhone={setUserPhone}
+        onChangeUserResidentNo={setUserResidentNo}
+        onChangeUserAddress={setUserAddress}
+        onChangeUserPosition={setUserPosition}
       />
 
       <ConfirmDialog

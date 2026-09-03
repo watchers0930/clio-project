@@ -4,6 +4,7 @@ import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import type { DbUser } from '@/lib/supabase/types';
 import { getUserRoleInfo, isAdmin, isManagerOrAbove } from '@/lib/permissions';
+import { maskResidentNo } from '@/lib/format/personal';
 
 /**
  * GET /api/users — 사용자 목록
@@ -48,6 +49,9 @@ export async function GET(request: NextRequest) {
         avatar_url: u.avatar_url,
         hire_date: (u as { hire_date?: string | null }).hire_date ?? null,
         phone: (u as { phone?: string | null }).phone ?? null,
+        resident_no: (u as { resident_no?: string | null }).resident_no ?? null,
+        address: (u as { address?: string | null }).address ?? null,
+        position: (u as { position?: string | null }).position ?? null,
         is_active: u.is_active ?? true,
         created_at: u.created_at,
       };
@@ -76,7 +80,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: '관리자 권한이 필요합니다.' }, { status: 403 });
     }
 
-    const { email, password, name, departmentId, role, hireDate, phone } = await request.json();
+    const { email, password, name, departmentId, role, hireDate, phone, residentNo, address, position } = await request.json();
 
     if (!email || !password || !name) {
       return NextResponse.json({ success: false, error: '이메일, 비밀번호, 이름은 필수입니다.' }, { status: 400 });
@@ -105,13 +109,21 @@ export async function POST(request: NextRequest) {
       role: role ?? 'user',
       avatar_url: null,
     };
-    // 입사일·연락처 포함 시도 → 컬럼(마이그레이션 015) 미적용이면 기본 필드로 폴백
+    // 확장 프로필 포함 시도 → 컬럼(마이그레이션 015/016) 미적용이면 기본 필드로 폴백
+    const extProfile = {
+      ...baseProfile,
+      hire_date: hireDate || null,
+      phone: phone || null,
+      resident_no: residentNo ? maskResidentNo(residentNo) : null,
+      address: address || null,
+      position: position || null,
+    };
     let { data: newUser, error: insertErr } = await adminClient
       .from('users')
-      .insert({ ...baseProfile, hire_date: hireDate || null, phone: phone || null })
+      .insert(extProfile)
       .select()
       .single();
-    if (insertErr && /hire_date|phone|column/i.test(insertErr.message)) {
+    if (insertErr && /hire_date|phone|resident_no|address|position|column/i.test(insertErr.message)) {
       ({ data: newUser, error: insertErr } = await adminClient.from('users').insert(baseProfile).select().single());
     }
 
@@ -175,7 +187,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, error: '관리자 권한이 필요합니다.' }, { status: 403 });
     }
 
-    const { id, departmentId, role, name, email, password, isActive, hireDate, phone } = await request.json();
+    const { id, departmentId, role, name, email, password, isActive, hireDate, phone, residentNo, address, position } = await request.json();
     if (!id) return NextResponse.json({ success: false, error: '사용자 ID 필수' }, { status: 400 });
 
     // 대상 사용자 현재 정보
@@ -204,6 +216,9 @@ export async function PUT(request: NextRequest) {
     if (isActive !== undefined) updateData.is_active = isActive;
     if (hireDate !== undefined) updateData.hire_date = hireDate || null;
     if (phone !== undefined) updateData.phone = phone || null;
+    if (residentNo !== undefined) updateData.resident_no = residentNo ? maskResidentNo(residentNo) : null;
+    if (address !== undefined) updateData.address = address || null;
+    if (position !== undefined) updateData.position = position || null;
 
     const oldDeptId = target.department_id;
     if (departmentId !== undefined) updateData.department_id = departmentId;
@@ -216,10 +231,10 @@ export async function PUT(request: NextRequest) {
       .eq('id', id)
       .select()
       .single();
-    // hire_date·phone 컬럼(마이그레이션 015) 미적용 시 해당 필드 제외하고 재시도
-    if (error && /hire_date|phone|column/i.test(error.message)) {
-      const { hire_date: _h, phone: _p, ...rest } = updateData;
-      void _h; void _p;
+    // 확장 컬럼(마이그레이션 015/016) 미적용 시 해당 필드 제외하고 재시도
+    if (error && /hire_date|phone|resident_no|address|position|column/i.test(error.message)) {
+      const { hire_date: _h, phone: _p, resident_no: _r, address: _a, position: _pos, ...rest } = updateData;
+      void _h; void _p; void _r; void _a; void _pos;
       ({ data, error } = await dbClient.from('users').update(rest).eq('id', id).select().single());
     }
 

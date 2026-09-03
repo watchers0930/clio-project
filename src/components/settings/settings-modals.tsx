@@ -1,4 +1,5 @@
 import type { Department, UserItem } from '@/components/settings/types';
+import { formatKoreanPhone } from '@/lib/format/personal';
 
 const inputCls = 'h-[52px] w-full rounded-xl border border-border bg-surface-secondary px-4.5 text-[15px] text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary';
 const labelCls = 'mb-2.5 block text-[14px] font-medium text-foreground-secondary';
@@ -75,6 +76,9 @@ interface UserModalProps {
   userRole: string;
   userHireDate: string;
   userPhone: string;
+  userResidentNo: string;
+  userAddress: string;
+  userPosition: string;
   userSaving: boolean;
   departments: Department[];
   onClose: () => void;
@@ -86,13 +90,17 @@ interface UserModalProps {
   onChangeUserRole: (value: string) => void;
   onChangeUserHireDate: (value: string) => void;
   onChangeUserPhone: (value: string) => void;
+  onChangeUserResidentNo: (value: string) => void;
+  onChangeUserAddress: (value: string) => void;
+  onChangeUserPosition: (value: string) => void;
 }
 
 export function UserModal(props: UserModalProps) {
   const {
-    open, editUser, userName, userEmail, userPassword, userDeptId, userRole, userHireDate, userPhone, userSaving, departments,
+    open, editUser, userName, userEmail, userPassword, userDeptId, userRole, userHireDate, userPhone,
+    userResidentNo, userAddress, userPosition, userSaving, departments,
     onClose, onSave, onChangeUserName, onChangeUserEmail, onChangeUserPassword, onChangeUserDeptId, onChangeUserRole,
-    onChangeUserHireDate, onChangeUserPhone,
+    onChangeUserHireDate, onChangeUserPhone, onChangeUserResidentNo, onChangeUserAddress, onChangeUserPosition,
   } = props;
 
   if (!open) return null;
@@ -143,8 +151,22 @@ export function UserModal(props: UserModalProps) {
             </div>
             <div>
               <label className={labelCls}>연락처</label>
-              <input value={userPhone} onChange={(e) => onChangeUserPhone(e.target.value)} placeholder="010-0000-0000" className={inputCls} />
+              <input value={userPhone} onChange={(e) => onChangeUserPhone(formatKoreanPhone(e.target.value))} placeholder="010-0000-0000" className={inputCls} />
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>주민등록번호 <span className="text-[12px] text-foreground-quaternary">(앞6+성별1만 저장)</span></label>
+              <input value={userResidentNo} onChange={(e) => onChangeUserResidentNo(e.target.value)} placeholder="900101-1234567" className={`${inputCls} font-en`} />
+            </div>
+            <div>
+              <label className={labelCls}>직위</label>
+              <input value={userPosition} onChange={(e) => onChangeUserPosition(e.target.value)} placeholder="예: 매니저" className={inputCls} />
+            </div>
+          </div>
+          <div>
+            <label className={labelCls}>주소</label>
+            <input value={userAddress} onChange={(e) => onChangeUserAddress(e.target.value)} placeholder="예: 서울특별시 강남구 ..." className={inputCls} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

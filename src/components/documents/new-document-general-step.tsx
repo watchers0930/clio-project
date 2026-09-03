@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { createTemplateBundle } from '@/lib/templates/template-schema';
 import { renderTemplatePreviewHtml } from '@/lib/templates/template-preview';
 import type { TemplateItem } from '@/components/documents/page-types';
 import { LeaveEmployeePicker } from '@/components/documents/LeaveEmployeePicker';
+import { EmploymentCertAutofill } from '@/components/documents/EmploymentCertAutofill';
 
 const AUTO_INPUT_FIELD_KEYS = new Set([
   'author',
@@ -83,8 +84,28 @@ export function NewDocumentGeneralStep({
     ? renderTemplatePreviewHtml(previewBundle, selectedTemplateItem.name)
     : undefined;
   const autoFields = templateFields.filter((field) => field.autoFill);
-  const manualFields = templateFields.filter((field) => !field.autoFill && !field.aiAssist);
+  const allManualFields = templateFields.filter((field) => !field.autoFill && !field.aiAssist);
   const aiFields = templateFields.filter((field) => field.aiAssist);
+
+  const isEmploymentCert = selectedTemplateItem?.name === '재직증명서';
+  // 재직증명서: 본인 정보 자동입력 → 사용자는 제출용도만 입력
+  const manualFields = isEmploymentCert
+    ? allManualFields.filter((field) => field.key === 'purpose')
+    : allManualFields;
+
+  const handleCertAutofill = useCallback((p: {
+    name: string; resident_no: string; address: string; department: string; position: string; hire_date: string;
+  }) => {
+    onSetDocumentInputs((prev) => ({
+      ...prev,
+      employee_name: p.name || prev.employee_name || '',
+      resident_registration_no: p.resident_no || prev.resident_registration_no || '',
+      employee_address: p.address || prev.employee_address || '',
+      department: p.department || prev.department || '',
+      position: p.position || prev.position || '',
+      employment_start_date: p.hire_date || prev.employment_start_date || '',
+    }));
+  }, [onSetDocumentInputs]);
 
   return (
     <>
@@ -92,6 +113,11 @@ export function NewDocumentGeneralStep({
       <div className="space-y-5">
         <div>
           <p className="text-sm font-medium text-foreground" style={{ marginBottom: 8 }}>{isWorklogTemplate ? '수동 입력' : '문서 기본 정보'}</p>
+          {isEmploymentCert && (
+            <div style={{ marginBottom: 12 }}>
+              <EmploymentCertAutofill onLoaded={handleCertAutofill} />
+            </div>
+          )}
           {selectedTemplateItem?.name === '휴가원' && (
             <div style={{ marginBottom: 12 }}>
               <LeaveEmployeePicker
