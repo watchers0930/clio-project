@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { DailyCall } from '@daily-co/daily-js';
-import { Languages } from 'lucide-react';
+import { Languages, Link2 } from 'lucide-react';
 import { useLiveCaptions } from '@/hooks/useLiveCaptions';
 import { CaptionOverlay, CAPTION_LANGS } from './CaptionOverlay';
 
@@ -103,6 +103,22 @@ export function VideoCallModal({ isOpen, roomUrl, token, onClose }: VideoCallMod
       <div className="relative h-[85vh] w-full max-w-5xl overflow-hidden rounded-xl bg-neutral-900 shadow-2xl">
         {/* 상단 컨트롤 바 */}
         <div className="absolute right-3 top-3 z-30 flex items-center gap-2">
+          <button
+            onClick={async () => {
+              if (!roomUrl) return;
+              const url = `${window.location.origin}/meet/${roomUrl.split('/').pop()}`;
+              try {
+                await navigator.clipboard.writeText(url);
+                alert(`게스트 초대 링크가 복사되었습니다.\n\n${url}`);
+              } catch {
+                alert(url);
+              }
+            }}
+            className="inline-flex items-center gap-1.5 rounded-md bg-black/50 px-3 py-1.5 text-sm font-medium text-white hover:bg-black/70"
+          >
+            <Link2 size={15} />
+            초대 링크
+          </button>
           <button
             onClick={() => setCaptionsOn((v) => !v)}
             className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${

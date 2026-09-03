@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Search, Video } from 'lucide-react';
+import { Search, Video, Link2 } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import { SttModal } from '@/components/meetings/SttModal';
 import { VideoCallModal } from '@/components/meetings/VideoCallModal';
@@ -42,7 +42,7 @@ function MeetingsPageContent() {
   const [events, setEvents] = useState<MeetingEvent[]>([]);
   const [meetingDocs, setMeetingDocs] = useState<MeetingDocument[]>([]);
   const [sttModalOpen, setSttModalOpen] = useState(false);
-  const { joiningKey, error: videoError, room, join, leave } = useVideoRoom();
+  const { joiningKey, error: videoError, room, join, leave, copyInvite } = useVideoRoom();
 
   useEffect(() => {
     setSttModalOpen(searchParams.get('record') === 'true');
@@ -51,6 +51,11 @@ function MeetingsPageContent() {
   useEffect(() => {
     if (videoError) alert(videoError);
   }, [videoError]);
+
+  const handleCopyInvite = async (eventId?: string) => {
+    const url = await copyInvite(eventId);
+    if (url) alert(`게스트 초대 링크가 복사되었습니다.\n\n${url}\n\n이 링크를 받은 사람은 이름 입력 후 호스트 승인으로 입장합니다.`);
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -199,6 +204,13 @@ function MeetingsPageContent() {
                   >
                     <Search size={14} />
                     관련 문서 검색
+                  </button>
+                  <button
+                    onClick={() => handleCopyInvite(event.id)}
+                    className="inline-flex items-center gap-2 rounded-xl border border-border-tint px-4 py-2.5 text-[12px] font-medium text-foreground-secondary hover:bg-surface-secondary transition-colors"
+                  >
+                    <Link2 size={14} />
+                    초대 링크
                   </button>
                 </div>
               </div>

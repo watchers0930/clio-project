@@ -42,34 +42,32 @@ export async function POST(request: NextRequest) {
 
     let roomName: string;
     let roomUrl: string;
-    let isOwner = false;
 
     if (eventId) {
-      // 일정 연결 방: 존재·권한만 확인. 방 이름은 eventId로 결정론적 생성 →
+      // 일정 연결 방: 존재 확인. 방 이름은 eventId로 결정론적 생성 →
       // ensureRoom 이 멱등(있으면 재사용)이라 DB에 URL을 저장할 필요가 없다.
       const { data: event, error } = await admin
         .from('events')
-        .select('id, created_by')
+        .select('id')
         .eq('id', eventId)
         .single();
 
       if (error || !event) {
         return NextResponse.json({ success: false, error: '일정을 찾을 수 없습니다' }, { status: 404 });
       }
-      isOwner = event.created_by === authUserId;
 
       const room = await ensureRoom(`clio-${eventId}`);
       roomName = room.name;
       roomUrl = room.url;
     } else {
-      // 즉석 방: 저장하지 않음. 생성자에게 방장 권한 부여
+      // 즉석 방: 저장하지 않음.
       const room = await ensureRoom(`clio-adhoc-${randomUUID()}`, 4 * 60 * 60);
       roomName = room.name;
       roomUrl = room.url;
-      isOwner = true;
     }
 
-    const token = await createMeetingToken(roomName, userName, isOwner);
+    // 로그인한 CLIO 멤버는 모두 owner → 게스트 노킹 입장을 승인할 수 있음
+    const token = await createMeetingToken(roomName, userName, true);
 
     return NextResponse.json(
       { success: true, data: { roomUrl, token } },

@@ -44,5 +44,25 @@ export function useVideoRoom() {
     setError(null);
   }, []);
 
-  return { joiningKey, error, room, join, leave };
+  // 게스트 초대 링크 생성·복사 (방을 보장한 뒤 /meet/<방ID> 링크 복사)
+  const copyInvite = useCallback(async (eventId?: string): Promise<string | null> => {
+    try {
+      const res = await fetch('/api/meetings/rooms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(eventId ? { eventId } : {}),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || '링크 생성 실패');
+      const roomName = String(json.data.roomUrl).split('/').pop();
+      const url = `${window.location.origin}/meet/${roomName}`;
+      await navigator.clipboard.writeText(url);
+      return url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '초대 링크 생성에 실패했습니다');
+      return null;
+    }
+  }, []);
+
+  return { joiningKey, error, room, join, leave, copyInvite };
 }

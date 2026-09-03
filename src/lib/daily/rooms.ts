@@ -38,6 +38,21 @@ export interface DailyRoom {
 }
 
 /**
+ * 방을 조회만 한다. 없으면 null (생성하지 않음 — 공개/게스트 경로용).
+ */
+export async function getRoom(roomName: string): Promise<DailyRoom | null> {
+  if (!ROOM_NAME_RE.test(roomName)) return null;
+  const res = await fetch(`${DAILY_API_BASE}/rooms/${roomName}`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Daily 방 조회 실패: ${await readError(res)}`);
+  const room = (await res.json()) as { name: string; url: string };
+  return { name: room.name, url: room.url };
+}
+
+/**
  * 방을 조회하고 없으면 생성한다. (멱등)
  * @param roomName 결정론적 방 이름 (예: clio-<eventId>)
  * @param expSeconds 방 만료까지 남은 초 (기본 24시간)
