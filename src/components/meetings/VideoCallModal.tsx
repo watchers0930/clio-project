@@ -79,8 +79,17 @@ export function VideoCallModal({ isOpen, roomUrl, token, onClose }: VideoCallMod
     if (!frame) return;
     (async () => {
       try {
-        if (captionsOn) await frame.startTranscription();
-        else await frame.stopTranscription();
+        if (captionsOn) {
+          // 자동 언어감지(multi) 우선 — 한↔영 등 혼합 발화 대응.
+          // 미지원 시 기본 설정으로 폴백.
+          try {
+            await frame.startTranscription({ language: 'multi' });
+          } catch {
+            await frame.startTranscription();
+          }
+        } else {
+          await frame.stopTranscription();
+        }
       } catch {
         /* 미입장·권한 등으로 실패하면 무시 (입장 후 다시 토글) */
       }
