@@ -111,8 +111,8 @@ export const EMPLOYMENT_CERTIFICATE_TEMPLATE_HTML = `
   <p class="date">{{report_date_ko}}</p>
 
   <section class="company-info">
-    <div class="company-row"><span class="company-label">회 사 명</span><span class="company-value">{{company_name}}</span></div>
-    <div class="company-row"><span class="company-label">대 표 자</span><span class="company-value">{{representative_name}}</span><span class="seal"><span class="seal-text">(인)</span><img class="seal-image" src="{{signature_image_src}}" alt="도장" /></span></div>
+    <div class="company-row"><span class="company-label">회 사 명</span><span class="company-value">{{company_name}}</span><span class="seal"><span class="seal-text">(인)</span><img class="seal-image" src="{{signature_image_src}}" alt="직인" /></span></div>
+    <div class="company-row"><span class="company-label">대표이사</span><span class="company-value">{{representative_name}}</span></div>
     <div class="company-row"><span class="company-label registration-label">사업자등록</span><span class="company-value">{{business_registration_no}}</span></div>
     <div class="company-row"><span class="company-label">주 소</span><span class="company-value address-value">{{company_address}}</span></div>
     <div class="company-row"><span class="company-label">전 화</span><span class="company-value">{{company_phone}}</span></div>
