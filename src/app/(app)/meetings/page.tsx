@@ -164,7 +164,7 @@ function MeetingsPageContent() {
         </div>
       </section>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-6">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[6fr_4fr] xl:gap-6">
         <section className="rounded-2xl border border-border bg-white p-5">
           <p className="text-[16px] font-semibold text-foreground">다가오는 회의</p>
           <p className="mt-1 text-[12px] text-foreground-secondary">일정에서 바로 시작</p>
