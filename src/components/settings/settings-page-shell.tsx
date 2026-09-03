@@ -538,6 +538,7 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
           onUpdateCompanyLogoPatternDensity={updateCompanyLogoPatternDensity}
           onDeleteCompanySeal={deleteCompanySeal}
           onUploadCompanySeal={uploadCompanySeal}
+          currentUserIsAdmin={isAdmin}
         />
         </div>
       )}

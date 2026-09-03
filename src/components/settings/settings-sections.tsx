@@ -342,6 +342,7 @@ interface SignatureSectionProps {
   onUpdateCompanyLogoPatternDensity: (density: 'sparse' | 'normal' | 'dense') => void;
   onDeleteCompanySeal: () => void;
   onUploadCompanySeal: (file: File) => void;
+  currentUserIsAdmin: boolean;
 }
 
 export function SignatureSection({
@@ -366,6 +367,7 @@ export function SignatureSection({
   onUpdateCompanyLogoPatternDensity,
   onDeleteCompanySeal,
   onUploadCompanySeal,
+  currentUserIsAdmin,
 }: SignatureSectionProps) {
   const densityOptions: Array<{ value: 'sparse' | 'normal' | 'dense'; label: string }> = [
     { value: 'sparse', label: '적게' },
@@ -375,6 +377,7 @@ export function SignatureSection({
 
   return (
     <div className="grid gap-5 max-w-lg">
+    {!currentUserIsAdmin && (
     <div className="bg-card rounded-2xl border border-border p-8">
       <h2 className="text-[16px] font-semibold mb-1">전자 서명 관리</h2>
       <p className="text-sm text-muted mb-6">문서 다운로드 시 서명란에 자동으로 삽입됩니다. PNG, JPEG, WebP (최대 2MB)</p>
@@ -435,7 +438,9 @@ export function SignatureSection({
         }}
       />
     </div>
+    )}
 
+    {currentUserIsAdmin && (<>
     <div className="bg-card rounded-2xl border border-border p-8">
       <h2 className="text-[16px] font-semibold mb-1">회사 로고 워터마크</h2>
       <p className="text-sm text-muted mb-6">재직증명서 중앙 워터마크로 사용됩니다. PNG, JPEG, WebP (최대 2MB)</p>
@@ -583,6 +588,7 @@ export function SignatureSection({
         }}
       />
     </div>
+    </>)}
     </div>
   );
 }
