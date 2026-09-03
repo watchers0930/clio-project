@@ -26,7 +26,9 @@ export const koLocale = ko;
 
 /** 일정 유형 색상 */
 const EVENT_TYPE_COLORS: Record<EventType, string> = {
+  general: '#6e6e73',
   meeting: '#2E6FF2',
+  // 이하 과거 데이터 표시용
   deadline: '#ff3b30',
   personal: '#30d158',
   company: '#ff9f0a',
@@ -36,7 +38,9 @@ const EVENT_TYPE_COLORS: Record<EventType, string> = {
 
 /** 일정 유형 한글 라벨 */
 const EVENT_TYPE_LABELS: Record<EventType, string> = {
+  general: '일반',
   meeting: '회의',
+  // 이하 과거 데이터 표시용
   deadline: '마감',
   personal: '개인',
   company: '전사',

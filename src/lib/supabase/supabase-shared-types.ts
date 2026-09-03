@@ -4,7 +4,8 @@ export type TemplateScope = 'department' | 'company';
 export type TemplateType = TemplateScope;
 export type DocumentStatus = 'draft' | 'completed';
 export type ChannelType = 'department' | 'direct' | 'group';
-export type EventType = 'meeting' | 'deadline' | 'personal' | 'company' | 'cancelled' | 'other';
+// 선택 가능한 유형은 일반/회의 2개. deadline~other 는 과거 데이터 표시용으로만 유지.
+export type EventType = 'general' | 'meeting' | 'deadline' | 'personal' | 'company' | 'cancelled' | 'other';
 export type TodoPriority = 'high' | 'medium' | 'low';
 export type TodoStatus = 'active' | 'completed';
 export type MemoColor = 'default' | 'blue' | 'green' | 'yellow' | 'red' | 'purple';

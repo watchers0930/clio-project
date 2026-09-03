@@ -6,7 +6,7 @@ import { Spinner } from '@/components/ui';
 import type { CalendarEvent, EventType } from '@/lib/supabase/types';
 import { getEventTypeLabel } from '@/lib/schedule-utils';
 
-const EVENT_TYPES: EventType[] = ['meeting', 'deadline', 'personal', 'company', 'cancelled', 'other'];
+const EVENT_TYPES: EventType[] = ['general', 'meeting'];
 
 interface EventFormModalProps {
   open: boolean;
@@ -53,7 +53,7 @@ export default function EventFormModal({
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<EventFormData>({
     title: '', description: '', location: '',
-    event_type: 'meeting', start_at: '', end_at: '',
+    event_type: 'general', start_at: '', end_at: '',
     all_day: false, department_id: null,
   });
 
@@ -82,7 +82,7 @@ export default function EventFormModal({
       );
       setForm({
         title: '', description: '', location: '',
-        event_type: 'meeting',
+        event_type: 'general',
         start_at: isMultiDay
           ? toLocalDatetime(start).split('T')[0] + 'T00:00'
           : toLocalDatetime(start),
