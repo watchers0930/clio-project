@@ -69,7 +69,19 @@ export async function ensureRoom(
     cache: 'no-store',
   });
   if (getRes.ok) {
-    const room = (await getRes.json()) as { name: string; url: string };
+    const room = (await getRes.json()) as {
+      name: string;
+      url: string;
+      config?: { enable_knocking?: boolean };
+    };
+    // 기존 방에 노킹(대기실)이 꺼져 있으면 한 번 켠다 (게스트 입장 허용)
+    if (!room.config?.enable_knocking) {
+      await fetch(`${DAILY_API_BASE}/rooms/${roomName}`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ properties: { enable_knocking: true } }),
+      }).catch(() => {});
+    }
     return { name: room.name, url: room.url };
   }
   if (getRes.status !== 404) {
@@ -90,6 +102,7 @@ export async function ensureRoom(
         enable_screenshare: true,
         enable_chat: true,
         enable_prejoin_ui: true,
+        enable_knocking: true,
       },
     }),
   });
