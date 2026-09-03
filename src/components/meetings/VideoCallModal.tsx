@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { DailyCall } from '@daily-co/daily-js';
-import { Languages, Link2 } from 'lucide-react';
+import { Languages, Link2, Sparkles } from 'lucide-react';
 import { useLiveCaptions } from '@/hooks/useLiveCaptions';
+import { startBeautyProcessor, type BeautyProcessor } from '@/lib/meetings/beautyFilter';
 import { CaptionOverlay, CAPTION_LANGS } from './CaptionOverlay';
 import { WaitingRoomBanner, type Knocker } from './WaitingRoomBanner';
 
@@ -29,6 +30,10 @@ export function VideoCallModal({ isOpen, roomUrl, token, onClose }: VideoCallMod
   const [captionsOn, setCaptionsOn] = useState(false);
   const [targetLang, setTargetLang] = useState('ko');
   const [knockers, setKnockers] = useState<Knocker[]>([]);
+  const [beautyOn, setBeautyOn] = useState(false);
+  const [beautyBusy, setBeautyBusy] = useState(false);
+  const beautyRef = useRef<BeautyProcessor | null>(null);
+  const camIdRef = useRef<string | undefined>(undefined);
   const { captions, pushFinal, clear } = useLiveCaptions(targetLang);
 
   const admitGuest = (id: string) => callRef.current?.updateWaitingParticipant(id, { grantRequestedAccess: true });
@@ -110,6 +115,46 @@ export function VideoCallModal({ isOpen, roomUrl, token, onClose }: VideoCallMod
     })();
   }, [captionsOn]);
 
+  // 뷰티 필터 on/off → Daily 카메라 입력을 가공 트랙으로 교체/복원
+  useEffect(() => {
+    const frame = callRef.current;
+    if (!frame) return;
+    let cancelled = false;
+    (async () => {
+      setBeautyBusy(true);
+      try {
+        if (beautyOn) {
+          // 현재 카메라 deviceId 저장(복원용)
+          try {
+            const di = await frame.getInputDevices();
+            const cam = di?.camera as { deviceId?: string } | undefined;
+            camIdRef.current = cam?.deviceId || camIdRef.current;
+          } catch { /* 무시 */ }
+          const proc = await startBeautyProcessor();
+          if (cancelled) { proc.stop(); return; }
+          beautyRef.current = proc;
+          await frame.setInputDevicesAsync({ videoSource: proc.track });
+        } else {
+          // 원래 카메라로 복원
+          await frame.setInputDevicesAsync({ videoDeviceId: camIdRef.current || undefined });
+          beautyRef.current?.stop();
+          beautyRef.current = null;
+        }
+      } catch {
+        // 카메라 접근 실패 등 → 토글 원복
+        beautyRef.current?.stop();
+        beautyRef.current = null;
+        if (!cancelled) setBeautyOn(false);
+      } finally {
+        if (!cancelled) setBeautyBusy(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [beautyOn]);
+
+  // 언마운트 시 뷰티 리소스 정리
+  useEffect(() => () => { beautyRef.current?.stop(); beautyRef.current = null; }, []);
+
   if (!isOpen) return null;
 
   return (
@@ -132,6 +177,16 @@ export function VideoCallModal({ isOpen, roomUrl, token, onClose }: VideoCallMod
           >
             <Link2 size={15} />
             초대 링크
+          </button>
+          <button
+            onClick={() => !beautyBusy && setBeautyOn((v) => !v)}
+            disabled={beautyBusy}
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-60 ${
+              beautyOn ? 'bg-primary text-white' : 'bg-black/50 text-white hover:bg-black/70'
+            }`}
+          >
+            <Sparkles size={15} />
+            {beautyBusy ? '적용 중…' : beautyOn ? '뷰티 켜짐' : '뷰티'}
           </button>
           <button
             onClick={() => setCaptionsOn((v) => !v)}
