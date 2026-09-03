@@ -5,6 +5,7 @@ import type { DailyCall } from '@daily-co/daily-js';
 import { Languages, Link2 } from 'lucide-react';
 import { useLiveCaptions } from '@/hooks/useLiveCaptions';
 import { CaptionOverlay, CAPTION_LANGS } from './CaptionOverlay';
+import { WaitingRoomBanner, type Knocker } from './WaitingRoomBanner';
 
 interface VideoCallModalProps {
   isOpen: boolean;
@@ -27,7 +28,11 @@ export function VideoCallModal({ isOpen, roomUrl, token, onClose }: VideoCallMod
 
   const [captionsOn, setCaptionsOn] = useState(false);
   const [targetLang, setTargetLang] = useState('ko');
+  const [knockers, setKnockers] = useState<Knocker[]>([]);
   const { captions, pushFinal, clear } = useLiveCaptions(targetLang);
+
+  const admitGuest = (id: string) => callRef.current?.updateWaitingParticipant(id, { grantRequestedAccess: true });
+  const denyGuest = (id: string) => callRef.current?.updateWaitingParticipant(id, { grantRequestedAccess: false });
 
   // 프레임 생성/입장 (자막 상태와 무관하게 1회)
   useEffect(() => {
@@ -49,6 +54,14 @@ export function VideoCallModal({ isOpen, roomUrl, token, onClose }: VideoCallMod
       callRef.current = frame;
       frame.on('joined-meeting', () => { joinedRef.current = true; });
       frame.on('left-meeting', () => { if (joinedRef.current) onCloseRef.current(); });
+      // 게스트 노킹(대기) 목록 → 커스텀 승인 배너
+      const refreshWaiting = () => {
+        const wp = (frame.waitingParticipants?.() ?? {}) as Record<string, { id: string; name?: string }>;
+        setKnockers(Object.values(wp).map((w) => ({ id: w.id, name: w.name ?? '게스트' })));
+      };
+      frame.on('waiting-participant-added', refreshWaiting);
+      frame.on('waiting-participant-updated', refreshWaiting);
+      frame.on('waiting-participant-removed', refreshWaiting);
       // 라이브 자막 수신 → 최종 발화만 번역 큐로
       frame.on('transcription-message', (ev) => {
         if (!ev) return;
@@ -70,6 +83,7 @@ export function VideoCallModal({ isOpen, roomUrl, token, onClose }: VideoCallMod
       callRef.current?.destroy();
       callRef.current = null;
       clear();
+      setKnockers([]);
     };
   }, [isOpen, roomUrl, token, pushFinal, clear]);
 
@@ -150,6 +164,7 @@ export function VideoCallModal({ isOpen, roomUrl, token, onClose }: VideoCallMod
         </div>
 
         <div ref={containerRef} className="h-full w-full" />
+        <WaitingRoomBanner knockers={knockers} onAdmit={admitGuest} onDeny={denyGuest} />
         <CaptionOverlay captions={captions} enabled={captionsOn} />
       </div>
     </div>
