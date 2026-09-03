@@ -7,7 +7,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 
 // 인증 없이 접근 가능한 경로
-const PUBLIC_PATHS = ['/login', '/signup', '/auth/callback', '/share'];
+const PUBLIC_PATHS = ['/login', '/signup', '/auth/callback', '/share', '/meet'];
 
 async function handleProxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
