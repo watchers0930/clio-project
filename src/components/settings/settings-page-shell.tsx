@@ -52,6 +52,8 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
   const [userPassword, setUserPassword] = useState('');
   const [userDeptId, setUserDeptId] = useState('');
   const [userRole, setUserRole] = useState('user');
+  const [userHireDate, setUserHireDate] = useState('');
+  const [userPhone, setUserPhone] = useState('');
   const [userSaving, setUserSaving] = useState(false);
 
   const [sigUrl, setSigUrl] = useState<string | null>(null);
@@ -270,6 +272,8 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
     setUserPassword('');
     setUserDeptId(user?.department_id ?? '');
     setUserRole(user?.role ?? 'user');
+    setUserHireDate((user as { hire_date?: string | null } | undefined)?.hire_date ?? '');
+    setUserPhone((user as { phone?: string | null } | undefined)?.phone ?? '');
     setShowUserModal(true);
   };
 
@@ -288,6 +292,8 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
             password: userPassword || undefined,
             departmentId: userDeptId || null,
             role: userRole,
+            hireDate: userHireDate || null,
+            phone: userPhone || null,
           }),
         });
         const json = await res.json();
@@ -315,6 +321,8 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
             password: userPassword,
             departmentId: userDeptId || null,
             role: userRole,
+            hireDate: userHireDate || null,
+            phone: userPhone || null,
           }),
         });
         const json = await res.json();
@@ -494,6 +502,8 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
         userPassword={userPassword}
         userDeptId={userDeptId}
         userRole={userRole}
+        userHireDate={userHireDate}
+        userPhone={userPhone}
         userSaving={userSaving}
         departments={departments}
         onClose={() => setShowUserModal(false)}
@@ -503,6 +513,8 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
         onChangeUserPassword={setUserPassword}
         onChangeUserDeptId={setUserDeptId}
         onChangeUserRole={setUserRole}
+        onChangeUserHireDate={setUserHireDate}
+        onChangeUserPhone={setUserPhone}
       />
 
       <ConfirmDialog

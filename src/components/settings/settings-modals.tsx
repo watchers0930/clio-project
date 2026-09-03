@@ -73,6 +73,8 @@ interface UserModalProps {
   userPassword: string;
   userDeptId: string;
   userRole: string;
+  userHireDate: string;
+  userPhone: string;
   userSaving: boolean;
   departments: Department[];
   onClose: () => void;
@@ -82,12 +84,15 @@ interface UserModalProps {
   onChangeUserPassword: (value: string) => void;
   onChangeUserDeptId: (value: string) => void;
   onChangeUserRole: (value: string) => void;
+  onChangeUserHireDate: (value: string) => void;
+  onChangeUserPhone: (value: string) => void;
 }
 
 export function UserModal(props: UserModalProps) {
   const {
-    open, editUser, userName, userEmail, userPassword, userDeptId, userRole, userSaving, departments,
+    open, editUser, userName, userEmail, userPassword, userDeptId, userRole, userHireDate, userPhone, userSaving, departments,
     onClose, onSave, onChangeUserName, onChangeUserEmail, onChangeUserPassword, onChangeUserDeptId, onChangeUserRole,
+    onChangeUserHireDate, onChangeUserPhone,
   } = props;
 
   if (!open) return null;
@@ -131,6 +136,16 @@ export function UserModal(props: UserModalProps) {
               </div>
             </>
           )}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>입사일</label>
+              <input value={userHireDate} onChange={(e) => onChangeUserHireDate(e.target.value)} type="date" className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>연락처</label>
+              <input value={userPhone} onChange={(e) => onChangeUserPhone(e.target.value)} placeholder="010-0000-0000" className={inputCls} />
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>부서</label>
