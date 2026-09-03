@@ -518,7 +518,8 @@ export async function GET(
     const mergedDocumentInputs = {
       ...embeddedInputs,
       author: signerName,
-      signature_image_src: signatureBufferToDataUrl(signatureBuffer),
+      // 재직증명서는 회사 직인 우선(없으면 개인 서명)
+      signature_image_src: signatureBufferToDataUrl(companySealBuffer ?? signatureBuffer),
       company_logo_src: signatureBufferToDataUrl(companyLogoContext.buffer),
       company_logo_pattern_size: companyLogoContext.patternSize,
     };
