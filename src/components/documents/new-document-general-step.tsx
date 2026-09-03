@@ -88,9 +88,12 @@ export function NewDocumentGeneralStep({
   const aiFields = templateFields.filter((field) => field.aiAssist);
 
   const isEmploymentCert = selectedTemplateItem?.name === '재직증명서';
-  // 재직증명서: 본인 정보 자동입력 → 사용자는 제출용도만 입력
+  // 재직증명서: 본인 정보 자동입력 → 제출용도만 입력.
+  // 단, 자동입력이 안 된 필수 필드(예: 프로필에 입사일 없음)는 숨기지 않고 보여준다.
   const manualFields = isEmploymentCert
-    ? allManualFields.filter((field) => field.key === 'purpose')
+    ? allManualFields.filter(
+        (field) => field.key === 'purpose' || (field.required && !documentInputs[field.key]?.trim()),
+      )
     : allManualFields;
 
   const handleCertAutofill = useCallback((p: {
