@@ -34,6 +34,7 @@ import { isProposalTemplateName } from '@/lib/templates/proposal';
 import { isBusinessPlanTemplateName } from '@/lib/templates/business-plan';
 import { isEmploymentCertificateTemplateName } from '@/lib/templates/employment-certificate';
 import { signatureBufferToDataUrl } from '@/lib/utils/signature-data-url';
+import { loadCompanySeal } from '@/lib/settings/company-seal';
 
 export const maxDuration = 300;
 
@@ -253,6 +254,8 @@ export async function POST(request: NextRequest) {
     const versionFields = await resolveVersionFields(supabase, parentId);
     const { userName, userPosition, userDept, signatureBuffer } = await loadUserGenerationContext(supabase, authUserId);
     const companyLogoContext = await loadCompanyLogoWatermarkContext();
+    // 재직증명서 등 회사 발급 문서의 직인은 회사 공용 직인을 사용
+    const companySealBuffer = await loadCompanySeal();
     const sourceContext = await loadSourceChunks(supabase, sourceFileIds);
     const { sourceChunks, sourceFileNames, sourceFileSummary, sourceFileCount } = sourceContext;
     const templateContext = await loadTemplateContext(supabase, templateId, customStructure, format);
@@ -359,7 +362,9 @@ export async function POST(request: NextRequest) {
       report_date: todayStr,
       report_time: timeStr,
       report_no: reportNo,
-      signature_image_src: signatureBufferToDataUrl(signatureBuffer),
+      signature_image_src: signatureBufferToDataUrl(
+        isEmploymentCertificateTemplateName(templateName) && companySealBuffer ? companySealBuffer : signatureBuffer,
+      ),
       company_logo_src: signatureBufferToDataUrl(companyLogoContext.buffer),
       company_logo_pattern_size: companyLogoContext.patternSize,
       source_file_names: sourceFileNames.join(', '),

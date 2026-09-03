@@ -9,6 +9,7 @@ import type { CorporateTheme } from '@/lib/renderers/types';
 import { DEFAULT_THEME } from '@/lib/renderers/types';
 import { injectSignatureDocx, injectSignatureHwpx } from '@/lib/utils/inject-signature';
 import { signatureBufferToDataUrl } from '@/lib/utils/signature-data-url';
+import { loadCompanySealBuffer } from '@/lib/settings/company-seal';
 import { parseTemplateBundle, type TemplateBundle } from '@/lib/templates/template-schema';
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
 import { isProposalTemplateName } from '@/lib/templates/proposal';
@@ -347,6 +348,10 @@ export async function GET(
 
     const isProposalDocument = isProposalTemplateName(templateName);
     const isEmploymentCertificateDocument = /재직\s*증명서/.test(templateName);
+    // 재직증명서 직인 = 회사 공용 직인
+    const companySealBuffer = isEmploymentCertificateDocument
+      ? await loadCompanySealBuffer(createAdminSupabaseClient())
+      : null;
     const proposalPreviewHtml = isProposalDocument
       ? renderProposalDocumentHtml({
           title: doc.title,
@@ -407,7 +412,7 @@ export async function GET(
             const templateDocumentInputs = {
               ...inlineInputs,
               author: signerName,
-              signature_image_src: signatureBufferToDataUrl(signatureBuffer),
+              signature_image_src: signatureBufferToDataUrl(companySealBuffer ?? signatureBuffer),
               company_logo_src: signatureBufferToDataUrl(companyLogoContext.buffer),
               company_logo_pattern_size: companyLogoContext.patternSize,
             };

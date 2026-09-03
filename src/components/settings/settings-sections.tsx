@@ -331,11 +331,17 @@ interface SignatureSectionProps {
   logoSettingsSaving: boolean;
   sigFileRef: React.RefObject<HTMLInputElement | null>;
   logoFileRef: React.RefObject<HTMLInputElement | null>;
+  sealLoading: boolean;
+  sealUploading: boolean;
+  sealUrl: string | null;
+  sealFileRef: React.RefObject<HTMLInputElement | null>;
   onDeleteSignature: () => void;
   onUploadSignature: (file: File) => void;
   onDeleteCompanyLogo: () => void;
   onUploadCompanyLogo: (file: File) => void;
   onUpdateCompanyLogoPatternDensity: (density: 'sparse' | 'normal' | 'dense') => void;
+  onDeleteCompanySeal: () => void;
+  onUploadCompanySeal: (file: File) => void;
 }
 
 export function SignatureSection({
@@ -349,11 +355,17 @@ export function SignatureSection({
   logoSettingsSaving,
   sigFileRef,
   logoFileRef,
+  sealLoading,
+  sealUploading,
+  sealUrl,
+  sealFileRef,
   onDeleteSignature,
   onUploadSignature,
   onDeleteCompanyLogo,
   onUploadCompanyLogo,
   onUpdateCompanyLogoPatternDensity,
+  onDeleteCompanySeal,
+  onUploadCompanySeal,
 }: SignatureSectionProps) {
   const densityOptions: Array<{ value: 'sparse' | 'normal' | 'dense'; label: string }> = [
     { value: 'sparse', label: '적게' },
@@ -506,6 +518,67 @@ export function SignatureSection({
         onChange={(event) => {
           const file = event.target.files?.[0];
           if (file) onUploadCompanyLogo(file);
+          event.target.value = '';
+        }}
+      />
+    </div>
+
+    <div className="bg-card rounded-2xl border border-border p-8">
+      <h2 className="text-[16px] font-semibold mb-1">회사 직인</h2>
+      <p className="text-sm text-muted mb-6">재직증명서 등 회사 발급 문서의 대표자 직인란에 삽입됩니다. 배경 투명 PNG 권장. (최대 2MB)</p>
+
+      {sealLoading ? (
+        <div className="flex items-center justify-center h-32">
+          <Spinner size="lg" />
+        </div>
+      ) : sealUrl ? (
+        <div className="flex flex-col gap-4">
+          <div className="relative border border-border rounded-xl overflow-hidden bg-surface-secondary flex items-center justify-center" style={{ height: 140 }}>
+            <Image src={sealUrl} alt="회사 직인" width={200} height={120} unoptimized style={{ maxHeight: 120, maxWidth: '100%', width: 'auto', objectFit: 'contain' }} />
+          </div>
+          <div className="flex gap-3.5">
+            <button
+              onClick={() => sealFileRef.current?.click()}
+              disabled={sealUploading}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-foreground text-white text-sm font-medium hover:bg-primary transition-colors disabled:opacity-40"
+            >
+              {sealUploading ? <Spinner size="sm" /> : <Upload size={14} />}
+              직인 교체
+            </button>
+            <button
+              onClick={onDeleteCompanySeal}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors"
+            >
+              <X size={14} /> 삭제
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div
+          onClick={() => sealFileRef.current?.click()}
+          className="border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-primary hover:bg-blue-50/30 transition-colors"
+          style={{ height: 160 }}
+        >
+          {sealUploading ? (
+            <Spinner size="lg" />
+          ) : (
+            <>
+              <Building2 size={28} className="text-muted" />
+              <p className="text-sm text-muted font-medium">클릭하여 회사 직인 등록</p>
+              <p className="text-xs text-muted">PNG · JPEG · WebP, 최대 2MB</p>
+            </>
+          )}
+        </div>
+      )}
+
+      <input
+        ref={sealFileRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) onUploadCompanySeal(file);
           event.target.value = '';
         }}
       />
