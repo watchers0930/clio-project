@@ -143,17 +143,23 @@ export function useDocumentViewerActions({
     try {
       const effectiveDownloadFormat = doc.outputFormat ?? (doc.template === '업무협약서(MOU)' ? 'pdf' : downloadFormat);
       if (effectiveDownloadFormat === 'pdf') {
-        const res = await fetch(`/api/documents/${doc.id}/download?font=${encodeURIComponent(selectedFont)}&format=pdf`);
-        if (!res.ok) throw new Error('다운로드 실패');
-
-        const htmlContent = await res.text();
+        // 팝업은 클릭 제스처 내에서 먼저 열어야 차단되지 않는다 (await 전에 open).
         const printWindow = window.open('', '_blank');
-        if (printWindow) {
+        if (!printWindow) { toast.error('팝업이 차단되었습니다. 팝업을 허용해 주세요.'); return; }
+        printWindow.document.write('<!doctype html><meta charset="utf-8"><title>문서 여는 중…</title><body style="font-family:sans-serif;padding:24px;color:#555">문서를 불러오는 중입니다…</body>');
+        try {
+          const res = await fetch(`/api/documents/${doc.id}/download?font=${encodeURIComponent(selectedFont)}&format=pdf`);
+          if (!res.ok) throw new Error('다운로드 실패');
+          const htmlContent = await res.text();
+          printWindow.document.open();
           printWindow.document.write(htmlContent);
           printWindow.document.close();
           printWindow.onload = () => {
             setTimeout(() => printWindow.print(), 300);
           };
+        } catch (e) {
+          printWindow.close();
+          throw e;
         }
         return;
       }

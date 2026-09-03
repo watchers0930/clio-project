@@ -632,20 +632,28 @@ export function useDocumentsPage() {
     const opensPrintWindow = generatedDownloadMeta.extension === 'html' || generatedDownloadMeta.mimeType?.startsWith('text/html');
     try {
       if (opensPrintWindow) {
-        const res = generatedDoc.id
-          ? await fetch(`/api/documents/${generatedDoc.id}/download?format=pdf`)
-          : generatedDownloadUrl
-          ? await fetch(generatedDownloadUrl)
-          : null;
-        if (!res?.ok) throw new Error('다운로드 실패');
-        const html = await res.text();
+        // 팝업은 사용자 클릭 제스처 내에서 먼저 열어야 차단되지 않는다 (await 전에 open).
         const printWindow = window.open('', '_blank');
         if (!printWindow) { toast.error('팝업이 차단되었습니다. 팝업을 허용해 주세요.'); return; }
-        printWindow.document.write(html);
-        printWindow.document.close();
-        printWindow.onload = () => {
-          setTimeout(() => printWindow.print(), 300);
-        };
+        printWindow.document.write('<!doctype html><meta charset="utf-8"><title>문서 여는 중…</title><body style="font-family:sans-serif;padding:24px;color:#555">문서를 불러오는 중입니다…</body>');
+        try {
+          const res = generatedDoc.id
+            ? await fetch(`/api/documents/${generatedDoc.id}/download?format=pdf`)
+            : generatedDownloadUrl
+            ? await fetch(generatedDownloadUrl)
+            : null;
+          if (!res?.ok) throw new Error('다운로드 실패');
+          const html = await res.text();
+          printWindow.document.open();
+          printWindow.document.write(html);
+          printWindow.document.close();
+          printWindow.onload = () => {
+            setTimeout(() => printWindow.print(), 300);
+          };
+        } catch (e) {
+          printWindow.close();
+          throw e;
+        }
         return;
       }
 
