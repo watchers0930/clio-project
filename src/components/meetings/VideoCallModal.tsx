@@ -5,6 +5,7 @@ import type { DailyCall } from '@daily-co/daily-js';
 import { Languages, Link2, Sparkles } from 'lucide-react';
 import { useLiveCaptions } from '@/hooks/useLiveCaptions';
 import { startBeautyProcessor, type BeautyProcessor } from '@/lib/meetings/beautyFilter';
+import { startSpeechCaptions, isSpeechRecognitionSupported, type SpeechCaptioner } from '@/lib/meetings/speechCaptions';
 import { CaptionOverlay, CAPTION_LANGS } from './CaptionOverlay';
 import { WaitingRoomBanner, type Knocker } from './WaitingRoomBanner';
 
@@ -34,6 +35,7 @@ export function VideoCallModal({ isOpen, roomUrl, token, onClose }: VideoCallMod
   const [beautyBusy, setBeautyBusy] = useState(false);
   const beautyRef = useRef<BeautyProcessor | null>(null);
   const camIdRef = useRef<string | undefined>(undefined);
+  const speechRef = useRef<SpeechCaptioner | null>(null);
   const { captions, pushFinal, clear } = useLiveCaptions(targetLang);
 
   const admitGuest = (id: string) => callRef.current?.updateWaitingParticipant(id, { grantRequestedAccess: true });
@@ -67,18 +69,11 @@ export function VideoCallModal({ isOpen, roomUrl, token, onClose }: VideoCallMod
       frame.on('waiting-participant-added', refreshWaiting);
       frame.on('waiting-participant-updated', refreshWaiting);
       frame.on('waiting-participant-removed', refreshWaiting);
-      // 라이브 자막 수신 → 최종 발화만 번역 큐로
-      frame.on('transcription-message', (ev) => {
-        if (!ev) return;
-        const isFinal = (ev.rawResponse as { is_final?: boolean })?.is_final;
-        if (isFinal === false) return; // interim(중간) 결과는 건너뜀
-        const text = ev.text ?? '';
-        if (!text) return;
-        const pid = ev.participantId ?? 'local';
-        const p = frame.participants?.()[pid];
-        const name = p?.user_name || (pid === 'local' ? '나' : '상대');
-        const ts = ev.timestamp instanceof Date ? ev.timestamp.getTime() : text.length;
-        pushFinal(`${pid}-${ts}`, name, text);
+      // 상대가 브라우저 음성인식으로 보낸 자막 수신 → 내 언어로 번역해 표시
+      frame.on('app-message', (ev) => {
+        const d = (ev as { data?: { __caption?: boolean; text?: string; name?: string; ts?: number }; fromId?: string })?.data;
+        if (!d?.__caption || !d.text) return;
+        pushFinal(`${(ev as { fromId?: string }).fromId ?? 'x'}-${d.ts ?? d.text.length}`, d.name || '상대', d.text);
       });
       await frame.join({ url: roomUrl, token }).catch(() => {});
     })();
@@ -92,28 +87,31 @@ export function VideoCallModal({ isOpen, roomUrl, token, onClose }: VideoCallMod
     };
   }, [isOpen, roomUrl, token, pushFinal, clear]);
 
-  // 자막 on/off → 트랜스크립션 시작/중지 (입장 완료 후 동작)
+  // 자막 on/off·언어 변경 → 브라우저 음성인식 시작/중지
+  // (내 발화를 인식 → Daily 메시지로 전송 + 로컬 표시. 상대 자막은 app-message로 수신)
   useEffect(() => {
-    const frame = callRef.current;
-    if (!frame) return;
-    (async () => {
-      try {
-        if (captionsOn) {
-          // 자동 언어감지(multi) 우선 — 한↔영 등 혼합 발화 대응.
-          // 미지원 시 기본 설정으로 폴백.
-          try {
-            await frame.startTranscription({ language: 'multi' });
-          } catch {
-            await frame.startTranscription();
-          }
-        } else {
-          await frame.stopTranscription();
-        }
-      } catch {
-        /* 미입장·권한 등으로 실패하면 무시 (입장 후 다시 토글) */
-      }
-    })();
-  }, [captionsOn]);
+    speechRef.current?.stop();
+    speechRef.current = null;
+    if (!captionsOn) return;
+
+    const captioner = startSpeechCaptions(targetLang, (text) => {
+      const frame = callRef.current;
+      if (!frame) return;
+      const localName = frame.participants?.().local?.user_name || '나';
+      const ts = Date.now();
+      try { frame.sendAppMessage({ __caption: true, text, name: localName, ts }, '*'); } catch { /* 무시 */ }
+      pushFinal(`me-${ts}`, localName, text);
+    });
+    if (!captioner) {
+      // 미지원 브라우저(사파리 등)
+      alert('이 브라우저는 음성인식 자막을 지원하지 않습니다. Chrome 또는 Edge에서 사용해주세요.');
+      setCaptionsOn(false);
+      return;
+    }
+    speechRef.current = captioner;
+
+    return () => { speechRef.current?.stop(); speechRef.current = null; };
+  }, [captionsOn, targetLang, pushFinal]);
 
   // 뷰티 필터 on/off → Daily 카메라 입력을 가공 트랙으로 교체/복원
   useEffect(() => {
