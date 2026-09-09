@@ -167,8 +167,8 @@ export function useDocumentsPage() {
       if (res.ok) {
         const data = await res.json();
         const templateData = data.data ?? data.templates ?? [];
-        // 새 문서 생성에서 노출할 템플릿: 재직증명서 · 회의록만 (DB 데이터는 보존)
-        const ALLOWED_TEMPLATES = ['재직증명서', '회의록', '휴가원'];
+        // 새 문서 생성에서 노출할 템플릿 (DB 데이터는 보존)
+        const ALLOWED_TEMPLATES = ['재직증명서', '회의록', '휴가원', '품의서'];
         const mapped = templateData
           .filter((template: Record<string, unknown>) => ALLOWED_TEMPLATES.includes(template.name as string))
           .map((template: Record<string, unknown>) => ({
