@@ -228,8 +228,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, synced, errors });
   } catch (err) {
+    const raw = err instanceof Error ? err.message : String(err);
+    // refresh token 만료·취소 → 재연결 필요
+    if (raw.includes('invalid_grant')) {
+      return NextResponse.json({
+        error: 'Gmail 연결이 만료되었습니다. 설정에서 "다시 연결"을 눌러 재연결해 주세요.',
+        code: 'invalid_grant',
+      }, { status: 401 });
+    }
     console.error('[gmail/sync] 치명적 오류:', err);
-    const msg = err instanceof Error ? err.message.slice(0, 200) : String(err).slice(0, 200);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: raw.slice(0, 200) }, { status: 500 });
   }
 }

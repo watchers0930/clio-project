@@ -200,6 +200,14 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
                 {reindexing ? <Spinner size="sm" /> : <RefreshCw size={14} />}
                 {reindexing ? '재인덱싱 중...' : '첨부 포함 재인덱싱'}
               </button>
+              <a
+                href="/api/auth/google"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-border text-foreground-secondary text-[13px] font-medium hover:bg-surface transition-colors"
+                title="연결이 만료되었을 때 토큰을 갱신합니다 (동기화 데이터는 유지)"
+              >
+                <RefreshCw size={14} />
+                다시 연결
+              </a>
               <button
                 onClick={handleDisconnect}
                 disabled={disconnecting}
