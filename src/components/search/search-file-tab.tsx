@@ -126,6 +126,8 @@ interface FileTabProps {
   onOpenContractRiskFromResult: (result: SearchResult) => void;
   onOpenFiles: () => void;
   canAnalyzeContract: (result: SearchResult) => boolean;
+  isElectron?: boolean;
+  onCopyLocalPath?: (result: SearchResult) => void;
 }
 
 export function FileSearchTab({
@@ -160,6 +162,8 @@ export function FileSearchTab({
   onOpenContractRiskFromResult,
   onOpenFiles,
   canAnalyzeContract,
+  isElectron,
+  onCopyLocalPath,
 }: FileTabProps) {
   const [resumeCardLayouts] = useState<LayoutStore>(DEFAULT_RESUME_CARD_LAYOUTS);
   const topDocumentResult = sortedResults.find((result) => result.sourceType === 'document') ?? null;
@@ -283,7 +287,7 @@ export function FileSearchTab({
                 description={topFileResult ? '파일을 다시 열고 공유하거나 검토용 문서로 넘겨서 다음 흐름을 바로 시작합니다.' : '이번 검색에는 파일 결과가 없어서 문서 중심으로 작업을 이어가면 됩니다.'}
                 result={topFileResult}
                 emptyLabel="이번 검색에서 바로 이어볼 파일 결과가 아직 없습니다."
-                primaryActionLabel="파일 열기"
+                primaryActionLabel={topFileResult?.dataSource === 'local' && !isElectron ? '경로 복사' : '파일 열기'}
                 secondaryActionLabel="공유"
                 tertiaryActionLabel="새 문서 활용"
                 onOpenResult={onOpenResult}
@@ -415,6 +419,33 @@ export function FileSearchTab({
                                 trailing: <ArrowRight size={14} />,
                               },
                             ]
+                          : result.dataSource === 'local'
+                          ? [
+                              // 로컬 파일: 웹은 직접 열기 불가 → 경로 복사 / 데스크톱 앱은 파일 열기
+                              isElectron
+                                ? {
+                                    label: '파일 열기',
+                                    onClick: () => onOpenResult(result),
+                                    variant: 'primary' as const,
+                                    trailing: <ArrowRight size={14} />,
+                                  }
+                                : {
+                                    label: '경로 복사',
+                                    onClick: () => onCopyLocalPath?.(result),
+                                    variant: 'primary' as const,
+                                  },
+                              {
+                                label: 'AI에게 묻기',
+                                onClick: () => onOpenComments(result),
+                                variant: 'secondary' as const,
+                              },
+                              {
+                                label: '새 문서 활용',
+                                onClick: () => onOpenDocumentsFromResult(result),
+                                variant: 'secondary' as const,
+                                trailing: <ArrowRight size={14} />,
+                              },
+                            ]
                           : [
                               {
                                 label: result.sourceType === 'document' ? '문서 열기' : '파일 열기',
@@ -455,7 +486,7 @@ export function FileSearchTab({
                     />
 
                     <div className="mt-8 flex items-center gap-4 border-t border-surface-secondary pt-5">
-                      {result.dataSource !== 'gmail' && (
+                      {result.dataSource !== 'gmail' && result.dataSource !== 'local' && (
                         <button onClick={() => onOpenPreview(result.id)} className="flex items-center gap-1.5 text-sm font-medium text-foreground-secondary transition-colors hover:text-foreground">
                           <EyeIcon />
                           미리보기
@@ -469,6 +500,10 @@ export function FileSearchTab({
                         <button onClick={() => onOpenGmailAttachments?.(result)} className="flex items-center gap-1.5 text-sm font-medium text-foreground-secondary transition-colors hover:text-foreground">
                           <DownloadIcon />
                           첨부파일 받기
+                        </button>
+                      ) : result.dataSource === 'local' ? (
+                        <button onClick={() => onCopyLocalPath?.(result)} className="flex items-center gap-1.5 text-sm font-medium text-foreground-secondary transition-colors hover:text-foreground">
+                          경로 복사
                         </button>
                       ) : (
                         <button onClick={() => onDownloadOriginal(result)} className="flex items-center gap-1.5 text-sm font-medium text-foreground-secondary transition-colors hover:text-foreground">

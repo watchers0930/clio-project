@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { extractText } from '@/lib/ai/extract-text';
 import { chunkText } from '@/lib/ai/chunk-text';
@@ -60,18 +59,6 @@ export async function POST(req: NextRequest) {
   const chunks = chunkText(textWithMeta);
   if (chunks.length === 0) {
     return NextResponse.json({ error: '청킹 결과 없음' }, { status: 422 });
-  }
-
-  // 원본 파일을 Storage에 저장 (웹에서 원본 열람용) — 경로 규칙: local-originals/{userId}/{fileHash}.{ext}
-  try {
-    const admin = createAdminSupabaseClient();
-    const storagePath = `local-originals/${userId}/${fileHash}.${ext}`;
-    await admin.storage.from('files').upload(storagePath, buffer, {
-      contentType: mimeType,
-      upsert: true,
-    });
-  } catch (e) {
-    console.warn('[local/process] 원본 저장 실패(검색 인덱싱은 계속):', e instanceof Error ? e.message : e);
   }
 
   // upsert local_file_index

@@ -54,6 +54,7 @@ function SearchPageInner() {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [pinnedFileIds, setPinnedFileIds] = useState<string[] | null>(null);
+  const [isElectron, setIsElectron] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // 부서 목록 + 검색 제안어
@@ -64,6 +65,11 @@ function SearchPageInner() {
     }).catch(() => {
       setSuggestions(['회의록', '보고서', '계약서', '제안서', '공문']);
     });
+  }, []);
+
+  // 실행 환경 판별 (데스크톱 앱 여부)
+  useEffect(() => {
+    setIsElectron(!!(window as Window & { electronAPI?: { isElectron?: boolean } }).electronAPI?.isElectron);
   }, []);
 
   // 검색 화면 진입 시 Gmail 최신 메일 자동 증분 동기화 (백그라운드, 서버 쿨다운 10분)
@@ -292,50 +298,23 @@ function SearchPageInner() {
     if (!res.ok) toast.error(`파일을 열 수 없습니다: ${res.error ?? ''}`);
   };
 
-  // 로컬 파일 텍스트 미리보기 (원본이 서버에 없을 때 폴백)
-  const showLocalTextPreview = async (result: SearchResult) => {
-    setPreviewLoading(true);
-    setPreviewData(null);
+  // 로컬 파일 경로 복사 (웹은 폴더를 직접 못 여니 경로 복사로 대체)
+  const copyLocalPath = async (result: SearchResult) => {
+    const path = result.localPath ?? '';
+    if (!path) { toast.error('파일 경로 정보가 없습니다.'); return; }
     try {
-      const res = await fetch(`/api/local-files/${result.id}/preview`);
-      if (!res.ok) {
-        setPreviewData({ name: result.name, text: '미리보기를 불러올 수 없습니다.' });
-        return;
-      }
-      const data = await res.json() as { name: string; text: string };
-      setPreviewData({ name: data.name, text: data.text || '내용이 없습니다.' });
+      await navigator.clipboard.writeText(path);
+      toast.success('파일 경로를 복사했습니다. Finder/탐색기에서 붙여넣어 이동하세요.');
     } catch {
-      toast.error('파일을 열 수 없습니다.');
-    } finally {
-      setPreviewLoading(false);
+      toast.error('경로 복사에 실패했습니다.');
     }
   };
 
-  const openLocalFile = async (result: SearchResult) => {
-    // Electron 환경이면 네이티브 앱으로
+  const openLocalFile = (result: SearchResult) => {
+    // 데스크톱 앱: 폴더/파일 직접 열기 / 웹: 경로 복사
     const api = (window as Window & { electronAPI?: { isElectron?: boolean } }).electronAPI;
     if (api?.isElectron) { void openLocalFileNative(result); return; }
-
-    // 브라우저 환경: 서버에 저장된 원본이 있으면 뷰어(PDF 등)로, 없으면 텍스트 미리보기로 폴백
-    const win = window.open('', '_blank'); // 팝업 차단 방지: 클릭 제스처 내 선행 오픈
-    try {
-      const res = await fetch(`/api/local-files/${result.id}/file`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.url) {
-          if (win) win.location.href = data.url;
-          else window.open(data.url, '_blank', 'noopener,noreferrer');
-          return;
-        }
-      }
-      // 원본 미저장(구 인덱싱) → 새 탭 닫고 텍스트 미리보기 + 재동기화 안내
-      if (win) win.close();
-      toast.error('원본이 저장돼 있지 않아 텍스트로 표시합니다. 로컬 폴더를 다시 동기화하면 원본을 열 수 있습니다.');
-      await showLocalTextPreview(result);
-    } catch {
-      if (win) win.close();
-      await showLocalTextPreview(result);
-    }
+    void copyLocalPath(result);
   };
 
   // 업로드 파일 원본을 브라우저 뷰어(PDF 등)로 새 탭에서 열기
@@ -449,6 +428,8 @@ function SearchPageInner() {
             onOpenContractRiskFromResult={(result) => router.push(`/contract-risk?source=${encodeURIComponent(result.name)}`)}
             onOpenFiles={() => router.push('/files')}
             canAnalyzeContract={canAnalyzeContract}
+            isElectron={isElectron}
+            onCopyLocalPath={(result) => { void copyLocalPath(result); }}
           />
         )}
 
