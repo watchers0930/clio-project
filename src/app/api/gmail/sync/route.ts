@@ -106,9 +106,11 @@ export async function POST(request: NextRequest) {
     if (!userId) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
 
     let isAuto = false;
+    let isReindex = false;
     try {
       const body = await request.json();
       isAuto = body?.auto === true;
+      isReindex = body?.reindex === true;
     } catch { /* body 없음 */ }
 
     const admin = createAdminSupabaseClient();
@@ -146,7 +148,21 @@ export async function POST(request: NextRequest) {
 
     const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-    // 이미 동기화된 external_id 목록 (증분)
+    // 재인덱싱: 기존 Gmail 파일과 청크를 모두 삭제하고 처음부터 다시 인덱싱
+    if (isReindex) {
+      const { data: oldFiles } = await admin
+        .from('files')
+        .select('id')
+        .eq('uploaded_by', userId)
+        .eq('source', 'gmail');
+      const oldIds = (oldFiles ?? []).map((f: { id: string }) => f.id);
+      if (oldIds.length > 0) {
+        await admin.from('file_chunks').delete().in('file_id', oldIds);
+        await admin.from('files').delete().in('id', oldIds);
+      }
+    }
+
+    // 이미 동기화된 external_id 목록 (증분) — 재인덱싱 시에는 위에서 삭제되어 비어 있음
     const { data: existing } = await admin
       .from('files')
       .select('external_id')

@@ -24,6 +24,7 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [syncDone, setSyncDone] = useState(false);
+  const [reindexing, setReindexing] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const toast = useToast();
 
@@ -69,6 +70,29 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
       toast.error('동기화 중 오류가 발생했습니다.');
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleReindex = async () => {
+    if (!confirm('기존에 동기화된 Gmail 데이터를 모두 지우고, 첨부파일 내용까지 포함해 최근 100개를 다시 인덱싱합니다. 계속하시겠습니까?')) return;
+    setReindexing(true);
+    try {
+      const res = await fetch('/api/gmail/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reindex: true }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`재인덱싱 완료 — ${data.synced ?? 0}개 이메일을 첨부 포함해 다시 인덱싱했습니다.`);
+        await loadStatus();
+      } else {
+        toast.error(data.error ?? '재인덱싱 실패');
+      }
+    } catch {
+      toast.error('재인덱싱 중 오류가 발생했습니다.');
+    } finally {
+      setReindexing(false);
     }
   };
 
@@ -149,7 +173,7 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
             <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-100">
               <AlertCircle size={14} className="text-blue-500 mt-0.5 shrink-0" />
               <p className="text-[12px] text-blue-700">
-                최근 이메일 최대 100개를 가져와 AI 검색에 포함합니다. 이미 동기화된 이메일은 중복 추가되지 않습니다.
+                최근 이메일 최대 100개를 본문·첨부파일 내용까지 가져와 AI 검색에 포함합니다. 검색 화면에 들어가면 새 메일이 자동 동기화되며, 이미 동기화된 이메일은 중복 추가되지 않습니다. 예전에 본문만 동기화한 메일에 첨부 내용을 반영하려면 &lsquo;첨부 포함 재인덱싱&rsquo;을 눌러주세요.
               </p>
             </div>
 
@@ -168,6 +192,15 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
                 {syncing ? '동기화 중...' : syncDone ? '동기화 완료' : '지금 동기화'}
               </button>
               <button
+                onClick={handleReindex}
+                disabled={reindexing}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-border text-foreground-secondary text-[13px] font-medium hover:bg-surface disabled:opacity-50 transition-colors"
+                title="기존 동기화 데이터를 지우고 첨부파일 내용까지 다시 인덱싱합니다"
+              >
+                {reindexing ? <Spinner size="sm" /> : <RefreshCw size={14} />}
+                {reindexing ? '재인덱싱 중...' : '첨부 포함 재인덱싱'}
+              </button>
+              <button
                 onClick={handleDisconnect}
                 disabled={disconnecting}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-border text-foreground-secondary text-[13px] font-medium hover:bg-surface disabled:opacity-50 transition-colors"
@@ -183,8 +216,8 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
               <h3 className="text-[13px] font-semibold text-foreground mb-3">연결하면 이런 것이 가능합니다</h3>
               <ul className="space-y-2 text-[13px] text-foreground-secondary">
                 <li className="flex items-center gap-2"><CheckCircle size={13} className="text-[#2E6FF2]" /> AI 검색에서 이메일 내용 검색</li>
-                <li className="flex items-center gap-2"><CheckCircle size={13} className="text-[#2E6FF2]" /> 첨부파일 정보를 검색 컨텍스트에 포함</li>
-                <li className="flex items-center gap-2"><CheckCircle size={13} className="text-[#2E6FF2]" /> 최근 30일 이메일 자동 동기화</li>
+                <li className="flex items-center gap-2"><CheckCircle size={13} className="text-[#2E6FF2]" /> 첨부파일 내용(PDF·문서 등)까지 검색에 포함</li>
+                <li className="flex items-center gap-2"><CheckCircle size={13} className="text-[#2E6FF2]" /> 검색 화면 진입 시 최신 이메일 자동 동기화</li>
               </ul>
             </div>
 
