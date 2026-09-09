@@ -24,5 +24,6 @@ export function getAuthUrl() {
     access_type: 'offline',
     scope: SCOPES,
     prompt: 'consent',
+    include_granted_scopes: true,
   });
 }

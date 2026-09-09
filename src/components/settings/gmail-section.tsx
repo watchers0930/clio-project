@@ -50,6 +50,7 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
     if (errorParam === 'server') toast.error(msgParam ? `연결 오류: ${msgParam}` : 'Gmail 연결 중 오류가 발생했습니다.');
     if (errorParam === 'session_expired') toast.error('세션이 만료됐습니다. 다시 시도해 주세요.');
     if (errorParam === 'no_token') toast.error('Google 토큰을 받지 못했습니다. 다시 시도해 주세요.');
+    if (errorParam === 'scope') toast.error('Gmail 접근 권한에 동의해야 합니다. 다시 연결 후 동의 화면에서 Gmail 권한을 체크해 주세요.');
   }, [successParam, errorParam]);
 
   const handleSync = async () => {

@@ -29,6 +29,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}/settings?tab=gmail&error=no_token`);
     }
 
+    // Gmail 읽기 권한 동의 여부 확인 (부분 동의 방지)
+    if (!(tokens.scope ?? '').includes('gmail.readonly')) {
+      return NextResponse.redirect(`${origin}/settings?tab=gmail&error=scope`);
+    }
+
     // 사용자 이메일 조회
     oauth2Client.setCredentials(tokens);
     const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });

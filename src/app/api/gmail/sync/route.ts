@@ -236,6 +236,13 @@ export async function POST(request: NextRequest) {
         code: 'invalid_grant',
       }, { status: 401 });
     }
+    // Gmail 읽기 권한 미동의 → 재연결하며 권한 체크 필요
+    if (raw.includes('insufficient authentication scopes') || raw.includes('insufficient_scope') || raw.includes('ACCESS_TOKEN_SCOPE_INSUFFICIENT')) {
+      return NextResponse.json({
+        error: 'Gmail 읽기 권한이 없습니다. "다시 연결" 후 동의 화면에서 Gmail 접근 권한에 반드시 체크해 주세요.',
+        code: 'insufficient_scope',
+      }, { status: 403 });
+    }
     console.error('[gmail/sync] 치명적 오류:', err);
     return NextResponse.json({ error: raw.slice(0, 200) }, { status: 500 });
   }
