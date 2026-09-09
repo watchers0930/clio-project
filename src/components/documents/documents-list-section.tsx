@@ -78,14 +78,14 @@ export function DocumentsListSection({
           <p className="mt-1 text-[12px] text-foreground-secondary">열기, 공유, 버전 확인</p>
         </div>
         <div className="flex items-center gap-[10px]">
-          <label className="flex items-center gap-1.5 text-[12px] text-foreground-secondary cursor-pointer">
+          <label className="flex items-center gap-2 text-[12px] text-foreground-secondary cursor-pointer leading-none">
             <input
               type="checkbox"
               checked={docs.length > 0 && selectedDocIds.size === docs.length}
               onChange={onToggleSelectAll}
-              className="w-4 h-4 rounded border-border accent-[#0071e3] cursor-pointer"
+              className="w-4 h-4 shrink-0 rounded border-border accent-[#0071e3] cursor-pointer"
             />
-            전체 선택
+            <span>전체 선택</span>
           </label>
           {selectedDocIds.size > 0 && (
             <button onClick={onBulkDelete} className="px-3.5 py-2 rounded-xl text-[13px] text-danger border border-danger hover:bg-red-50 transition-colors">
