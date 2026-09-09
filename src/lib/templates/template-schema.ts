@@ -20,6 +20,11 @@ import {
   EMPLOYMENT_CERTIFICATE_TEMPLATE_HTML,
   isEmploymentCertificateTemplateName,
 } from '@/lib/templates/employment-certificate';
+import {
+  createLeaveApplicationTemplateBundle,
+  LEAVE_APPLICATION_TEMPLATE_HTML,
+  isLeaveApplicationTemplateName,
+} from '@/lib/templates/leave-application';
 
 export interface TemplateFieldDefinition {
   key: string;
@@ -106,6 +111,10 @@ function buildDefaultHtml(name: string, sections: TemplateSectionDefinition[]) {
 
   if (isEmploymentCertificateTemplateName(name)) {
     return EMPLOYMENT_CERTIFICATE_TEMPLATE_HTML;
+  }
+
+  if (isLeaveApplicationTemplateName(name)) {
+    return LEAVE_APPLICATION_TEMPLATE_HTML;
   }
 
   const tocItems = sections
@@ -214,6 +223,28 @@ export function createTemplateBundle(params: {
       fields: [
         ...certificateBundle.fields,
         ...placeholderFields.filter((field) => !certificateBundle.fields.some((base) => base.key === field.key)),
+      ],
+    };
+  }
+
+  if (isLeaveApplicationTemplateName(params.name)) {
+    const leaveBundle = createLeaveApplicationTemplateBundle();
+    const placeholderFields = Array.isArray(params.placeholders)
+      ? params.placeholders
+          .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
+          .map((item, index) => ({
+            key: String(item.key ?? `placeholder_${index + 1}`),
+            label: String(item.label ?? item.key ?? `플레이스홀더 ${index + 1}`),
+            type: 'text' as const,
+            placeholder: typeof item.context === 'string' ? item.context : undefined,
+          }))
+      : [];
+
+    return {
+      ...leaveBundle,
+      fields: [
+        ...leaveBundle.fields,
+        ...placeholderFields.filter((field) => !leaveBundle.fields.some((base) => base.key === field.key)),
       ],
     };
   }
