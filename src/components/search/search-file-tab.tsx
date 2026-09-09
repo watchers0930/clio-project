@@ -287,7 +287,7 @@ export function FileSearchTab({
                 description={topFileResult ? '파일을 다시 열고 공유하거나 검토용 문서로 넘겨서 다음 흐름을 바로 시작합니다.' : '이번 검색에는 파일 결과가 없어서 문서 중심으로 작업을 이어가면 됩니다.'}
                 result={topFileResult}
                 emptyLabel="이번 검색에서 바로 이어볼 파일 결과가 아직 없습니다."
-                primaryActionLabel={topFileResult?.dataSource === 'local' && !isElectron ? '경로 복사' : '파일 열기'}
+                primaryActionLabel={topFileResult?.dataSource === 'local' && !isElectron ? '폴더 경로 복사' : '파일 열기'}
                 secondaryActionLabel="공유"
                 tertiaryActionLabel="새 문서 활용"
                 onOpenResult={onOpenResult}
@@ -430,7 +430,7 @@ export function FileSearchTab({
                                     trailing: <ArrowRight size={14} />,
                                   }
                                 : {
-                                    label: '경로 복사',
+                                    label: '폴더 경로 복사',
                                     onClick: () => onCopyLocalPath?.(result),
                                     variant: 'primary' as const,
                                   },
@@ -503,7 +503,7 @@ export function FileSearchTab({
                         </button>
                       ) : result.dataSource === 'local' ? (
                         <button onClick={() => onCopyLocalPath?.(result)} className="flex items-center gap-1.5 text-sm font-medium text-foreground-secondary transition-colors hover:text-foreground">
-                          경로 복사
+                          폴더 경로 복사
                         </button>
                       ) : (
                         <button onClick={() => onDownloadOriginal(result)} className="flex items-center gap-1.5 text-sm font-medium text-foreground-secondary transition-colors hover:text-foreground">

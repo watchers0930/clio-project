@@ -298,13 +298,15 @@ function SearchPageInner() {
     if (!res.ok) toast.error(`파일을 열 수 없습니다: ${res.error ?? ''}`);
   };
 
-  // 로컬 파일 경로 복사 (웹은 폴더를 직접 못 여니 경로 복사로 대체)
+  // 로컬 파일이 있는 폴더 경로 복사 (웹은 폴더를 직접 못 여니 경로 복사로 대체)
   const copyLocalPath = async (result: SearchResult) => {
-    const path = result.localPath ?? '';
-    if (!path) { toast.error('파일 경로 정보가 없습니다.'); return; }
+    const fullPath = result.localPath ?? '';
+    if (!fullPath) { toast.error('파일 경로 정보가 없습니다.'); return; }
+    // 파일명을 제외한 폴더 경로만 추출
+    const folderPath = fullPath.replace(/[/\\][^/\\]*$/, '') || fullPath;
     try {
-      await navigator.clipboard.writeText(path);
-      toast.success('파일 경로를 복사했습니다. Finder/탐색기에서 붙여넣어 이동하세요.');
+      await navigator.clipboard.writeText(folderPath);
+      toast.success('폴더 경로를 복사했습니다. Finder/탐색기에서 붙여넣어 이동하세요.');
     } catch {
       toast.error('경로 복사에 실패했습니다.');
     }
