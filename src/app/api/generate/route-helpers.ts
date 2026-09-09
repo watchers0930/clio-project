@@ -14,6 +14,10 @@ import {
   createLeaveApplicationTemplateBundle,
   LEAVE_APPLICATION_TEMPLATE_NAME,
 } from '@/lib/templates/leave-application';
+import {
+  createApprovalRequestTemplateBundle,
+  APPROVAL_REQUEST_TEMPLATE_NAME,
+} from '@/lib/templates/approval-request';
 
 const FONT_MAP: Record<string, string> = {
   '맑은 고딕': 'Malgun Gothic',
@@ -52,6 +56,7 @@ type FileChunkRow = {
 
 const BUILTIN_EMPLOYMENT_CERTIFICATE_TEMPLATE_ID = '__builtin_employment_certificate__';
 const BUILTIN_LEAVE_APPLICATION_TEMPLATE_ID = '__builtin_leave_application__';
+const BUILTIN_APPROVAL_REQUEST_TEMPLATE_ID = '__builtin_approval_request__';
 
 export function buildTheme(font: unknown): CorporateTheme {
   const fontParam = typeof font === 'string' ? font : '맑은 고딕';
@@ -212,6 +217,15 @@ export async function loadTemplateContext(
       name: LEAVE_APPLICATION_TEMPLATE_NAME,
       content: JSON.stringify(bundle),
       description: '휴가 신청서 (남은 휴가일수 자동계산)',
+      placeholders: [],
+      template_file_id: null,
+    };
+  } else if (templateId === BUILTIN_APPROVAL_REQUEST_TEMPLATE_ID) {
+    const bundle = createApprovalRequestTemplateBundle();
+    tmpl = {
+      name: APPROVAL_REQUEST_TEMPLATE_NAME,
+      content: JSON.stringify(bundle),
+      description: '기안-검토-승인 결재란 품의서 (기안자 전자서명)',
       placeholders: [],
       template_file_id: null,
     };
