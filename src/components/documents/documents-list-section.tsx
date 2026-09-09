@@ -78,13 +78,13 @@ export function DocumentsListSection({
           <p className="mt-1 text-[12px] text-foreground-secondary">열기, 공유, 버전 확인</p>
         </div>
         <div className="flex items-center gap-[10px]">
-          <label className="flex items-center gap-2.5 whitespace-nowrap text-[12px] text-foreground-secondary cursor-pointer">
+          <label className="flex items-center whitespace-nowrap text-[12px] text-foreground-secondary cursor-pointer">
             <input
               type="checkbox"
               checked={docs.length > 0 && selectedDocIds.size === docs.length}
               onChange={onToggleSelectAll}
-              className="m-0 h-4 w-4 shrink-0 rounded border-border accent-[#0071e3] cursor-pointer"
-              style={{ width: 16, height: 16 }}
+              className="shrink-0 rounded border-border accent-[#0071e3] cursor-pointer"
+              style={{ width: 16, height: 16, marginRight: 7 }}
             />
             전체 선택
           </label>
