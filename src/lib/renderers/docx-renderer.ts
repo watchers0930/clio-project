@@ -531,8 +531,9 @@ function approvalSignParagraph(signatureDataUrl: string | undefined): Paragraph 
   return new Paragraph({ children: [new TextRun({ text: '' })] });
 }
 
-function approvalBoxLabelCell(text: string, ff: string, fs: number): TableCell {
+function approvalBoxLabelCell(text: string, ff: string, fs: number, widthPct?: number): TableCell {
   return new TableCell({
+    ...(widthPct ? { width: { size: widthPct, type: WidthType.PERCENTAGE } } : {}),
     shading: LABEL_SHADING,
     borders: ALL_BORDERS,
     margins: { top: 40, bottom: 40, left: 60, right: 60 },
@@ -543,6 +544,12 @@ function approvalBoxLabelCell(text: string, ff: string, fs: number): TableCell {
     })],
   });
 }
+
+const NONE_BORDER = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } as const;
+const NO_TABLE_BORDERS = {
+  top: NONE_BORDER, bottom: NONE_BORDER, left: NONE_BORDER, right: NONE_BORDER,
+  insideHorizontal: NONE_BORDER, insideVertical: NONE_BORDER,
+};
 
 function buildApprovalRequestDocxChildren(
   r: Record<string, string>,
@@ -556,33 +563,58 @@ function buildApprovalRequestDocxChildren(
   const BODY_LABEL_W = 22;
   const BODY_VALUE_W = 78;
 
-  // 상단 결재란 (우측 정렬)
-  elements.push(new Table({
-    alignment: AlignmentType.RIGHT,
-    width: { size: 42, type: WidthType.PERCENTAGE },
+  // 결재란 (3칸 균등)
+  const emptyApprovalCell = (widthPct: number) => new TableCell({
+    width: { size: widthPct, type: WidthType.PERCENTAGE },
+    borders: ALL_BORDERS,
+    verticalAlign: VerticalAlign.CENTER,
+    children: [new Paragraph({ children: [new TextRun({ text: '' })] })],
+  });
+  const approvalBox = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
     rows: [
       new TableRow({ children: [
-        approvalBoxLabelCell('기안', fontFamily, fontSize),
-        approvalBoxLabelCell('검토', fontFamily, fontSize),
-        approvalBoxLabelCell('승인', fontFamily, fontSize),
+        approvalBoxLabelCell('기안', fontFamily, fontSize, 33),
+        approvalBoxLabelCell('검토', fontFamily, fontSize, 33),
+        approvalBoxLabelCell('승인', fontFamily, fontSize, 34),
       ] }),
       new TableRow({
         height: { value: 1100, rule: HeightRule.ATLEAST },
         children: [
-          new TableCell({ borders: ALL_BORDERS, verticalAlign: VerticalAlign.CENTER, children: [approvalSignParagraph(documentInputs?.signature_image_src)] }),
-          new TableCell({ borders: ALL_BORDERS, verticalAlign: VerticalAlign.CENTER, children: [new Paragraph({ children: [new TextRun({ text: '' })] })] }),
-          new TableCell({ borders: ALL_BORDERS, verticalAlign: VerticalAlign.CENTER, children: [new Paragraph({ children: [new TextRun({ text: '' })] })] }),
+          new TableCell({ width: { size: 33, type: WidthType.PERCENTAGE }, borders: ALL_BORDERS, verticalAlign: VerticalAlign.CENTER, children: [approvalSignParagraph(documentInputs?.signature_image_src)] }),
+          emptyApprovalCell(33),
+          emptyApprovalCell(34),
         ],
       }),
     ],
+  });
+
+  // 상단: 제목(좌측) + 결재란(우측) 한 줄 배치 (테두리 없는 레이아웃 표)
+  elements.push(new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: NO_TABLE_BORDERS,
+    rows: [
+      new TableRow({ children: [
+        new TableCell({
+          width: { size: 58, type: WidthType.PERCENTAGE },
+          borders: NO_TABLE_BORDERS,
+          verticalAlign: VerticalAlign.CENTER,
+          children: [new Paragraph({
+            alignment: AlignmentType.LEFT,
+            children: [new TextRun({ text: r.report_title || '품의서', bold: true, size: fontSize + 14, font: fontFamily })],
+          })],
+        }),
+        new TableCell({
+          width: { size: 42, type: WidthType.PERCENTAGE },
+          borders: NO_TABLE_BORDERS,
+          verticalAlign: VerticalAlign.TOP,
+          children: [approvalBox],
+        }),
+      ] }),
+    ],
   }));
 
-  // 제목
-  elements.push(new Paragraph({
-    alignment: AlignmentType.CENTER,
-    spacing: { before: 200, after: 400 },
-    children: [new TextRun({ text: r.report_title || '품의서', bold: true, size: fontSize + 14, font: fontFamily })],
-  }));
+  elements.push(new Paragraph({ spacing: { after: 300 } }));
 
   // 기안 정보 표
   const drafter = `${r.author ?? ''}${r.author_position ? ` ${r.author_position}` : ''}`.trim();
