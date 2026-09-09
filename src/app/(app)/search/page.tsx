@@ -292,12 +292,8 @@ function SearchPageInner() {
     if (!res.ok) toast.error(`파일을 열 수 없습니다: ${res.error ?? ''}`);
   };
 
-  const openLocalFile = async (result: SearchResult) => {
-    // Electron 환경이면 네이티브 앱으로
-    const api = (window as Window & { electronAPI?: { isElectron?: boolean } }).electronAPI;
-    if (api?.isElectron) { void openLocalFileNative(result); return; }
-
-    // 브라우저 환경: DB 청크로 미리보기
+  // 로컬 파일 텍스트 미리보기 (원본이 서버에 없을 때 폴백)
+  const showLocalTextPreview = async (result: SearchResult) => {
     setPreviewLoading(true);
     setPreviewData(null);
     try {
@@ -312,6 +308,33 @@ function SearchPageInner() {
       toast.error('파일을 열 수 없습니다.');
     } finally {
       setPreviewLoading(false);
+    }
+  };
+
+  const openLocalFile = async (result: SearchResult) => {
+    // Electron 환경이면 네이티브 앱으로
+    const api = (window as Window & { electronAPI?: { isElectron?: boolean } }).electronAPI;
+    if (api?.isElectron) { void openLocalFileNative(result); return; }
+
+    // 브라우저 환경: 서버에 저장된 원본이 있으면 뷰어(PDF 등)로, 없으면 텍스트 미리보기로 폴백
+    const win = window.open('', '_blank'); // 팝업 차단 방지: 클릭 제스처 내 선행 오픈
+    try {
+      const res = await fetch(`/api/local-files/${result.id}/file`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.url) {
+          if (win) win.location.href = data.url;
+          else window.open(data.url, '_blank', 'noopener,noreferrer');
+          return;
+        }
+      }
+      // 원본 미저장(구 인덱싱) → 새 탭 닫고 텍스트 미리보기 + 재동기화 안내
+      if (win) win.close();
+      toast.error('원본이 저장돼 있지 않아 텍스트로 표시합니다. 로컬 폴더를 다시 동기화하면 원본을 열 수 있습니다.');
+      await showLocalTextPreview(result);
+    } catch {
+      if (win) win.close();
+      await showLocalTextPreview(result);
     }
   };
 
