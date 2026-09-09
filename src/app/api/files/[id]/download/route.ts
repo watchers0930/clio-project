@@ -8,7 +8,7 @@ import { canAccessFile, getUserRoleInfo } from '@/lib/permissions';
  * GET /api/files/[id]/download — Signed URL 발급 (60초 유효)
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -46,12 +46,13 @@ export async function GET(
       return NextResponse.json({ error: '접근 권한이 없습니다.' }, { status: 403 });
     }
 
+    // inline=true → 브라우저 뷰어로 열기(다운로드 강제 안 함), 그 외 → 다운로드
+    const inline = new URL(request.url).searchParams.get('inline') === 'true';
+
     // Signed URL 발급
     const { data: signed, error: signError } = await admin.storage
       .from('files')
-      .createSignedUrl(file.storage_path, 60, {
-        download: file.name,
-      });
+      .createSignedUrl(file.storage_path, 60, inline ? {} : { download: file.name });
 
     if (signError || !signed?.signedUrl) {
       console.error('[download] signed URL error:', signError?.message);

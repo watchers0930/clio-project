@@ -315,6 +315,26 @@ function SearchPageInner() {
     }
   };
 
+  // 업로드 파일 원본을 브라우저 뷰어(PDF 등)로 새 탭에서 열기
+  const openUploadedFile = async (result: SearchResult) => {
+    // 팝업 차단 방지: 클릭 제스처 내에서 먼저 새 탭을 연 뒤 URL 주입
+    const win = window.open('', '_blank');
+    try {
+      const res = await fetch(`/api/files/${result.id}/download?inline=true`);
+      const data = await res.json();
+      if (data.success && data.url) {
+        if (win) win.location.href = data.url;
+        else window.open(data.url, '_blank', 'noopener,noreferrer');
+      } else {
+        if (win) win.close();
+        toast.error(data.error ?? '파일을 열 수 없습니다.');
+      }
+    } catch {
+      if (win) win.close();
+      toast.error('파일을 열 수 없습니다.');
+    }
+  };
+
   const openResult = (result: SearchResult) => {
     if (result.sourceType === 'document') {
       router.push(`/documents/${result.id}`);
@@ -328,7 +348,8 @@ function SearchPageInner() {
       window.open(`https://mail.google.com/mail/u/0/#inbox/${result.externalId}`, '_blank', 'noopener,noreferrer');
       return;
     }
-    void openPreview(result.id);
+    // 업로드 파일: 원본을 뷰어로 열기 (PDF 등). 텍스트 미리보기는 별도 '미리보기' 버튼 사용
+    void openUploadedFile(result);
   };
 
   const openGmailAttachments = (result: SearchResult) => {
