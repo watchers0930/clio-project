@@ -54,30 +54,16 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
   const handleSync = async () => {
     setSyncing(true);
     try {
-      // 최근 6개월치를 끝까지 축적 (서버가 hasMore=true면 반복 호출)
-      let totalSynced = 0;
-      let rounds = 0;
-      const MAX_ROUNDS = 10;
-      let hasMore = true;
-      let failed = false;
-      while (hasMore && rounds < MAX_ROUNDS) {
-        const res = await fetch('/api/gmail/sync', { method: 'POST' });
-        const data = await res.json();
-        if (!data.success) {
-          toast.error(data.error ?? '동기화 실패');
-          failed = true;
-          break;
-        }
-        totalSynced += data.synced ?? 0;
-        // 새로 추가된 게 있고 더 남았을 때만 계속 (무한 루프 방지)
-        hasMore = data.hasMore === true && (data.synced ?? 0) > 0;
-        rounds++;
-      }
-      if (!failed) {
-        toast.success(`동기화 완료 — ${totalSynced}개 이메일이 추가되었습니다.`);
+      // 최근 100개 대상 증분 동기화
+      const res = await fetch('/api/gmail/sync', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`동기화 완료 — ${data.synced ?? 0}개 이메일이 추가되었습니다.`);
         setSyncDone(true);
         await loadStatus();
         setTimeout(() => setSyncDone(false), 4000);
+      } else {
+        toast.error(data.error ?? '동기화 실패');
       }
     } catch {
       toast.error('동기화 중 오류가 발생했습니다.');

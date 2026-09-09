@@ -12,6 +12,7 @@ export const maxDuration = 60;
 
 // 받은편지함 기준, 최근 6개월, 자동 발송(구글알리미·프로모션·업데이트·소셜) 제외
 const GMAIL_QUERY = 'in:inbox newer_than:6m -category:promotions -category:updates -category:social -from:googlealerts-noreply@google.com -from:noreply@google.com -from:no-reply@accounts.google.com';
+const MAX_SYNC_COUNT = 100; // 한 번에 최근 100개까지만 동기화
 const BUDGET_MS = 50_000; // Vercel 60초 제한 대비 여유
 const AUTO_COOLDOWN_MS = 10 * 60 * 1000; // 자동 동기화 쿨다운 10분
 // 첨부파일 본문 파싱 대상 (텍스트 추출 가능한 형식)
@@ -156,70 +157,60 @@ export async function POST(request: NextRequest) {
     let synced = 0;
     let errors = 0;
     const startedAt = Date.now();
-    let pageToken: string | undefined = undefined;
-    let reachedBudget = false;
 
-    // 페이지네이션: 예산 내에서 여러 페이지 처리
-    do {
-      const listData: gmail_v1.Schema$ListMessagesResponse = (await gmail.users.messages.list({
-        userId: 'me',
-        maxResults: 100,
-        q: GMAIL_QUERY,
-        pageToken,
-      })).data;
-      const messages = listData.messages ?? [];
-      pageToken = listData.nextPageToken ?? undefined;
+    // 최근 100개만 대상 (최신순). 증분: 이미 동기화된 메일은 스킵.
+    const listData: gmail_v1.Schema$ListMessagesResponse = (await gmail.users.messages.list({
+      userId: 'me',
+      maxResults: MAX_SYNC_COUNT,
+      q: GMAIL_QUERY,
+    })).data;
+    const messages = listData.messages ?? [];
 
-      for (const msg of messages) {
-        if (Date.now() - startedAt > BUDGET_MS) { reachedBudget = true; break; }
-        if (!msg.id || existingIds.has(msg.id)) continue;
+    for (const msg of messages) {
+      if (Date.now() - startedAt > BUDGET_MS) break;
+      if (!msg.id || existingIds.has(msg.id)) continue;
 
-        try {
-          const { data: full } = await gmail.users.messages.get({ userId: 'me', id: msg.id, format: 'full' });
-          const { subject, from, date, textParts, attachments } = parseMessagePayload(full);
-          const { names, texts } = await extractAttachmentsText(gmail, msg.id, attachments);
+      try {
+        const { data: full } = await gmail.users.messages.get({ userId: 'me', id: msg.id, format: 'full' });
+        const { subject, from, date, textParts, attachments } = parseMessagePayload(full);
+        const { names, texts } = await extractAttachmentsText(gmail, msg.id, attachments);
 
-          const header = [`제목: ${subject}`, `보낸 사람: ${from}`, `날짜: ${date}`].join('\n');
-          const bodyText = textParts.join('\n');
-          const attachmentNote = names.length > 0 ? `\n\n첨부파일: ${names.join(', ')}` : '';
-          const attachmentBody = texts.length > 0 ? `\n\n${texts.join('\n\n')}` : '';
-          const fullText = `${header}\n\n${bodyText}${attachmentNote}${attachmentBody}`.trim();
+        const header = [`제목: ${subject}`, `보낸 사람: ${from}`, `날짜: ${date}`].join('\n');
+        const bodyText = textParts.join('\n');
+        const attachmentNote = names.length > 0 ? `\n\n첨부파일: ${names.join(', ')}` : '';
+        const attachmentBody = texts.length > 0 ? `\n\n${texts.join('\n\n')}` : '';
+        const fullText = `${header}\n\n${bodyText}${attachmentNote}${attachmentBody}`.trim();
 
-          if (!fullText) continue;
+        if (!fullText) continue;
 
-          const { data: fileRow, error: fileErr } = await admin.from('files').insert({
-            name: subject.slice(0, 200),
-            type: 'message/email',
-            size: fullText.length,
-            uploaded_by: userId,
-            status: 'indexed',
-            storage_path: null,
-            scope: 'company',
-            source: 'gmail',
-            external_id: msg.id,
-            department_id: null,
-          }).select('id').single();
+        const { data: fileRow, error: fileErr } = await admin.from('files').insert({
+          name: subject.slice(0, 200),
+          type: 'message/email',
+          size: fullText.length,
+          uploaded_by: userId,
+          status: 'indexed',
+          storage_path: null,
+          scope: 'company',
+          source: 'gmail',
+          external_id: msg.id,
+          department_id: null,
+        }).select('id').single();
 
-          if (fileErr || !fileRow) { errors++; continue; }
+        if (fileErr || !fileRow) { errors++; continue; }
 
-          const chunks = chunkText(fullText);
-          await generateAndStoreChunks(admin, fileRow.id, chunks);
-          existingIds.add(msg.id);
-          synced++;
-        } catch (err) {
-          console.error(`[gmail/sync] message ${msg.id}:`, err);
-          errors++;
-        }
+        const chunks = chunkText(fullText);
+        await generateAndStoreChunks(admin, fileRow.id, chunks);
+        existingIds.add(msg.id);
+        synced++;
+      } catch (err) {
+        console.error(`[gmail/sync] message ${msg.id}:`, err);
+        errors++;
       }
-
-      if (reachedBudget) break;
-    } while (pageToken && Date.now() - startedAt <= BUDGET_MS);
+    }
 
     await admin.from('user_google_connections').update({ last_synced_at: new Date().toISOString() }).eq('user_id', userId);
 
-    // reachedBudget=true 또는 pageToken 남음 → 아직 동기화할 메일이 더 있음
-    const hasMore = reachedBudget || !!pageToken;
-    return NextResponse.json({ success: true, synced, errors, hasMore });
+    return NextResponse.json({ success: true, synced, errors });
   } catch (err) {
     console.error('[gmail/sync] 치명적 오류:', err);
     const msg = err instanceof Error ? err.message.slice(0, 200) : String(err).slice(0, 200);
