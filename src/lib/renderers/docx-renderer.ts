@@ -337,14 +337,21 @@ function isMouTemplate(templateBundle: TemplateBundle) {
 // ─── 휴가원 전용 DOCX 렌더링 ─────────────────────────────
 const LEAVE_CELL_MARGINS = { top: 80, bottom: 80, left: 140, right: 140 };
 
-function leaveLabelCell(text: string, ff: string, fs: number, colspan = 1, widthPct?: number): TableCell {
+function leaveLabelCell(
+  text: string,
+  ff: string,
+  fs: number,
+  colspan = 1,
+  widthPct?: number,
+  vAlign: typeof VerticalAlign.CENTER | typeof VerticalAlign.TOP | typeof VerticalAlign.BOTTOM = VerticalAlign.CENTER,
+): TableCell {
   return new TableCell({
     columnSpan: colspan,
     ...(widthPct ? { width: { size: widthPct, type: WidthType.PERCENTAGE } } : {}),
     shading: LABEL_SHADING,
     borders: ALL_BORDERS,
     margins: LEAVE_CELL_MARGINS,
-    verticalAlign: VerticalAlign.CENTER,
+    verticalAlign: vAlign,
     children: [new Paragraph({
       alignment: AlignmentType.LEFT,
       children: [new TextRun({ text, bold: true, size: fs, font: ff })],
@@ -406,8 +413,8 @@ function buildLeaveApplicationDocxChildren(
   documentInputs?: Record<string, string>,
 ): (Paragraph | Table)[] {
   const elements: (Paragraph | Table)[] = [];
-  const LABEL_W = 18;
-  const VALUE_W = 32;
+  const LABEL_W = 21;
+  const VALUE_W = 29;
   const WIDE_W = VALUE_W + LABEL_W + VALUE_W; // colspan 3
 
   // 제목
@@ -419,7 +426,7 @@ function buildLeaveApplicationDocxChildren(
 
   // 1. 신청자 정보
   elements.push(new Paragraph({
-    alignment: AlignmentType.CENTER,
+    alignment: AlignmentType.LEFT,
     spacing: { before: 200, after: 160 },
     children: [new TextRun({ text: '1. 신청자 정보', bold: true, size: fontSize + 2, font: fontFamily })],
   }));
@@ -443,7 +450,7 @@ function buildLeaveApplicationDocxChildren(
 
   // 2. 휴가 내역
   elements.push(new Paragraph({
-    alignment: AlignmentType.CENTER,
+    alignment: AlignmentType.LEFT,
     spacing: { before: 320, after: 160 },
     children: [new TextRun({ text: '2. 휴가 내역', bold: true, size: fontSize + 2, font: fontFamily })],
   }));
@@ -464,7 +471,7 @@ function buildLeaveApplicationDocxChildren(
       new TableRow({
         height: { value: 4000, rule: HeightRule.ATLEAST },
         children: [
-          leaveLabelCell('사유', fontFamily, fontSize, 1, LABEL_W),
+          leaveLabelCell('사유', fontFamily, fontSize, 1, LABEL_W, VerticalAlign.TOP),
           leaveValueCell(r.leave_reason ?? '', fontFamily, fontSize, 3, WIDE_W, VerticalAlign.TOP),
         ],
       }),

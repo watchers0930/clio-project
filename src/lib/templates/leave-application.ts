@@ -55,11 +55,11 @@ export const LEAVE_APPLICATION_TEMPLATE_HTML = `
 .leave-app .section-title{margin:0 0 5mm 1mm;font-size:4.4mm;font-weight:700;line-height:1;}
 .leave-app table{width:100%;border-collapse:collapse;table-layout:fixed;border:1px solid #222;}
 .leave-app td{height:11mm;border:1px solid #222;vertical-align:middle;font-size:4.2mm;font-weight:400;line-height:1.35;}
-.leave-app .label{text-align:left;background:#f5f5f5;padding:0 3mm;}
-.leave-app col:nth-child(1){width:20%;}
-.leave-app col:nth-child(2){width:30%;}
-.leave-app col:nth-child(3){width:20%;}
-.leave-app col:nth-child(4){width:30%;}
+.leave-app .label{text-align:left;background:#f5f5f5;padding:0 3mm;white-space:nowrap;}
+.leave-app col:nth-child(1){width:21%;}
+.leave-app col:nth-child(2){width:29%;}
+.leave-app col:nth-child(3){width:21%;}
+.leave-app col:nth-child(4){width:29%;}
 .leave-app .value{padding:0 4mm;letter-spacing:0;white-space:normal;word-break:keep-all;}
 .leave-app .reason-cell{height:34mm;vertical-align:top;padding-top:2mm;}
 .leave-app .highlight{font-weight:700;color:#1A5AD9;}
