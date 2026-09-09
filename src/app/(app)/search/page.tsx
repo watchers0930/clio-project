@@ -66,6 +66,16 @@ function SearchPageInner() {
     });
   }, []);
 
+  // 검색 화면 진입 시 Gmail 최신 메일 자동 증분 동기화 (백그라운드, 서버 쿨다운 10분)
+  // Gmail 미연결 시 서버가 400 반환 → 무시. 검색 UX에 영향 없음(fire-and-forget).
+  useEffect(() => {
+    fetch('/api/gmail/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ auto: true }),
+    }).catch(() => {});
+  }, []);
+
   const openPreview = async (fileId: string) => {
     setPreviewLoading(true);
     setPreviewData(null);
