@@ -208,6 +208,10 @@ function buildHtmlTemplateDocxChildren(
     return buildLeaveApplicationDocxChildren(r, fontFamily, fontSize, documentInputs);
   }
 
+  if (templateBundle.outline.startsWith('# 품의서')) {
+    return buildApprovalRequestDocxChildren(r, fontFamily, fontSize, documentInputs);
+  }
+
   if (!templateBundle.outline.startsWith('# 사업계획서')) {
     return buildGenericHtmlTemplateDocxChildren(templateBundle, r, fontFamily, fontSize);
   }
@@ -493,6 +497,147 @@ function buildLeaveApplicationDocxChildren(
     alignment: AlignmentType.CENTER,
     spacing: { after: 200 },
     children: leaveSignatureChildren(r.employee_name ?? '', documentInputs?.signature_image_src, fontFamily, fontSize),
+  }));
+
+  // 하단 회사명
+  elements.push(new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 800 },
+    children: [new TextRun({ text: r.company_name ?? '', bold: true, size: fontSize + 2, font: fontFamily })],
+  }));
+
+  return elements;
+}
+
+// ─── 품의서 전용 DOCX 렌더링 ─────────────────────────────
+function approvalSignParagraph(signatureDataUrl: string | undefined): Paragraph {
+  if (signatureDataUrl && signatureDataUrl.startsWith('data:image')) {
+    const base64 = signatureDataUrl.split(',')[1] ?? '';
+    if (base64) {
+      try {
+        return new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new ImageRun({
+            type: /^data:image\/png/i.test(signatureDataUrl) ? 'png' : 'jpg',
+            data: Buffer.from(base64, 'base64'),
+            transformation: { width: 68, height: 34 },
+          })],
+        });
+      } catch {
+        // 실패 시 빈 칸
+      }
+    }
+  }
+  return new Paragraph({ children: [new TextRun({ text: '' })] });
+}
+
+function approvalBoxLabelCell(text: string, ff: string, fs: number): TableCell {
+  return new TableCell({
+    shading: LABEL_SHADING,
+    borders: ALL_BORDERS,
+    margins: { top: 40, bottom: 40, left: 60, right: 60 },
+    verticalAlign: VerticalAlign.CENTER,
+    children: [new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [new TextRun({ text, bold: true, size: fs - 2, font: ff })],
+    })],
+  });
+}
+
+function buildApprovalRequestDocxChildren(
+  r: Record<string, string>,
+  fontFamily: string,
+  fontSize: number,
+  documentInputs?: Record<string, string>,
+): (Paragraph | Table)[] {
+  const elements: (Paragraph | Table)[] = [];
+  const LABEL_W = 21;
+  const VALUE_W = 29;
+  const BODY_LABEL_W = 22;
+  const BODY_VALUE_W = 78;
+
+  // 상단 결재란 (우측 정렬)
+  elements.push(new Table({
+    alignment: AlignmentType.RIGHT,
+    width: { size: 42, type: WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({ children: [
+        approvalBoxLabelCell('기안', fontFamily, fontSize),
+        approvalBoxLabelCell('검토', fontFamily, fontSize),
+        approvalBoxLabelCell('승인', fontFamily, fontSize),
+      ] }),
+      new TableRow({
+        height: { value: 1100, rule: HeightRule.ATLEAST },
+        children: [
+          new TableCell({ borders: ALL_BORDERS, verticalAlign: VerticalAlign.CENTER, children: [approvalSignParagraph(documentInputs?.signature_image_src)] }),
+          new TableCell({ borders: ALL_BORDERS, verticalAlign: VerticalAlign.CENTER, children: [new Paragraph({ children: [new TextRun({ text: '' })] })] }),
+          new TableCell({ borders: ALL_BORDERS, verticalAlign: VerticalAlign.CENTER, children: [new Paragraph({ children: [new TextRun({ text: '' })] })] }),
+        ],
+      }),
+    ],
+  }));
+
+  // 제목
+  elements.push(new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 200, after: 400 },
+    children: [new TextRun({ text: r.report_title || '품의서', bold: true, size: fontSize + 14, font: fontFamily })],
+  }));
+
+  // 기안 정보 표
+  const drafter = `${r.author ?? ''}${r.author_position ? ` ${r.author_position}` : ''}`.trim();
+  elements.push(new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({ children: [
+        leaveLabelCell('문서번호', fontFamily, fontSize, 1, LABEL_W),
+        leaveValueCell(r.report_no ?? '', fontFamily, fontSize, 1, VALUE_W),
+        leaveLabelCell('기안일', fontFamily, fontSize, 1, LABEL_W),
+        leaveValueCell(r.report_date_ko ?? r.report_date ?? '', fontFamily, fontSize, 1, VALUE_W),
+      ] }),
+      new TableRow({ children: [
+        leaveLabelCell('기안부서', fontFamily, fontSize, 1, LABEL_W),
+        leaveValueCell(r.author_department ?? '', fontFamily, fontSize, 1, VALUE_W),
+        leaveLabelCell('기안자', fontFamily, fontSize, 1, LABEL_W),
+        leaveValueCell(drafter, fontFamily, fontSize, 1, VALUE_W),
+      ] }),
+    ],
+  }));
+
+  elements.push(new Paragraph({ spacing: { after: 160 } }));
+
+  // 품의 내용 표
+  elements.push(new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({ children: [
+        leaveLabelCell('건명', fontFamily, fontSize, 1, BODY_LABEL_W),
+        leaveValueCell(r.subject ?? '', fontFamily, fontSize, 1, BODY_VALUE_W),
+      ] }),
+      new TableRow({ children: [
+        leaveLabelCell('품의 목적', fontFamily, fontSize, 1, BODY_LABEL_W, VerticalAlign.TOP),
+        leaveValueCell(r.purpose ?? '', fontFamily, fontSize, 1, BODY_VALUE_W, VerticalAlign.TOP),
+      ] }),
+      new TableRow({
+        height: { value: 3400, rule: HeightRule.ATLEAST },
+        children: [
+          leaveLabelCell('세부 내용', fontFamily, fontSize, 1, BODY_LABEL_W, VerticalAlign.TOP),
+          leaveValueCell(r.details ?? '', fontFamily, fontSize, 1, BODY_VALUE_W, VerticalAlign.TOP),
+        ],
+      }),
+      new TableRow({ children: [
+        leaveLabelCell('소요 예산', fontFamily, fontSize, 1, BODY_LABEL_W),
+        leaveValueCell(r.budget_amount ?? '', fontFamily, fontSize, 1, BODY_VALUE_W),
+      ] }),
+      new TableRow({ children: [
+        leaveLabelCell('시행 예정일', fontFamily, fontSize, 1, BODY_LABEL_W),
+        leaveValueCell(r.execution_date_ko ?? r.execution_date ?? '', fontFamily, fontSize, 1, BODY_VALUE_W),
+      ] }),
+      new TableRow({ children: [
+        leaveLabelCell('비고', fontFamily, fontSize, 1, BODY_LABEL_W, VerticalAlign.TOP),
+        leaveValueCell(r.remarks ?? '', fontFamily, fontSize, 1, BODY_VALUE_W, VerticalAlign.TOP),
+      ] }),
+    ],
   }));
 
   // 하단 회사명

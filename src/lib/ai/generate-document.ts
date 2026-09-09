@@ -12,6 +12,7 @@ import { isWorklogTemplateName } from '@/lib/templates/worklog';
 import { isProposalTemplateName } from '@/lib/templates/proposal';
 import { isBusinessPlanTemplateName } from '@/lib/templates/business-plan';
 import { isEmploymentCertificateTemplateName } from '@/lib/templates/employment-certificate';
+import { isApprovalRequestTemplateName } from '@/lib/templates/approval-request';
 import {
   MAX_CONTEXT_CHARS,
   MAX_TEMPLATE_FILE_CHARS,
@@ -286,6 +287,27 @@ export async function generateDocumentContent(params: {
       `- 전화: ${documentInputs?.company_phone || ''}`,
     ];
     return lines.join('\n');
+  }
+
+  if (isApprovalRequestTemplateName(templateName)) {
+    const title = documentInputs?.report_title?.trim() || templateName;
+    return [
+      `# ${title}`,
+      '',
+      '## 기안 정보',
+      `- 문서번호: ${documentInputs?.report_no || ''}`,
+      `- 기안일: ${documentInputs?.report_date || ''}`,
+      `- 기안부서: ${documentInputs?.author_department || ''}`,
+      `- 기안자: ${documentInputs?.author || ''} ${documentInputs?.author_position || ''}`.trim(),
+      '',
+      '## 품의 내용',
+      `- 건명: ${documentInputs?.subject || '[미입력]'}`,
+      `- 품의 목적: ${documentInputs?.purpose || ''}`,
+      `- 세부 내용: ${documentInputs?.details || ''}`,
+      `- 소요 예산: ${documentInputs?.budget_amount || ''}`,
+      `- 시행 예정일: ${documentInputs?.execution_date || ''}`,
+      `- 비고: ${documentInputs?.remarks || ''}`,
+    ].join('\n');
   }
 
   // 제안서: 섹션별 분할 생성 (템플릿 파일 없는 번들 기반)

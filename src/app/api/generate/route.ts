@@ -34,6 +34,7 @@ import { isProposalTemplateName } from '@/lib/templates/proposal';
 import { isBusinessPlanTemplateName } from '@/lib/templates/business-plan';
 import { isEmploymentCertificateTemplateName } from '@/lib/templates/employment-certificate';
 import { isLeaveApplicationTemplateName } from '@/lib/templates/leave-application';
+import { isApprovalRequestTemplateName } from '@/lib/templates/approval-request';
 import { signatureBufferToDataUrl } from '@/lib/utils/signature-data-url';
 import { loadCompanySeal } from '@/lib/settings/company-seal';
 
@@ -599,7 +600,7 @@ export async function POST(request: NextRequest) {
     // 마크다운 기반 포맷(DOCX새로생성/HWPX/PDF)은 기존처럼 documents 테이블에도 저장
     if (generationResult.markdown) {
       // 제안서/사업계획서: documentInputs를 콘텐츠 앞에 HTML 코멘트로 저장 (다운로드 시 표지 복원용)
-      const shouldEmbedInputs = isProposalTemplate || isBusinessPlanTemplateName(templateName) || isMouTemplateName(templateName) || isEmploymentCertificateTemplateName(templateName) || isLeaveApplicationTemplateName(templateName);
+      const shouldEmbedInputs = isProposalTemplate || isBusinessPlanTemplateName(templateName) || isMouTemplateName(templateName) || isEmploymentCertificateTemplateName(templateName) || isLeaveApplicationTemplateName(templateName) || isApprovalRequestTemplateName(templateName);
       // 서명/로고 base64는 다운로드 시 재생성되므로 embed에서 제외 (DB content 비대화 방지)
       const embeddableDocumentInputs = Object.fromEntries(
         Object.entries(resolvedDocumentInputs).filter(

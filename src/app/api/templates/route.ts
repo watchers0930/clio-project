@@ -20,6 +20,10 @@ import {
   createLeaveApplicationTemplateBundle,
   LEAVE_APPLICATION_TEMPLATE_NAME,
 } from '@/lib/templates/leave-application';
+import {
+  createApprovalRequestTemplateBundle,
+  APPROVAL_REQUEST_TEMPLATE_NAME,
+} from '@/lib/templates/approval-request';
 import { extractTemplateFileInnerHtml } from '@/lib/templates/template-file-preview';
 import type { DbTemplate } from '@/lib/supabase/types';
 
@@ -86,6 +90,7 @@ type TemplateRowWithJoins = DbTemplate & {
 
 const BUILTIN_EMPLOYMENT_CERTIFICATE_TEMPLATE_ID = '__builtin_employment_certificate__';
 const BUILTIN_LEAVE_APPLICATION_TEMPLATE_ID = '__builtin_leave_application__';
+const BUILTIN_APPROVAL_REQUEST_TEMPLATE_ID = '__builtin_approval_request__';
 
 function mergeTemplateFields(
   baseFields: TemplateFieldDefinition[],
@@ -239,6 +244,27 @@ export async function GET(request: NextRequest) {
         id: BUILTIN_LEAVE_APPLICATION_TEMPLATE_ID,
         name: LEAVE_APPLICATION_TEMPLATE_NAME,
         description: '휴가 신청서 (남은 휴가일수 자동계산)',
+        content: bundle.outline,
+        department: '전사',
+        departmentId: null,
+        scope: '전사 공용',
+        placeholders: [],
+        templateMode: bundle.mode,
+        templateHtml: bundle.layoutHtml,
+        templateFields: bundle.fields,
+        templateSections: bundle.sections,
+        lastUpdated: '',
+        usageCount: 0,
+        templateFile: null,
+      });
+    }
+
+    if (!tplList.some((template) => template.name === APPROVAL_REQUEST_TEMPLATE_NAME)) {
+      const bundle = createApprovalRequestTemplateBundle();
+      tplList.push({
+        id: BUILTIN_APPROVAL_REQUEST_TEMPLATE_ID,
+        name: APPROVAL_REQUEST_TEMPLATE_NAME,
+        description: '기안–검토–승인 결재란 품의서 (기안자 전자서명)',
         content: bundle.outline,
         department: '전사',
         departmentId: null,

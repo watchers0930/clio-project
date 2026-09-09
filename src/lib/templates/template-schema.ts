@@ -25,6 +25,11 @@ import {
   LEAVE_APPLICATION_TEMPLATE_HTML,
   isLeaveApplicationTemplateName,
 } from '@/lib/templates/leave-application';
+import {
+  createApprovalRequestTemplateBundle,
+  APPROVAL_REQUEST_TEMPLATE_HTML,
+  isApprovalRequestTemplateName,
+} from '@/lib/templates/approval-request';
 
 export interface TemplateFieldDefinition {
   key: string;
@@ -115,6 +120,10 @@ function buildDefaultHtml(name: string, sections: TemplateSectionDefinition[]) {
 
   if (isLeaveApplicationTemplateName(name)) {
     return LEAVE_APPLICATION_TEMPLATE_HTML;
+  }
+
+  if (isApprovalRequestTemplateName(name)) {
+    return APPROVAL_REQUEST_TEMPLATE_HTML;
   }
 
   const tocItems = sections
@@ -245,6 +254,28 @@ export function createTemplateBundle(params: {
       fields: [
         ...leaveBundle.fields,
         ...placeholderFields.filter((field) => !leaveBundle.fields.some((base) => base.key === field.key)),
+      ],
+    };
+  }
+
+  if (isApprovalRequestTemplateName(params.name)) {
+    const approvalBundle = createApprovalRequestTemplateBundle();
+    const placeholderFields = Array.isArray(params.placeholders)
+      ? params.placeholders
+          .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
+          .map((item, index) => ({
+            key: String(item.key ?? `placeholder_${index + 1}`),
+            label: String(item.label ?? item.key ?? `플레이스홀더 ${index + 1}`),
+            type: 'text' as const,
+            placeholder: typeof item.context === 'string' ? item.context : undefined,
+          }))
+      : [];
+
+    return {
+      ...approvalBundle,
+      fields: [
+        ...approvalBundle.fields,
+        ...placeholderFields.filter((field) => !approvalBundle.fields.some((base) => base.key === field.key)),
       ],
     };
   }
