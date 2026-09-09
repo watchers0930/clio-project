@@ -201,10 +201,20 @@ function buildDocumentInputInstructions(documentInputs: Record<string, string>) 
   pushLine('특이사항', documentInputs.note);
   pushLine('차일업무계획', documentInputs.tomorrow_work);
 
+  // 프롬프트에 넣지 않을 키: 위에서 이미 처리한 필드 + base64 이미지/메타 필드
+  // (base64 data URL은 수만 토큰을 차지해 TPM 한도 초과를 유발하므로 반드시 제외)
+  const SKIP_KEYS = new Set([
+    'report_title', 'subtitle', 'today_work', 'tomorrow_work', 'note',
+    'signature_image_src', 'company_logo_src', 'company_logo_pattern_size',
+  ]);
+
   for (const [key, value] of Object.entries(documentInputs)) {
-    if (!value?.trim()) continue;
-    if (['report_title', 'subtitle', 'today_work', 'tomorrow_work', 'note'].includes(key)) continue;
-    lines.push(`${labelMap[key] ?? key}: ${value.trim()}`);
+    const trimmed = value?.trim();
+    if (!trimmed) continue;
+    if (SKIP_KEYS.has(key)) continue;
+    // 방어적 처리: base64 data URL 등 비정상적으로 긴 값은 프롬프트에서 제외
+    if (trimmed.startsWith('data:') || trimmed.length > 2000) continue;
+    lines.push(`${labelMap[key] ?? key}: ${trimmed}`);
   }
 
   return lines.length > 0 ? `## 기본 입력값\n${lines.join('\n')}` : '';
