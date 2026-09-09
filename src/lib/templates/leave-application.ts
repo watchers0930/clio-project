@@ -55,18 +55,21 @@ export const LEAVE_APPLICATION_TEMPLATE_HTML = `
 .leave-app .section-title{margin:0 0 5mm 1mm;font-size:4.4mm;font-weight:700;line-height:1;}
 .leave-app table{width:100%;border-collapse:collapse;table-layout:fixed;border:1px solid #222;}
 .leave-app td{height:11mm;border:1px solid #222;vertical-align:middle;font-size:4.2mm;font-weight:400;line-height:1.35;}
-.leave-app .label{text-align:center;background:#f5f5f5;}
+.leave-app .label{text-align:left;background:#f5f5f5;padding:0 3mm;}
 .leave-app col:nth-child(1){width:20%;}
 .leave-app col:nth-child(2){width:30%;}
 .leave-app col:nth-child(3){width:20%;}
 .leave-app col:nth-child(4){width:30%;}
 .leave-app .value{padding:0 4mm;letter-spacing:0;white-space:normal;word-break:keep-all;}
+.leave-app .reason-cell{height:34mm;vertical-align:top;padding-top:2mm;}
 .leave-app .highlight{font-weight:700;color:#1A5AD9;}
-.leave-app .statement{position:absolute;top:176mm;left:0;z-index:1;width:100%;margin:0;text-align:center;font-size:4.4mm;line-height:1;}
-.leave-app .date{position:absolute;top:200mm;left:0;z-index:1;width:100%;margin:0;text-align:center;font-size:4.2mm;line-height:1;letter-spacing:0;word-spacing:3mm;}
-.leave-app .signer{position:absolute;top:222mm;left:0;z-index:1;width:100%;text-align:center;font-size:4.4mm;line-height:1;}
+.leave-app .statement{position:absolute;top:196mm;left:0;z-index:1;width:100%;margin:0;text-align:center;font-size:4.4mm;line-height:1;}
+.leave-app .date{position:absolute;top:216mm;left:0;z-index:1;width:100%;margin:0;text-align:center;font-size:4.2mm;line-height:1;letter-spacing:0;word-spacing:3mm;}
+.leave-app .signer{position:absolute;top:238mm;left:0;z-index:1;width:100%;text-align:center;font-size:4.4mm;line-height:1;}
 .leave-app .signer .name{margin-left:4mm;font-weight:700;letter-spacing:1mm;}
-.leave-app .approver{position:absolute;top:246mm;left:0;z-index:1;width:100%;text-align:center;font-size:4.2mm;}
+.leave-app .sign-img{height:14mm;vertical-align:middle;margin-left:2mm;}
+.leave-app .sign-img[src=""],.leave-app .sign-img:not([src]){display:none;}
+.leave-app .approver{position:absolute;top:270mm;left:0;z-index:1;width:100%;text-align:center;font-size:4.4mm;font-weight:700;}
 @media print{html,body{width:210mm;height:297mm;min-height:297mm;margin:0!important;padding:0!important;background:#fff;overflow:hidden}.leave-app{width:210mm;height:297mm;min-height:297mm;margin:0;box-shadow:none;}}
 </style>
 <article class="leave-app">
@@ -110,7 +113,7 @@ export const LEAVE_APPLICATION_TEMPLATE_HTML = `
         </tr>
         <tr>
           <td class="label">사유</td>
-          <td class="value" colspan="3">{{leave_reason}}</td>
+          <td class="value reason-cell" colspan="3">{{leave_reason}}</td>
         </tr>
       </tbody>
     </table>
@@ -118,8 +121,8 @@ export const LEAVE_APPLICATION_TEMPLATE_HTML = `
 
   <p class="statement">위와 같이 휴가를 신청합니다.</p>
   <p class="date">{{report_date_ko}}</p>
-  <p class="signer">신청인 : <span class="name">{{employee_name}}</span> (서명)</p>
-  <p class="approver">{{company_name}} 대표이사 {{representative_name}} 귀하</p>
+  <p class="signer">신청인 : <span class="name">{{employee_name}}</span> <img class="sign-img" src="{{signature_image_src}}" alt="" /></p>
+  <p class="approver">{{company_name}}</p>
 </article>
 `.trim();
 

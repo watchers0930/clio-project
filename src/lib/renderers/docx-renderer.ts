@@ -16,6 +16,9 @@ import {
   AlignmentType,
   PageBreak,
   ShadingType,
+  ImageRun,
+  VerticalAlign,
+  HeightRule,
 } from 'docx';
 import Docxtemplater from 'docxtemplater';
 import PizZip from 'pizzip';
@@ -201,6 +204,10 @@ function buildHtmlTemplateDocxChildren(
     return buildMouDocxChildren(r, fontFamily, fontSize);
   }
 
+  if (templateBundle.outline.startsWith('# 휴가원')) {
+    return buildLeaveApplicationDocxChildren(r, fontFamily, fontSize, documentInputs);
+  }
+
   if (!templateBundle.outline.startsWith('# 사업계획서')) {
     return buildGenericHtmlTemplateDocxChildren(templateBundle, r, fontFamily, fontSize);
   }
@@ -325,6 +332,170 @@ function buildHtmlTemplateDocxChildren(
 
 function isMouTemplate(templateBundle: TemplateBundle) {
   return templateBundle.outline.includes('양해각서') || templateBundle.fields.some((field) => field.key === 'party_a_name' || field.key === 'party_b_name');
+}
+
+// ─── 휴가원 전용 DOCX 렌더링 ─────────────────────────────
+const LEAVE_CELL_MARGINS = { top: 80, bottom: 80, left: 140, right: 140 };
+
+function leaveLabelCell(text: string, ff: string, fs: number, colspan = 1, widthPct?: number): TableCell {
+  return new TableCell({
+    columnSpan: colspan,
+    ...(widthPct ? { width: { size: widthPct, type: WidthType.PERCENTAGE } } : {}),
+    shading: LABEL_SHADING,
+    borders: ALL_BORDERS,
+    margins: LEAVE_CELL_MARGINS,
+    verticalAlign: VerticalAlign.CENTER,
+    children: [new Paragraph({
+      alignment: AlignmentType.LEFT,
+      children: [new TextRun({ text, bold: true, size: fs, font: ff })],
+    })],
+  });
+}
+
+function leaveValueCell(
+  text: string,
+  ff: string,
+  fs: number,
+  colspan = 1,
+  widthPct?: number,
+  vAlign: typeof VerticalAlign.CENTER | typeof VerticalAlign.TOP | typeof VerticalAlign.BOTTOM = VerticalAlign.CENTER,
+): TableCell {
+  const lines = (text || '').split('\n');
+  return new TableCell({
+    columnSpan: colspan,
+    ...(widthPct ? { width: { size: widthPct, type: WidthType.PERCENTAGE } } : {}),
+    borders: ALL_BORDERS,
+    margins: LEAVE_CELL_MARGINS,
+    verticalAlign: vAlign,
+    children: lines.map((line) => new Paragraph({ children: [new TextRun({ text: line, size: fs, font: ff })] })),
+  });
+}
+
+function leaveSignatureChildren(
+  employeeName: string,
+  signatureDataUrl: string | undefined,
+  ff: string,
+  fs: number,
+): (TextRun | ImageRun)[] {
+  const children: (TextRun | ImageRun)[] = [
+    new TextRun({ text: `신청인 : ${employeeName || ''} `, size: fs, font: ff }),
+  ];
+  if (signatureDataUrl && signatureDataUrl.startsWith('data:image')) {
+    const base64 = signatureDataUrl.split(',')[1] ?? '';
+    if (base64) {
+      try {
+        children.push(new ImageRun({
+          type: /^data:image\/png/i.test(signatureDataUrl) ? 'png' : 'jpg',
+          data: Buffer.from(base64, 'base64'),
+          transformation: { width: 110, height: 55 },
+        }));
+        return children;
+      } catch {
+        // 이미지 삽입 실패 시 텍스트로 폴백
+      }
+    }
+  }
+  children.push(new TextRun({ text: '(서명)', size: fs, font: ff }));
+  return children;
+}
+
+function buildLeaveApplicationDocxChildren(
+  r: Record<string, string>,
+  fontFamily: string,
+  fontSize: number,
+  documentInputs?: Record<string, string>,
+): (Paragraph | Table)[] {
+  const elements: (Paragraph | Table)[] = [];
+  const LABEL_W = 18;
+  const VALUE_W = 32;
+  const WIDE_W = VALUE_W + LABEL_W + VALUE_W; // colspan 3
+
+  // 제목
+  elements.push(new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { after: 400 },
+    children: [new TextRun({ text: r.report_title || '휴가원', bold: true, size: fontSize + 14, font: fontFamily })],
+  }));
+
+  // 1. 신청자 정보
+  elements.push(new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 200, after: 160 },
+    children: [new TextRun({ text: '1. 신청자 정보', bold: true, size: fontSize + 2, font: fontFamily })],
+  }));
+  elements.push(new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({ children: [
+        leaveLabelCell('부서', fontFamily, fontSize, 1, LABEL_W),
+        leaveValueCell(r.department ?? '', fontFamily, fontSize, 1, VALUE_W),
+        leaveLabelCell('성명', fontFamily, fontSize, 1, LABEL_W),
+        leaveValueCell(r.employee_name ?? '', fontFamily, fontSize, 1, VALUE_W),
+      ] }),
+      new TableRow({ children: [
+        leaveLabelCell('입사일', fontFamily, fontSize, 1, LABEL_W),
+        leaveValueCell(r.hire_date_ko ?? r.hire_date ?? '', fontFamily, fontSize, 1, VALUE_W),
+        leaveLabelCell('비상연락처', fontFamily, fontSize, 1, LABEL_W),
+        leaveValueCell(r.emergency_contact ?? '', fontFamily, fontSize, 1, VALUE_W),
+      ] }),
+    ],
+  }));
+
+  // 2. 휴가 내역
+  elements.push(new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 320, after: 160 },
+    children: [new TextRun({ text: '2. 휴가 내역', bold: true, size: fontSize + 2, font: fontFamily })],
+  }));
+  const period = `${r.leave_start_date_ko ?? r.leave_start_date ?? ''} ~ ${r.leave_end_date_ko ?? r.leave_end_date ?? ''}`;
+  elements.push(new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({ children: [
+        leaveLabelCell('휴가기간', fontFamily, fontSize, 1, LABEL_W),
+        leaveValueCell(period, fontFamily, fontSize, 3, WIDE_W),
+      ] }),
+      new TableRow({ children: [
+        leaveLabelCell('기 사용 휴가', fontFamily, fontSize, 1, LABEL_W),
+        leaveValueCell(`${r.used_leave_days ?? '0'} 일`, fontFamily, fontSize, 1, VALUE_W),
+        leaveLabelCell('남은 휴가일수', fontFamily, fontSize, 1, LABEL_W),
+        leaveValueCell(`${r.remaining_leave_days ?? ''} 일`, fontFamily, fontSize, 1, VALUE_W),
+      ] }),
+      new TableRow({
+        height: { value: 4000, rule: HeightRule.ATLEAST },
+        children: [
+          leaveLabelCell('사유', fontFamily, fontSize, 1, LABEL_W),
+          leaveValueCell(r.leave_reason ?? '', fontFamily, fontSize, 3, WIDE_W, VerticalAlign.TOP),
+        ],
+      }),
+    ],
+  }));
+
+  // 신청 문구 + 날짜 + 신청인(전자서명)
+  elements.push(new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 400, after: 160 },
+    children: [new TextRun({ text: '위와 같이 휴가를 신청합니다.', size: fontSize, font: fontFamily })],
+  }));
+  elements.push(new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { after: 200 },
+    children: [new TextRun({ text: r.report_date_ko ?? r.report_date ?? '', size: fontSize, font: fontFamily })],
+  }));
+  elements.push(new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { after: 200 },
+    children: leaveSignatureChildren(r.employee_name ?? '', documentInputs?.signature_image_src, fontFamily, fontSize),
+  }));
+
+  // 하단 회사명
+  elements.push(new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 800 },
+    children: [new TextRun({ text: r.company_name ?? '', bold: true, size: fontSize + 2, font: fontFamily })],
+  }));
+
+  return elements;
 }
 
 function textParagraph(
