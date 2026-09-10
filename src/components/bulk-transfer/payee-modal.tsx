@@ -78,7 +78,7 @@ export function PayeeModal({ open, editing, onClose, onSubmit }: Props) {
           </button>
         </div>
 
-        <div className="px-6 py-5 flex flex-col gap-4">
+        <div className="px-6 py-5 flex flex-col gap-3">
           <div>
             <label className={labelCls}>거래처명</label>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="예) OO건설, 김철수" className={inputCls} />

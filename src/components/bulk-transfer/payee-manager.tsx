@@ -12,7 +12,7 @@ interface Props {
 
 export function PayeeManager({ payees, onAdd, onEdit, onDelete }: Props) {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-[14px] font-semibold text-foreground">거래처 계좌</h3>
