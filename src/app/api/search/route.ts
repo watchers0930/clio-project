@@ -38,7 +38,7 @@ interface AuditLogRow {
   created_at: string;
 }
 
-interface FileRow { id: string; name: string; type: string | null; department_id: string | null; created_at: string; uploaded_by: string | null; source?: string | null; external_id?: string | null }
+interface FileRow { id: string; name: string; type: string | null; department_id: string | null; created_at: string; uploaded_by: string | null; source?: string | null; external_id?: string | null; source_date?: string | null }
 interface DocRow {
   id: string;
   title: string;
@@ -266,7 +266,7 @@ export async function POST(request: NextRequest) {
         }
         if (fileMap.size > 0) {
           const { data: files } = await sb
-            .from('files').select('id, name, type, department_id, created_at, uploaded_by, source, external_id').in('id', Array.from(fileMap.keys()));
+            .from('files').select('id, name, type, department_id, created_at, uploaded_by, source, external_id, source_date').in('id', Array.from(fileMap.keys()));
           const accessibleFiles = await filterAccessibleFileRows(
             supabase,
             authUserId,
@@ -283,7 +283,8 @@ export async function POST(request: NextRequest) {
               relevance: Math.round((match?.similarity ?? 0) * 100),
               fileType: getFileType(f.type, f.name),
               department: deptMap.get(f.department_id ?? '') ?? '미분류',
-              date: f.created_at.split('T')[0],
+              // Gmail 등 외부 소스는 실제 원본 날짜(source_date) 우선, 없으면 동기화 시각으로 폴백
+              date: (f.source_date ?? f.created_at).split('T')[0],
               aiSummary: '',
               sourceType: 'file',
               dataSource: f.source === 'gmail' ? 'gmail' : 'upload',
@@ -359,7 +360,7 @@ export async function POST(request: NextRequest) {
     // ── ④ 파일 텍스트 검색 폴백 (벡터 결과 없을 때) ──
     if (fileResults.length === 0) {
       let fileQuery = sb
-        .from('files').select('id, name, type, department_id, created_at, uploaded_by')
+        .from('files').select('id, name, type, department_id, created_at, uploaded_by, source, external_id, source_date')
         .or(queryTokens.map((t: string) => `name.ilike.%${t}%`).join(','));
       if (department && department !== '전체') {
         const deptId = deptIdByName.get(department);
@@ -384,9 +385,11 @@ export async function POST(request: NextRequest) {
           relevance: Math.min(85, Math.max(30, score + 50)),
           fileType: getFileType(f.type, f.name),
           department: deptMap.get(f.department_id ?? '') ?? '미분류',
-          date: f.created_at.split('T')[0],
+          date: (f.source_date ?? f.created_at).split('T')[0],
           aiSummary: '',
           sourceType: 'file',
+          dataSource: f.source === 'gmail' ? 'gmail' : 'upload',
+          externalId: f.external_id ?? null,
         });
       }
     }

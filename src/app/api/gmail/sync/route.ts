@@ -154,6 +154,8 @@ export async function POST(request: NextRequest) {
       try {
         const { data: full } = await gmail.users.messages.get({ userId: 'me', id: msg.id, format: 'full' });
         const { subject, from, date, textParts, attachments } = parseMessagePayload(full);
+        // internalDate(서버 수신 기준 epoch ms)를 실제 발송일로 사용. Date 헤더보다 신뢰 가능.
+        const sourceDate = full.internalDate ? new Date(Number(full.internalDate)).toISOString() : null;
         const { names, texts } = await extractAttachmentsText(gmail, msg.id, attachments);
 
         const header = [`제목: ${subject}`, `보낸 사람: ${from}`, `날짜: ${date}`].join('\n');
@@ -174,6 +176,7 @@ export async function POST(request: NextRequest) {
           scope: 'company',
           source: 'gmail',
           external_id: msg.id,
+          source_date: sourceDate,
           department_id: null,
         }).select('id').single();
 
