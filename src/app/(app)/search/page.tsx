@@ -14,6 +14,8 @@ import {
 } from '@/components/search/search-sections';
 import { ShareLinkModal } from '@/components/documents/ShareLinkModal';
 import { GmailAttachmentModal } from '@/components/search/gmail-attachment-modal';
+import { GmailEmailModal } from '@/components/search/gmail-email-modal';
+import { useGmailActions } from '@/components/search/use-gmail-actions';
 import type { ChatMessage, SearchResult, SearchTab } from '@/components/search/types';
 
 /* ────────────────────────── page ─────────────────────────── */
@@ -39,7 +41,7 @@ function SearchPageInner() {
   const [previewData, setPreviewData] = useState<{ name: string; text: string; truncated?: boolean; totalLength?: number } | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [shareTarget, setShareTarget] = useState<{ id: string; title: string; type: 'document' | 'file' } | null>(null);
-  const [gmailAttachmentTarget, setGmailAttachmentTarget] = useState<{ messageId: string; name: string } | null>(null);
+  const gmail = useGmailActions();
   const [recentQueries, setRecentQueries] = useState<string[]>([]);
   const [searchContext, setSearchContext] = useState<{
     role: string;
@@ -348,17 +350,13 @@ function SearchPageInner() {
       void openLocalFile(result);
       return;
     }
-    if (result.dataSource === 'gmail' && result.externalId) {
-      window.open(`https://mail.google.com/mail/u/0/#inbox/${result.externalId}`, '_blank', 'noopener,noreferrer');
+    if (result.dataSource === 'gmail') {
+      // 앱 내 모달로 본문 조회 + 번역 (기존 Gmail 웹 이동은 모달 안의 'Gmail에서 열기'로 유지)
+      gmail.openEmail(result);
       return;
     }
     // 업로드 파일: 원본을 뷰어로 열기 (PDF 등). 텍스트 미리보기는 별도 '미리보기' 버튼 사용
     void openUploadedFile(result);
-  };
-
-  const openGmailAttachments = (result: SearchResult) => {
-    if (!result.externalId) return;
-    setGmailAttachmentTarget({ messageId: result.externalId, name: result.name });
   };
 
   const openComments = (result: SearchResult) => {
@@ -421,7 +419,7 @@ function SearchPageInner() {
             onOpenShare={openShare}
             onToggleSummary={(id) => setExpandedSummary(expandedSummary === id ? null : id)}
             onDownloadOriginal={(result) => { void handleDownloadOriginal(result); }}
-            onOpenGmailAttachments={openGmailAttachments}
+            onOpenGmailAttachments={gmail.openAttachments}
             onStartChat={startChatFromResult}
             onOpenDocumentsFromResult={(result) => router.push(buildDocumentCreateHref({
               fileIds: [result.id],
@@ -463,11 +461,19 @@ function SearchPageInner() {
         />
       )}
 
-      {gmailAttachmentTarget && (
+      {gmail.emailTarget && (
+        <GmailEmailModal
+          messageId={gmail.emailTarget.messageId}
+          emailName={gmail.emailTarget.name}
+          onClose={gmail.closeEmail}
+        />
+      )}
+
+      {gmail.attachmentTarget && (
         <GmailAttachmentModal
-          messageId={gmailAttachmentTarget.messageId}
-          emailName={gmailAttachmentTarget.name}
-          onClose={() => setGmailAttachmentTarget(null)}
+          messageId={gmail.attachmentTarget.messageId}
+          emailName={gmail.attachmentTarget.name}
+          onClose={gmail.closeAttachments}
         />
       )}
     </div>

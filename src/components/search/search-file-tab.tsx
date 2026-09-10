@@ -397,7 +397,7 @@ export function FileSearchTab({
                         result.dataSource === 'gmail'
                           ? [
                               {
-                                label: '이메일 열기',
+                                label: '이메일 보기·번역',
                                 onClick: () => onOpenResult(result),
                                 variant: 'primary' as const,
                                 trailing: <ArrowRight size={14} />,

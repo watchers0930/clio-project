@@ -6,6 +6,7 @@ import { createOAuthClient } from '@/lib/google/oauth';
 import { chunkText } from '@/lib/ai/chunk-text';
 import { generateAndStoreChunks } from '@/lib/ai/embeddings';
 import { extractText } from '@/lib/ai/extract-text';
+import { parseMessagePayload, type AttachmentMeta } from '@/lib/google/gmail-message';
 import { google, gmail_v1 } from 'googleapis';
 
 export const maxDuration = 60;
@@ -19,42 +20,6 @@ const AUTO_COOLDOWN_MS = 10 * 60 * 1000; // 자동 동기화 쿨다운 10분
 const ATTACHMENT_EXTS = ['pdf', 'docx', 'dotx', 'xlsx', 'pptx', 'txt', 'csv', 'tsv', 'md', 'hwp', 'hwpx'];
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 첨부 10MB 초과는 건너뜀
 const MAX_ATTACHMENTS_PER_MAIL = 5;
-
-interface AttachmentMeta { attachmentId: string; filename: string; mimeType: string; size: number }
-
-// 이메일 본문(text) + 첨부파일 메타 수집
-function parseMessagePayload(msg: gmail_v1.Schema$Message) {
-  const headers = msg.payload?.headers ?? [];
-  const subject = headers.find((h) => h.name?.toLowerCase() === 'subject')?.value ?? '(제목 없음)';
-  const from = headers.find((h) => h.name?.toLowerCase() === 'from')?.value ?? '';
-  const date = headers.find((h) => h.name?.toLowerCase() === 'date')?.value ?? '';
-
-  const attachments: AttachmentMeta[] = [];
-  const textParts: string[] = [];
-
-  function walk(parts: gmail_v1.Schema$MessagePart[] | undefined) {
-    if (!parts) return;
-    for (const part of parts) {
-      const mime = part.mimeType ?? '';
-      const filename = part.filename ?? '';
-
-      if (filename && part.body?.attachmentId) {
-        attachments.push({ attachmentId: part.body.attachmentId, filename, mimeType: mime, size: part.body.size ?? 0 });
-      }
-      if (mime === 'text/plain' && part.body?.data) {
-        textParts.push(Buffer.from(part.body.data, 'base64').toString('utf-8'));
-      }
-      if (part.parts) walk(part.parts);
-    }
-  }
-
-  if (msg.payload?.body?.data && msg.payload.mimeType === 'text/plain') {
-    textParts.push(Buffer.from(msg.payload.body.data, 'base64').toString('utf-8'));
-  }
-  walk(msg.payload?.parts ?? []);
-
-  return { subject, from, date, textParts, attachments };
-}
 
 // 첨부파일 다운로드 + 텍스트 추출 (지원 형식만)
 async function extractAttachmentsText(
