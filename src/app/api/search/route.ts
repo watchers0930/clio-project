@@ -5,25 +5,9 @@ import { getAuthUserId } from '@/lib/auth-helper';
 import { generateEmbedding } from '@/lib/ai/embeddings';
 import { summarizeText } from '@/lib/ai/summarize';
 import { filterAccessibleDocumentRows, filterAccessibleFileRows, getUserRoleInfo } from '@/lib/permissions';
+import { keywordFileSearch, getFileType, type SearchResultItem } from '@/lib/search/keyword-file-search';
 
 const SEARCH_AI_SUMMARY_ENABLED = process.env.ENABLE_SEARCH_AI_SUMMARY === 'true';
-
-interface SearchResultItem {
-  id: string;
-  name: string;
-  excerpt: string;
-  relevance: number;
-  fileType: string;
-  department: string;
-  date: string;
-  aiSummary: string;
-  sourceType: 'file' | 'document';
-  dataSource?: 'gmail' | 'upload';
-  externalId?: string | null;
-  relationLabel?: string | null;
-  originDocumentId?: string | null;
-  originDocumentTitle?: string | null;
-}
 
 interface SearchContext {
   role: string;
@@ -62,20 +46,6 @@ function formatOriginLabel(originContext: string | null | undefined) {
     shared_followup: '공유 문서 기반 후속',
     document_followup: '기준 문서 기반 후속',
   } as Record<string, string>)[originContext ?? ''] ?? null;
-}
-
-const FILE_TYPE_MAP: Record<string, string> = {
-  'application/pdf': 'PDF',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'XLSX',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PPTX',
-  'audio/m4a': 'M4A',
-  'text/markdown': 'MD',
-};
-
-function getFileType(mimeType: string | null, fileName: string): string {
-  if (mimeType && FILE_TYPE_MAP[mimeType]) return FILE_TYPE_MAP[mimeType];
-  return fileName.split('.').pop()?.toUpperCase() ?? 'FILE';
 }
 
 async function buildCreatorDepartmentMap(
@@ -357,46 +327,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── ④ 파일명 키워드(부분일치) 검색 — 항상 실행 후 벡터 결과와 병합(중복 제거) ──
-    // 짧은 단일 키워드(브랜드명 등)는 벡터 유사도가 낮아 놓치므로, 제목/파일명 부분일치를 항상 보강한다.
-    {
-      const alreadyFound = new Set(fileResults.map((r) => r.id));
-      let fileQuery = sb
-        .from('files').select('id, name, type, department_id, created_at, uploaded_by, source, external_id, source_date')
-        .or(queryTokens.map((t: string) => `name.ilike.%${t}%`).join(','));
-      if (department && department !== '전체') {
-        const deptId = deptIdByName.get(department);
-        if (deptId) fileQuery = fileQuery.eq('department_id', deptId);
-      }
-      const { data: matchedFiles } = await fileQuery.limit(20);
-      const accessibleMatchedFiles = await filterAccessibleFileRows(
-        supabase,
-        authUserId,
-        roleInfo.role,
-        roleInfo.department_id,
-        (matchedFiles as FileRow[] ?? []),
-      );
-      for (const f of accessibleMatchedFiles) {
-        if (alreadyFound.has(f.id)) continue; // 벡터에서 이미 잡힌 파일은 건너뜀
-        alreadyFound.add(f.id);
-        const nameLower = f.name.toLowerCase();
-        let score = 0;
-        for (const token of queryTokens) score += (nameLower.split(token).length - 1) * 25;
-        fileResults.push({
-          id: f.id,
-          name: f.name,
-          excerpt: `${f.name} 파일입니다.`,
-          relevance: Math.min(85, Math.max(30, score + 50)),
-          fileType: getFileType(f.type, f.name),
-          department: deptMap.get(f.department_id ?? '') ?? '미분류',
-          date: (f.source_date ?? f.created_at).split('T')[0],
-          aiSummary: '',
-          sourceType: 'file',
-          dataSource: f.source === 'gmail' ? 'gmail' : 'upload',
-          externalId: f.external_id ?? null,
-        });
-      }
-    }
+    // ── ④ 키워드(부분일치) 검색 — 파일명 + 본문(청크). 항상 실행 후 벡터 결과와 병합 ──
+    // 짧은 단일 키워드(브랜드명·발신자명 등)는 벡터 유사도가 낮아 놓치므로 부분일치로 보강한다.
+    const keywordResults = await keywordFileSearch({
+      sb,
+      supabase,
+      queryTokens,
+      department,
+      deptIdByName,
+      deptMap,
+      authUserId,
+      role: roleInfo.role,
+      userDepartmentId: roleInfo.department_id,
+      excludeIds: new Set(fileResults.map((r) => r.id)),
+    });
+    fileResults.push(...keywordResults);
 
     // ── ⑤ 결과 병합 + 필터 ──
     let results: SearchResultItem[] = [...fileResults, ...Array.from(docResultsMap.values())];
