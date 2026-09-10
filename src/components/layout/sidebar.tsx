@@ -19,6 +19,7 @@ import {
   ChevronsRight,
   KeyRound,
   Briefcase,
+  Banknote,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -48,6 +49,7 @@ const OPTIONAL_ITEMS: NavItem[] = [
   { key: 'contract-risk', label: '계약 리스크', href: '/contract-risk', icon: ShieldAlert, description: 'AI 계약 분석' },
   { key: 'account-credentials', label: '계정관리', href: '/account-credentials', icon: KeyRound, description: '사이트 계정 보관' },
   { key: 'work-ledger', label: '작업내역', href: '/work-ledger', icon: Briefcase, description: '프로젝트 · 수금 관리' },
+  { key: 'bulk-transfer', label: '대량이체', href: '/bulk-transfer', icon: Banknote, description: '하나은행 대량이체 파일' },
 ];
 
 interface SidebarProps {
