@@ -353,7 +353,10 @@ export async function POST(request: NextRequest) {
       results = results.filter((r) => r.sourceType === 'document' || r.fileType === fileType);
     }
 
-    results.sort((a, b) => b.relevance - a.relevance);
+    // 관련도(5점 단위로 묶음) 내림차순, 같은 묶음이면 최신 발송일 우선.
+    // 내용이 거의 같은 메일들(예: 반복 알림)에서 최신 메일이 옛 메일에 밀려 잘리지 않도록 함.
+    const relBucket = (rel: number) => Math.round(rel / 5);
+    results.sort((a, b) => (relBucket(b.relevance) - relBucket(a.relevance)) || (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
     results = results.filter((r) => r.relevance >= 30);
     results = results.slice(0, 10);
 
