@@ -357,8 +357,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── ④ 파일 텍스트 검색 폴백 (벡터 결과 없을 때) ──
-    if (fileResults.length === 0) {
+    // ── ④ 파일명 키워드(부분일치) 검색 — 항상 실행 후 벡터 결과와 병합(중복 제거) ──
+    // 짧은 단일 키워드(브랜드명 등)는 벡터 유사도가 낮아 놓치므로, 제목/파일명 부분일치를 항상 보강한다.
+    {
+      const alreadyFound = new Set(fileResults.map((r) => r.id));
       let fileQuery = sb
         .from('files').select('id, name, type, department_id, created_at, uploaded_by, source, external_id, source_date')
         .or(queryTokens.map((t: string) => `name.ilike.%${t}%`).join(','));
@@ -366,7 +368,7 @@ export async function POST(request: NextRequest) {
         const deptId = deptIdByName.get(department);
         if (deptId) fileQuery = fileQuery.eq('department_id', deptId);
       }
-      const { data: matchedFiles } = await fileQuery.limit(15);
+      const { data: matchedFiles } = await fileQuery.limit(20);
       const accessibleMatchedFiles = await filterAccessibleFileRows(
         supabase,
         authUserId,
@@ -375,6 +377,8 @@ export async function POST(request: NextRequest) {
         (matchedFiles as FileRow[] ?? []),
       );
       for (const f of accessibleMatchedFiles) {
+        if (alreadyFound.has(f.id)) continue; // 벡터에서 이미 잡힌 파일은 건너뜀
+        alreadyFound.add(f.id);
         const nameLower = f.name.toLowerCase();
         let score = 0;
         for (const token of queryTokens) score += (nameLower.split(token).length - 1) * 25;
