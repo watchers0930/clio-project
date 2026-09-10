@@ -353,8 +353,30 @@ export async function POST(request: NextRequest) {
       results = results.filter((r) => r.sourceType === 'document' || r.fileType === fileType);
     }
 
+    // 중복 알림 접기: 같은 제목의 파일(반복 메일 등)은 최신 1건만 대표로 남기고 나머지는 접는다.
+    // 대표 = 가장 최신 발송일(동일 날짜면 관련도 높은 것), duplicateCount에 묶인 총 건수 기록.
+    const collapsedFiles = new Map<string, SearchResultItem>();
+    const nonCollapsible: SearchResultItem[] = [];
+    for (const r of results) {
+      if (r.sourceType !== 'file') { nonCollapsible.push(r); continue; }
+      const key = r.name.trim().toLowerCase();
+      const existing = collapsedFiles.get(key);
+      if (!existing) {
+        collapsedFiles.set(key, { ...r, duplicateCount: 1 });
+        continue;
+      }
+      const total = (existing.duplicateCount ?? 1) + 1;
+      const isNewer = r.date > existing.date || (r.date === existing.date && r.relevance > existing.relevance);
+      const rep = isNewer ? r : existing;
+      collapsedFiles.set(key, {
+        ...rep,
+        relevance: Math.max(r.relevance, existing.relevance),
+        duplicateCount: total,
+      });
+    }
+    results = [...nonCollapsible, ...collapsedFiles.values()];
+
     // 관련도(5점 단위로 묶음) 내림차순, 같은 묶음이면 최신 발송일 우선.
-    // 내용이 거의 같은 메일들(예: 반복 알림)에서 최신 메일이 옛 메일에 밀려 잘리지 않도록 함.
     const relBucket = (rel: number) => Math.round(rel / 5);
     results.sort((a, b) => (relBucket(b.relevance) - relBucket(a.relevance)) || (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
     results = results.filter((r) => r.relevance >= 30);
