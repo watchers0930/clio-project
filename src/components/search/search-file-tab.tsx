@@ -6,6 +6,7 @@ import { VoiceInputButton } from '@/components/common/VoiceInputButton';
 import { DocumentActionRow } from '@/components/documents/document-action-row';
 import { ArrowRight } from 'lucide-react';
 import type { SearchResult } from './types';
+import { DuplicateGroup } from './duplicate-group';
 
 interface ResumeCardSpacingConfig {
   descriptionMarginTop: number;
@@ -375,14 +376,7 @@ export function FileSearchTab({
                             <span className="inline-flex items-center rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-semibold text-blue-600">문서허브</span>
                           )}
                         </div>
-                        <h3 className="truncate text-[16px] font-semibold text-foreground">
-                          {result.name}
-                          {result.duplicateCount && result.duplicateCount > 1 ? (
-                            <span className="ml-2 inline-flex items-center rounded-full bg-foreground/5 px-2 py-0.5 align-middle text-[10px] font-semibold text-foreground-secondary">
-                              외 {result.duplicateCount - 1}건
-                            </span>
-                          ) : null}
-                        </h3>
+                        <h3 className="truncate text-[16px] font-semibold text-foreground">{result.name}</h3>
                         <p className="mt-1 text-[12px] text-foreground-secondary">{result.fileType} · {result.department} · {result.date}</p>
                         {result.relationLabel ? (
                           <p className="mt-2 text-[11px] text-primary">
@@ -491,6 +485,14 @@ export function FileSearchTab({
                             ]
                       }
                     />
+
+                    {result.groupItems && result.groupItems.length > 0 ? (
+                      <DuplicateGroup
+                        items={result.groupItems}
+                        onOpen={onOpenResult}
+                        onOpenAttachments={onOpenGmailAttachments}
+                      />
+                    ) : null}
 
                     <div className="mt-8 flex items-center gap-4 border-t border-surface-secondary pt-5">
                       {result.dataSource !== 'gmail' && result.dataSource !== 'local' && (

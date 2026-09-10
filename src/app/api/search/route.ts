@@ -353,28 +353,34 @@ export async function POST(request: NextRequest) {
       results = results.filter((r) => r.sourceType === 'document' || r.fileType === fileType);
     }
 
-    // 중복 알림 접기: 같은 제목의 파일(반복 메일 등)은 최신 1건만 대표로 남기고 나머지는 접는다.
-    // 대표 = 가장 최신 발송일(동일 날짜면 관련도 높은 것), duplicateCount에 묶인 총 건수 기록.
-    const collapsedFiles = new Map<string, SearchResultItem>();
+    // 같은 제목 접기: 제목이 같은 파일(반복 알림 메일 등)을 한 묶음으로 접되, 개별 건은 버리지 않는다.
+    // 대표 = 가장 최신 발송일(동일 날짜면 관련도 높은 것). 나머지는 groupItems에 최신순 보존 → 프론트에서 펼쳐 개별 열람.
+    const groups = new Map<string, { rep: SearchResultItem; members: SearchResultItem[] }>();
     const nonCollapsible: SearchResultItem[] = [];
     for (const r of results) {
       if (r.sourceType !== 'file') { nonCollapsible.push(r); continue; }
       const key = r.name.trim().toLowerCase();
-      const existing = collapsedFiles.get(key);
-      if (!existing) {
-        collapsedFiles.set(key, { ...r, duplicateCount: 1 });
-        continue;
-      }
-      const total = (existing.duplicateCount ?? 1) + 1;
-      const isNewer = r.date > existing.date || (r.date === existing.date && r.relevance > existing.relevance);
-      const rep = isNewer ? r : existing;
-      collapsedFiles.set(key, {
-        ...rep,
-        relevance: Math.max(r.relevance, existing.relevance),
-        duplicateCount: total,
-      });
+      const g = groups.get(key);
+      if (!g) { groups.set(key, { rep: r, members: [r] }); continue; }
+      g.members.push(r);
+      const isNewer = r.date > g.rep.date || (r.date === g.rep.date && r.relevance > g.rep.relevance);
+      if (isNewer) g.rep = r;
     }
-    results = [...nonCollapsible, ...collapsedFiles.values()];
+    results = [
+      ...nonCollapsible,
+      ...[...groups.values()].map(({ rep, members }) => {
+        if (members.length === 1) return rep;
+        const others = members
+          .filter((m) => m.id !== rep.id)
+          .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+        return {
+          ...rep,
+          relevance: Math.max(...members.map((m) => m.relevance)),
+          duplicateCount: members.length,
+          groupItems: others,
+        };
+      }),
+    ];
 
     // 관련도(5점 단위로 묶음) 내림차순, 같은 묶음이면 최신 발송일 우선.
     const relBucket = (rel: number) => Math.round(rel / 5);

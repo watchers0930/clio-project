@@ -13,7 +13,8 @@ export interface SearchResultItem {
   sourceType: 'file' | 'document';
   dataSource?: 'gmail' | 'upload';
   externalId?: string | null;
-  duplicateCount?: number; // 같은 제목 중복 알림 접기 시 묶인 총 건수(대표 포함)
+  duplicateCount?: number; // 같은 제목 접기 시 묶인 총 건수(대표 포함)
+  groupItems?: SearchResultItem[]; // 접힌 나머지 개별 항목들(대표 제외, 최신순). 펼쳐서 각각 열람용
   relationLabel?: string | null;
   originDocumentId?: string | null;
   originDocumentTitle?: string | null;
