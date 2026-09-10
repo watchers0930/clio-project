@@ -91,7 +91,7 @@ export function TransferItemModal({ open, editing, payees, onClose, onAddPayee, 
           </button>
         </div>
 
-        <div className="px-6 py-5 space-y-4">
+        <div className="px-6 py-5 flex flex-col gap-4">
           <div>
             <div className="flex items-center justify-between">
               <label className={labelCls}>거래처</label>

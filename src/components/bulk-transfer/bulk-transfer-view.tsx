@@ -121,7 +121,7 @@ export function BulkTransferView() {
 
   return (
     <>
-      <div className="space-y-8">
+      <div className="flex flex-col gap-8">
         <div>
           <h2 className="text-[16px] font-semibold text-foreground">대량이체</h2>
           <p className="mt-1.5 text-[13px] text-foreground-secondary">
