@@ -44,9 +44,8 @@ export function DuplicateGroup({
                     type="button"
                     onClick={() => onOpenAttachments(m)}
                     className="inline-flex items-center gap-1 rounded-lg border border-border-tint px-2 py-1 text-[11px] text-foreground-secondary hover:bg-primary-tint"
-                    title="첨부파일"
                   >
-                    <Paperclip size={12} />
+                    <Paperclip size={12} /> 첨부
                   </button>
                 ) : null}
                 <button
@@ -54,7 +53,7 @@ export function DuplicateGroup({
                   onClick={() => onOpen(m)}
                   className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1 text-[11px] font-semibold text-white hover:opacity-90"
                 >
-                  열기 <ArrowRight size={12} />
+                  {m.dataSource === 'gmail' ? '이메일 보기·번역' : '열기'} <ArrowRight size={12} />
                 </button>
               </div>
             </li>
