@@ -30,6 +30,8 @@ export function DuplicateGroup({
         같은 제목 {items.length}건 더 {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
       </button>
 
+      <div aria-hidden="true" style={{ height: 10 }} />
+
       {open ? (
         <ul className="mt-2 divide-y divide-border-tint overflow-hidden rounded-xl border border-border-tint bg-white">
           {items.map((m) => (

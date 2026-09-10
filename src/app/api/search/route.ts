@@ -237,13 +237,15 @@ export async function POST(request: NextRequest) {
         if (fileMap.size > 0) {
           const { data: files } = await sb
             .from('files').select('id, name, type, department_id, created_at, uploaded_by, source, external_id, source_date').in('id', Array.from(fileMap.keys()));
-          const accessibleFiles = await filterAccessibleFileRows(
+          const accessibleFiles = (await filterAccessibleFileRows(
             supabase,
             authUserId,
             roleInfo.role,
             roleInfo.department_id,
             (files as FileRow[] ?? []),
-          );
+          ))
+            // Gmail 메일은 본인이 동기화한 것만 노출(본문 열람이 소유자만 가능 → 발췌만 보이고 못 여는 모순 방지)
+            .filter((f) => f.source !== 'gmail' || f.uploaded_by === authUserId);
           for (const f of accessibleFiles) {
             const match = fileMap.get(f.id);
             fileResults.push({

@@ -94,7 +94,9 @@ export async function keywordFileSearch(p: KeywordSearchParams): Promise<SearchR
 
   // ④ 접근권한 필터
   const candidates = [...nameRows, ...((contentFiles ?? []) as FileRow[])];
-  const accessible = await filterAccessibleFileRows(supabase, authUserId, role, userDepartmentId, candidates);
+  const accessible = (await filterAccessibleFileRows(supabase, authUserId, role, userDepartmentId, candidates))
+    // Gmail 메일은 본인이 동기화한 것만 노출(본문 열람이 소유자만 가능 → 발췌만 보이고 못 여는 모순 방지)
+    .filter((f) => f.source !== 'gmail' || f.uploaded_by === authUserId);
 
   const out: SearchResultItem[] = [];
   const seen = new Set(excludeIds);
