@@ -1,12 +1,13 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Plus, Pencil, Trash2, Download, Check } from 'lucide-react';
+import { Plus, Pencil, Trash2, Download, Check, FileUp } from 'lucide-react';
 import { TRANSFER_STATUS_LABELS, type TransferItem } from '@/lib/bulk-transfer/types';
 
 interface Props {
   items: TransferItem[];
   onAdd: () => void;
+  onImport: () => void;
   onEdit: (it: TransferItem) => void;
   onDelete: (it: TransferItem) => void;
   onToggleDone: (it: TransferItem) => void;
@@ -19,7 +20,7 @@ const STATUS_STYLE: Record<string, string> = {
   done: 'bg-emerald-50 text-emerald-600',
 };
 
-export function TransferList({ items, onAdd, onEdit, onDelete, onToggleDone, onExport }: Props) {
+export function TransferList({ items, onAdd, onImport, onEdit, onDelete, onToggleDone, onExport }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [exporting, setExporting] = useState(false);
 
@@ -67,6 +68,13 @@ export function TransferList({ items, onAdd, onEdit, onDelete, onToggleDone, onE
           )}
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={onImport}
+            className="flex items-center gap-1.5 h-9 rounded-xl border border-border px-4 text-[13px] font-medium text-foreground hover:bg-surface-secondary transition-colors"
+          >
+            <FileUp size={15} strokeWidth={1.5} />
+            PDF에서 불러오기
+          </button>
           <button
             onClick={onAdd}
             className="flex items-center gap-1.5 h-9 rounded-xl border border-border px-4 text-[13px] font-medium text-foreground hover:bg-surface-secondary transition-colors"

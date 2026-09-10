@@ -8,6 +8,7 @@ import { TransferList } from './transfer-list';
 import { PayeeManager } from './payee-manager';
 import { PayeeModal } from './payee-modal';
 import { TransferItemModal } from './transfer-item-modal';
+import { PdfImportModal } from './pdf-import-modal';
 
 type Tab = 'items' | 'payees';
 
@@ -32,6 +33,7 @@ export function BulkTransferView() {
   const [editingPayee, setEditingPayee] = useState<TransferPayee | null>(null);
   const [itemModal, setItemModal] = useState(false);
   const [editingItem, setEditingItem] = useState<TransferItem | null>(null);
+  const [pdfModal, setPdfModal] = useState(false);
 
   // --- 거래처 핸들러 ---
   const openAddPayee = () => {
@@ -139,6 +141,7 @@ export function BulkTransferView() {
           <TransferList
             items={items}
             onAdd={openAddItem}
+            onImport={() => setPdfModal(true)}
             onEdit={openEditItem}
             onDelete={(it) => void handleDeleteItem(it)}
             onToggleDone={(it) => void handleToggleDone(it)}
@@ -148,6 +151,14 @@ export function BulkTransferView() {
           <PayeeManager payees={payees} onAdd={openAddPayee} onEdit={openEditPayee} onDelete={(p) => void handleDeletePayee(p)} />
         )}
       </div>
+
+      <PdfImportModal
+        open={pdfModal}
+        onClose={() => setPdfModal(false)}
+        createPayee={createPayee}
+        createItem={createItem}
+        onDone={(msg) => toast.success(msg)}
+      />
 
       <PayeeModal open={payeeModal} editing={editingPayee} onClose={() => setPayeeModal(false)} onSubmit={submitPayee} />
       <TransferItemModal
