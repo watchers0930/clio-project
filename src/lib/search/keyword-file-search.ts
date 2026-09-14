@@ -34,6 +34,25 @@ export function getFileType(mimeType: string | null, fileName: string): string {
   return fileName.split('.').pop()?.toUpperCase() ?? 'FILE';
 }
 
+/**
+ * 제목/파일명 "단어 커버리지" 기반 관련도 점수 (벡터·키워드 검색 공용).
+ * 검색어 여러 단어 중 제목에 몇 개가 들어갔는지 비율로 산정한다.
+ * - 3단어 모두 포함(예: "vestra ai canadian" → 캐나다 메일) → 최상위 점수
+ * - "ai" 하나만 걸린 무관 문서 → 낮은 점수 (커버리지 비율로 자동 억제)
+ * @returns 매칭 없으면 0, 있으면 대략 50~90 (완전 매칭 90)
+ */
+export function titleCoverageScore(name: string, queryTokens: string[]): number {
+  const nameLower = name.normalize('NFC').toLowerCase();
+  // 2글자 미만 토큰은 노이즈("ai"는 유지되지만 1글자 조사·기호는 제외).
+  const sig = queryTokens.filter((t) => t.length >= 2);
+  const tokens = sig.length > 0 ? sig : queryTokens;
+  if (tokens.length === 0) return 0;
+  const matched = tokens.filter((t) => nameLower.includes(t)).length;
+  if (matched === 0) return 0;
+  const coverage = matched / tokens.length;
+  return Math.round(35 + coverage * 55);
+}
+
 interface FileRow {
   id: string; name: string; type: string | null; department_id: string | null;
   created_at: string; uploaded_by: string | null;
@@ -103,17 +122,14 @@ export async function keywordFileSearch(p: KeywordSearchParams): Promise<SearchR
   for (const f of accessible as FileRow[]) {
     if (seen.has(f.id)) continue;
     seen.add(f.id);
-    const nameLower = f.name.toLowerCase();
-    const inName = queryTokens.some((t) => nameLower.includes(t));
-    let score = 0;
-    for (const token of queryTokens) score += (nameLower.split(token).length - 1) * 25;
+    // 제목 커버리지 점수(검색어 단어가 제목에 몇 개 들어갔는지). 없으면 본문만 매칭 → 45.
+    const nameScore = titleCoverageScore(f.name, queryTokens);
     const snippet = snippetByFile.get(f.id);
     out.push({
       id: f.id,
       name: f.name,
       excerpt: (snippet ?? `${f.name} 파일입니다.`).slice(0, 200),
-      // 제목 매칭은 강하게, 본문만 매칭이면 중간 점수
-      relevance: inName ? Math.min(85, Math.max(30, score + 50)) : 45,
+      relevance: nameScore > 0 ? nameScore : 45,
       fileType: getFileType(f.type, f.name),
       department: deptMap.get(f.department_id ?? '') ?? '미분류',
       date: (f.source_date ?? f.created_at).split('T')[0],

@@ -5,7 +5,7 @@ import { getAuthUserId } from '@/lib/auth-helper';
 import { generateEmbedding } from '@/lib/ai/embeddings';
 import { summarizeText } from '@/lib/ai/summarize';
 import { filterAccessibleDocumentRows, filterAccessibleFileRows, getUserRoleInfo } from '@/lib/permissions';
-import { keywordFileSearch, getFileType, type SearchResultItem } from '@/lib/search/keyword-file-search';
+import { keywordFileSearch, getFileType, titleCoverageScore, type SearchResultItem } from '@/lib/search/keyword-file-search';
 
 const SEARCH_AI_SUMMARY_ENABLED = process.env.ENABLE_SEARCH_AI_SUMMARY === 'true';
 
@@ -248,11 +248,15 @@ export async function POST(request: NextRequest) {
             .filter((f) => f.source !== 'gmail' || f.uploaded_by === authUserId);
           for (const f of accessibleFiles) {
             const match = fileMap.get(f.id);
+            // 벡터 유사도와 제목 커버리지 점수 중 높은 쪽 사용.
+            // (제목에 검색어가 다 들어있는데 벡터 유사도만 낮아 상위10에서 잘리는 문제 방지)
+            const vecScore = Math.round((match?.similarity ?? 0) * 100);
+            const nameScore = titleCoverageScore(f.name, queryTokens);
             fileResults.push({
               id: f.id,
               name: f.name,
               excerpt: match?.content?.slice(0, 200) ?? '',
-              relevance: Math.round((match?.similarity ?? 0) * 100),
+              relevance: Math.max(vecScore, nameScore),
               fileType: getFileType(f.type, f.name),
               department: deptMap.get(f.department_id ?? '') ?? '미분류',
               // Gmail 등 외부 소스는 실제 원본 날짜(source_date) 우선, 없으면 동기화 시각으로 폴백
