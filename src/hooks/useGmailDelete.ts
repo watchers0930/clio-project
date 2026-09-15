@@ -1,6 +1,10 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+
+// 자주 쓰는 삭제 키워드를 브라우저(localStorage)에 저장. 개인 편의용 즐겨찾기.
+const SAVED_KEY = 'clio_gmail_delete_keywords';
+const SAVED_MAX = 30;
 
 export interface GmailDeleteHit {
   id: string;
@@ -43,6 +47,38 @@ export function useGmailDelete() {
   const [deleting, setDeleting] = useState(false);
   const [searched, setSearched] = useState(false);
   const [meta, setMeta] = useState<SearchMeta>({ total: 0, truncated: false, previewLimit: 100 });
+  const [savedKeywords, setSavedKeywords] = useState<string[]>([]);
+
+  // 저장된 키워드 로드 (클라이언트에서만)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SAVED_KEY);
+      if (raw) setSavedKeywords(JSON.parse(raw));
+    } catch { /* 파싱 실패 무시 */ }
+  }, []);
+
+  // 키워드 저장 — 이미 있으면 그대로, 최신순 상한 유지. 저장 여부 반환.
+  const saveKeyword = useCallback((keyword: string): boolean => {
+    const t = keyword.trim();
+    if (t.length < 2) return false;
+    let added = false;
+    setSavedKeywords((prev) => {
+      if (prev.includes(t)) return prev;
+      added = true;
+      const next = [t, ...prev].slice(0, SAVED_MAX);
+      try { localStorage.setItem(SAVED_KEY, JSON.stringify(next)); } catch { /* 무시 */ }
+      return next;
+    });
+    return added;
+  }, []);
+
+  const removeKeyword = useCallback((keyword: string) => {
+    setSavedKeywords((prev) => {
+      const next = prev.filter((k) => k !== keyword);
+      try { localStorage.setItem(SAVED_KEY, JSON.stringify(next)); } catch { /* 무시 */ }
+      return next;
+    });
+  }, []);
 
   const search = useCallback(async (keyword: string): Promise<ActionResult> => {
     setSearching(true);
@@ -126,10 +162,13 @@ export function useGmailDelete() {
     deleting,
     searched,
     meta,
+    savedKeywords,
     search,
     toggle,
     toggleAll,
     remove,
     reset,
+    saveKeyword,
+    removeKeyword,
   };
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Trash2, Search, AlertTriangle, Inbox } from 'lucide-react';
+import { Trash2, Search, AlertTriangle, Inbox, BookmarkPlus, X } from 'lucide-react';
 import { Spinner, ConfirmDialog } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
 import { useGmailDelete, type GmailDeleteHit } from '@/hooks/useGmailDelete';
@@ -42,19 +42,32 @@ export function GmailDeletePanel() {
   const [keyword, setKeyword] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const toast = useToast();
-  const { hits, selected, searching, deleting, searched, meta, search, toggle, toggleAll, remove } = useGmailDelete();
+  const { hits, selected, searching, deleting, searched, meta, savedKeywords, search, toggle, toggleAll, remove, saveKeyword, removeKeyword } = useGmailDelete();
 
-  const handleSearch = async () => {
-    const kw = keyword.trim();
+  const runSearch = async (kw: string) => {
     if (kw.length < 2) {
       toast.error('검색어는 2자 이상 입력해 주세요.');
       return;
     }
     const res = await search(kw);
-    if (!res.ok) {
-      toast.error(res.error ?? '검색에 실패했습니다.');
+    if (!res.ok) toast.error(res.error ?? '검색에 실패했습니다.');
+  };
+
+  const handleSearch = () => runSearch(keyword.trim());
+
+  const handleSaveKeyword = () => {
+    const kw = keyword.trim();
+    if (kw.length < 2) {
+      toast.error('저장할 키워드는 2자 이상 입력해 주세요.');
       return;
     }
+    const added = saveKeyword(kw);
+    toast.success(added ? '키워드를 저장했습니다.' : '이미 저장된 키워드입니다.');
+  };
+
+  const handleUseSaved = (kw: string) => {
+    setKeyword(kw);
+    runSearch(kw);
   };
 
   const handleConfirmDelete = async () => {
@@ -93,18 +106,26 @@ export function GmailDeletePanel() {
           </p>
         </div>
 
-        {/* 검색 입력 */}
+        {/* 검색 입력 — 아이콘/입력/저장을 flex로 나란히 배치(겹침 방지) */}
         <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-secondary" />
+          <div className="flex items-center gap-2 flex-1 min-w-0 px-3 rounded-lg border border-border bg-white focus-within:border-[#2E6FF2]">
+            <Search size={15} className="text-foreground-secondary shrink-0" />
             <input
               type="text"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
-              placeholder="예: 광고, from:noreply@example.com, subject:영수증"
-              className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border text-[13px] text-foreground focus:outline-none focus:border-[#2E6FF2]"
+              placeholder="예: 광고, from:noreply@example.com"
+              className="flex-1 min-w-0 py-2.5 bg-transparent text-[13px] text-foreground focus:outline-none"
             />
+            <button
+              type="button"
+              onClick={handleSaveKeyword}
+              title="이 키워드 저장"
+              className="shrink-0 text-foreground-secondary hover:text-[#2E6FF2] transition-colors"
+            >
+              <BookmarkPlus size={16} />
+            </button>
           </div>
           <button
             onClick={handleSearch}
@@ -115,6 +136,36 @@ export function GmailDeletePanel() {
             검색
           </button>
         </div>
+
+        {/* 저장된 키워드 (즐겨찾기) */}
+        {savedKeywords.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] text-foreground-secondary shrink-0">저장된 키워드</span>
+            {savedKeywords.map((kw) => (
+              <span
+                key={kw}
+                className="inline-flex items-center gap-1 pl-3 pr-1.5 py-1 rounded-full bg-surface border border-border"
+              >
+                <button
+                  type="button"
+                  onClick={() => handleUseSaved(kw)}
+                  title="이 키워드로 검색"
+                  className="max-w-[200px] truncate text-[12px] text-foreground hover:text-[#2E6FF2]"
+                >
+                  {kw}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeKeyword(kw)}
+                  title="키워드 삭제"
+                  className="shrink-0 text-foreground-secondary hover:text-danger"
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* 결과 */}
         {searched && (
