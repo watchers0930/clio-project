@@ -48,8 +48,8 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
 
   return (
     <>
-      {/* 모바일: 카드 리스트 */}
-      <div className="space-y-[10px] md:hidden">
+      {/* 모바일: 카드 리스트 (space-y-2.5 = 10px, arbitrary 클래스는 빌드에서 누락되므로 표준 클래스 사용) */}
+      <div className="space-y-2.5 md:hidden">
         {projects.map((p) => {
           const isOwner = !!currentUserId && p.created_by === currentUserId;
           const rec = receivable(p);
