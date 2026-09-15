@@ -112,30 +112,30 @@ function MeetingsPageContent() {
                 회의록 생성과 기존 회의록 검토부터 시작한 뒤 문서 운영 흐름으로 넘기세요.
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
               <button
                 onClick={() => join('adhoc')}
                 disabled={joiningKey === 'adhoc'}
-                className="h-9 inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 text-[13px] font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-60"
+                className="h-9 inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-primary px-3 text-[13px] font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-60 sm:px-4"
               >
-                <Video size={15} />
+                <Video size={15} className="shrink-0" />
                 {joiningKey === 'adhoc' ? '준비 중…' : '화상회의 시작'}
               </button>
               <button
                 onClick={() => router.push('/documents')}
-                className="h-9 rounded-xl bg-foreground px-4 text-[13px] font-medium text-white transition-colors hover:bg-primary"
+                className="h-9 inline-flex items-center justify-center whitespace-nowrap rounded-xl bg-foreground px-3 text-[13px] font-medium text-white transition-colors hover:bg-primary sm:px-4"
               >
                 회의 기반 문서 작성
               </button>
               <button
                 onClick={() => setSttModalOpen(true)}
-                className="h-9 rounded-xl border border-border bg-white px-4 text-[13px] font-medium text-foreground-secondary transition-colors hover:bg-surface-secondary"
+                className="h-9 inline-flex items-center justify-center whitespace-nowrap rounded-xl border border-border bg-white px-3 text-[13px] font-medium text-foreground-secondary transition-colors hover:bg-surface-secondary sm:px-4"
               >
                 음성 회의록
               </button>
               <Link
                 href="/schedule"
-                className="h-9 inline-flex items-center rounded-xl border border-border bg-white px-4 text-[13px] font-medium text-foreground-secondary transition-colors hover:bg-surface-secondary"
+                className="h-9 inline-flex items-center justify-center whitespace-nowrap rounded-xl border border-border bg-white px-3 text-[13px] font-medium text-foreground-secondary transition-colors hover:bg-surface-secondary sm:px-4"
               >
                 일정 보기
               </Link>
@@ -172,20 +172,20 @@ function MeetingsPageContent() {
             {events.length === 0 ? (
               <EmptyCard label="다가오는 회의 일정이 없습니다." />
             ) : events.map((event) => (
-              <div key={event.id} className="rounded-2xl border border-border bg-surface-tertiary p-5 flex items-center justify-between gap-4">
+              <div key={event.id} className="rounded-2xl border border-border bg-surface-tertiary p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="truncate text-[14px] font-semibold text-foreground">{event.title}</p>
-                  <p className="mt-3 text-[12px] text-foreground-secondary">
+                  <p className="mt-2 text-[12px] text-foreground-secondary sm:mt-3">
                     {event.start_at.split('T')[0]} · {event.location || '장소 미정'} · {event.creator_name || '작성자 미상'}
                   </p>
                 </div>
-                <div className="flex flex-wrap justify-end gap-3 shrink-0">
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end sm:gap-3 sm:shrink-0">
                   <button
                     onClick={() => join(event.id, event.id)}
                     disabled={joiningKey === event.id}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-[12px] font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-60"
+                    className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-primary px-4 py-2.5 text-[12px] font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-60"
                   >
-                    <Video size={14} />
+                    <Video size={14} className="shrink-0" />
                     {joiningKey === event.id ? '준비 중…' : '화상회의 입장'}
                   </button>
                   <button
@@ -194,22 +194,22 @@ function MeetingsPageContent() {
                       contextTitle: event.title,
                       instructions: `${event.title} 회의 내용을 정리한 회의록 초안을 작성하세요.`,
                     }))}
-                    className="rounded-xl bg-foreground px-4 py-2.5 text-[12px] font-medium text-white hover:bg-primary transition-colors"
+                    className="inline-flex items-center justify-center whitespace-nowrap rounded-xl bg-foreground px-4 py-2.5 text-[12px] font-medium text-white hover:bg-primary transition-colors"
                   >
                     회의록 작성
                   </button>
                   <button
                     onClick={() => router.push(`/search?q=${encodeURIComponent(event.title)}`)}
-                    className="inline-flex items-center gap-2 rounded-xl border border-border-tint px-4 py-2.5 text-[12px] font-medium text-primary hover:bg-primary-tint transition-colors"
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-border-tint px-4 py-2.5 text-[12px] font-medium text-primary hover:bg-primary-tint transition-colors"
                   >
-                    <Search size={14} />
+                    <Search size={14} className="shrink-0" />
                     관련 문서 검색
                   </button>
                   <button
                     onClick={() => handleCopyInvite(event.id)}
-                    className="inline-flex items-center gap-2 rounded-xl border border-border-tint px-4 py-2.5 text-[12px] font-medium text-foreground-secondary hover:bg-surface-secondary transition-colors"
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-border-tint px-4 py-2.5 text-[12px] font-medium text-foreground-secondary hover:bg-surface-secondary transition-colors"
                   >
-                    <Link2 size={14} />
+                    <Link2 size={14} className="shrink-0" />
                     초대 링크
                   </button>
                 </div>
