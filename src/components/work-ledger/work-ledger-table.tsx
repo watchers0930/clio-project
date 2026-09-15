@@ -49,7 +49,7 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
   return (
     <>
       {/* 모바일: 카드 리스트 */}
-      <div className="space-y-3 md:hidden">
+      <div className="space-y-[10px] md:hidden">
         {projects.map((p) => {
           const isOwner = !!currentUserId && p.created_by === currentUserId;
           const rec = receivable(p);
