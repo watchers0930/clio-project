@@ -120,6 +120,7 @@ function Sidebar({ collapsed = false, onToggle, mobile = false }: SidebarProps) 
       <Link
         key={item.href}
         href={item.href}
+        onClick={mobile ? onToggle : undefined}
         className={cn(
           'flex items-center rounded-md transition-all duration-150 border',
           isActive
@@ -170,7 +171,7 @@ function Sidebar({ collapsed = false, onToggle, mobile = false }: SidebarProps) 
         'flex items-center h-14 flex-shrink-0',
         collapsed && !mobile ? 'justify-center' : 'px-6'
       )}>
-        <Link href="/dashboard" className="text-[28px] font-light tracking-[0.3em] text-white select-none font-serif hover:text-white/80 transition-colors">
+        <Link href="/dashboard" onClick={mobile ? onToggle : undefined} className="text-[28px] font-light tracking-[0.3em] text-white select-none font-serif hover:text-white/80 transition-colors">
           {collapsed && !mobile ? 'C' : 'CLIO'}
         </Link>
       </div>
