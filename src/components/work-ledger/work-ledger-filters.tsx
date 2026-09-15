@@ -20,16 +20,16 @@ interface Props {
   exportDisabled: boolean;
 }
 
-const CTRL = 'h-9 rounded-xl border border-border bg-white px-3 text-[13px] text-foreground-secondary focus:outline-none focus:ring-1 focus:ring-primary';
+const CTRL = 'h-9 w-full rounded-xl border border-border bg-white px-3 text-[13px] text-foreground-secondary focus:outline-none focus:ring-1 focus:ring-primary sm:w-auto';
 
 export function WorkLedgerFilters({
   query, onQuery, statusFilter, onStatusFilter, sortKey, onSortKey, onExport, onAdd, exportDisabled,
 }: Props) {
   const [showCalc, setShowCalc] = useState(false);
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="flex items-center gap-2">
-        <div className="relative">
+        <div className="relative flex-1 sm:flex-none">
           <Search size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 z-10 text-foreground-quaternary" />
           <input
             type="text"
@@ -37,7 +37,7 @@ export function WorkLedgerFilters({
             onChange={(e) => onQuery(e.target.value)}
             placeholder="프로젝트명·발주처 검색"
             style={{ paddingLeft: '38px' }}
-            className="h-9 w-60 rounded-xl border border-border bg-surface-secondary pr-3 text-[13px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="h-9 w-full rounded-xl border border-border bg-surface-secondary pr-3 text-[13px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-1 focus:ring-primary sm:w-60"
           />
         </div>
         <button
@@ -52,7 +52,7 @@ export function WorkLedgerFilters({
 
       <CalculatorModal open={showCalc} onClose={() => setShowCalc(false)} />
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
         <select value={statusFilter} onChange={(e) => onStatusFilter(e.target.value as StatusFilter)} className={CTRL}>
           <option value="all">전체 상태</option>
           {(Object.keys(STATUS_LABELS) as WorkProjectStatus[]).map((s) => (
@@ -67,14 +67,14 @@ export function WorkLedgerFilters({
         <button
           onClick={onExport}
           disabled={exportDisabled}
-          className="flex h-9 items-center gap-1.5 rounded-xl border border-border px-4 text-[13px] font-medium text-foreground hover:bg-surface-secondary disabled:opacity-40 transition-colors"
+          className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-border px-4 text-[13px] font-medium text-foreground hover:bg-surface-secondary disabled:opacity-40 transition-colors sm:w-auto"
         >
           <Download size={15} strokeWidth={1.5} />
           엑셀
         </button>
         <button
           onClick={onAdd}
-          className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-4 text-[13px] font-medium text-white hover:bg-primary-dark transition-colors"
+          className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-primary px-4 text-[13px] font-medium text-white hover:bg-primary-dark transition-colors sm:w-auto"
         >
           <Plus size={15} strokeWidth={1.5} />
           작업 추가

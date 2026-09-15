@@ -47,7 +47,97 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-border">
+    <>
+      {/* 모바일: 카드 리스트 */}
+      <div className="space-y-3 md:hidden">
+        {projects.map((p) => {
+          const isOwner = !!currentUserId && p.created_by === currentUserId;
+          const rec = receivable(p);
+          return (
+            <div key={p.id} className="rounded-xl border border-border bg-white p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <StatusBadge project={p} />
+                  <p className="mt-1.5 break-words text-[14px] font-medium text-foreground">{p.name}</p>
+                </div>
+                <div className="flex flex-shrink-0 items-center gap-3">
+                  <button onClick={() => onView(p)} className="text-foreground-secondary hover:text-primary transition-colors" title="보기">
+                    <Eye size={17} strokeWidth={1.5} />
+                  </button>
+                  {isOwner && (
+                    <>
+                      <button onClick={() => onEdit(p)} className="text-foreground-secondary hover:text-primary transition-colors" title="수정">
+                        <Pencil size={16} strokeWidth={1.5} />
+                      </button>
+                      <button onClick={() => onDelete(p)} className="text-foreground-secondary hover:text-red-500 transition-colors" title="삭제">
+                        <Trash2 size={16} strokeWidth={1.5} />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {(p.client_name || p.supplier_name || p.manager_name || p.due_date) && (
+                <div className="mt-2.5 space-y-0.5 text-[12px] text-foreground-tertiary">
+                  {p.client_name && <div>발주 {p.client_name}</div>}
+                  {p.supplier_name && <div>매입 {p.supplier_name}</div>}
+                  {p.manager_name && <div>담당 {p.manager_name}</div>}
+                  {p.due_date && <div className="text-foreground-quaternary">완료예정 {p.due_date}</div>}
+                </div>
+              )}
+
+              <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border pt-3">
+                <div>
+                  <p className="text-[11px] text-foreground-quaternary">계약총액</p>
+                  <p className="mt-0.5 text-[14px] font-medium text-foreground">{formatKRW(p.contract_amount)}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-foreground-quaternary">매입금액</p>
+                  <p className="mt-0.5 text-[14px] font-medium text-foreground">{formatKRW(p.purchase_amount)}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-foreground-quaternary">예상수익</p>
+                  <p className="mt-0.5 text-[14px] font-medium text-primary">
+                    {formatKRW(expectedProfit(p.contract_amount, p.purchase_amount))}
+                    <span className="ml-1 text-[11px] text-foreground-quaternary">{marginRate(p.contract_amount, p.purchase_amount)}%</span>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-foreground-quaternary">미수금</p>
+                  <p className={`mt-0.5 text-[14px] font-medium ${rec > 0 ? 'text-foreground' : 'text-foreground-quaternary'}`}>{formatKRW(rec)}</p>
+                </div>
+              </div>
+
+              {p.payments.length > 0 && (
+                <div className="mt-3 border-t border-border pt-3">
+                  <p className="text-[11px] text-foreground-quaternary">수금내역</p>
+                  <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1.5">
+                    {p.payments.map((pay, i) => {
+                      const label = pay.type === 'interim' ? `중도금${pay.seq}` : PAYMENT_TYPE_LABELS[pay.type];
+                      return (
+                        <div key={pay.id ?? i} className="text-[13px]">
+                          <span className="font-medium text-emerald-600">{formatNumber(pay.amount)}</span>
+                          <span className="ml-1 text-[11px] text-foreground-quaternary">{label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {p.note && (
+                <div className="mt-3 border-t border-border pt-3">
+                  <p className="text-[11px] text-foreground-quaternary">비고</p>
+                  <p className="mt-1 whitespace-pre-wrap break-words text-[12px] text-foreground-secondary">{p.note}</p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 데스크탑: 테이블 */}
+      <div className="hidden overflow-x-auto rounded-xl border border-border md:block">
       <table className="w-full min-w-[1120px] table-fixed text-[13px]">
         <colgroup>
           <col style={{ width: '5.5%' }} />
@@ -137,6 +227,7 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
           })}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   );
 }

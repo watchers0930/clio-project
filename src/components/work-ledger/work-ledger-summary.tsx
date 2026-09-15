@@ -25,21 +25,21 @@ export function WorkLedgerSummary({ projects }: Props) {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-5 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-5">
       {cards.map((c) => {
         const Icon = c.icon;
         return (
-          <div key={c.label} className="rounded-xl border border-border bg-white px-5 py-6">
-            <div className="flex items-center gap-2.5">
+          <div key={c.label} className="rounded-xl border border-border bg-white px-4 py-4 sm:px-5 sm:py-6">
+            <div className="flex items-center gap-2">
               <span
-                className="flex h-8 w-8 items-center justify-center rounded-lg"
+                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg sm:h-8 sm:w-8"
                 style={{ backgroundColor: `${c.color}14`, color: c.color }}
               >
-                <Icon size={16} strokeWidth={1.8} />
+                <Icon size={15} strokeWidth={1.8} />
               </span>
-              <span className="text-[12px] text-foreground-secondary">{c.label}</span>
+              <span className="text-[11px] text-foreground-secondary sm:text-[12px]">{c.label}</span>
             </div>
-            <p className="mt-4 text-[19px] font-semibold text-foreground">{c.value}</p>
+            <p className="mt-3 break-all text-[16px] font-semibold leading-tight text-foreground sm:mt-4 sm:text-[19px]">{c.value}</p>
           </div>
         );
       })}
