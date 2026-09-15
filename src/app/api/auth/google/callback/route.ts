@@ -29,8 +29,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}/settings?tab=gmail&error=no_token`);
     }
 
-    // Gmail 읽기 권한 동의 여부 확인 (부분 동의 방지)
-    if (!(tokens.scope ?? '').includes('gmail.readonly')) {
+    // Gmail 권한 동의 여부 확인 (부분 동의 방지)
+    // gmail.modify는 읽기·휴지통이동을 모두 포함. 하위 호환으로 readonly도 허용(읽기·검색만 가능, 삭제는 불가).
+    const grantedScope = tokens.scope ?? '';
+    if (!grantedScope.includes('gmail.modify') && !grantedScope.includes('gmail.readonly')) {
       return NextResponse.redirect(`${origin}/settings?tab=gmail&error=scope`);
     }
 
@@ -48,6 +50,7 @@ export async function GET(request: NextRequest) {
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
       token_expiry: tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : null,
+      scope: grantedScope, // 재동의 여부(삭제 권한 보유) 판별에 사용
       sync_enabled: true,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' });

@@ -1,7 +1,9 @@
 import { google } from 'googleapis';
 
+// gmail.modify: 읽기 + 라벨 수정(휴지통 이동 포함). 영구 삭제(messages.delete)는 불가하므로
+// 사용자 실수 시에도 Gmail 휴지통에서 복구 가능하다. readonly의 상위 권한이라 검색·본문 조회도 그대로 동작.
 const SCOPES = [
-  'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/gmail.modify',
   'openid',
   'email',
 ];

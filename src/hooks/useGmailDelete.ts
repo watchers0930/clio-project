@@ -1,0 +1,135 @@
+'use client';
+
+import { useCallback, useState } from 'react';
+
+export interface GmailDeleteHit {
+  id: string;
+  subject: string;
+  from: string;
+  date: string;
+}
+
+interface SearchMeta {
+  total: number;
+  truncated: boolean;
+  previewLimit: number;
+}
+
+interface SearchResponse {
+  success?: boolean;
+  hits?: GmailDeleteHit[];
+  totalEstimate?: number;
+  truncated?: boolean;
+  previewLimit?: number;
+  error?: string;
+  code?: string;
+}
+
+interface ActionResult {
+  ok: boolean;
+  error?: string;
+  code?: string;
+  trashed?: number;
+}
+
+/**
+ * 지메일 키워드 삭제 패널의 상태·API 호출 로직.
+ * 검색 → 결과 선택 → 휴지통 이동 흐름을 담당한다. (UI는 gmail-delete-panel에서 렌더)
+ */
+export function useGmailDelete() {
+  const [hits, setHits] = useState<GmailDeleteHit[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [searching, setSearching] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [meta, setMeta] = useState<SearchMeta>({ total: 0, truncated: false, previewLimit: 100 });
+
+  const search = useCallback(async (keyword: string): Promise<ActionResult> => {
+    setSearching(true);
+    setSearched(false);
+    try {
+      const res = await fetch('/api/gmail/search-messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyword }),
+      });
+      const data: SearchResponse = await res.json();
+      if (!res.ok || !data.success) {
+        setHits([]);
+        setSelected(new Set());
+        return { ok: false, error: data.error, code: data.code };
+      }
+      const list = data.hits ?? [];
+      setHits(list);
+      // 기본 전체 선택 — 사용자가 목록을 눈으로 확인하고 필요 시 해제한다.
+      setSelected(new Set(list.map((h) => h.id)));
+      setMeta({
+        total: data.totalEstimate ?? list.length,
+        truncated: Boolean(data.truncated),
+        previewLimit: data.previewLimit ?? 100,
+      });
+      setSearched(true);
+      return { ok: true };
+    } catch {
+      return { ok: false, error: '검색 중 오류가 발생했습니다.' };
+    } finally {
+      setSearching(false);
+    }
+  }, []);
+
+  const toggle = useCallback((id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleAll = useCallback(() => {
+    setSelected((prev) => (prev.size === hits.length ? new Set() : new Set(hits.map((h) => h.id))));
+  }, [hits]);
+
+  const remove = useCallback(async (): Promise<ActionResult> => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return { ok: false, error: '삭제할 메일을 선택해 주세요.' };
+    setDeleting(true);
+    try {
+      const res = await fetch('/api/gmail/delete-messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageIds: ids }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) return { ok: false, error: data.error, code: data.code };
+      // 방금 삭제한 항목을 목록에서 제거
+      setHits((prev) => prev.filter((h) => !selected.has(h.id)));
+      setSelected(new Set());
+      return { ok: true, trashed: data.trashed };
+    } catch {
+      return { ok: false, error: '삭제 중 오류가 발생했습니다.' };
+    } finally {
+      setDeleting(false);
+    }
+  }, [selected]);
+
+  const reset = useCallback(() => {
+    setHits([]);
+    setSelected(new Set());
+    setSearched(false);
+  }, []);
+
+  return {
+    hits,
+    selected,
+    searching,
+    deleting,
+    searched,
+    meta,
+    search,
+    toggle,
+    toggleAll,
+    remove,
+    reset,
+  };
+}

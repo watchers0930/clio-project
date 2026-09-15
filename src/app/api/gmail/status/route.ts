@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
   const { data } = await supabase
     .from('user_google_connections')
-    .select('email, last_synced_at, sync_enabled, created_at')
+    .select('email, last_synced_at, sync_enabled, created_at, scope')
     .eq('user_id', userId)
     .single();
 
@@ -26,5 +26,7 @@ export async function GET(request: NextRequest) {
     lastSyncedAt: data.last_synced_at,
     syncEnabled: data.sync_enabled,
     connectedAt: data.created_at,
+    // gmail.modify 권한이 있어야 키워드 메일 삭제(휴지통 이동) 가능. 없으면 재연결 필요.
+    canDelete: (data.scope ?? '').includes('gmail.modify'),
   });
 }

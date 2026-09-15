@@ -49,6 +49,7 @@ export type DbGoogleConnection = {
   token_expiry: string | null;
   last_synced_at: string | null;
   sync_enabled: boolean;
+  scope: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -378,8 +379,8 @@ export interface Database {
       };
       user_google_connections: {
         Row: DbGoogleConnection;
-        Insert: { id?: string; user_id: string; email: string; access_token: string; refresh_token: string; token_expiry?: string | null; last_synced_at?: string | null; sync_enabled?: boolean; created_at?: string; updated_at?: string };
-        Update: { email?: string; access_token?: string; refresh_token?: string; token_expiry?: string | null; last_synced_at?: string | null; sync_enabled?: boolean; updated_at?: string };
+        Insert: { id?: string; user_id: string; email: string; access_token: string; refresh_token: string; token_expiry?: string | null; last_synced_at?: string | null; sync_enabled?: boolean; scope?: string | null; created_at?: string; updated_at?: string };
+        Update: { email?: string; access_token?: string; refresh_token?: string; token_expiry?: string | null; last_synced_at?: string | null; sync_enabled?: boolean; scope?: string | null; updated_at?: string };
         Relationships: [];
       };
       file_chunks: {

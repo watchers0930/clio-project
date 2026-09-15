@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Mail, RefreshCw, Unlink, CheckCircle, AlertCircle } from 'lucide-react';
+import { Mail, RefreshCw, Unlink, CheckCircle, AlertCircle, ShieldCheck } from 'lucide-react';
 import { Badge, Spinner } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
+import { GmailDeletePanel } from './gmail-delete-panel';
 
 interface GmailStatus {
   connected: boolean;
@@ -11,6 +12,7 @@ interface GmailStatus {
   lastSyncedAt?: string;
   syncEnabled?: boolean;
   connectedAt?: string;
+  canDelete?: boolean;
 }
 
 interface GmailSectionProps {
@@ -120,6 +122,7 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
   }
 
   return (
+    <div className="flex flex-col gap-6">
     <div className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden">
       <div className="px-8 py-6 border-b border-border">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -240,7 +243,7 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
                     개인이 직접 연결하려면 앱을 External로 두고 Production으로 게시해야 합니다.
                   </p>
                   <p className="mt-2 text-[12px] leading-5 text-amber-800">
-                    현재 요청 권한은 gmail.readonly입니다. 이 권한은 Google 검증 대상이라, 공개 배포 전에는 OAuth 설정과 검증 상태를 맞춰야 합니다.
+                    현재 요청 권한은 gmail.modify(읽기 + 휴지통 이동)입니다. 이 권한은 Google 검증 대상(restricted scope)이라, 공개 배포 전에는 OAuth 설정과 검증 상태를 맞춰야 합니다.
                   </p>
                 </div>
               </div>
@@ -260,11 +263,38 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
             </a>
 
             <p className="mt-4 text-[11px] text-foreground-secondary">
-              연결 시 이메일 읽기 권한만 요청합니다. 이메일 전송·수정·삭제는 불가합니다.
+              연결 시 이메일 읽기와 <strong>휴지통 이동(키워드 삭제)</strong> 권한을 요청합니다. 이메일 발송·영구 삭제는 하지 않습니다.
             </p>
           </div>
         )}
       </div>
+    </div>
+
+    {/* 연결 상태에서만: 삭제 권한 있으면 삭제 패널, 없으면 재연결 유도 */}
+    {status?.connected && (
+      status.canDelete ? (
+        <GmailDeletePanel />
+      ) : (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 shadow-sm px-8 py-6">
+          <div className="flex items-start gap-3">
+            <ShieldCheck size={18} className="text-amber-600 mt-0.5 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-amber-900">키워드 메일 삭제를 쓰려면 재연결이 필요합니다</p>
+              <p className="mt-1 text-[12px] leading-5 text-amber-800">
+                현재 연결은 읽기 전용 권한입니다. 키워드로 메일을 검색해 휴지통으로 옮기려면 삭제(휴지통 이동) 권한에 다시 동의해야 합니다.
+              </p>
+              <a
+                href="/api/auth/google"
+                className="mt-3 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#2E6FF2] text-white text-[13px] font-medium hover:bg-[#2560dc] transition-colors"
+              >
+                <RefreshCw size={14} />
+                삭제 권한 추가로 다시 연결
+              </a>
+            </div>
+          </div>
+        </div>
+      )
+    )}
     </div>
   );
 }
