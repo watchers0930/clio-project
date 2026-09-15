@@ -105,7 +105,7 @@ export default function ReviewsPage() {
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-secondary px-4 py-3">
               <div>
                 <p className="text-[10px] font-semibold text-foreground-tertiary">검토 대상 문서</p>
