@@ -64,7 +64,7 @@ export function ContractRiskHero({ sourceHint, onOpenFiles, onOpenDocuments }: H
             <button onClick={onOpenDocuments} className="h-9 rounded-xl border border-border bg-white px-4 text-[13px] font-medium text-foreground-secondary transition-colors hover:bg-surface-secondary">문서 생성</button>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-secondary px-4 py-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm"><ShieldCheck size={14} className="text-primary" strokeWidth={1.5} /></div>
             <div><p className="text-[10px] font-semibold text-foreground-tertiary">검토 항목</p><p className="text-[16px] font-bold text-foreground font-num leading-tight">25</p></div>
