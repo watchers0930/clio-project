@@ -12,6 +12,7 @@ import { MemoLockSection } from '@/components/settings/memo-lock-section';
 import { LocalSyncSection } from '@/components/settings/local-sync-section';
 import type { Department, UserItem } from '@/components/settings/types';
 import { useAuthStore } from '@/store/auth-store';
+import { cn } from '@/lib/utils';
 
 type SettingsTab = 'departments' | 'users' | 'signature' | 'templates' | 'menus' | 'gmail' | 'memo-lock' | 'local-sync';
 
@@ -471,6 +472,17 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
     );
   }
 
+  const settingsTabs = [
+    { id: 'menus', label: '메뉴', icon: <LayoutGrid size={15} /> },
+    { id: 'departments', label: '부서', icon: <Building2 size={15} /> },
+    ...(isAdmin ? [{ id: 'users', label: '사용자', icon: <Users size={15} /> }] : []),
+    { id: 'signature', label: '서명', icon: <PenLine size={15} /> },
+    { id: 'templates', label: '템플릿', icon: <FileText size={15} /> },
+    { id: 'memo-lock', label: '메모 잠금', icon: <Lock size={15} /> },
+    { id: 'gmail', label: 'Gmail', icon: <Mail size={15} /> },
+    { id: 'local-sync', label: '로컬 동기화', icon: <HardDrive size={15} /> },
+  ];
+
   return (
     <div className="flex flex-col gap-5">
       <section className="rounded-2xl border border-border bg-white shadow-sm">
@@ -480,20 +492,31 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
         </div>
       </section>
 
-      <div className="overflow-x-auto">
+      {/* 모바일: 2열 그리드 (가로스크롤 대신 전체 메뉴를 한눈에) */}
+      <div className="grid grid-cols-2 gap-2 sm:hidden">
+        {settingsTabs.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id as SettingsTab)}
+            className={cn(
+              'flex items-center gap-2 rounded-xl border px-3 py-3 text-[13px] font-medium transition-colors',
+              tab === t.id
+                ? 'border-primary bg-primary/5 text-primary'
+                : 'border-border bg-white text-foreground-secondary hover:bg-surface-secondary'
+            )}
+          >
+            <span className="flex-shrink-0">{t.icon}</span>
+            <span className="truncate">{t.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* 데스크탑: 기존 pill 탭 */}
+      <div className="hidden overflow-x-auto sm:block">
         <Tabs
-        tabs={[
-          { id: 'menus', label: '메뉴', icon: <LayoutGrid size={15} /> },
-          { id: 'departments', label: '부서', icon: <Building2 size={15} /> },
-          ...(isAdmin ? [{ id: 'users', label: '사용자', icon: <Users size={15} /> }] : []),
-          { id: 'signature', label: '서명', icon: <PenLine size={15} /> },
-          { id: 'templates', label: '템플릿', icon: <FileText size={15} /> },
-          { id: 'memo-lock', label: '메모 잠금', icon: <Lock size={15} /> },
-          { id: 'gmail', label: 'Gmail', icon: <Mail size={15} /> },
-          { id: 'local-sync', label: '로컬 동기화', icon: <HardDrive size={15} /> },
-        ]}
-        activeTab={tab}
-        onChange={(id) => setTab(id as SettingsTab)}
+          tabs={settingsTabs}
+          activeTab={tab}
+          onChange={(id) => setTab(id as SettingsTab)}
         />
       </div>
 
