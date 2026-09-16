@@ -157,7 +157,7 @@ export function GmailDeletePanel() {
           </button>
         </div>
 
-        {/* 저장된 키워드 (즐겨찾기) — 칩을 여러 개 선택하면 OR로 묶어 한 번에 검색한다. 기본 3열 그리드. */}
+        {/* 저장된 키워드 (즐겨찾기) — 칩을 여러 개 선택하면 OR로 묶어 한 번에 검색한다. 기본 2열 그리드. */}
         {savedKeywords.length > 0 && (
           <div className="flex flex-col gap-2">
             <span className="text-[11px] text-foreground-secondary">
@@ -175,7 +175,7 @@ export function GmailDeletePanel() {
                 </>
               )}
             </span>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {savedKeywords.map((kw) => {
                 const active = selectedKeywords.has(kw);
                 return (
