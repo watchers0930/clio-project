@@ -157,10 +157,10 @@ export function GmailDeletePanel() {
           </button>
         </div>
 
-        {/* 저장된 키워드 (즐겨찾기) — 칩을 여러 개 선택하면 OR로 묶어 한 번에 검색한다. */}
+        {/* 저장된 키워드 (즐겨찾기) — 칩을 여러 개 선택하면 OR로 묶어 한 번에 검색한다. 기본 3열 그리드. */}
         {savedKeywords.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] text-foreground-secondary shrink-0">
+          <div className="flex flex-col gap-2">
+            <span className="text-[11px] text-foreground-secondary">
               저장된 키워드
               {selectedKeywords.size > 0 && (
                 <>
@@ -168,44 +168,46 @@ export function GmailDeletePanel() {
                   <button
                     type="button"
                     onClick={clearSelectedKeywords}
-                    className="ml-1.5 text-foreground-secondary hover:text-danger underline underline-offset-2"
+                    className="ml-2 text-foreground-secondary hover:text-danger underline underline-offset-2"
                   >
                     초기화
                   </button>
                 </>
               )}
             </span>
-            {savedKeywords.map((kw) => {
-              const active = selectedKeywords.has(kw);
-              return (
-                <span
-                  key={kw}
-                  className={`inline-flex items-center gap-1 pl-3 pr-1.5 py-1 rounded-full border transition-colors ${
-                    active ? 'bg-blue-50 border-[#2E6FF2]' : 'bg-surface border-border'
-                  }`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggleKeyword(kw)}
-                    aria-pressed={active}
-                    title={active ? '선택 해제' : '이 키워드 선택(여러 개 선택 가능)'}
-                    className={`max-w-[200px] truncate text-[12px] ${
-                      active ? 'text-[#2E6FF2] font-medium' : 'text-foreground hover:text-[#2E6FF2]'
+            <div className="grid grid-cols-3 gap-2">
+              {savedKeywords.map((kw) => {
+                const active = selectedKeywords.has(kw);
+                return (
+                  <span
+                    key={kw}
+                    className={`flex items-center gap-1 pl-3 pr-1.5 py-1 rounded-full border transition-colors ${
+                      active ? 'bg-blue-50 border-[#2E6FF2]' : 'bg-surface border-border'
                     }`}
                   >
-                    {kw}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => removeKeyword(kw)}
-                    title="키워드 삭제"
-                    className="shrink-0 text-foreground-secondary hover:text-danger"
-                  >
-                    <X size={12} />
-                  </button>
-                </span>
-              );
-            })}
+                    <button
+                      type="button"
+                      onClick={() => toggleKeyword(kw)}
+                      aria-pressed={active}
+                      title={active ? '선택 해제' : '이 키워드 선택(여러 개 선택 가능)'}
+                      className={`flex-1 min-w-0 truncate text-left text-[12px] ${
+                        active ? 'text-[#2E6FF2] font-medium' : 'text-foreground hover:text-[#2E6FF2]'
+                      }`}
+                    >
+                      {kw}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeKeyword(kw)}
+                      title="키워드 삭제"
+                      className="shrink-0 text-foreground-secondary hover:text-danger"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
           </div>
         )}
 
