@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import type { MemoItem, MemoColor } from '@/lib/supabase/types';
+import { VoiceInputButton } from '@/components/common/VoiceInputButton';
 
 const COLORS: { value: MemoColor; hex: string; label: string }[] = [
   { value: 'default', hex: '#94A3B8', label: '기본' },
@@ -59,6 +60,12 @@ export default function MemoFormModal({ open, onClose, onSubmit, memo, initialDa
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
   }, [open, onClose]);
+
+  // 음성 변환 결과를 본문에 이어붙인다(여러 번 녹음 가능). 기존 내용이 있으면 줄바꿈 후 추가.
+  const handleVoiceTranscript = (text: string) => {
+    if (!text) return;
+    setContent((prev) => (prev.trim() ? `${prev}\n${text}` : text));
+  };
 
   const handleSubmit = async () => {
     if (!title.trim() || loading) return;
@@ -177,10 +184,17 @@ export default function MemoFormModal({ open, onClose, onSubmit, memo, initialDa
 
           {/* 내용 입력 */}
           <div style={{ marginTop: 10, marginBottom: 20 }}>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[11px] text-foreground-quaternary font-medium">내용</span>
+              <div className="flex items-center gap-1 text-[11px] text-foreground-quaternary">
+                <span>음성으로 입력</span>
+                <VoiceInputButton multiline onTranscript={handleVoiceTranscript} />
+              </div>
+            </div>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="내용을 입력하세요 (선택사항)"
+              placeholder="내용을 입력하거나 마이크로 받아쓰세요 (선택사항)"
               rows={5}
               className="w-full px-4 py-3 text-[13px] text-foreground-secondary rounded-xl outline-none resize-none transition-all leading-[1.8]"
               style={{

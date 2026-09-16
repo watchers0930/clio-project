@@ -7,11 +7,13 @@ interface VoiceInputButtonProps {
   onTranscript: (text: string) => void;
   className?: string;
   disabled?: boolean;
+  /** true면 변환된 전체 문장을 그대로 전달(메모 본문용). 기본(false)은 첫 줄만(검색창용). */
+  multiline?: boolean;
 }
 
 type VoiceStatus = 'idle' | 'recording' | 'processing';
 
-export function VoiceInputButton({ onTranscript, className, disabled }: VoiceInputButtonProps) {
+export function VoiceInputButton({ onTranscript, className, disabled, multiline = false }: VoiceInputButtonProps) {
   const [status, setStatus] = useState<VoiceStatus>('idle');
   const [error, setError] = useState<string | null>(null);
 
@@ -70,8 +72,9 @@ export function VoiceInputButton({ onTranscript, className, disabled }: VoiceInp
         const data = await res.json();
 
         if (data.success && data.data?.transcript) {
-          // 첫 줄만 검색창 입력용으로 사용 (줄바꿈 제거)
-          const text = data.data.transcript.split('\n')[0].trim();
+          // multiline이면 전체 문장(메모 본문), 아니면 첫 줄만(검색창)
+          const raw: string = data.data.transcript;
+          const text = multiline ? raw.trim() : raw.split('\n')[0].trim();
           onTranscript(text);
         }
       } catch {
@@ -83,7 +86,7 @@ export function VoiceInputButton({ onTranscript, className, disabled }: VoiceInp
 
     recorder.start();
     setStatus('recording');
-  }, [onTranscript]);
+  }, [onTranscript, multiline]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current?.state !== 'inactive') {
