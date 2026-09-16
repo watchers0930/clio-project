@@ -56,7 +56,7 @@ export function TransferList({ items, onAdd, onImport, onEdit, onDelete, onToggl
   return (
     <div className="flex flex-col gap-4">
       {/* 액션 바 */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="text-[13px] text-foreground-secondary">
           {selected.size > 0 ? (
             <span>
@@ -67,17 +67,17 @@ export function TransferList({ items, onAdd, onImport, onEdit, onDelete, onToggl
             <span>이체할 건을 선택한 뒤 하나은행 파일을 생성하세요.</span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
           <button
             onClick={onImport}
-            className="flex items-center gap-1.5 h-9 rounded-xl border border-border px-4 text-[13px] font-medium text-foreground hover:bg-surface-secondary transition-colors"
+            className="flex items-center justify-center gap-1.5 h-9 rounded-xl border border-border px-4 text-[13px] font-medium text-foreground hover:bg-surface-secondary transition-colors"
           >
             <FileUp size={15} strokeWidth={1.5} />
             PDF에서 불러오기
           </button>
           <button
             onClick={onAdd}
-            className="flex items-center gap-1.5 h-9 rounded-xl border border-border px-4 text-[13px] font-medium text-foreground hover:bg-surface-secondary transition-colors"
+            className="flex items-center justify-center gap-1.5 h-9 rounded-xl border border-border px-4 text-[13px] font-medium text-foreground hover:bg-surface-secondary transition-colors"
           >
             <Plus size={15} strokeWidth={1.5} />
             이체 건 추가
@@ -85,7 +85,7 @@ export function TransferList({ items, onAdd, onImport, onEdit, onDelete, onToggl
           <button
             onClick={() => void handleExport()}
             disabled={selected.size === 0 || exporting}
-            className="flex items-center gap-1.5 h-9 rounded-xl bg-primary px-4 text-[13px] font-medium text-white hover:bg-primary-dark transition-colors disabled:opacity-40"
+            className="col-span-2 flex items-center justify-center gap-1.5 h-9 rounded-xl bg-primary px-4 text-[13px] font-medium text-white hover:bg-primary-dark transition-colors disabled:opacity-40 sm:col-span-1"
           >
             <Download size={15} strokeWidth={1.5} />
             {exporting ? '생성 중...' : '하나은행 파일 생성'}
@@ -93,8 +93,73 @@ export function TransferList({ items, onAdd, onImport, onEdit, onDelete, onToggl
         </div>
       </div>
 
-      {/* 테이블 */}
-      <div className="overflow-x-auto rounded-xl border border-border">
+      {/* 모바일: 카드 리스트 */}
+      <div className="flex flex-col md:hidden" style={{ gap: '10px' }}>
+        {items.length === 0 ? (
+          <div className="rounded-xl border border-border bg-white py-12 text-center text-[13px] text-foreground-tertiary">
+            등록된 이체 건이 없습니다. &lsquo;이체 건 추가&rsquo; 버튼을 눌러 등록해 주세요.
+          </div>
+        ) : items.map((it) => {
+          const missing = !it.payee_id;
+          return (
+            <div key={it.id} className="rounded-xl border border-border bg-white p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start gap-2.5">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(it.id)}
+                    onChange={() => toggle(it.id)}
+                    disabled={missing}
+                    className="mt-0.5 h-4 w-4 flex-shrink-0 accent-primary disabled:opacity-30"
+                  />
+                  <div className="min-w-0">
+                    <p className="break-words text-[14px] font-medium text-foreground">{it.payee_name}</p>
+                    <p className="mt-0.5 text-[12px] text-foreground-secondary">
+                      {missing ? (
+                        <span className="text-red-500">거래처 삭제됨</span>
+                      ) : (
+                        <>{it.bank_name} <span className="font-mono text-foreground-tertiary">{it.account_masked}</span></>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <span className={`flex-shrink-0 inline-block rounded-full px-2.5 py-1 text-[11px] font-medium ${STATUS_STYLE[it.status]}`}>
+                  {TRANSFER_STATUS_LABELS[it.status]}
+                </span>
+              </div>
+              <div className="mt-3 flex items-end justify-between border-t border-border pt-3">
+                <div>
+                  <p className="text-[11px] text-foreground-quaternary">이체금액</p>
+                  <p className="mt-0.5 font-mono text-[16px] font-medium text-foreground">{Number(it.amount).toLocaleString('ko-KR')}원</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => onToggleDone(it)}
+                    className={`transition-colors ${it.status === 'done' ? 'text-emerald-600' : 'text-foreground-quaternary hover:text-emerald-600'}`}
+                    title={it.status === 'done' ? '완료 해제' : '이체완료 표시'}
+                  >
+                    <Check size={17} strokeWidth={2} />
+                  </button>
+                  <button onClick={() => onEdit(it)} className="text-foreground-secondary hover:text-primary transition-colors" title="수정">
+                    <Pencil size={16} strokeWidth={1.5} />
+                  </button>
+                  <button onClick={() => onDelete(it)} className="text-foreground-secondary hover:text-red-500 transition-colors" title="삭제">
+                    <Trash2 size={16} strokeWidth={1.5} />
+                  </button>
+                </div>
+              </div>
+              {(it.memo || it.deposit_display) && (
+                <p className="mt-2 text-[12px] text-foreground-secondary">
+                  <span className="text-foreground-quaternary">적요 </span>{it.memo || it.deposit_display}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 데스크탑: 테이블 */}
+      <div className="hidden overflow-x-auto rounded-xl border border-border md:block">
         <table className="w-full table-fixed text-[13px]">
           <colgroup>
             <col className="w-[44px]" />

@@ -13,21 +13,51 @@ interface Props {
 export function PayeeManager({ payees, onAdd, onEdit, onDelete }: Props) {
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <h3 className="text-[14px] font-semibold text-foreground">거래처 계좌</h3>
           <p className="mt-0.5 text-[12px] text-foreground-secondary">계좌번호는 암호화 저장되며, 이체 건 등록 시 재사용됩니다.</p>
         </div>
         <button
           onClick={onAdd}
-          className="flex items-center gap-1.5 h-9 rounded-xl bg-primary px-4 text-[13px] font-medium text-white hover:bg-primary-dark transition-colors"
+          className="flex flex-shrink-0 items-center gap-1.5 h-9 rounded-xl bg-primary px-4 text-[13px] font-medium text-white hover:bg-primary-dark transition-colors"
         >
           <Plus size={15} strokeWidth={1.5} />
           거래처 추가
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border">
+      {/* 모바일: 카드 리스트 */}
+      <div className="flex flex-col md:hidden" style={{ gap: '10px' }}>
+        {payees.length === 0 ? (
+          <div className="rounded-xl border border-border bg-white py-12 text-center text-[13px] text-foreground-tertiary">
+            등록된 거래처가 없습니다. &lsquo;거래처 추가&rsquo; 버튼을 눌러 계좌를 등록해 주세요.
+          </div>
+        ) : payees.map((p) => (
+          <div key={p.id} className="rounded-xl border border-border bg-white p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="break-words text-[14px] font-medium text-foreground">{p.name}</p>
+                <p className="mt-0.5 text-[12px] text-foreground-secondary">
+                  {p.bank_name}{p.account_holder ? ` · ${p.account_holder}` : ''}
+                </p>
+              </div>
+              <div className="flex flex-shrink-0 items-center gap-4">
+                <button onClick={() => onEdit(p)} className="text-foreground-secondary hover:text-primary transition-colors" title="수정">
+                  <Pencil size={16} strokeWidth={1.5} />
+                </button>
+                <button onClick={() => onDelete(p)} className="text-foreground-secondary hover:text-red-500 transition-colors" title="삭제">
+                  <Trash2 size={16} strokeWidth={1.5} />
+                </button>
+              </div>
+            </div>
+            <p className="mt-2 font-mono text-[13px] tracking-wider text-foreground-tertiary">{p.account_masked}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* 데스크탑: 테이블 */}
+      <div className="hidden overflow-x-auto rounded-xl border border-border md:block">
         <table className="w-full table-fixed text-[13px]">
           <colgroup>
             <col className="w-[26%]" />
