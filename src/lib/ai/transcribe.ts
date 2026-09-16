@@ -26,6 +26,8 @@ export async function transcribeAudio(
     file,
     language: 'ko',
     response_format: 'text',
+    // 무음/노이즈에서 유튜브 아웃트로("시청해주셔서 감사합니다" 등) 환각을 억제
+    temperature: 0,
   });
 
   return response as unknown as string;
