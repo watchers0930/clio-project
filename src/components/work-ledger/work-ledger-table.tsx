@@ -48,8 +48,9 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
 
   return (
     <>
-      {/* 모바일: 카드 리스트 (space-y-2.5 = 10px, arbitrary 클래스는 빌드에서 누락되므로 표준 클래스 사용) */}
-      <div className="space-y-2.5 md:hidden">
+      {/* 모바일: 카드 리스트 — 이 프로젝트 Tailwind v4는 소수 스텝(space-y-2.5)·arbitrary(space-y-[10px]) CSS를 생성하지 않아
+          간격이 0이 됨. 정확한 10px는 inline style(flex gap)로 보장 (inline은 빌드에서 누락 불가) */}
+      <div className="flex flex-col md:hidden" style={{ gap: '10px' }}>
         {projects.map((p) => {
           const isOwner = !!currentUserId && p.created_by === currentUserId;
           const rec = receivable(p);
