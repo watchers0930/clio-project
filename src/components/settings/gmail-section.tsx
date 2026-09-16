@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Mail, RefreshCw, Unlink, CheckCircle, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Mail, RefreshCw, Unlink, CheckCircle, AlertCircle, ShieldCheck, Paperclip, Link2 } from 'lucide-react';
 import { Badge, Spinner } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
 import { GmailDeletePanel } from './gmail-delete-panel';
@@ -124,7 +124,7 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
   return (
     <div className="flex flex-col gap-6">
     <div className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden">
-      <div className="px-8 py-6 border-b border-border">
+      <div className="px-5 py-5 sm:px-8 sm:py-6 border-b border-border">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-[#1B1F2B] flex items-center justify-center">
@@ -141,7 +141,7 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
         </div>
       </div>
 
-      <div className="px-8 py-6">
+      <div className="px-5 py-5 sm:px-8 sm:py-6">
         {status?.connected ? (
           <div className="flex flex-col" style={{ gap: '16px' }}>
             {/* 연결 상태 */}
@@ -153,8 +153,8 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
               </div>
             </div>
 
-            {/* 마지막 동기화 */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* 마지막 동기화 · 연결일 */}
+            <div className="grid grid-cols-2 gap-3">
               <div className="p-4 rounded-xl bg-surface border border-border">
                 <p className="text-[11px] text-foreground-secondary mb-1">마지막 동기화</p>
                 <p className="text-[13px] font-medium text-foreground">
@@ -176,49 +176,49 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
             {/* 안내 */}
             <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-100">
               <AlertCircle size={14} className="text-blue-500 mt-0.5 shrink-0" />
-              <p className="text-[12px] text-blue-700">
+              <p className="text-[12px] leading-5 text-blue-700">
                 최근 이메일 최대 100개를 본문·첨부파일 내용까지 가져와 AI 검색에 포함합니다. 검색 화면에 들어가면 새 메일이 자동 동기화되며, 이미 동기화된 이메일은 중복 추가되지 않습니다. 예전에 본문만 동기화한 메일에 첨부 내용을 반영하려면 &lsquo;첨부 포함 재인덱싱&rsquo;을 눌러주세요.
               </p>
             </div>
 
-            {/* 버튼 */}
-            <div className="flex gap-3">
+            {/* 액션 버튼 — 모바일 2열 카드, 데스크탑 가로 한 줄 */}
+            <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
               <button
                 onClick={handleSync}
                 disabled={syncing || syncDone}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-medium transition-colors disabled:opacity-80 ${
+                className={`flex flex-col sm:flex-row items-center justify-center gap-2 px-3 py-3 sm:py-2.5 rounded-xl text-[13px] font-medium transition-colors disabled:opacity-80 ${
                   syncDone
                     ? 'bg-blue-500 text-white'
                     : 'bg-[#2E6FF2] text-white hover:bg-[#2560dc] disabled:opacity-50'
                 }`}
               >
-                {syncing ? <Spinner size="sm" /> : syncDone ? <CheckCircle size={14} /> : <RefreshCw size={14} />}
-                {syncing ? '동기화 중...' : syncDone ? '동기화 완료' : '지금 동기화'}
+                {syncing ? <Spinner size="sm" /> : syncDone ? <CheckCircle size={15} /> : <RefreshCw size={15} />}
+                <span className="text-center leading-tight sm:whitespace-nowrap">{syncing ? '동기화 중...' : syncDone ? '동기화 완료' : '지금 동기화'}</span>
               </button>
               <button
                 onClick={handleReindex}
                 disabled={reindexing}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-border text-foreground-secondary text-[13px] font-medium hover:bg-surface disabled:opacity-50 transition-colors"
+                className="flex flex-col sm:flex-row items-center justify-center gap-2 px-3 py-3 sm:py-2.5 rounded-xl border border-border text-foreground-secondary text-[13px] font-medium hover:bg-surface hover:text-foreground disabled:opacity-50 transition-colors"
                 title="기존 동기화 데이터를 지우고 첨부파일 내용까지 다시 인덱싱합니다"
               >
-                {reindexing ? <Spinner size="sm" /> : <RefreshCw size={14} />}
-                {reindexing ? '재인덱싱 중...' : '첨부 포함 재인덱싱'}
+                {reindexing ? <Spinner size="sm" /> : <Paperclip size={15} />}
+                <span className="text-center leading-tight sm:whitespace-nowrap">{reindexing ? '재인덱싱 중...' : '첨부 포함 재인덱싱'}</span>
               </button>
               <a
                 href="/api/auth/google"
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-border text-foreground-secondary text-[13px] font-medium hover:bg-surface transition-colors"
+                className="flex flex-col sm:flex-row items-center justify-center gap-2 px-3 py-3 sm:py-2.5 rounded-xl border border-border text-foreground-secondary text-[13px] font-medium hover:bg-surface hover:text-foreground transition-colors"
                 title="연결이 만료되었을 때 토큰을 갱신합니다 (동기화 데이터는 유지)"
               >
-                <RefreshCw size={14} />
-                다시 연결
+                <Link2 size={15} />
+                <span className="text-center leading-tight sm:whitespace-nowrap">다시 연결</span>
               </a>
               <button
                 onClick={handleDisconnect}
                 disabled={disconnecting}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-border text-foreground-secondary text-[13px] font-medium hover:bg-surface disabled:opacity-50 transition-colors"
+                className="flex flex-col sm:flex-row items-center justify-center gap-2 px-3 py-3 sm:py-2.5 rounded-xl border border-border text-foreground-secondary text-[13px] font-medium hover:bg-red-50 hover:text-danger hover:border-red-200 disabled:opacity-50 transition-colors"
               >
-                {disconnecting ? <Spinner size="sm" /> : <Unlink size={14} />}
-                연결 해제
+                {disconnecting ? <Spinner size="sm" /> : <Unlink size={15} />}
+                <span className="text-center leading-tight sm:whitespace-nowrap">연결 해제</span>
               </button>
             </div>
           </div>
@@ -275,7 +275,7 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
       status.canDelete ? (
         <GmailDeletePanel />
       ) : (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 shadow-sm px-8 py-6">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 shadow-sm px-5 py-5 sm:px-8 sm:py-6">
           <div className="flex items-start gap-3">
             <ShieldCheck size={18} className="text-amber-600 mt-0.5 shrink-0" />
             <div className="min-w-0">

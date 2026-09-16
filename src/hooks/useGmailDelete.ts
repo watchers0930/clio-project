@@ -48,6 +48,8 @@ export function useGmailDelete() {
   const [searched, setSearched] = useState(false);
   const [meta, setMeta] = useState<SearchMeta>({ total: 0, truncated: false, previewLimit: 100 });
   const [savedKeywords, setSavedKeywords] = useState<string[]>([]);
+  // 저장된 키워드 중 현재 선택(체크)한 것들 — 여러 개를 OR로 묶어 한 번에 검색한다.
+  const [selectedKeywords, setSelectedKeywords] = useState<Set<string>>(new Set());
 
   // 저장된 키워드 로드 (클라이언트에서만)
   useEffect(() => {
@@ -78,7 +80,26 @@ export function useGmailDelete() {
       try { localStorage.setItem(SAVED_KEY, JSON.stringify(next)); } catch { /* 무시 */ }
       return next;
     });
+    // 삭제되는 키워드는 선택 목록에서도 함께 제거한다.
+    setSelectedKeywords((prev) => {
+      if (!prev.has(keyword)) return prev;
+      const next = new Set(prev);
+      next.delete(keyword);
+      return next;
+    });
   }, []);
+
+  // 저장된 키워드 선택/해제 토글 — 여러 개를 동시에 고를 수 있다.
+  const toggleKeyword = useCallback((keyword: string) => {
+    setSelectedKeywords((prev) => {
+      const next = new Set(prev);
+      if (next.has(keyword)) next.delete(keyword);
+      else next.add(keyword);
+      return next;
+    });
+  }, []);
+
+  const clearSelectedKeywords = useCallback(() => setSelectedKeywords(new Set()), []);
 
   const search = useCallback(async (keyword: string): Promise<ActionResult> => {
     setSearching(true);
@@ -163,6 +184,7 @@ export function useGmailDelete() {
     searched,
     meta,
     savedKeywords,
+    selectedKeywords,
     search,
     toggle,
     toggleAll,
@@ -170,5 +192,7 @@ export function useGmailDelete() {
     reset,
     saveKeyword,
     removeKeyword,
+    toggleKeyword,
+    clearSelectedKeywords,
   };
 }

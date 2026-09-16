@@ -42,18 +42,42 @@ export function GmailDeletePanel() {
   const [keyword, setKeyword] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const toast = useToast();
-  const { hits, selected, searching, deleting, searched, meta, savedKeywords, search, toggle, toggleAll, remove, saveKeyword, removeKeyword } = useGmailDelete();
+  const { hits, selected, searching, deleting, searched, meta, savedKeywords, selectedKeywords, search, toggle, toggleAll, remove, saveKeyword, removeKeyword, toggleKeyword, clearSelectedKeywords } = useGmailDelete();
 
   const runSearch = async (kw: string) => {
     if (kw.length < 2) {
       toast.error('검색어는 2자 이상 입력해 주세요.');
       return;
     }
+    if (kw.length > 200) {
+      toast.error('선택한 키워드가 너무 많습니다. 개수를 줄여 주세요.');
+      return;
+    }
     const res = await search(kw);
     if (!res.ok) toast.error(res.error ?? '검색에 실패했습니다.');
   };
 
-  const handleSearch = () => runSearch(keyword.trim());
+  // 선택한 저장 키워드들을 Gmail 검색식으로 조합. 각 키워드를 괄호로 감싸 OR로 묶는다.
+  // 예: (광고 프로모션) OR (from:noreply@x.com) — 하나라도 일치하면 검색.
+  const buildOrQuery = (kws: string[]) => {
+    const cleaned = kws.map((k) => k.trim()).filter(Boolean);
+    if (cleaned.length <= 1) return cleaned[0] ?? '';
+    return cleaned.map((k) => `(${k})`).join(' OR ');
+  };
+
+  // 입력창에 직접 입력한 값이 있으면 그 값으로, 없으면 선택한 저장 키워드들로 검색한다.
+  const handleSearch = () => {
+    const typed = keyword.trim();
+    if (typed) {
+      runSearch(typed);
+      return;
+    }
+    if (selectedKeywords.size > 0) {
+      runSearch(buildOrQuery(Array.from(selectedKeywords)));
+      return;
+    }
+    toast.error('검색어를 입력하거나 저장된 키워드를 선택해 주세요.');
+  };
 
   const handleSaveKeyword = () => {
     const kw = keyword.trim();
@@ -63,11 +87,6 @@ export function GmailDeletePanel() {
     }
     const added = saveKeyword(kw);
     toast.success(added ? '키워드를 저장했습니다.' : '이미 저장된 키워드입니다.');
-  };
-
-  const handleUseSaved = (kw: string) => {
-    setKeyword(kw);
-    runSearch(kw);
   };
 
   const handleConfirmDelete = async () => {
@@ -103,6 +122,7 @@ export function GmailDeletePanel() {
           <p className="text-[12px] leading-5 text-amber-800">
             삭제는 <strong>Gmail 휴지통으로 이동</strong>이며 영구 삭제가 아닙니다. 휴지통에서 30일 내 복구할 수 있습니다.
             반드시 <strong>목록을 확인하고 선택</strong>한 뒤 삭제하세요. 발신자로 좁히려면 <code className="px-1 rounded bg-white/60">from:</code>, 제목은 <code className="px-1 rounded bg-white/60">subject:</code> 문법을 쓸 수 있습니다.
+            저장된 키워드를 <strong>여러 개 선택</strong>하면 그중 <strong>하나라도 포함</strong>된 메일을 함께 찾습니다.
           </p>
         </div>
 
@@ -133,37 +153,59 @@ export function GmailDeletePanel() {
             className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#2E6FF2] text-white text-[13px] font-medium hover:bg-[#2560dc] disabled:opacity-50 transition-colors shrink-0"
           >
             {searching ? <Spinner size="sm" /> : <Search size={14} />}
-            검색
+            {!keyword.trim() && selectedKeywords.size > 0 ? `선택 ${selectedKeywords.size}개 검색` : '검색'}
           </button>
         </div>
 
-        {/* 저장된 키워드 (즐겨찾기) */}
+        {/* 저장된 키워드 (즐겨찾기) — 칩을 여러 개 선택하면 OR로 묶어 한 번에 검색한다. */}
         {savedKeywords.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] text-foreground-secondary shrink-0">저장된 키워드</span>
-            {savedKeywords.map((kw) => (
-              <span
-                key={kw}
-                className="inline-flex items-center gap-1 pl-3 pr-1.5 py-1 rounded-full bg-surface border border-border"
-              >
-                <button
-                  type="button"
-                  onClick={() => handleUseSaved(kw)}
-                  title="이 키워드로 검색"
-                  className="max-w-[200px] truncate text-[12px] text-foreground hover:text-[#2E6FF2]"
+            <span className="text-[11px] text-foreground-secondary shrink-0">
+              저장된 키워드
+              {selectedKeywords.size > 0 && (
+                <>
+                  <span className="ml-1 text-[#2E6FF2]">· {selectedKeywords.size}개 선택</span>
+                  <button
+                    type="button"
+                    onClick={clearSelectedKeywords}
+                    className="ml-1.5 text-foreground-secondary hover:text-danger underline underline-offset-2"
+                  >
+                    초기화
+                  </button>
+                </>
+              )}
+            </span>
+            {savedKeywords.map((kw) => {
+              const active = selectedKeywords.has(kw);
+              return (
+                <span
+                  key={kw}
+                  className={`inline-flex items-center gap-1 pl-3 pr-1.5 py-1 rounded-full border transition-colors ${
+                    active ? 'bg-blue-50 border-[#2E6FF2]' : 'bg-surface border-border'
+                  }`}
                 >
-                  {kw}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeKeyword(kw)}
-                  title="키워드 삭제"
-                  className="shrink-0 text-foreground-secondary hover:text-danger"
-                >
-                  <X size={12} />
-                </button>
-              </span>
-            ))}
+                  <button
+                    type="button"
+                    onClick={() => toggleKeyword(kw)}
+                    aria-pressed={active}
+                    title={active ? '선택 해제' : '이 키워드 선택(여러 개 선택 가능)'}
+                    className={`max-w-[200px] truncate text-[12px] ${
+                      active ? 'text-[#2E6FF2] font-medium' : 'text-foreground hover:text-[#2E6FF2]'
+                    }`}
+                  >
+                    {kw}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeKeyword(kw)}
+                    title="키워드 삭제"
+                    className="shrink-0 text-foreground-secondary hover:text-danger"
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              );
+            })}
           </div>
         )}
 
