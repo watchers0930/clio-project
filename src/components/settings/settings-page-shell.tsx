@@ -492,21 +492,21 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
         </div>
       </section>
 
-      {/* 모바일: 2열 그리드 (가로스크롤 대신 전체 메뉴를 한눈에) */}
-      <div className="grid grid-cols-2 gap-2 sm:hidden">
+      {/* 모바일: 3열 그리드 (가로스크롤 대신 전체 메뉴를 한눈에) */}
+      <div className="grid grid-cols-3 gap-2 sm:hidden">
         {settingsTabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id as SettingsTab)}
             className={cn(
-              'flex items-center gap-2 rounded-xl border px-3 py-3 text-[13px] font-medium transition-colors',
+              'flex flex-col items-center justify-center gap-1.5 rounded-xl border px-2 py-3 text-[12px] font-medium transition-colors',
               tab === t.id
                 ? 'border-primary bg-primary/5 text-primary'
                 : 'border-border bg-white text-foreground-secondary hover:bg-surface-secondary'
             )}
           >
             <span className="flex-shrink-0">{t.icon}</span>
-            <span className="truncate">{t.label}</span>
+            <span className="truncate max-w-full">{t.label}</span>
           </button>
         ))}
       </div>
