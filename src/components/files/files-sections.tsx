@@ -204,7 +204,7 @@ export function FilesListView({
   // onOpenContractRiskFromFile — reserved for future use
 }: FilesContentProps) {
   return (
-    <div className="overflow-hidden rounded-[16px] border border-border bg-white shadow-sm">
+    <div className="md:overflow-hidden md:rounded-[16px] md:border md:border-border md:bg-white md:shadow-sm">
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full text-sm">
           <thead>
