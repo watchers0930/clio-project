@@ -181,7 +181,8 @@ export function GmailDeletePanel() {
                 return (
                   <span
                     key={kw}
-                    className={`flex items-center gap-1 pl-3 pr-1.5 py-1 rounded-full border transition-colors ${
+                    style={{ paddingTop: '2px', paddingBottom: '2px' }}
+                    className={`flex items-center gap-1 pl-3 pr-1.5 rounded-full border transition-colors ${
                       active ? 'bg-blue-50 border-[#2E6FF2]' : 'bg-surface border-border'
                     }`}
                   >
