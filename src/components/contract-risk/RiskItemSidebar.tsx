@@ -27,7 +27,7 @@ const RISK_ICON = {
 const RISK_COLOR = {
   high: 'text-red-500',
   medium: 'text-amber-500',
-  low: 'text-emerald-600',
+  low: 'text-blue-800',
 };
 
 function getDecision(key: string, suggestions: SuggestionState[]): DecisionStatus | null {
@@ -85,7 +85,7 @@ export function RiskItemSidebar({
 
           const rowBg =
             decision === 'accepted'
-              ? 'bg-green-50 border-green-200'
+              ? 'bg-blue-50 border-blue-200'
               : decision === 'skipped'
               ? 'bg-surface-secondary border-border'
               : isActive
@@ -129,8 +129,8 @@ export function RiskItemSidebar({
                 {/* 결정 상태 */}
                 {decision === 'accepted' && (
                   <div className="mt-1.5 flex items-center gap-1">
-                    <CheckCircle className="w-3 h-3 text-green-600" />
-                    <span className="text-[11px] text-green-600">적용됨</span>
+                    <CheckCircle className="w-3 h-3 text-blue-800" />
+                    <span className="text-[11px] text-blue-800">적용됨</span>
                   </div>
                 )}
                 {decision === 'skipped' && (

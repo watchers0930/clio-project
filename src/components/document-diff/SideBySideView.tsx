@@ -16,14 +16,14 @@ const GUTTER: Record<string, string> = {
 };
 
 const ROW_BG: Record<string, string> = {
-  added: 'bg-green-50',
+  added: 'bg-blue-50',
   removed: 'bg-red-50',
   modified: 'bg-yellow-50',
   unchanged: '',
 };
 
 const CELL_TEXT: Record<string, string> = {
-  added: 'text-green-800',
+  added: 'text-blue-900',
   removed: 'text-red-800',
   modified: 'text-yellow-800',
   unchanged: 'text-foreground',
@@ -39,7 +39,7 @@ function WordHighlight({ line }: { line: DiffLine }) {
         w.type === 'removed' ? (
           <mark key={i} className="bg-red-200 line-through text-red-800 rounded-sm">{w.text}</mark>
         ) : w.type === 'added' ? (
-          <mark key={i} className="bg-green-200 underline text-green-800 rounded-sm">{w.text}</mark>
+          <mark key={i} className="bg-blue-100 underline text-blue-900 rounded-sm">{w.text}</mark>
         ) : (
           <span key={i}>{w.text}</span>
         )
@@ -104,7 +104,7 @@ export function SideBySideView({ lines, onChangeRef }: SideBySideViewProps) {
                 {/* 거터 */}
                 <td className={cn(
                   'w-5 text-center select-none font-bold text-[11px]',
-                  line.type === 'added' ? 'text-green-600' :
+                  line.type === 'added' ? 'text-blue-800' :
                   line.type === 'removed' ? 'text-red-600' :
                   line.type === 'modified' ? 'text-yellow-600' : '',
                 )}>

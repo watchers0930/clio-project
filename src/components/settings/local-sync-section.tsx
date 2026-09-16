@@ -133,7 +133,7 @@ export function LocalSyncSection() {
 function StatusBadge({ status }: { status: string }) {
   if (status === 'ready') {
     return (
-      <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+      <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-800">
         <CheckCircle2 className="h-3 w-3" /> 연결됨
       </span>
     );

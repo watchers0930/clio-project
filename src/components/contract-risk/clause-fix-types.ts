@@ -27,7 +27,7 @@ export interface ClauseFixModalProps {
 export const RISK_LEVEL_CLS: Record<string, string> = {
   high: 'bg-red-50 text-red-700 border border-red-200',
   medium: 'bg-amber-50 text-amber-700 border border-amber-200',
-  low: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  low: 'bg-blue-50 text-blue-800 border border-blue-200',
 };
 
 export const RISK_LEVEL_LABEL: Record<string, string> = {

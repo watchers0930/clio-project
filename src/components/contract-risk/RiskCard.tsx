@@ -31,10 +31,10 @@ const RISK_CONFIG = {
   low: {
     label: '하',
     Icon: Info,
-    badgeCls: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    badgeCls: 'bg-blue-100 text-blue-800 border-blue-200',
     borderCls: 'border-l-emerald-500',
-    iconCls: 'text-emerald-600',
-    iconBg: 'bg-emerald-50',
+    iconCls: 'text-blue-800',
+    iconBg: 'bg-blue-50',
   },
 } as const;
 
@@ -106,7 +106,7 @@ export function RiskCard({ item, expandOverride }: RiskCardProps) {
             className="flex h-8 w-8 items-center justify-center rounded-lg text-foreground-quaternary hover:text-foreground hover:bg-surface-secondary transition-colors"
             title="복사"
           >
-            {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+            {copied ? <Check size={13} className="text-blue-800" /> : <Copy size={13} />}
           </button>
           <div className={cn('flex h-7 w-7 items-center justify-center rounded-lg transition-transform duration-200', expanded && 'rotate-180')}>
             <ChevronDown size={15} className="text-foreground-quaternary" />
@@ -137,9 +137,9 @@ export function RiskCard({ item, expandOverride }: RiskCardProps) {
             )}
             {item.recommendation && (
               <div>
-                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-2">권고사항</p>
-                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5">
-                  <p className="text-[13px] text-emerald-800 leading-relaxed">{item.recommendation}</p>
+                <p className="text-[10px] font-bold text-blue-800 uppercase tracking-widest mb-2">권고사항</p>
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3.5">
+                  <p className="text-[13px] text-blue-900 leading-relaxed">{item.recommendation}</p>
                 </div>
               </div>
             )}

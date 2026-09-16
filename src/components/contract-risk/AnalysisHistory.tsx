@@ -171,7 +171,7 @@ export function AnalysisHistory() {
                   </span>
                 )}
                 {item.risk_count.low > 0 && (
-                  <span className="text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg px-2 py-1">
+                  <span className="text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 rounded-lg px-2 py-1">
                     {item.risk_count.low}하
                   </span>
                 )}

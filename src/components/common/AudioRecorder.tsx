@@ -187,8 +187,8 @@ export function AudioRecorder({ onComplete, onSwitchToUpload, className }: Audio
     <div className={`flex flex-col items-center gap-6 py-8 ${className ?? ''}`}>
       {/* 완료 뱃지 */}
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center">
-          <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
+          <svg className="w-4 h-4 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
           </svg>
         </div>

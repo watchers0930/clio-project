@@ -31,7 +31,7 @@ function PaymentLine({ payment }: { payment: WorkPayment }) {
   const label = payment.type === 'interim' ? `중도금${payment.seq}` : PAYMENT_TYPE_LABELS[payment.type];
   return (
     <div>
-      <div className="font-medium text-emerald-600">{formatNumber(payment.amount)}</div>
+      <div className="font-medium text-blue-800">{formatNumber(payment.amount)}</div>
       <div className="text-[11px] text-foreground-quaternary">{label}</div>
     </div>
   );
@@ -117,7 +117,7 @@ export function WorkLedgerTable({ projects, currentUserId, onView, onEdit, onDel
                       const label = pay.type === 'interim' ? `중도금${pay.seq}` : PAYMENT_TYPE_LABELS[pay.type];
                       return (
                         <div key={pay.id ?? i} className="text-[13px]">
-                          <span className="font-medium text-emerald-600">{formatNumber(pay.amount)}</span>
+                          <span className="font-medium text-blue-800">{formatNumber(pay.amount)}</span>
                           <span className="ml-1 text-[11px] text-foreground-quaternary">{label}</span>
                         </div>
                       );

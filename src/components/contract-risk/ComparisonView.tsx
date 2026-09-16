@@ -17,7 +17,7 @@ interface Props {
 const CHANGE_CONFIG: Record<ChangeType, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
   worsened: { label: '악화', color: 'text-red-600', bg: 'bg-red-50', Icon: ArrowUp },
   new: { label: '신규', color: 'text-orange-600', bg: 'bg-orange-50', Icon: Plus },
-  improved: { label: '개선', color: 'text-emerald-600', bg: 'bg-emerald-50', Icon: ArrowDown },
+  improved: { label: '개선', color: 'text-blue-800', bg: 'bg-blue-50', Icon: ArrowDown },
   resolved: { label: '해소', color: 'text-blue-600', bg: 'bg-blue-50', Icon: Check },
   unchanged: { label: '동일', color: 'text-foreground-quaternary', bg: 'bg-surface-secondary', Icon: Minus },
 };
@@ -25,7 +25,7 @@ const CHANGE_CONFIG: Record<ChangeType, { label: string; color: string; bg: stri
 const RISK_BADGE: Record<string, string> = {
   high: 'bg-red-100 text-red-700 border-red-200',
   medium: 'bg-amber-100 text-amber-700 border-amber-200',
-  low: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  low: 'bg-blue-100 text-blue-800 border-blue-200',
 };
 
 function CountBadge({ count, label }: { count: RiskCount; label: string }) {
@@ -38,7 +38,7 @@ function CountBadge({ count, label }: { count: RiskCount; label: string }) {
         <div className="flex gap-1.5">
           {count.high > 0 && <span className="text-[10px] font-bold bg-red-50 text-red-600 border border-red-200 rounded-lg px-2 py-0.5">{count.high}상</span>}
           {count.medium > 0 && <span className="text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-200 rounded-lg px-2 py-0.5">{count.medium}중</span>}
-          {count.low > 0 && <span className="text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg px-2 py-0.5">{count.low}하</span>}
+          {count.low > 0 && <span className="text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 rounded-lg px-2 py-0.5">{count.low}하</span>}
         </div>
       </div>
     </div>

@@ -112,7 +112,7 @@ export function WorkProjectDetailModal({ open, project, departments, onClose }: 
                           <td className="px-3 py-2 font-medium text-foreground">{label}</td>
                           <td className="px-3 py-2 text-right text-foreground">{formatKRW(p.amount)}</td>
                           <td className={`px-3 py-2 ${overdue ? 'text-red-600' : 'text-foreground-secondary'}`}>{p.due_date ?? '—'}{overdue && ' (연체)'}</td>
-                          <td className="px-3 py-2 text-center">{p.paid ? <span className="text-emerald-600">완료</span> : <span className="text-foreground-quaternary">예정</span>}</td>
+                          <td className="px-3 py-2 text-center">{p.paid ? <span className="text-blue-800">완료</span> : <span className="text-foreground-quaternary">예정</span>}</td>
                         </tr>
                       );
                     })}

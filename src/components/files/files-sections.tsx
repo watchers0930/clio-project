@@ -278,7 +278,7 @@ export function FilesListView({
               <button onClick={() => onOpenSearchFromFile(file)} className="flex-1 whitespace-nowrap rounded-lg border border-border-tint px-2 py-2 text-[11px] font-medium text-primary hover:bg-primary-tint transition-colors">
                 관련 문서 검색
               </button>
-              <button onClick={() => onOpenDocumentsFromFile(file)} className="flex-1 whitespace-nowrap rounded-lg border border-teal-200 px-2 py-2 text-[11px] font-medium text-teal-600 hover:bg-teal-50 transition-colors">
+              <button onClick={() => onOpenDocumentsFromFile(file)} className="flex-1 whitespace-nowrap rounded-lg border border-blue-200 px-2 py-2 text-[11px] font-medium text-blue-800 hover:bg-blue-50 transition-colors">
                 후속 문서 작성
               </button>
               <button onClick={() => onOpenCommentsFromFile(file)} className="flex-1 whitespace-nowrap rounded-lg border border-indigo-200 px-2 py-2 text-[11px] font-medium text-indigo-600 hover:bg-indigo-50 transition-colors">

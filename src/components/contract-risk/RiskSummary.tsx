@@ -29,9 +29,9 @@ const STAT_CARDS = [
   {
     key: 'low' as keyof RiskCount,
     label: '하위 리스크',
-    color: 'text-emerald-600',
-    bg: 'bg-emerald-50',
-    bar: 'bg-emerald-500',
+    color: 'text-blue-800',
+    bg: 'bg-blue-50',
+    bar: 'bg-blue-500',
   },
 ];
 

@@ -9,14 +9,14 @@ interface InlineViewProps {
 }
 
 const ROW_BG: Record<string, string> = {
-  added: 'bg-green-50',
+  added: 'bg-blue-50',
   removed: 'bg-red-50',
   modified: 'bg-yellow-50',
   unchanged: '',
 };
 
 const GUTTER_STYLE: Record<string, string> = {
-  added: 'text-green-600',
+  added: 'text-blue-800',
   removed: 'text-red-600',
   modified: 'text-yellow-600',
   unchanged: 'text-transparent',
@@ -66,18 +66,18 @@ export function InlineView({ lines, onChangeRef }: InlineViewProps) {
                     </td>
                   </tr>
                   {/* 신 버전 줄 (추가) */}
-                  <tr key={`${idx}-new`} className="bg-green-50 border-b border-border">
+                  <tr key={`${idx}-new`} className="bg-blue-50 border-b border-border">
                     <td className="w-10 px-2 text-right text-foreground-quaternary select-none border-r border-border bg-surface-tertiary">
                       {line.newLine}
                     </td>
-                    <td className="w-5 text-center select-none font-bold text-[11px] text-green-600">+</td>
-                    <td className="px-3 py-1 text-green-800">
+                    <td className="w-5 text-center select-none font-bold text-[11px] text-blue-800">+</td>
+                    <td className="px-3 py-1 text-blue-900">
                       {line.wordDiff ? (
                         line.wordDiff
                           .filter((w) => w.type !== 'removed')
                           .map((w, i) =>
                             w.type === 'added' ? (
-                              <mark key={i} className="bg-green-200 underline text-green-800 rounded-sm">{w.text}</mark>
+                              <mark key={i} className="bg-blue-100 underline text-blue-900 rounded-sm">{w.text}</mark>
                             ) : (
                               <span key={i}>{w.text}</span>
                             )
@@ -105,7 +105,7 @@ export function InlineView({ lines, onChangeRef }: InlineViewProps) {
                 </td>
                 <td className={cn(
                   'px-3 py-1',
-                  line.type === 'added' ? 'text-green-800' :
+                  line.type === 'added' ? 'text-blue-900' :
                   line.type === 'removed' ? 'text-red-800 line-through' :
                   'text-foreground',
                 )}>

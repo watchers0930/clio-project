@@ -204,7 +204,7 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
               <div key={s} className="flex items-center">
                 <div className="flex items-center gap-2">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${
-                    done ? 'bg-emerald-500 text-white' : active ? 'bg-primary text-white' : 'bg-border text-foreground-secondary'
+                    done ? 'bg-blue-500 text-white' : active ? 'bg-primary text-white' : 'bg-border text-foreground-secondary'
                   }`}>{done ? '✓' : s}</div>
                   <span className={`text-[12px] font-medium ${active ? 'text-foreground' : 'text-foreground-quaternary'}`}>{label}</span>
                 </div>
@@ -345,8 +345,8 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
                         onClick={() => handleStatusChange('accepted')}
                         className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-[12px] font-medium border transition-colors ${
                           fixState.status === 'accepted'
-                            ? 'bg-emerald-500 text-white border-emerald-500'
-                            : 'border-border text-foreground-secondary hover:border-emerald-400 hover:text-emerald-600'
+                            ? 'bg-blue-500 text-white border-blue-500'
+                            : 'border-border text-foreground-secondary hover:border-blue-400 hover:text-blue-800'
                         }`}
                       >
                         <Check className="w-3.5 h-3.5" /> 수락
@@ -409,8 +409,8 @@ export function ClauseFixModal({ open, onClose, analysisId, riskItems }: ClauseF
           {/* Step 3: 완료 */}
           {step === 3 && (
             <div className="space-y-7 py-8 text-center">
-              <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto">
-                <Check className="w-8 h-8 text-emerald-500" />
+              <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mx-auto">
+                <Check className="w-8 h-8 text-blue-700" />
               </div>
               <div>
                 <h3 className="text-[16px] font-semibold text-foreground">수정 계약서 생성 완료</h3>

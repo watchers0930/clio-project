@@ -17,7 +17,7 @@ interface TodoExtractModalProps {
 const PRIORITY_BADGE: Record<string, { label: string; cls: string }> = {
   high:   { label: '높음', cls: 'bg-red-50 text-red-600 border-red-200' },
   medium: { label: '보통', cls: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
-  low:    { label: '낮음', cls: 'bg-green-50 text-green-700 border-green-200' },
+  low:    { label: '낮음', cls: 'bg-blue-50 text-blue-800 border-blue-200' },
 };
 
 export function TodoExtractModal({

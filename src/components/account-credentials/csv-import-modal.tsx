@@ -140,7 +140,7 @@ export function CsvImportModal({ open, onClose, onImported }: Props) {
           {/* 완료 상태 */}
           {done ? (
             <div className="flex flex-col items-center gap-3 py-8">
-              <CheckCircle2 size={48} className="text-green-500" />
+              <CheckCircle2 size={48} className="text-blue-700" />
               <p className="text-[15px] font-semibold text-foreground">{importedCount}개 계정을 가져왔습니다.</p>
               <button
                 onClick={handleClose}
@@ -214,7 +214,7 @@ export function CsvImportModal({ open, onClose, onImported }: Props) {
                             <td className="px-3 py-2 text-foreground-secondary truncate">{row.username || '—'}</td>
                             <td className="px-3 py-2 text-center">
                               {row.valid
-                                ? <span className="text-green-500">✓</span>
+                                ? <span className="text-blue-700">✓</span>
                                 : <span className="text-red-400">✗</span>
                               }
                             </td>

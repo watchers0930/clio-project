@@ -28,9 +28,9 @@ export function BulkApplyBar({
     <div className="fixed bottom-0 left-0 right-0 z-30 bg-foreground text-white px-6 py-3.5 flex items-center gap-4 shadow-2xl">
       {/* 수락 건수 */}
       <div className="flex items-center gap-2 flex-shrink-0">
-        <CheckCircle className="w-4 h-4 text-green-400" />
+        <CheckCircle className="w-4 h-4 text-blue-600" />
         <span className="text-sm">
-          <span className="font-semibold text-green-400">{acceptedCount}개</span>
+          <span className="font-semibold text-blue-600">{acceptedCount}개</span>
           <span className="text-foreground-quaternary"> 조항 수락됨 / 전체 {totalCount}개</span>
         </span>
       </div>

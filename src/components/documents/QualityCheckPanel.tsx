@@ -22,7 +22,7 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 function ScoreColor(score: number) {
-  if (score >= 90) return 'text-green-600';
+  if (score >= 90) return 'text-blue-800';
   if (score >= 70) return 'text-yellow-600';
   return 'text-red-600';
 }
@@ -146,11 +146,11 @@ export function QualityCheckPanel({ documentId, onClose, autoRequest }: QualityC
 
         {/* 검수 결과 — 아이템 없음 */}
         {status === 'success' && result && filteredItems.length === 0 && (
-          <div className="rounded-xl border border-green-200 bg-green-50 p-4 flex items-center gap-3">
-            <svg className="w-5 h-5 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-center gap-3">
+            <svg className="w-5 h-5 text-blue-700 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
-            <p className="text-xs text-green-700">
+            <p className="text-xs text-blue-800">
               {activeTab === 'all'
                 ? '문제가 발견되지 않았습니다.'
                 : `해당 카테고리에서 문제가 발견되지 않았습니다.`}

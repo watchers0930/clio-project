@@ -145,11 +145,11 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
         {status?.connected ? (
           <div className="flex flex-col" style={{ gap: '16px' }}>
             {/* 연결 상태 */}
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-green-50 border border-green-200">
-              <CheckCircle size={18} className="text-green-600 shrink-0" />
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-blue-50 border border-blue-200">
+              <CheckCircle size={18} className="text-blue-800 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-medium text-green-800">연결됨</p>
-                <p className="text-[12px] text-green-700 truncate">{status.email}</p>
+                <p className="text-[13px] font-medium text-blue-900">연결됨</p>
+                <p className="text-[12px] text-blue-800 truncate">{status.email}</p>
               </div>
             </div>
 
@@ -188,7 +188,7 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
                 disabled={syncing || syncDone}
                 className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-medium transition-colors disabled:opacity-80 ${
                   syncDone
-                    ? 'bg-green-500 text-white'
+                    ? 'bg-blue-500 text-white'
                     : 'bg-[#2E6FF2] text-white hover:bg-[#2560dc] disabled:opacity-50'
                 }`}
               >

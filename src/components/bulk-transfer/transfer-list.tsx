@@ -17,7 +17,7 @@ interface Props {
 const STATUS_STYLE: Record<string, string> = {
   pending: 'bg-surface-secondary text-foreground-tertiary',
   exported: 'bg-primary/10 text-primary',
-  done: 'bg-emerald-50 text-emerald-600',
+  done: 'bg-blue-50 text-blue-800',
 };
 
 export function TransferList({ items, onAdd, onImport, onEdit, onDelete, onToggleDone, onExport }: Props) {
@@ -135,7 +135,7 @@ export function TransferList({ items, onAdd, onImport, onEdit, onDelete, onToggl
                 <div className="flex items-center gap-4">
                   <button
                     onClick={() => onToggleDone(it)}
-                    className={`transition-colors ${it.status === 'done' ? 'text-emerald-600' : 'text-foreground-quaternary hover:text-emerald-600'}`}
+                    className={`transition-colors ${it.status === 'done' ? 'text-blue-800' : 'text-foreground-quaternary hover:text-blue-800'}`}
                     title={it.status === 'done' ? '완료 해제' : '이체완료 표시'}
                   >
                     <Check size={17} strokeWidth={2} />
@@ -225,7 +225,7 @@ export function TransferList({ items, onAdd, onImport, onEdit, onDelete, onToggl
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => onToggleDone(it)}
-                          className={`transition-colors ${it.status === 'done' ? 'text-emerald-600' : 'text-foreground-quaternary hover:text-emerald-600'}`}
+                          className={`transition-colors ${it.status === 'done' ? 'text-blue-800' : 'text-foreground-quaternary hover:text-blue-800'}`}
                           title={it.status === 'done' ? '완료 해제' : '이체완료 표시'}
                         >
                           <Check size={15} strokeWidth={2} />

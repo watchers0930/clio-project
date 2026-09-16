@@ -25,7 +25,7 @@ export function RiskFilter({ filter, onChange, counts, isAllExpanded, onToggleEx
     { key: 'all',    label: '전체',      count: counts.all },
     { key: 'high',   label: '상위',      count: counts.high,   dot: 'bg-red-500' },
     { key: 'medium', label: '중위',      count: counts.medium, dot: 'bg-amber-400' },
-    { key: 'low',    label: '하위',      count: counts.low,    dot: 'bg-emerald-500' },
+    { key: 'low',    label: '하위',      count: counts.low,    dot: 'bg-blue-500' },
   ];
 
   const categories: { key: Category | 'all'; label: string; count: number }[] = [

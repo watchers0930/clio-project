@@ -31,7 +31,7 @@ interface AutofillModalProps {
 }
 
 const CONFIDENCE_BADGE: Record<string, { label: string; cls: string }> = {
-  high:   { label: '확실',  cls: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
+  high:   { label: '확실',  cls: 'bg-blue-50 text-blue-800 border border-blue-200' },
   medium: { label: '추정',  cls: 'bg-amber-50 text-amber-700 border border-amber-200' },
   low:    { label: '불분명', cls: 'bg-red-50 text-red-600 border border-red-200' },
 };
@@ -210,7 +210,7 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
               <div key={s} className="flex items-center">
                 <div className="flex items-center gap-2">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors ${
-                    done ? 'bg-emerald-500 text-white' :
+                    done ? 'bg-blue-500 text-white' :
                     active ? 'bg-primary text-white' :
                     'bg-border text-foreground-secondary'
                   }`}>
@@ -281,7 +281,7 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
                 <p className="text-[13px] text-foreground-secondary">
                   총 <span className="font-semibold text-foreground">{fields.length}</span>개 필드 감지
                   {fields.filter(f => f.autoMapped).length > 0 && (
-                    <span className="ml-2 text-emerald-600">
+                    <span className="ml-2 text-blue-800">
                       ({fields.filter(f => f.autoMapped).length}개 자동 매핑)
                     </span>
                   )}
@@ -326,8 +326,8 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
           {/* Step 3: 완료 */}
           {step === 3 && (
             <div className="text-center space-y-6 py-6">
-              <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto">
-                <CheckCircle className="w-8 h-8 text-emerald-500" />
+              <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mx-auto">
+                <CheckCircle className="w-8 h-8 text-blue-700" />
               </div>
               <div>
                 <h3 className="text-[16px] font-semibold text-foreground">자동채우기 완료!</h3>

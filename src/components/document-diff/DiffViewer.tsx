@@ -126,7 +126,7 @@ export function DiffViewer({
         <div className="flex flex-col gap-3.5 px-4 py-4 sm:px-5 bg-white border border-border rounded-xl lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[13px]">
             <span className="font-semibold text-foreground">변경 통계</span>
-            <span className="flex items-center gap-1.5 text-green-700 bg-green-50 px-2.5 py-1 rounded-full text-[12px]">
+            <span className="flex items-center gap-1.5 text-blue-800 bg-blue-50 px-2.5 py-1 rounded-full text-[12px]">
               <span>+{diffResult.stats.added}</span>
             </span>
             <span className="flex items-center gap-1.5 text-red-700 bg-red-50 px-2.5 py-1 rounded-full text-[12px]">

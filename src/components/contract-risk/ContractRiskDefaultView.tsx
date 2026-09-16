@@ -192,11 +192,11 @@ export function ContractRiskDefaultView({
         {/* 탐지 항목 없음 */}
         {total === 0 && (
           <div className="rounded-2xl border border-border bg-white p-6 text-center sm:p-10">
-            <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <ShieldCheck size={24} className="text-emerald-600" />
+            <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <ShieldCheck size={24} className="text-blue-800" />
             </div>
-            <p className="text-[16px] font-bold text-emerald-800 mb-1">리스크가 탐지되지 않았습니다</p>
-            <p className="text-[13px] text-emerald-700">분석한 25개 항목에서 리스크가 발견되지 않았습니다.</p>
+            <p className="text-[16px] font-bold text-blue-900 mb-1">리스크가 탐지되지 않았습니다</p>
+            <p className="text-[13px] text-blue-800">분석한 25개 항목에서 리스크가 발견되지 않았습니다.</p>
           </div>
         )}
 

@@ -94,8 +94,8 @@ export function MemoLockSection() {
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <h2 className="text-[16px] font-semibold text-foreground">메모 잠금</h2>
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${enabled ? 'bg-green-50 text-green-700' : 'bg-surface-secondary text-foreground-secondary'}`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${enabled ? 'bg-green-500' : 'bg-foreground-quaternary'}`} />
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${enabled ? 'bg-blue-50 text-blue-800' : 'bg-surface-secondary text-foreground-secondary'}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${enabled ? 'bg-blue-500' : 'bg-foreground-quaternary'}`} />
               {enabled ? '잠금 활성' : '잠금 비활성'}
             </span>
           </div>

@@ -63,7 +63,7 @@ export function SuggestionPanel({ suggestion, onAccept, onSkip, onEditRevised, i
           {suggestion.item_name}
         </span>
         {isAccepted && (
-          <span className="ml-auto flex items-center gap-1 text-[12px] text-green-600 font-medium">
+          <span className="ml-auto flex items-center gap-1 text-[12px] text-blue-800 font-medium">
             <CheckCircle className="w-3.5 h-3.5" /> 적용됨
           </span>
         )}
@@ -144,7 +144,7 @@ export function SuggestionPanel({ suggestion, onAccept, onSkip, onEditRevised, i
             className={cn(
               'flex-1 py-2.5 rounded-xl text-[13px] font-medium transition-colors',
               isAccepted
-                ? 'bg-green-600 text-white'
+                ? 'bg-blue-700 text-white'
                 : 'bg-primary text-white hover:bg-primary-dark',
             )}
           >
