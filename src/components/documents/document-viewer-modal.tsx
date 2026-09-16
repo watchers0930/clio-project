@@ -3,6 +3,12 @@ import { DocumentCommentPanel } from '@/components/documents/DocumentCommentPane
 import { HtmlPreviewFrame } from '@/components/documents/html-preview-frame';
 import type { DocumentItem } from '@/components/documents/page-types';
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
+import { useServerRenderedPreview } from '@/components/documents/use-server-rendered-preview';
+
+/** 문서 본문에 임베드된 입력값 메타 주석(<!--DOCUMENT_INPUTS:...-->)을 제거한다. */
+function stripDocumentInputs(content: string): string {
+  return content.replace(/^<!--(?:PROPOSAL_INPUTS|DOCUMENT_INPUTS):.*?-->\n?/, '');
+}
 
 interface DocumentViewerModalProps {
   viewDoc: DocumentItem | null;
@@ -72,6 +78,8 @@ export function DocumentViewerModal({
   onCommentsReflected,
 }: DocumentViewerModalProps) {
   const [proposalViewMode, setProposalViewMode] = useState<'preview' | 'edit'>('preview');
+  // 제안서를 제외한 템플릿 문서(품의서 등)는 서버 렌더 HTML 프리뷰 사용
+  const serverPreview = useServerRenderedPreview(viewDoc, selectedFont);
 
   if (!viewDoc) return null;
 
@@ -80,6 +88,10 @@ export function DocumentViewerModal({
   void onOpenMemo;
 
   const isProposal = viewDoc.template === '제안서';
+  // 제안서 외 templateId 보유 문서(품의서·사업계획서·재직증명서 등)는 서버 렌더 프리뷰
+  const isServerTemplate = !isProposal && !!viewDoc.templateId;
+  // 레이아웃(HTML) 프리뷰를 사용하는 문서 = 제안서 + 서버 템플릿 문서
+  const useHtmlPreview = isProposal || isServerTemplate;
   const availableDownloadFormats = isProposal ? ['pdf'] : downloadFormatOptions;
   const proposalHtml = isProposal
     ? renderProposalDocumentHtml({
@@ -155,7 +167,7 @@ export function DocumentViewerModal({
               </div>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
-              {isProposal ? (
+              {useHtmlPreview ? (
                 <div className="flex h-full min-h-[400px] flex-col gap-3">
                   {isDraft && (
                     <div className="flex gap-2">
@@ -182,18 +194,41 @@ export function DocumentViewerModal({
                     </div>
                   )}
                   {!isDraft || proposalViewMode === 'preview' ? (
-                    <HtmlPreviewFrame
-                      title="proposal-preview"
-                      html={proposalHtml}
-                      className="h-full min-h-[640px] w-full rounded-xl border border-border bg-white"
-                    />
+                    isProposal ? (
+                      <HtmlPreviewFrame
+                        title="proposal-preview"
+                        html={proposalHtml}
+                        className="h-full min-h-[640px] w-full rounded-xl border border-border bg-white"
+                      />
+                    ) : serverPreview.loading ? (
+                      <div className="flex h-full min-h-[640px] w-full items-center justify-center rounded-xl border border-border bg-white text-sm text-foreground-secondary">
+                        레이아웃을 불러오는 중입니다…
+                      </div>
+                    ) : serverPreview.error || !serverPreview.html ? (
+                      <div className="flex h-full min-h-[640px] w-full items-center justify-center rounded-xl border border-border bg-white text-sm text-foreground-secondary">
+                        레이아웃 미리보기를 불러오지 못했습니다. 원문 편집 또는 다운로드로 확인해 주세요.
+                      </div>
+                    ) : (
+                      <HtmlPreviewFrame
+                        title="document-preview"
+                        html={serverPreview.html}
+                        className="h-full min-h-[640px] w-full rounded-xl border border-border bg-white"
+                      />
+                    )
                   ) : (
-                    <textarea
-                      value={editContent}
-                      onChange={(e) => onChangeContent(e.target.value)}
-                      className="w-full h-full min-h-[400px] text-sm text-foreground leading-relaxed bg-transparent resize-none focus:outline-none font-mono"
-                      placeholder="문서 내용을 편집하세요..."
-                    />
+                    <div className="flex h-full min-h-[400px] flex-col gap-2">
+                      {isServerTemplate && isEdited && (
+                        <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">
+                          편집한 내용은 <strong>초안 저장</strong> 후 레이아웃 보기에 반영됩니다.
+                        </p>
+                      )}
+                      <textarea
+                        value={editContent}
+                        onChange={(e) => onChangeContent(e.target.value)}
+                        className="w-full h-full min-h-[360px] text-sm text-foreground leading-relaxed bg-transparent resize-none focus:outline-none font-mono"
+                        placeholder="문서 내용을 편집하세요..."
+                      />
+                    </div>
                   )}
                 </div>
               ) : isDraft ? (
@@ -205,7 +240,7 @@ export function DocumentViewerModal({
                 />
               ) : (
                 <div className="prose prose-sm max-w-none">
-                  {(viewDoc.content ?? '문서 내용이 없습니다.').split('\n').map((line, i) => {
+                  {stripDocumentInputs(viewDoc.content ?? '문서 내용이 없습니다.').split('\n').map((line, i) => {
                     if (line.startsWith('## ')) return <h2 key={i} className="text-lg font-bold text-foreground mt-4 mb-2">{line.replace('## ', '')}</h2>;
                     if (line.startsWith('# ')) return <h1 key={i} className="text-xl font-bold text-foreground mt-4 mb-2">{line.replace('# ', '')}</h1>;
                     if (line.startsWith('- ')) return <li key={i} className="text-sm text-foreground ml-4">{line.replace('- ', '')}</li>;
