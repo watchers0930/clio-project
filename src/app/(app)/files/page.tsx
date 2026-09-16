@@ -129,11 +129,11 @@ function FilesPage() {
         mode="actions-only"
       />
 
-      <div className="flex items-center justify-between gap-3 py-[12px]">
+      <div className="flex flex-col gap-2.5 py-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-foreground-secondary">
           총 <span className="font-num font-medium text-foreground">{filtered.length}</span>개 파일
         </p>
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => { void handleReprocessAllErrors(); }}
             className="inline-flex min-h-[32px] items-center justify-center gap-1.5 rounded-full border border-warning/30 bg-warning/5 px-3 text-[10px] font-medium text-warning transition-colors hover:bg-warning/5 sm:min-h-[34px] sm:px-3.5 sm:text-[11px]"

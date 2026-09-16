@@ -251,40 +251,30 @@ export function FilesListView({
           </tbody>
         </table>
       </div>
-      <div className="flex flex-col gap-3 md:hidden">
+      <div className="flex flex-col md:hidden" style={{ gap: '10px' }}>
         {paged.length === 0 && (
           <div className="px-5 py-14 text-center text-foreground-secondary">검색 결과가 없습니다.</div>
         )}
         {paged.map((file) => (
-          <div key={file.id} className="rounded-xl border border-border bg-white px-4 py-5">
+          <div key={file.id} className="rounded-xl border border-border bg-white p-4">
             <div className="flex items-start gap-3">
-              <input type="checkbox" checked={selectedIds.has(file.id)} onChange={() => onToggleSelect(file.id)} className="mt-1 rounded border-border text-primary focus:ring-primary" />
+              <input type="checkbox" checked={selectedIds.has(file.id)} onChange={() => onToggleSelect(file.id)} className="mt-1 flex-shrink-0 rounded border-border text-primary focus:ring-primary" />
               <div className="min-w-0 flex-1">
                 <button onClick={() => onOpenFile(file)} className="flex w-full items-start gap-2 text-left">
                   <FileIcon type={file.type} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2 pb-[7px]">
-                      <span className="truncate text-[14px] font-medium text-foreground">{file.name}</span>
-                      <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${file.sourceType === 'document' ? 'bg-purple-100 text-purple-700' : (FILE_TYPE_BADGE[file.type] ?? 'bg-gray-100 text-gray-600')}`}>{file.sourceType === 'document' ? 'AI문서' : file.type}</span>
-                    </div>
-                    <div className="mt-[30px] flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[11px] leading-5 text-foreground-secondary">
-                      <span>{file.department}</span>
-                      <span>·</span>
-                      <span>{file.uploadDate}</span>
-                      <span>·</span>
-                      <span>{file.size}</span>
-                      <div className="ml-[18px] flex items-center gap-[10px]">
-                        <ScopeBadge scope={file.scope} compact />
-                        <span className={`inline-flex min-h-[20px] items-center rounded-full px-2 py-0 text-[10px] font-medium leading-none ${FILE_STATUS_COLOR[file.status]}`}>{file.status}</span>
-                      </div>
-                    </div>
-                  </div>
+                  <span className="min-w-0 flex-1 break-words text-[14px] font-medium text-foreground">{file.name}</span>
+                  <span className={`flex-shrink-0 inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${file.sourceType === 'document' ? 'bg-purple-100 text-purple-700' : (FILE_TYPE_BADGE[file.type] ?? 'bg-gray-100 text-gray-600')}`}>{file.sourceType === 'document' ? 'AI문서' : file.type}</span>
                 </button>
-                <div className="sr-only">
-                  <ScopeBadge scope={file.scope} />
-                  <span className={`inline-flex min-h-[24px] items-center rounded-full px-2.5 py-0 text-xs font-medium leading-none ${FILE_STATUS_COLOR[file.status]}`}>{file.status}</span>
+                <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[11px] leading-5 text-foreground-secondary">
+                  <span>{file.department}</span>
+                  <span className="text-foreground-quaternary">·</span>
+                  <span>{file.uploadDate}</span>
+                  <span className="text-foreground-quaternary">·</span>
+                  <span>{file.size}</span>
+                  <ScopeBadge scope={file.scope} compact />
+                  <span className={`inline-flex min-h-[20px] items-center rounded-full px-2 py-0 text-[10px] font-medium leading-none ${FILE_STATUS_COLOR[file.status]}`}>{file.status}</span>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
                   <button onClick={() => onOpenSearchFromFile(file)} className="rounded-lg border border-border-tint px-3 py-2 text-[11px] font-medium text-primary hover:bg-primary-tint transition-colors">
                     관련 문서 검색
                   </button>
