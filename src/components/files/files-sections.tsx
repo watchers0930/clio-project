@@ -274,14 +274,14 @@ export function FilesListView({
               <ScopeBadge scope={file.scope} compact />
               <span className={`inline-flex flex-shrink-0 items-center rounded-full px-2 py-1 text-[10px] font-medium leading-none ${FILE_STATUS_COLOR[file.status]}`}>{file.status}</span>
             </div>
-            <div className="mt-3 flex gap-2">
+            <div className="flex gap-2" style={{ marginTop: '17px' }}>
               <button onClick={() => onOpenSearchFromFile(file)} className="flex-1 whitespace-nowrap rounded-lg border border-border-tint px-2 py-2 text-[11px] font-medium text-primary hover:bg-primary-tint transition-colors">
                 관련 문서 검색
               </button>
-              <button onClick={() => onOpenDocumentsFromFile(file)} className="flex-1 whitespace-nowrap rounded-lg border border-success/30 px-2 py-2 text-[11px] font-medium text-success hover:bg-success/5 transition-colors">
+              <button onClick={() => onOpenDocumentsFromFile(file)} className="flex-1 whitespace-nowrap rounded-lg border border-teal-200 px-2 py-2 text-[11px] font-medium text-teal-600 hover:bg-teal-50 transition-colors">
                 후속 문서 작성
               </button>
-              <button onClick={() => onOpenCommentsFromFile(file)} className="flex-1 whitespace-nowrap rounded-lg border border-purple-200 px-2 py-2 text-[11px] font-medium text-purple-600 hover:bg-purple-50 transition-colors">
+              <button onClick={() => onOpenCommentsFromFile(file)} className="flex-1 whitespace-nowrap rounded-lg border border-indigo-200 px-2 py-2 text-[11px] font-medium text-indigo-600 hover:bg-indigo-50 transition-colors">
                 검토 문서 열기
               </button>
             </div>
