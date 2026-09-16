@@ -96,7 +96,9 @@ export default function SharedDocumentsPage() {
             <div>
               <h1 className="text-[20px] font-bold text-foreground">공유 문서</h1>
               <p className="mt-1.5 text-[13px] text-foreground-secondary">
-                공유받은 문서와 내가 배포 중인 문서를 확인하고, 코멘트 검토나 후속 문서 작성으로 이어갑니다.
+                공유받은 문서와 내가 배포 중인 문서를 확인하고,
+                <br />
+                코멘트 검토나 후속 문서 작성으로 이어갑니다.
               </p>
             </div>
             <div className="flex items-center gap-2">
