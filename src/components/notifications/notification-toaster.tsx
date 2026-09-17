@@ -59,7 +59,7 @@ function NotificationCard({
       className={cn(
         'flex w-80 items-start gap-3 rounded-xl border border-border bg-white px-4 py-3 shadow-lg',
         'border-l-[3px] border-l-primary',
-        'animate-in slide-in-from-right-6 fade-in-0 duration-300',
+        'animate-in slide-in-from-bottom-6 fade-in-0 duration-300',
         item.link && 'cursor-pointer hover:bg-surface-secondary transition-colors',
       )}
     >
@@ -145,7 +145,7 @@ export function NotificationToaster() {
   if (items.length === 0) return null;
 
   return (
-    <div className="fixed top-6 right-6 z-[9999] flex flex-col gap-2 pointer-events-none">
+    <div className="fixed bottom-6 right-6 z-[9999] flex flex-col-reverse gap-2 pointer-events-none">
       {items.map((item) => (
         <div key={item.id} className="pointer-events-auto">
           <NotificationCard
