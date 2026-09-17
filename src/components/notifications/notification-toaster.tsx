@@ -131,9 +131,7 @@ export function NotificationToaster() {
             push(payload.new as NotificationRow);
           },
         )
-        .subscribe((status, err) => {
-          console.log('[notif] subscribe', status, err ?? '');
-        });
+        .subscribe();
     })();
 
     return () => {
