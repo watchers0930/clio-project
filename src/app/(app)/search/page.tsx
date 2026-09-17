@@ -15,6 +15,8 @@ import {
 import { ShareLinkModal } from '@/components/documents/ShareLinkModal';
 import { GmailAttachmentModal } from '@/components/search/gmail-attachment-modal';
 import { GmailEmailModal } from '@/components/search/gmail-email-modal';
+import { GmailSyncBar } from '@/components/search/gmail-sync-bar';
+import { useGmailSync } from '@/components/search/use-gmail-sync';
 import { useGmailActions } from '@/components/search/use-gmail-actions';
 import type { ChatMessage, SearchResult, SearchTab } from '@/components/search/types';
 
@@ -72,16 +74,6 @@ function SearchPageInner() {
   // 실행 환경 판별 (데스크톱 앱 여부)
   useEffect(() => {
     setIsElectron(!!(window as Window & { electronAPI?: { isElectron?: boolean } }).electronAPI?.isElectron);
-  }, []);
-
-  // 검색 화면 진입 시 Gmail 최신 메일 자동 증분 동기화 (백그라운드, 서버 쿨다운 10분)
-  // Gmail 미연결 시 서버가 400 반환 → 무시. 검색 UX에 영향 없음(fire-and-forget).
-  useEffect(() => {
-    fetch('/api/gmail/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ auto: true }),
-    }).catch(() => {});
   }, []);
 
   const openPreview = async (fileId: string) => {
@@ -206,6 +198,13 @@ function SearchPageInner() {
   const doSearchRef = useRef(doSearch);
   useEffect(() => { doSearchRef.current = doSearch; }, [doSearch]);
 
+  // Gmail 동기화(진입 자동 + 수동). 새 메일이 들어오면 현재 검색어로 자동 재검색.
+  const queryRef = useRef(query);
+  useEffect(() => { queryRef.current = query; }, [query]);
+  const gmailSync = useGmailSync(() => {
+    if (queryRef.current.trim()) void doSearchRef.current(queryRef.current);
+  });
+
   const qParam = searchParams.get('q')?.trim() ?? '';
   const askParam = searchParams.get('ask')?.trim() ?? '';
   const tabParam = searchParams.get('tab') ?? '';
@@ -220,7 +219,6 @@ function SearchPageInner() {
       setActiveTab('ai');
       setChatInput(askParam);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qParam, askParam, tabParam]);
 
   const sortedResults = [...results].sort((a, b) => {
@@ -390,6 +388,15 @@ function SearchPageInner() {
 
       <div className="flex flex-col gap-5">
         <SearchTabs activeTab={activeTab} onTabChange={setActiveTab} />
+
+        {activeTab === 'file' && (
+          <GmailSyncBar
+            connected={gmailSync.connected}
+            lastSyncedAt={gmailSync.lastSyncedAt}
+            syncing={gmailSync.syncing}
+            onSync={() => { void gmailSync.runSync(false); }}
+          />
+        )}
 
         {activeTab === 'file' && (
           <FileSearchTab
