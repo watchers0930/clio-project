@@ -109,24 +109,40 @@ export function NotificationToaster() {
     const supabase = createClient();
     if (!supabase) return;
 
-    const channel = supabase
-      .channel(`notifications:${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `recipient_id=eq.${userId}`,
-        },
-        (payload) => {
-          push(payload.new as NotificationRow);
-        },
-      )
-      .subscribe();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+
+    // @supabase/ssr createBrowserClient는 realtime 소켓에 세션 JWT를 자동 주입하지
+    // 않는다 → 로그인 사용자의 postgres_changes(RLS)가 조용히 막힌다. 구독 전
+    // 세션 토큰을 명시적으로 주입해야 authenticated 컨텍스트로 이벤트를 받는다.
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (token) supabase.realtime.setAuth(token);
+      if (cancelled) return;
+
+      channel = supabase
+        .channel(`notifications:${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `recipient_id=eq.${userId}`,
+          },
+          (payload) => {
+            push(payload.new as NotificationRow);
+          },
+        )
+        .subscribe((status, err) => {
+          console.log('[notif] subscribe', status, err ?? '');
+        });
+    })();
 
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
     };
   }, [userId, push]);
 
