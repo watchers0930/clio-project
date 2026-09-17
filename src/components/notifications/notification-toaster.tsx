@@ -51,11 +51,7 @@ function NotificationCard({
   onDismiss: () => void;
   onOpen: () => void;
 }) {
-  useEffect(() => {
-    const timer = setTimeout(onDismiss, 6000);
-    return () => clearTimeout(timer);
-  }, [onDismiss]);
-
+  // 자동으로 사라지지 않는다 — 사용자가 X로 닫거나 클릭해 이동할 때까지 유지(대장 요청).
   return (
     <div
       role={item.link ? 'button' : undefined}
