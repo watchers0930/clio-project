@@ -56,7 +56,7 @@ function NotificationCard({
     <div
       role={item.link ? 'button' : undefined}
       onClick={item.link ? onOpen : undefined}
-      style={{ animation: 'notifSlideUp 320ms ease-out', borderLeftWidth: 3 }}
+      style={{ animation: 'notifSlideUp 320ms ease-out', borderLeftWidth: 3, minHeight: 96 }}
       className={cn(
         'flex w-80 items-start gap-3 rounded-xl border border-border bg-white px-4 py-3 shadow-lg',
         'border-l-primary',
