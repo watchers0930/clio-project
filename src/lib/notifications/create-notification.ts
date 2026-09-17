@@ -1,6 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-export type NotificationType = 'document_comment' | 'chat_request';
+export type NotificationType =
+  | 'document_comment'
+  | 'chat_request'
+  | 'document_shared'
+  | 'file_shared'
+  | 'comment_reflected';
 
 interface CreateNotificationsParams {
   recipientIds: string[];

@@ -6,6 +6,7 @@ import { extractSectionContent, replaceSectionContent } from '@/lib/utils/parse-
 import OpenAI from 'openai';
 import { recordAuditEvent } from '@/lib/audit';
 import { canManageDocument, getUserRoleInfo } from '@/lib/permissions';
+import { createNotifications } from '@/lib/notifications/create-notification';
 import {
   buildCurrentDocumentUpdate,
   buildSnapshotInsertPayload,
@@ -263,6 +264,25 @@ ${feedbackList}
         next_version_number: nextVersionNumber,
       },
     });
+
+    // 반영된 댓글의 작성자들에게 알림(반영한 본인 제외). best-effort.
+    try {
+      const recipientIds = comments.map((c) => c.user_id).filter(Boolean) as string[];
+      const [{ data: actor }, { data: docRow }] = await Promise.all([
+        admin.from('users').select('name').eq('id', authUserId).single(),
+        admin.from('documents').select('title').eq('id', documentId).single(),
+      ]);
+      await createNotifications(admin, {
+        recipientIds,
+        actorId: authUserId,
+        type: 'comment_reflected',
+        title: `${actor?.name ?? '누군가'}님이 회원님의 댓글을 문서에 반영했습니다`,
+        body: docRow?.title ?? null,
+        link: `/documents/${documentId}`,
+      });
+    } catch (e) {
+      console.error('[apply-comments] notify', e);
+    }
 
     return NextResponse.json({ success: true, updatedContent });
   } catch (e) {

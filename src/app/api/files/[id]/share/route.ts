@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { getUserRoleInfo, isAdmin } from '@/lib/permissions';
+import { createAdminSupabaseClient } from '@/lib/supabase/admin';
+import { createNotifications } from '@/lib/notifications/create-notification';
 
 /**
  * GET /api/files/[id]/share — 파일 공유 현황 조회
@@ -93,6 +95,32 @@ export async function POST(
       target_id: fileId,
       details: { shared_with_user: userId, shared_with_dept: departmentId, permission: permission ?? 'read' },
     }).then(() => {}, () => {});
+
+    // 공유 대상(사용자 또는 부서 구성원)에게 알림. best-effort.
+    try {
+      const admin = createAdminSupabaseClient();
+      let recipientIds: string[] = [];
+      if (userId) {
+        recipientIds = [userId];
+      } else if (departmentId) {
+        const { data: deptUsers } = await admin.from('users').select('id').eq('department_id', departmentId);
+        recipientIds = (deptUsers ?? []).map((u) => u.id);
+      }
+      const [{ data: actor }, { data: fileRow }] = await Promise.all([
+        admin.from('users').select('name').eq('id', authUserId).single(),
+        admin.from('files').select('name').eq('id', fileId).single(),
+      ]);
+      await createNotifications(admin, {
+        recipientIds,
+        actorId: authUserId,
+        type: 'file_shared',
+        title: `${actor?.name ?? '누군가'}님이 파일을 공유했습니다`,
+        body: fileRow?.name ?? null,
+        link: '/files',
+      });
+    } catch (e) {
+      console.error('[files/share] notify', e);
+    }
 
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch {

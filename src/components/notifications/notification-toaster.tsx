@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { create } from 'zustand';
-import { X, MessageSquareText, MessagesSquare, Bell } from 'lucide-react';
+import { X, MessageSquareText, MessagesSquare, Bell, FileText, Paperclip, CheckCheck } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuthStore } from '@/store/auth-store';
 import { cn } from '@/lib/utils';
@@ -38,6 +38,9 @@ const useNotificationToastStore = create<NotificationToastStore>((set) => ({
 function NotificationIcon({ type, size = 18 }: { type: string; size?: number }) {
   if (type === 'chat_request') return <MessagesSquare size={size} />;
   if (type === 'document_comment') return <MessageSquareText size={size} />;
+  if (type === 'comment_reflected') return <CheckCheck size={size} />;
+  if (type === 'document_shared') return <FileText size={size} />;
+  if (type === 'file_shared') return <Paperclip size={size} />;
   return <Bell size={size} />;
 }
 

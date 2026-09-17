@@ -3,6 +3,8 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { recordAuditEvent } from '@/lib/audit';
 import { canAccessDocument, canManageDocument, getUserRoleInfo } from '@/lib/permissions';
+import { createAdminSupabaseClient } from '@/lib/supabase/admin';
+import { createNotifications } from '@/lib/notifications/create-notification';
 
 export async function GET(
   _request: NextRequest,
@@ -90,6 +92,32 @@ export async function POST(
       targetId: documentId,
       details: { shared_with_user: userId, shared_with_dept: departmentId, permission: permission ?? 'read' },
     });
+
+    // 공유 대상(사용자 또는 부서 구성원)에게 알림. best-effort.
+    try {
+      const admin = createAdminSupabaseClient();
+      let recipientIds: string[] = [];
+      if (userId) {
+        recipientIds = [userId];
+      } else if (departmentId) {
+        const { data: deptUsers } = await admin.from('users').select('id').eq('department_id', departmentId);
+        recipientIds = (deptUsers ?? []).map((u) => u.id);
+      }
+      const [{ data: actor }, { data: doc }] = await Promise.all([
+        admin.from('users').select('name').eq('id', authUserId).single(),
+        admin.from('documents').select('title').eq('id', documentId).single(),
+      ]);
+      await createNotifications(admin, {
+        recipientIds,
+        actorId: authUserId,
+        type: 'document_shared',
+        title: `${actor?.name ?? '누군가'}님이 문서를 공유했습니다`,
+        body: doc?.title ?? null,
+        link: `/documents/${documentId}`,
+      });
+    } catch (e) {
+      console.error('[documents/share] notify', e);
+    }
 
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch {
