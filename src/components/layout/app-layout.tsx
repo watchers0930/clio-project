@@ -6,6 +6,7 @@ import { Sidebar } from './sidebar';
 import { Header } from './header';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { ToastRenderer } from '@/components/ui/toast';
+import { NotificationToaster } from '@/components/notifications/notification-toaster';
 import { useAuthStore } from '@/store/auth-store';
 import { ExpiryAlertProvider } from '@/components/expiry/ExpiryAlertProvider';
 import { EventAlertProvider } from '@/components/schedule/event-alert-provider';
@@ -81,6 +82,7 @@ function AppLayout({ children }: AppLayoutProps) {
       </div>
       <MobileBottomNav />
       <ToastRenderer />
+      <NotificationToaster />
       <OnboardingModal />
     </div>
     </EventAlertProvider>

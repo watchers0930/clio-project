@@ -4,6 +4,44 @@ import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { recordAuditEvent } from '@/lib/audit';
 import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
+import { createNotifications } from '@/lib/notifications/create-notification';
+
+/** 문서 댓글 수신자(문서 작성자 + 공유 대상)를 조회한다. 발신자 제외는 createNotifications가 처리. */
+async function resolveCommentRecipients(
+  admin: ReturnType<typeof createAdminSupabaseClient>,
+  documentId: string,
+): Promise<string[]> {
+  const recipients = new Set<string>();
+  try {
+    const { data: doc } = await admin
+      .from('documents')
+      .select('created_by')
+      .eq('id', documentId)
+      .single();
+    if (doc?.created_by) recipients.add(doc.created_by);
+
+    const { data: perms } = await admin
+      .from('document_permissions')
+      .select('granted_to_user, granted_to_dept')
+      .eq('document_id', documentId);
+
+    const deptIds: string[] = [];
+    for (const p of perms ?? []) {
+      if (p.granted_to_user) recipients.add(p.granted_to_user);
+      if (p.granted_to_dept) deptIds.push(p.granted_to_dept);
+    }
+    if (deptIds.length > 0) {
+      const { data: deptUsers } = await admin
+        .from('users')
+        .select('id')
+        .in('department_id', deptIds);
+      for (const u of deptUsers ?? []) recipients.add(u.id);
+    }
+  } catch (e) {
+    console.error('[resolveCommentRecipients]', e);
+  }
+  return [...recipients];
+}
 
 async function loadUserNameMap(admin: ReturnType<typeof createAdminSupabaseClient>, userIds: string[]) {
   if (userIds.length === 0) return new Map<string, string>();
@@ -112,6 +150,18 @@ export async function POST(
         comment_id: data.id,
         content_length: content.length,
       },
+    });
+
+    // 문서 작성자 + 공유 대상에게 알림(발신자 제외). best-effort — 실패해도 댓글 작성은 성공.
+    const actorName = userNameMap.get(authUserId) ?? '누군가';
+    const recipientIds = await resolveCommentRecipients(admin, documentId);
+    await createNotifications(admin, {
+      recipientIds,
+      actorId: authUserId,
+      type: 'document_comment',
+      title: `${actorName}님이 댓글을 남겼습니다`,
+      body: content.length > 80 ? `${content.slice(0, 80)}…` : content,
+      link: `/documents/${documentId}`,
     });
 
     return NextResponse.json({

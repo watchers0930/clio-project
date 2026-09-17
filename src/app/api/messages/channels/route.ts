@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { createNotifications } from '@/lib/notifications/create-notification';
 
 /**
  * GET /api/messages/channels — 내가 속한 채널 목록
@@ -89,6 +90,16 @@ export async function POST(request: NextRequest) {
         { channel_id: channel.id, user_id: targetUserId },
       ]);
       if (memErr) console.error('[channels/POST] members insert:', memErr.message);
+
+      // 채팅 신청(신규 DM 개설) 시 상대에게 알림. best-effort.
+      await createNotifications(admin, {
+        recipientIds: [targetUserId],
+        actorId: authUserId,
+        type: 'chat_request',
+        title: `${myUser?.name ?? '누군가'}님이 채팅을 시작했습니다`,
+        body: null,
+        link: '/messages',
+      });
 
       return NextResponse.json({ success: true, data: channel }, { status: 201 });
     }
