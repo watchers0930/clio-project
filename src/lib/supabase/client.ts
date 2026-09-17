@@ -6,8 +6,11 @@
 import { createBrowserClient } from '@supabase/ssr';
 import type { Database } from './types';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+// ⚠️ env 값 끝에 개행/공백이 딸려오면 Realtime WebSocket URL의 apikey에 %0A가 붙어
+// 연결이 CHANNEL_ERROR로 실패한다(REST 요청은 헤더라 관대해서 티가 안 남).
+// 반드시 trim으로 방어한다.
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
 
 /**
  * 브라우저 측 Supabase 클라이언트 생성
