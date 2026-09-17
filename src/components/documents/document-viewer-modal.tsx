@@ -4,11 +4,9 @@ import { HtmlPreviewFrame } from '@/components/documents/html-preview-frame';
 import type { DocumentItem } from '@/components/documents/page-types';
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
 import { useServerRenderedPreview } from '@/components/documents/use-server-rendered-preview';
+import { DocumentMarkdownBody } from '@/components/documents/document-markdown-body';
 
-/** 문서 본문에 임베드된 입력값 메타 주석(<!--DOCUMENT_INPUTS:...-->)을 제거한다. */
-function stripDocumentInputs(content: string): string {
-  return content.replace(/^<!--(?:PROPOSAL_INPUTS|DOCUMENT_INPUTS):.*?-->\n?/, '');
-}
+const EMBEDDED_INPUTS_RE = /^<!--(?:PROPOSAL_INPUTS|DOCUMENT_INPUTS):/;
 
 interface DocumentViewerModalProps {
   viewDoc: DocumentItem | null;
@@ -88,9 +86,13 @@ export function DocumentViewerModal({
   void onOpenMemo;
 
   const isProposal = viewDoc.template === '제안서';
-  // 제안서 외 templateId 보유 문서(품의서·사업계획서·재직증명서 등)는 서버 렌더 프리뷰
+  // 커스텀 DB 템플릿(templateId 보유): 번들이 DB에 있어 서버 렌더 HTML 프리뷰 사용
   const isServerTemplate = !isProposal && !!viewDoc.templateId;
-  // 레이아웃(HTML) 프리뷰를 사용하는 문서 = 제안서 + 서버 템플릿 문서
+  // 빌트인 템플릿(품의서·재직증명서·휴가원 등)은 template_id 없이 저장되고 본문 앞에
+  // <!--DOCUMENT_INPUTS--> 주석이 붙는다. 주석을 걷어낸 마크다운 본문을 렌더한다.
+  const hasEmbeddedInputs = EMBEDDED_INPUTS_RE.test(viewDoc.content ?? '');
+  const isMarkdownTemplate = !isProposal && !isServerTemplate && hasEmbeddedInputs;
+  // iframe(HTML) 프리뷰 = 제안서(클라 렌더) + 서버 템플릿
   const useHtmlPreview = isProposal || isServerTemplate;
   const availableDownloadFormats = isProposal ? ['pdf'] : downloadFormatOptions;
   const proposalHtml = isProposal
@@ -231,6 +233,45 @@ export function DocumentViewerModal({
                     </div>
                   )}
                 </div>
+              ) : isMarkdownTemplate ? (
+                <div className="flex h-full min-h-[400px] flex-col gap-3">
+                  {isDraft && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setProposalViewMode('preview')}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                          proposalViewMode === 'preview'
+                            ? 'bg-foreground text-white'
+                            : 'border border-border text-foreground-secondary hover:bg-surface-secondary'
+                        }`}
+                      >
+                        레이아웃 보기
+                      </button>
+                      <button
+                        onClick={() => setProposalViewMode('edit')}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                          proposalViewMode === 'edit'
+                            ? 'bg-foreground text-white'
+                            : 'border border-border text-foreground-secondary hover:bg-surface-secondary'
+                        }`}
+                      >
+                        원문 편집
+                      </button>
+                    </div>
+                  )}
+                  {!isDraft || proposalViewMode === 'preview' ? (
+                    <div className="h-full min-h-[400px] overflow-y-auto rounded-xl border border-border bg-white px-5 py-4">
+                      <DocumentMarkdownBody content={isDraft ? editContent : viewDoc.content ?? ''} />
+                    </div>
+                  ) : (
+                    <textarea
+                      value={editContent}
+                      onChange={(e) => onChangeContent(e.target.value)}
+                      className="w-full h-full min-h-[360px] text-sm text-foreground leading-relaxed bg-transparent resize-none focus:outline-none font-mono"
+                      placeholder="문서 내용을 편집하세요..."
+                    />
+                  )}
+                </div>
               ) : isDraft ? (
                 <textarea
                   value={editContent}
@@ -239,17 +280,7 @@ export function DocumentViewerModal({
                   placeholder="문서 내용을 편집하세요..."
                 />
               ) : (
-                <div className="prose prose-sm max-w-none">
-                  {stripDocumentInputs(viewDoc.content ?? '문서 내용이 없습니다.').split('\n').map((line, i) => {
-                    if (line.startsWith('## ')) return <h2 key={i} className="text-lg font-bold text-foreground mt-4 mb-2">{line.replace('## ', '')}</h2>;
-                    if (line.startsWith('# ')) return <h1 key={i} className="text-xl font-bold text-foreground mt-4 mb-2">{line.replace('# ', '')}</h1>;
-                    if (line.startsWith('- ')) return <li key={i} className="text-sm text-foreground ml-4">{line.replace('- ', '')}</li>;
-                    if (line.startsWith('*')) return <p key={i} className="text-sm text-foreground-secondary italic">{line.replace(/\*/g, '')}</p>;
-                    if (line.trim() === '---') return <hr key={i} className="my-3 border-border" />;
-                    if (line.trim() === '') return <br key={i} />;
-                    return <p key={i} className="text-sm text-foreground leading-relaxed">{line}</p>;
-                  })}
-                </div>
+                <DocumentMarkdownBody content={viewDoc.content ?? ''} />
               )}
             </div>
 
