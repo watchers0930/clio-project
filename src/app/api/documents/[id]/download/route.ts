@@ -495,6 +495,17 @@ export async function GET(
           });
         }
 
+        // 렌더된 HTML 양식(휴가원·재직증명서 등 테이블 양식)은 PDF 요청도
+        // 마크다운으로 재렌더하지 않고 저장된 표 양식 HTML을 그대로 서빙한다.
+        if (format === 'pdf' && ext === 'html') {
+          return new NextResponse(new Uint8Array(fileBuffer), {
+            headers: {
+              'Content-Type': 'text/html; charset=utf-8',
+              'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(`${doc.title}.html`)}`,
+              'Content-Length': String(fileBuffer.length),
+            },
+          });
+        }
         // PDF 다운로드 요청이면 content 기반 재렌더링으로 넘김 (최신 템플릿 로직 적용)
         if (format === 'pdf' && (doc.content ?? '').length > 50) {
           // storage_path 블록을 빠져나가 아래 renderPdf 경로로 진행
