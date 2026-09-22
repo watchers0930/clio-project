@@ -46,83 +46,74 @@ export function computeRemainingLeaveDays(hireDate: string, usedDays: number, ba
 export const LEAVE_APPLICATION_TEMPLATE_HTML = `
 <style>
 @page{size:A4;margin:0;}
-.leave-app{position:relative;box-sizing:border-box;width:210mm;height:297mm;min-height:297mm;margin:0 auto;background:#fff;color:#111;overflow:hidden;font-family:Batang,"AppleMyungjo","Nanum Myeongjo","Noto Serif KR",serif;letter-spacing:-1px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.leave-app{position:relative;box-sizing:border-box;width:210mm;min-height:297mm;margin:0 auto;padding:24mm 26mm;background:#fff;color:#111;font-family:Batang,"AppleMyungjo","Nanum Myeongjo","Noto Serif KR",serif;letter-spacing:-0.5px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 .leave-app *{box-sizing:border-box;}
-.leave-app .title{position:absolute;top:32mm;left:0;z-index:1;width:100%;margin:0;text-align:center;font-size:12mm;font-weight:700;letter-spacing:2mm;line-height:1;}
-.leave-app .section{position:absolute;left:28mm;z-index:1;width:154mm;font-size:4.2mm;line-height:1;}
-.leave-app .section-1{top:62mm;}
-.leave-app .section-2{top:112mm;}
-.leave-app .section-title{margin:0 0 5mm 1mm;font-size:4.4mm;font-weight:700;line-height:1;}
-.leave-app table{width:100%;border-collapse:collapse;table-layout:fixed;border:1px solid #222;}
-.leave-app td{height:11mm;border:1px solid #222;vertical-align:middle;font-size:4.2mm;font-weight:400;line-height:1.35;}
-.leave-app .label{text-align:left;background:#f5f5f5;padding:0 3mm;white-space:nowrap;}
-.leave-app col:nth-child(1){width:21%;}
-.leave-app col:nth-child(2){width:29%;}
-.leave-app col:nth-child(3){width:21%;}
-.leave-app col:nth-child(4){width:29%;}
-.leave-app .value{padding:0 4mm;letter-spacing:0;white-space:normal;word-break:keep-all;}
-.leave-app .reason-cell{height:34mm;vertical-align:top;padding-top:2mm;}
+.leave-app .title{margin:0 0 14mm 0;text-align:center;font-size:12mm;font-weight:700;letter-spacing:3mm;line-height:1;}
+.leave-app .section-title{margin:0 0 4mm 1mm;font-size:4.4mm;font-weight:700;line-height:1;}
+.leave-app table.grid{width:100%;border-collapse:collapse;table-layout:fixed;border:1px solid #222;margin-bottom:8mm;}
+.leave-app table.grid td{height:11mm;border:1px solid #222;vertical-align:middle;font-size:4.2mm;font-weight:400;line-height:1.4;padding:2mm 3mm;}
+.leave-app .label{text-align:left;background:#f5f5f5;font-weight:700;white-space:nowrap;}
+.leave-app .value{text-align:left;letter-spacing:0;white-space:pre-wrap;word-break:keep-all;}
+.leave-app .value.reason{vertical-align:top;height:34mm;}
 .leave-app .highlight{font-weight:700;color:#1A5AD9;}
-.leave-app .statement{position:absolute;top:196mm;left:0;z-index:1;width:100%;margin:0;text-align:center;font-size:4.4mm;line-height:1;}
-.leave-app .date{position:absolute;top:216mm;left:0;z-index:1;width:100%;margin:0;text-align:center;font-size:4.2mm;line-height:1;letter-spacing:0;word-spacing:3mm;}
-.leave-app .signer{position:absolute;top:238mm;left:0;z-index:1;width:100%;text-align:center;font-size:4.4mm;line-height:1;}
+.leave-app col.c-label{width:22%;}
+.leave-app col.c-value{width:28%;}
+.leave-app .statement{margin:12mm 0 8mm 0;text-align:center;font-size:4.4mm;line-height:1;}
+.leave-app .date{margin:0 0 12mm 0;text-align:center;font-size:4.2mm;line-height:1;letter-spacing:0;word-spacing:3mm;}
+.leave-app .signer{margin:0 0 10mm 0;text-align:center;font-size:4.4mm;line-height:1;}
 .leave-app .signer .name{margin-left:4mm;font-weight:700;letter-spacing:1mm;}
 .leave-app .sign-img{height:14mm;vertical-align:middle;margin-left:2mm;}
 .leave-app .sign-img[src=""],.leave-app .sign-img:not([src]){display:none;}
-.leave-app .approver{position:absolute;top:270mm;left:0;z-index:1;width:100%;text-align:center;font-size:4.4mm;font-weight:700;}
-@media print{html,body{width:210mm;height:297mm;min-height:297mm;margin:0!important;padding:0!important;background:#fff;overflow:hidden}.leave-app{width:210mm;height:297mm;min-height:297mm;margin:0;box-shadow:none;}}
+.leave-app .company{margin-top:6mm;text-align:center;font-size:4.6mm;font-weight:700;}
+@media print{html,body{width:210mm;margin:0!important;padding:0!important;background:#fff;}.leave-app{width:210mm;margin:0;box-shadow:none;}}
 </style>
 <article class="leave-app">
   <h1 class="title">{{report_title}}</h1>
 
-  <section class="section section-1">
-    <h2 class="section-title">1. 신청자 정보</h2>
-    <table>
-      <colgroup><col><col><col><col></colgroup>
-      <tbody>
-        <tr>
-          <td class="label">부서</td>
-          <td class="value">{{department}}</td>
-          <td class="label">성명</td>
-          <td class="value">{{employee_name}}</td>
-        </tr>
-        <tr>
-          <td class="label">입사일</td>
-          <td class="value">{{hire_date_ko}}</td>
-          <td class="label">비상연락처</td>
-          <td class="value">{{emergency_contact}}</td>
-        </tr>
-      </tbody>
-    </table>
-  </section>
+  <h2 class="section-title">1. 신청자 정보</h2>
+  <table class="grid">
+    <colgroup><col class="c-label"><col class="c-value"><col class="c-label"><col class="c-value"></colgroup>
+    <tbody>
+      <tr>
+        <td class="label">부서</td>
+        <td class="value">{{department}}</td>
+        <td class="label">성명</td>
+        <td class="value">{{employee_name}}</td>
+      </tr>
+      <tr>
+        <td class="label">입사일</td>
+        <td class="value">{{hire_date_ko}}</td>
+        <td class="label">비상연락처</td>
+        <td class="value">{{emergency_contact}}</td>
+      </tr>
+    </tbody>
+  </table>
 
-  <section class="section section-2">
-    <h2 class="section-title">2. 휴가 내역</h2>
-    <table>
-      <colgroup><col><col><col><col></colgroup>
-      <tbody>
-        <tr>
-          <td class="label">휴가기간</td>
-          <td class="value" colspan="3">{{leave_start_date_ko}} ~ {{leave_end_date_ko}}</td>
-        </tr>
-        <tr>
-          <td class="label">기 사용 휴가</td>
-          <td class="value">{{used_leave_days}} 일</td>
-          <td class="label">남은 휴가일수</td>
-          <td class="value highlight">{{remaining_leave_days}} 일</td>
-        </tr>
-        <tr>
-          <td class="label">사유</td>
-          <td class="value reason-cell" colspan="3">{{leave_reason}}</td>
-        </tr>
-      </tbody>
-    </table>
-  </section>
+  <h2 class="section-title">2. 휴가 내역</h2>
+  <table class="grid">
+    <colgroup><col class="c-label"><col class="c-value"><col class="c-label"><col class="c-value"></colgroup>
+    <tbody>
+      <tr>
+        <td class="label">휴가기간</td>
+        <td class="value" colspan="3">{{leave_start_date_ko}} ~ {{leave_end_date_ko}}</td>
+      </tr>
+      <tr>
+        <td class="label">기 사용 휴가</td>
+        <td class="value">{{used_leave_days}} 일</td>
+        <td class="label">남은 휴가일수</td>
+        <td class="value highlight">{{remaining_leave_days}} 일</td>
+      </tr>
+      <tr>
+        <td class="label">사유</td>
+        <td class="value reason" colspan="3">{{leave_reason}}</td>
+      </tr>
+    </tbody>
+  </table>
 
   <p class="statement">위와 같이 휴가를 신청합니다.</p>
   <p class="date">{{report_date_ko}}</p>
   <p class="signer">신청인 : <span class="name">{{employee_name}}</span> <img class="sign-img" src="{{signature_image_src}}" alt="" /></p>
-  <p class="approver">{{company_name}}</p>
+  <p class="company">{{company_name}}</p>
 </article>
 `.trim();
 
