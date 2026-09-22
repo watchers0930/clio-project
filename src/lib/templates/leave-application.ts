@@ -53,6 +53,8 @@ export const LEAVE_APPLICATION_TEMPLATE_HTML = `
 .leave-app .approval-box td{border:1px solid #222;text-align:center;vertical-align:middle;font-size:3.6mm;}
 .leave-app .approval-box .ap-label{height:7mm;background:#f5f5f5;font-weight:700;}
 .leave-app .approval-box .ap-sign{height:18mm;}
+.leave-app .approval-box .ap-sign img{max-height:15mm;max-width:90%;object-fit:contain;}
+.leave-app .approval-box .ap-sign img[src=""],.leave-app .approval-box .ap-sign img:not([src]){display:none;}
 .leave-app .section-title{margin:0 0 4mm 1mm;font-size:4.4mm;font-weight:700;line-height:1;}
 .leave-app table.grid{width:100%;border-collapse:collapse;table-layout:fixed;border:1px solid #222;margin-bottom:8mm;}
 .leave-app table.grid td{height:11mm;border:1px solid #222;vertical-align:middle;font-size:4.2mm;font-weight:400;line-height:1.4;padding:2mm 3mm;}
@@ -77,7 +79,7 @@ export const LEAVE_APPLICATION_TEMPLATE_HTML = `
   <table class="approval-box">
     <tbody>
       <tr><td class="ap-label">담당</td><td class="ap-label">관리</td><td class="ap-label">대표</td></tr>
-      <tr><td class="ap-sign"></td><td class="ap-sign"></td><td class="ap-sign"></td></tr>
+      <tr><td class="ap-sign"><img src="{{signature_image_src}}" alt="" /></td><td class="ap-sign"></td><td class="ap-sign"></td></tr>
     </tbody>
   </table>
 
@@ -123,7 +125,6 @@ export const LEAVE_APPLICATION_TEMPLATE_HTML = `
 
   <p class="statement">위와 같이 휴가를 신청합니다.</p>
   <p class="date">{{report_date_ko}}</p>
-  <p class="signer">신청인 : <span class="name">{{employee_name}}</span> <img class="sign-img" src="{{signature_image_src}}" alt="" /></p>
   <p class="company">{{company_name}}</p>
 </article>
 `.trim();
