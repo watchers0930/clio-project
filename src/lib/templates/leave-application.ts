@@ -48,7 +48,11 @@ export const LEAVE_APPLICATION_TEMPLATE_HTML = `
 @page{size:A4;margin:0;}
 .leave-app{position:relative;box-sizing:border-box;width:210mm;min-height:297mm;margin:0 auto;padding:24mm 26mm;background:#fff;color:#111;font-family:Batang,"AppleMyungjo","Nanum Myeongjo","Noto Serif KR",serif;letter-spacing:-0.5px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 .leave-app *{box-sizing:border-box;}
-.leave-app .title{margin:0 0 14mm 0;text-align:center;font-size:12mm;font-weight:700;letter-spacing:3mm;line-height:1;}
+.leave-app .title{margin:0 0 8mm 0;text-align:center;font-size:12mm;font-weight:700;letter-spacing:3mm;line-height:1;}
+.leave-app .approval-box{border-collapse:collapse;table-layout:fixed;width:66mm;margin:0 0 12mm auto;}
+.leave-app .approval-box td{border:1px solid #222;text-align:center;vertical-align:middle;font-size:3.6mm;}
+.leave-app .approval-box .ap-label{height:7mm;background:#f5f5f5;font-weight:700;}
+.leave-app .approval-box .ap-sign{height:18mm;}
 .leave-app .section-title{margin:0 0 4mm 1mm;font-size:4.4mm;font-weight:700;line-height:1;}
 .leave-app table.grid{width:100%;border-collapse:collapse;table-layout:fixed;border:1px solid #222;margin-bottom:8mm;}
 .leave-app table.grid td{height:11mm;border:1px solid #222;vertical-align:middle;font-size:4.2mm;font-weight:400;line-height:1.4;padding:2mm 3mm;}
@@ -69,6 +73,13 @@ export const LEAVE_APPLICATION_TEMPLATE_HTML = `
 </style>
 <article class="leave-app">
   <h1 class="title">{{report_title}}</h1>
+
+  <table class="approval-box">
+    <tbody>
+      <tr><td class="ap-label">담당</td><td class="ap-label">관리</td><td class="ap-label">대표</td></tr>
+      <tr><td class="ap-sign"></td><td class="ap-sign"></td><td class="ap-sign"></td></tr>
+    </tbody>
+  </table>
 
   <h2 class="section-title">1. 신청자 정보</h2>
   <table class="grid">
