@@ -75,7 +75,11 @@ export interface DocData {
 
 export function isFileBased(doc: DocData) {
   const firstLine = (doc.content ?? '').split('\n')[0];
-  return firstLine.startsWith('[') && firstLine.length < 200;
+  if (firstLine.startsWith('[') && firstLine.length < 200) return true;
+  // 렌더된 HTML 양식 파일(generated/*.html)이 있는 html-template 문서(휴가원·재직증명서 등)는
+  // 마크다운(content)이 아니라 양식 파일을 iframe으로 보여준다.
+  if (doc.storage_path?.endsWith('.html') && firstLine.startsWith('<!--DOCUMENT_INPUTS')) return true;
+  return false;
 }
 
 function normalizeOrdinals(content: string) {

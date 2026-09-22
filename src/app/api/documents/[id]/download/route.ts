@@ -390,6 +390,17 @@ export async function GET(
         };
 
         if (inline) {
+          // 렌더된 HTML 양식(generated/*.html — 휴가원·재직증명서 등 테이블 양식)은
+          // 마크다운으로 재렌더하지 않고 저장된 양식 HTML을 그대로 서빙한다.
+          if (ext === 'html') {
+            return new NextResponse(new Uint8Array(fileBuffer), {
+              headers: {
+                'Content-Type': 'text/html; charset=utf-8',
+                'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(`${doc.title}.html`)}`,
+                'Content-Length': String(fileBuffer.length),
+              },
+            });
+          }
           // 미리보기: 마크다운 content가 있으면 PDF 렌더, 없으면 원본 파일 서빙
           let inlineContent = doc.content ?? '';
           // 임베드된 documentInputs 추출
