@@ -148,8 +148,15 @@ function buildTemplateHtml(
     replacements[`${section.key}_body`] = section.bodyMarkdown ? markdownFragmentToHtml(section.bodyMarkdown, { indentByHeading }) : '<p>[내용 없음]</p>';
   });
 
+  // 미입력 필드에 예시(placeholder)가 값으로 들어간 경우 빈칸으로 처리한다.
+  const placeholderByKey = new Map((templateBundle.fields ?? []).map((f) => [f.key, f.placeholder ?? '']));
+
   const bodyHtml = templateBundle.layoutHtml.replace(/\{\{([^}]+)\}\}/g, (_match, key: string) => {
-    return replacements[key.trim()] ?? '';
+    const k = key.trim();
+    const val = replacements[k] ?? '';
+    const ph = placeholderByKey.get(k);
+    if (ph && val === ph) return '';
+    return val;
   });
 
   return `<!DOCTYPE html>

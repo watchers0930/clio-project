@@ -36,7 +36,8 @@ function interpolateFieldDefaultValue(value: string, inputs: Record<string, stri
     const normalizedKey = key.trim();
     const inputValue = inputs[normalizedKey]?.trim();
     if (inputValue) return inputValue;
-    return fields.find((field) => field.key === normalizedKey)?.placeholder ?? '';
+    // 미입력 필드는 예시(placeholder)를 값으로 채우지 않고 비워둔다.
+    return '';
   });
 }
 
