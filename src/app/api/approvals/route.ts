@@ -52,6 +52,8 @@ export async function POST(request: NextRequest) {
     const d = (tmpl?.approval_depth ?? null) as number | null;
     if (d && d >= 1) depth = d;
   }
+  // 결재란 3칸 양식(품의서 기안/검토/승인, 휴가원 담당/관리/대표)은 3단계 결재
+  if (/품의서|휴가원/.test(doc.title ?? '')) depth = 3;
 
   // 조직도 + 신청자 서명
   const { data: members } = await admin

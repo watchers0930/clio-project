@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { applyApprovalSignatures } from '@/lib/approval/apply-signatures';
 import { renderDocx } from '@/lib/renderers/docx-renderer';
 import { renderHwpx } from '@/lib/renderers/hwpx-renderer';
 import { renderPdf } from '@/lib/renderers/pdf-renderer';
@@ -393,11 +394,14 @@ export async function GET(
           // 렌더된 HTML 양식(generated/*.html — 휴가원·재직증명서 등 테이블 양식)은
           // 마크다운으로 재렌더하지 않고 저장된 양식 HTML을 그대로 서빙한다.
           if (ext === 'html') {
-            return new NextResponse(new Uint8Array(fileBuffer), {
+            let formHtml = fileBuffer.toString('utf-8');
+            formHtml = await applyApprovalSignatures(adminClient, doc.id, formHtml);
+            const outBuffer = Buffer.from(formHtml, 'utf-8');
+            return new NextResponse(new Uint8Array(outBuffer), {
               headers: {
                 'Content-Type': 'text/html; charset=utf-8',
                 'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(`${doc.title}.html`)}`,
-                'Content-Length': String(fileBuffer.length),
+                'Content-Length': String(outBuffer.length),
               },
             });
           }
@@ -498,11 +502,14 @@ export async function GET(
         // 렌더된 HTML 양식(휴가원·재직증명서 등 테이블 양식)은 PDF 요청도
         // 마크다운으로 재렌더하지 않고 저장된 표 양식 HTML을 그대로 서빙한다.
         if (format === 'pdf' && ext === 'html') {
-          return new NextResponse(new Uint8Array(fileBuffer), {
+          let formHtml = fileBuffer.toString('utf-8');
+          formHtml = await applyApprovalSignatures(adminClient, doc.id, formHtml);
+          const outBuffer = Buffer.from(formHtml, 'utf-8');
+          return new NextResponse(new Uint8Array(outBuffer), {
             headers: {
               'Content-Type': 'text/html; charset=utf-8',
               'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(`${doc.title}.html`)}`,
-              'Content-Length': String(fileBuffer.length),
+              'Content-Length': String(outBuffer.length),
             },
           });
         }

@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   const admin = createAdminSupabaseClient();
   const { data: doc } = await admin
     .from('documents')
-    .select('id, template_id, created_by')
+    .select('id, title, template_id, created_by')
     .eq('id', documentId)
     .maybeSingle();
   if (!doc) return NextResponse.json({ success: false, error: '문서를 찾을 수 없습니다.' }, { status: 404 });
@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
     const d = (tmpl?.approval_depth ?? null) as number | null;
     if (d && d >= 1) depth = d;
   }
+  if (/품의서|휴가원/.test(doc.title ?? '')) depth = 3;
 
   const { data: members } = await admin
     .from('users')
