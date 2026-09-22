@@ -1,5 +1,6 @@
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { isAdmin } from '@/lib/permissions';
 import { extractText, extractXlsxStructured } from '@/lib/ai/extract-text';
 import type { DbFileRecord, DbTemplate, DbUser } from '@/lib/supabase/types';
 import type { CorporateTheme, OutputFormat, RenderOutput } from '@/lib/renderers/types';
@@ -86,7 +87,7 @@ export async function resolveVersionFields(supabase: SupabaseClient, parentId?: 
 export async function loadUserGenerationContext(supabase: SupabaseClient, authUserId: string) {
   const { data: userData } = await supabase
     .from('users')
-    .select('name, position, signature_path, departments:department_id(name)')
+    .select('name, position, signature_path, role, departments:department_id(name)')
     .eq('id', authUserId)
     .single();
   const userRow = userData as (DbUser & { departments?: { name: string } | null }) | null;
@@ -94,6 +95,8 @@ export async function loadUserGenerationContext(supabase: SupabaseClient, authUs
   const userPosition = userRow?.position ?? '';
   const userDept = userRow?.departments?.name ?? '';
   const signaturePath = userRow?.signature_path ?? null;
+  // 작성자가 admin인지 — 회사 직인은 admin에게만, 일반 회원은 본인 서명
+  const userIsAdmin = isAdmin(userRow?.role ?? '');
   let signatureBuffer: Buffer | null = null;
 
   if (signaturePath) {
@@ -106,7 +109,7 @@ export async function loadUserGenerationContext(supabase: SupabaseClient, authUs
     }
   }
 
-  return { userName, userPosition, userDept, signatureBuffer };
+  return { userName, userPosition, userDept, signatureBuffer, userIsAdmin };
 }
 
 export async function loadCompanyLogoWatermarkContext() {

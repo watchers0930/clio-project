@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { isAdmin } from '@/lib/permissions';
 import { renderDocx } from '@/lib/renderers/docx-renderer';
 import { renderHwpx } from '@/lib/renderers/hwpx-renderer';
 import { renderPdf } from '@/lib/renderers/pdf-renderer';
@@ -295,6 +296,8 @@ export async function GET(
     // 서명 이미지 가져오기 — 다운로드 전용 (inline 미리보기는 서명 제외), 이름은 항상 가져옴
     let signatureBuffer: Buffer | null = null;
     let signerName = '';
+    // 문서 작성자가 admin인지 — 회사 직인은 admin이 만든 문서에만, 그 외엔 본인 서명
+    let signerIsAdmin = false;
     let templateBundle: TemplateBundle | null = null;
     let templateName = '';
     try {
@@ -332,11 +335,12 @@ export async function GET(
         const signatureOwnerId = docMeta?.created_by ?? authUserId;
         const { data: userData, error: userErr } = await adminClient
           .from('users')
-          .select('name, signature_path')
+          .select('name, signature_path, role')
           .eq('id', signatureOwnerId)
           .maybeSingle();
         if (!userErr && userData) {
           signerName = userData.name ?? '';
+          signerIsAdmin = isAdmin(userData.role);
           if (userData.signature_path) {
             const { data: sigBlob } = await adminClient.storage.from('files').download(userData.signature_path);
             if (sigBlob) signatureBuffer = Buffer.from(await sigBlob.arrayBuffer());
@@ -348,8 +352,9 @@ export async function GET(
 
     const isProposalDocument = isProposalTemplateName(templateName);
     const isEmploymentCertificateDocument = /재직\s*증명서/.test(templateName);
-    // 재직증명서 직인 = 회사 공용 직인
-    const companySealBuffer = isEmploymentCertificateDocument
+    // 재직증명서 직인 = 회사 공용 직인. 단 작성자가 admin일 때만 직인을 쓰고,
+    // 일반 회원이 만든 문서에는 본인 서명이 들어간다.
+    const companySealBuffer = (isEmploymentCertificateDocument && signerIsAdmin)
       ? await loadCompanySealBuffer(createAdminSupabaseClient())
       : null;
     const proposalPreviewHtml = isProposalDocument

@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
     }
 
     const versionFields = await resolveVersionFields(supabase, parentId);
-    const { userName, userPosition, userDept, signatureBuffer } = await loadUserGenerationContext(supabase, authUserId);
+    const { userName, userPosition, userDept, signatureBuffer, userIsAdmin } = await loadUserGenerationContext(supabase, authUserId);
     const companyLogoContext = await loadCompanyLogoWatermarkContext();
     // 재직증명서 등 회사 발급 문서의 직인은 회사 공용 직인을 사용
     const companySealBuffer = await loadCompanySeal();
@@ -375,7 +375,7 @@ export async function POST(request: NextRequest) {
       report_time: timeStr,
       report_no: reportNo,
       signature_image_src: signatureBufferToDataUrl(
-        isEmploymentCertificateTemplateName(templateName) && companySealBuffer ? companySealBuffer : signatureBuffer,
+        isEmploymentCertificateTemplateName(templateName) && companySealBuffer && userIsAdmin ? companySealBuffer : signatureBuffer,
       ),
       company_logo_src: signatureBufferToDataUrl(companyLogoContext.buffer),
       company_logo_pattern_size: companyLogoContext.patternSize,
