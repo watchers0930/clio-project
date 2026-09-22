@@ -16,6 +16,9 @@ export type DbUser = Record<string, unknown> & {
   is_active: boolean;
   signature_path: string | null;
   sidebar_menus: string[] | null;
+  manager_user_id: string | null;
+  rank_level: number | null;
+  rank_title: string | null;
   created_at: string;
 };
 
@@ -367,8 +370,8 @@ export interface Database {
       };
       users: {
         Row: DbUser;
-        Insert: { id: string; email: string; name: string; position?: string; department_id?: string | null; role?: string; avatar_url?: string | null; is_active?: boolean; signature_path?: string | null; sidebar_menus?: string[] | null; created_at?: string };
-        Update: { email?: string; name?: string; position?: string; department_id?: string | null; role?: string; avatar_url?: string | null; is_active?: boolean; signature_path?: string | null; sidebar_menus?: string[] | null };
+        Insert: { id: string; email: string; name: string; position?: string; department_id?: string | null; role?: string; avatar_url?: string | null; is_active?: boolean; signature_path?: string | null; sidebar_menus?: string[] | null; manager_user_id?: string | null; rank_level?: number | null; rank_title?: string | null; created_at?: string };
+        Update: { email?: string; name?: string; position?: string; department_id?: string | null; role?: string; avatar_url?: string | null; is_active?: boolean; signature_path?: string | null; sidebar_menus?: string[] | null; manager_user_id?: string | null; rank_level?: number | null; rank_title?: string | null };
         Relationships: [];
       };
       files: {
@@ -398,6 +401,37 @@ export interface Database {
         Update: { pattern?: string; enabled?: boolean; last_run_at?: string | null; total_trashed?: number; updated_at?: string };
         Relationships: [];
       };
+      approval_requests: {
+        Row: {
+          id: string;
+          document_id: string;
+          requester_id: string;
+          status: string;
+          current_step: number;
+          created_at: string;
+          completed_at: string | null;
+        };
+        Insert: { id?: string; document_id: string; requester_id: string; status?: string; current_step?: number; created_at?: string; completed_at?: string | null };
+        Update: { status?: string; current_step?: number; completed_at?: string | null };
+        Relationships: [];
+      };
+      approval_steps: {
+        Row: {
+          id: string;
+          request_id: string;
+          step_order: number;
+          approver_id: string;
+          rank_title: string | null;
+          status: string;
+          signature_path: string | null;
+          comment: string | null;
+          decided_at: string | null;
+          created_at: string;
+        };
+        Insert: { id?: string; request_id: string; step_order: number; approver_id: string; rank_title?: string | null; status?: string; signature_path?: string | null; comment?: string | null; decided_at?: string | null; created_at?: string };
+        Update: { status?: string; signature_path?: string | null; comment?: string | null; decided_at?: string | null; rank_title?: string | null };
+        Relationships: [];
+      };
       file_chunks: {
         Row: DbFileChunk;
         Insert: { id?: string; file_id: string; content: string; chunk_index: number; embedding: number[]; token_count: number; created_at?: string };
@@ -406,8 +440,8 @@ export interface Database {
       };
       templates: {
         Row: DbTemplate;
-        Insert: { id?: string; name: string; description?: string | null; department_id?: string | null; scope?: string; icon?: string | null; content?: string | null; placeholders?: unknown; created_by?: string | null; created_at?: string; updated_at?: string };
-        Update: { name?: string; description?: string | null; department_id?: string | null; scope?: string; icon?: string | null; content?: string | null; placeholders?: unknown; created_by?: string | null; updated_at?: string };
+        Insert: { id?: string; name: string; description?: string | null; department_id?: string | null; scope?: string; icon?: string | null; content?: string | null; placeholders?: unknown; created_by?: string | null; approval_depth?: number | null; created_at?: string; updated_at?: string };
+        Update: { name?: string; description?: string | null; department_id?: string | null; scope?: string; icon?: string | null; content?: string | null; placeholders?: unknown; created_by?: string | null; approval_depth?: number | null; updated_at?: string };
         Relationships: [];
       };
       documents: {

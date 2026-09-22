@@ -5,7 +5,10 @@ export type NotificationType =
   | 'chat_request'
   | 'document_shared'
   | 'file_shared'
-  | 'comment_reflected';
+  | 'comment_reflected'
+  | 'approval_requested'
+  | 'approval_approved'
+  | 'approval_rejected';
 
 interface CreateNotificationsParams {
   recipientIds: string[];

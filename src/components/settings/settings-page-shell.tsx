@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Building2, Users, PenLine, FileText, LayoutGrid, Mail, Lock, HardDrive } from 'lucide-react';
+import { Building2, Users, PenLine, FileText, LayoutGrid, Mail, Lock, HardDrive, Network } from 'lucide-react';
 import { Spinner, Tabs, ConfirmDialog } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
 import TemplatesPage from '@/app/(app)/templates/page';
@@ -10,11 +10,12 @@ import { DepartmentsSection, MenusSection, SignatureSection, UsersSection } from
 import { GmailSection } from '@/components/settings/gmail-section';
 import { MemoLockSection } from '@/components/settings/memo-lock-section';
 import { LocalSyncSection } from '@/components/settings/local-sync-section';
+import { OrgChartSection } from '@/components/settings/org-chart-section';
 import type { Department, UserItem } from '@/components/settings/types';
 import { useAuthStore } from '@/store/auth-store';
 import { cn } from '@/lib/utils';
 
-type SettingsTab = 'departments' | 'users' | 'signature' | 'templates' | 'menus' | 'gmail' | 'memo-lock' | 'local-sync';
+type SettingsTab = 'departments' | 'users' | 'org-chart' | 'signature' | 'templates' | 'menus' | 'gmail' | 'memo-lock' | 'local-sync';
 
 interface SettingsPageShellProps {
   initialTab?: SettingsTab;
@@ -476,6 +477,7 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
     { id: 'menus', label: '메뉴', icon: <LayoutGrid size={15} /> },
     { id: 'departments', label: '부서', icon: <Building2 size={15} /> },
     ...(isAdmin ? [{ id: 'users', label: '사용자', icon: <Users size={15} /> }] : []),
+    ...(isAdmin ? [{ id: 'org-chart', label: '조직도', icon: <Network size={15} /> }] : []),
     { id: 'signature', label: '서명', icon: <PenLine size={15} /> },
     { id: 'templates', label: '템플릿', icon: <FileText size={15} /> },
     { id: 'memo-lock', label: '메모 잠금', icon: <Lock size={15} /> },
@@ -567,6 +569,7 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
       )}
       {tab === 'templates' && <div><TemplatesPage /></div>}
       {tab === 'gmail' && <GmailSection successParam={gmailSuccess} errorParam={gmailError} msgParam={gmailMsg} />}
+      {tab === 'org-chart' && isAdmin && <div><OrgChartSection /></div>}
       {tab === 'memo-lock' && <MemoLockSection />}
       {tab === 'local-sync' && <LocalSyncSection />}
 

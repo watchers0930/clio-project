@@ -16,6 +16,7 @@ import { VersionPanel, type VersionItem } from '@/components/documents/VersionPa
 import { TodoExtractModal } from '@/components/meetings/TodoExtractModal';
 import { Spinner } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
+import { SubmitApprovalButton } from '@/components/approvals/submit-approval-button';
 
 export default function DocumentViewerPage() {
   const params = useParams();
@@ -221,6 +222,12 @@ export default function DocumentViewerPage() {
 
       {/* ── 좌측: 문서 뷰어 ── */}
       <div className={`min-w-0 flex-1 ${isProposalPage ? 'mx-auto flex max-w-[1280px] flex-col gap-4' : 'flex flex-col gap-4 lg:gap-[20px]'}`}>
+        {!isProposalPage && (
+          <div className="flex justify-end mb-3">
+            <SubmitApprovalButton documentId={id} status={doc.status} onSubmitted={fetchDoc} />
+          </div>
+        )}
+
         <DocumentViewerHeader
           doc={doc}
           isDraft={isDraft}
