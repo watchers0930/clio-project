@@ -84,21 +84,40 @@ export function useGmailAutoDelete() {
     setPreviewed(false);
   }, []);
 
-  const addRule = useCallback(async (pattern: string): Promise<ActionResult> => {
+  // 여러 발신자 패턴을 한 번에 등록한다. 이미 등록된 것(중복)은 건너뛴다.
+  // 반환: added(신규 등록 수), dup(중복 건너뜀), error(전부 실패 시 사유)
+  const addRules = useCallback(async (patterns: string[]): Promise<{ ok: boolean; added: number; dup: number; error?: string }> => {
+    if (patterns.length === 0) return { ok: false, added: 0, dup: 0, error: '등록할 발신자를 선택해 주세요.' };
     setSaving(true);
+    const newRules: AutoDeleteRule[] = [];
+    let added = 0;
+    let dup = 0;
+    let firstErr: string | undefined;
     try {
-      const res = await fetch('/api/gmail/auto-delete-rules', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pattern }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) return { ok: false, error: data.error, code: data.code };
-      setRules((prev) => [data.rule, ...prev]);
+      for (const pattern of patterns) {
+        try {
+          const res = await fetch('/api/gmail/auto-delete-rules', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pattern }),
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            added++;
+            newRules.push(data.rule);
+          } else if (data.code === 'duplicate') {
+            dup++;
+          } else if (!firstErr) {
+            firstErr = data.error;
+          }
+        } catch {
+          if (!firstErr) firstErr = '일부 발신자 등록 중 오류가 발생했습니다.';
+        }
+      }
+      if (newRules.length > 0) setRules((prev) => [...newRules, ...prev]);
       clearPreview();
-      return { ok: true };
-    } catch {
-      return { ok: false, error: '규칙 등록 중 오류가 발생했습니다.' };
+      const ok = added > 0 || dup > 0;
+      return { ok, added, dup, error: ok ? undefined : (firstErr ?? '규칙 등록에 실패했습니다.') };
     } finally {
       setSaving(false);
     }
@@ -126,7 +145,24 @@ export function useGmailAutoDelete() {
     saving,
     preview,
     clearPreview,
-    addRule,
+    addRules,
     removeRule,
   };
+}
+
+/**
+ * Gmail From 헤더("이름 <a@b.com>" 또는 "a@b.com")에서 발신자 이메일을 뽑아
+ * 자동삭제 규칙 형태(from:a@b.com)로 만든다. 이메일을 못 찾으면 null.
+ */
+export function extractSenderPattern(from: string): string | null {
+  const angle = from.match(/<([^>]+)>/);
+  const email = (angle ? angle[1] : from).trim().toLowerCase();
+  if (!email || !email.includes('@') || email.includes(' ')) return null;
+  return `from:${email}`;
+}
+
+/** 발신자 표시용 — From 헤더에서 이메일만 추출(규칙 프리픽스 없이). */
+export function extractSenderEmail(from: string): string | null {
+  const p = extractSenderPattern(from);
+  return p ? p.slice('from:'.length) : null;
 }
