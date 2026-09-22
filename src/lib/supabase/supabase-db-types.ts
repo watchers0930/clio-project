@@ -383,6 +383,21 @@ export interface Database {
         Update: { email?: string; access_token?: string; refresh_token?: string; token_expiry?: string | null; last_synced_at?: string | null; sync_enabled?: boolean; scope?: string | null; updated_at?: string };
         Relationships: [];
       };
+      gmail_auto_delete_rules: {
+        Row: {
+          id: string;
+          user_id: string;
+          pattern: string;
+          enabled: boolean;
+          last_run_at: string | null;
+          total_trashed: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: { id?: string; user_id: string; pattern: string; enabled?: boolean; last_run_at?: string | null; total_trashed?: number; created_at?: string; updated_at?: string };
+        Update: { pattern?: string; enabled?: boolean; last_run_at?: string | null; total_trashed?: number; updated_at?: string };
+        Relationships: [];
+      };
       file_chunks: {
         Row: DbFileChunk;
         Insert: { id?: string; file_id: string; content: string; chunk_index: number; embedding: number[]; token_count: number; created_at?: string };

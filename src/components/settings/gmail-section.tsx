@@ -5,6 +5,7 @@ import { Mail, RefreshCw, Unlink, CheckCircle, AlertCircle, ShieldCheck, Papercl
 import { Badge, Spinner } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
 import { GmailDeletePanel } from './gmail-delete-panel';
+import { GmailAutoDeletePanel } from './gmail-auto-delete-panel';
 
 interface GmailStatus {
   connected: boolean;
@@ -273,7 +274,10 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
     {/* 연결 상태에서만: 삭제 권한 있으면 삭제 패널, 없으면 재연결 유도 */}
     {status?.connected && (
       status.canDelete ? (
-        <GmailDeletePanel />
+        <>
+          <GmailDeletePanel />
+          <GmailAutoDeletePanel />
+        </>
       ) : (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 shadow-sm px-5 py-5 sm:px-8 sm:py-6">
           <div className="flex items-start gap-3">

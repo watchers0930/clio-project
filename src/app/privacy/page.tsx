@@ -48,7 +48,7 @@ export default function PrivacyPolicyPage() {
         <ul style={ulStyle}>
           <li>수집된 이메일 본문·첨부 텍스트는 <strong>이용자 본인의 검색 기능 제공 목적</strong>으로만 사용됩니다.</li>
           <li>이메일 데이터는 광고 목적으로 사용되지 않으며, 제3자에게 판매되지 않습니다.</li>
-          <li>메일 삭제(휴지통 이동)는 <strong>이용자가 키워드로 검색해 확인한 메일에 대해서만</strong> 실행되며, 서비스가 임의로 삭제하지 않습니다.</li>
+          <li>메일 삭제(휴지통 이동)는 <strong>이용자가 키워드로 검색해 확인한 메일</strong>, 또는 <strong>이용자가 직접 등록한 자동삭제 규칙(발신자·키워드)에 해당하는 메일</strong>에 대해서만 실행됩니다. 자동삭제는 이용자가 사전에 등록·확인한 규칙에 한해 정기적으로(1일 1회) 동작하며, 이용자가 별표·중요 표시한 메일은 자동삭제에서 제외되고, 서비스가 규칙 없이 임의로 삭제하는 일은 없습니다.</li>
           <li>이용자는 언제든지 서비스 설정에서 <strong>Gmail 연결을 해제</strong>할 수 있으며, 해제 시 동기화된 이메일 데이터는 삭제됩니다.</li>
         </ul>
         <p style={{ marginTop: 16, padding: '14px 16px', background: '#f5f5f7', borderRadius: 10, fontSize: 14 }}>
