@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { getUserRoleInfo, isAdmin, isManagerOrAbove } from '@/lib/permissions';
 
@@ -42,21 +43,24 @@ export async function POST(request: NextRequest) {
     const { name, code, description, managerId } = await request.json();
     if (!name || !code) return NextResponse.json({ success: false, error: '부서명과 코드는 필수입니다.' }, { status: 400 });
 
-    const { data: dept, error: deptErr } = await supabase.from('departments').insert({
+    // 권한검증은 위에서 완료. 실제 변이는 admin(service_role)으로 RLS 우회 (departments 등은 쓰기 정책 없음)
+    const admin = createAdminSupabaseClient();
+
+    const { data: dept, error: deptErr } = await admin.from('departments').insert({
       name, code: code.toUpperCase(), description: description ?? null, manager_id: managerId ?? null,
     }).select().single();
 
     if (deptErr) return NextResponse.json({ success: false, error: '부서 생성 실패: ' + deptErr.message }, { status: 500 });
 
-    const { data: channel } = await supabase.from('channels').insert({
+    const { data: channel } = await admin.from('channels').insert({
       name, type: 'department', department_id: dept.id,
     }).select().single();
 
     if (managerId && channel) {
-      try { await supabase.from('channel_members').insert({ channel_id: channel.id, user_id: managerId }); } catch (e) { console.warn('[cleanup]', e); }
+      try { await admin.from('channel_members').insert({ channel_id: channel.id, user_id: managerId }); } catch (e) { console.warn('[cleanup]', e); }
     }
 
-    try { await supabase.from('audit_logs').insert({ user_id: authUserId, action: 'dept.create', target_type: 'department', target_id: dept.id, details: { name, code } }); } catch (e) { console.warn('[cleanup]', e); }
+    try { await admin.from('audit_logs').insert({ user_id: authUserId, action: 'dept.create', target_type: 'department', target_id: dept.id, details: { name, code } }); } catch (e) { console.warn('[cleanup]', e); }
 
     return NextResponse.json({ success: true, data: { ...dept, memberCount: 0 } }, { status: 201 });
   } catch (err) {
@@ -91,11 +95,14 @@ export async function PUT(request: NextRequest) {
     if (managerId !== undefined) updateData.manager_id = managerId;
     if (isActive !== undefined) updateData.is_active = isActive;
 
-    const { data, error } = await supabase.from('departments').update(updateData).eq('id', id).select().single();
+    // 권한검증 완료 후 admin(service_role)으로 변이 (RLS 우회)
+    const admin = createAdminSupabaseClient();
+
+    const { data, error } = await admin.from('departments').update(updateData).eq('id', id).select().single();
     if (error) return NextResponse.json({ success: false, error: '부서 수정 실패: ' + error.message }, { status: 500 });
 
     if (name) {
-      try { await supabase.from('channels').update({ name }).eq('department_id', id).eq('type', 'department'); } catch (e) { console.warn('[cleanup]', e); }
+      try { await admin.from('channels').update({ name }).eq('department_id', id).eq('type', 'department'); } catch (e) { console.warn('[cleanup]', e); }
     }
 
     return NextResponse.json({ success: true, data });
@@ -121,8 +128,11 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ success: false, error: 'ID 필수' }, { status: 400 });
 
+    // 권한검증 완료 후 admin(service_role)으로 조회·변이 (RLS 우회)
+    const admin = createAdminSupabaseClient();
+
     // 부서에 직원이 있는지 확인
-    const { count } = await supabase
+    const { count } = await admin
       .from('users')
       .select('id', { count: 'exact', head: true })
       .eq('department_id', id);
@@ -132,13 +142,13 @@ export async function DELETE(request: NextRequest) {
     }
 
     // 연결된 채널 삭제
-    try { await supabase.from('channels').delete().eq('department_id', id).eq('type', 'department'); } catch (e) { console.warn('[cleanup]', e); }
+    try { await admin.from('channels').delete().eq('department_id', id).eq('type', 'department'); } catch (e) { console.warn('[cleanup]', e); }
 
     // 부서 완전 삭제
-    const { error: delErr } = await supabase.from('departments').delete().eq('id', id);
+    const { error: delErr } = await admin.from('departments').delete().eq('id', id);
     if (delErr) return NextResponse.json({ success: false, error: '부서 삭제 실패: ' + delErr.message }, { status: 500 });
 
-    try { await supabase.from('audit_logs').insert({ user_id: authUserId, action: 'dept.delete', target_type: 'department', target_id: id, details: {} }); } catch (e) { console.warn('[cleanup]', e); }
+    try { await admin.from('audit_logs').insert({ user_id: authUserId, action: 'dept.delete', target_type: 'department', target_id: id, details: {} }); } catch (e) { console.warn('[cleanup]', e); }
 
     return NextResponse.json({ success: true });
   } catch {
