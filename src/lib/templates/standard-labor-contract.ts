@@ -16,7 +16,7 @@ export const STANDARD_LABOR_CONTRACT_FIELDS: TemplateFieldDefinition[] = [
   { key: 'work_time_end', label: '종업 시각', type: 'text', defaultValue: '18:00', placeholder: '예: 18:00' },
   { key: 'break_time', label: '휴게시간', type: 'text', defaultValue: '12:00 ~ 13:00', placeholder: '예: 12:00 ~ 13:00' },
   { key: 'work_days_per_week', label: '근무일', type: 'text', defaultValue: '5일(월~금)', placeholder: '예: 5일(월~금)' },
-  { key: 'weekly_holiday', label: '주휴일', type: 'text', defaultValue: '일요일', placeholder: '예: 일요일' },
+  { key: 'weekly_holiday', label: '주휴일(요일 선택)', type: 'checkbox', options: ['월', '화', '수', '목', '금', '토', '일'], defaultValue: '일' },
   { key: 'salary_type', label: '임금 형태', type: 'select', required: true, options: ['월급', '일급', '시간급'], defaultValue: '월급' },
   { key: 'salary_amount', label: '임금액', type: 'text', required: true, placeholder: '예: 3,000,000원' },
   { key: 'bonus', label: '상여금', type: 'select', options: ['있음', '없음'], defaultValue: '없음' },
@@ -25,7 +25,7 @@ export const STANDARD_LABOR_CONTRACT_FIELDS: TemplateFieldDefinition[] = [
   { key: 'pay_date', label: '임금지급일', type: 'text', defaultValue: '매월 25일', placeholder: '예: 매월 25일' },
   { key: 'pay_method', label: '지급방법', type: 'select', options: ['근로자에게 직접지급', '근로자 명의 예금통장에 입금'], defaultValue: '근로자 명의 예금통장에 입금' },
   { key: 'social_insurance', label: '사회보험 적용', type: 'checkbox', options: ['고용보험', '산재보험', '국민연금', '건강보험'], defaultValue: '고용보험,산재보험,국민연금,건강보험' },
-  { key: 'contract_date', label: '계약 체결일', type: 'date', required: true },
+  { key: 'contract_date', label: '계약 체결일', type: 'date', required: true, defaultValue: '{{report_date}}' },
   { key: 'company_address', label: '사업체 주소', type: 'textarea', defaultValue: '서울특별시 강남구 강남대로 354(혜천빌딩) 1126-5호' },
   { key: 'representative_name', label: '대표자', type: 'text', defaultValue: '김동의' },
   { key: 'company_phone', label: '사업체 전화', type: 'text', defaultValue: '010-8490-9271' },
@@ -56,6 +56,7 @@ export const STANDARD_LABOR_CONTRACT_TEMPLATE_HTML = `
 .labor-contract .term-title{font-weight:700;margin-bottom:1mm;}
 .labor-contract .sub{padding-left:5mm;line-height:1.7;}
 .labor-contract .insurance span{margin-right:5mm;white-space:nowrap;}
+.labor-contract .opt-inline span{margin-right:4mm;white-space:nowrap;}
 .labor-contract .sign-date{margin:9mm 0 7mm;text-align:center;letter-spacing:0.5mm;}
 .labor-contract .sign-party{margin:0 0 5mm;}
 .labor-contract .sign-role{font-weight:700;margin-bottom:1.5mm;}
@@ -83,9 +84,12 @@ export const STANDARD_LABOR_CONTRACT_TEMPLATE_HTML = `
     <li><span class="term-title">2. 근 무 장 소 :</span> {{work_place}}</li>
     <li><span class="term-title">3. 업무의 내용 :</span> {{job_description}}</li>
     <li><span class="term-title">4. 소정근로시간 :</span> {{work_time_start}} 부터 {{work_time_end}} 까지 (휴게시간 : {{break_time}})</li>
-    <li><span class="term-title">5. 근무일/휴일 :</span> 매주 {{work_days_per_week}} 근무, 주휴일 매주 {{weekly_holiday}}</li>
+    <li><div class="term-title">5. 근무일/휴일</div>
+      <div class="sub">- 근무일 : 매주 {{work_days_per_week}} 근무</div>
+      <div class="sub opt-inline">- 주휴일 : <span>{{weekly_holiday_opt0}} 월</span> <span>{{weekly_holiday_opt1}} 화</span> <span>{{weekly_holiday_opt2}} 수</span> <span>{{weekly_holiday_opt3}} 목</span> <span>{{weekly_holiday_opt4}} 금</span> <span>{{weekly_holiday_opt5}} 토</span> <span>{{weekly_holiday_opt6}} 일</span></div>
+    </li>
     <li><div class="term-title">6. 임 금</div>
-      <div class="sub">- {{salary_type}} : {{salary_amount}}</div>
+      <div class="sub">- {{salary_type}} : {{salary_amount_display}}</div>
       <div class="sub">- 상여금 : {{bonus}} {{bonus_amount}}</div>
       <div class="sub">- 기타급여(제수당 등) : {{other_allowance}}</div>
       <div class="sub">- 임금지급일 : {{pay_date}}</div>
@@ -121,7 +125,7 @@ export const STANDARD_LABOR_CONTRACT_TEMPLATE_HTML = `
     <div class="sign-party">
       <div class="sign-role">(근로자)</div>
       <div class="sign-line"><span class="sign-label">주 소</span> <span>{{employee_address}}</span></div>
-      <div class="sign-line"><span class="sign-label">연 락 처</span> <span>{{employee_contact}}</span></div>
+      <div class="sign-line"><span class="sign-label">연 락 처</span> <span>{{employee_contact_display}}</span></div>
       <div class="sign-line"><span class="sign-label">성 명</span> <span>{{employee_name}} <span class="sign-seal">(서명 또는 인)</span></span></div>
     </div>
   </div>
@@ -130,6 +134,63 @@ export const STANDARD_LABOR_CONTRACT_TEMPLATE_HTML = `
 
 export function isStandardLaborContractTemplateName(templateName: string | null | undefined) {
   return Boolean(templateName && /근로계약서/.test(templateName));
+}
+
+/** 숫자 → 한글 금액 (예: 3000000 → 삼백만) */
+function numberToKorean(num: number): string {
+  if (num === 0) return '영';
+  const digits = ['', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구'];
+  const smallUnit = ['', '십', '백', '천'];
+  const bigUnit = ['', '만', '억', '조', '경'];
+  let result = '';
+  let bigIdx = 0;
+  let n = num;
+  while (n > 0 && bigIdx < bigUnit.length) {
+    const chunk = n % 10000;
+    if (chunk > 0) {
+      let chunkStr = '';
+      let c = chunk;
+      let u = 0;
+      while (c > 0) {
+        const d = c % 10;
+        if (d > 0) chunkStr = digits[d] + smallUnit[u] + chunkStr;
+        c = Math.floor(c / 10);
+        u += 1;
+      }
+      result = chunkStr + bigUnit[bigIdx] + result;
+    }
+    n = Math.floor(n / 10000);
+    bigIdx += 1;
+  }
+  return result;
+}
+
+/** 임금액 문자열 → "3,000,000원 (금 삼백만원정)". 숫자 파싱 불가 시 원본 반환 */
+export function formatSalaryAmount(raw: string): string {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return '';
+  const digitsOnly = trimmed.replace(/[^0-9]/g, '');
+  if (!digitsOnly) return trimmed;
+  const num = parseInt(digitsOnly, 10);
+  if (!Number.isFinite(num) || num <= 0) return trimmed;
+  return `${num.toLocaleString('en-US')}원 (금 ${numberToKorean(num)}원정)`;
+}
+
+/** 전화번호 문자열 → 하이픈 포맷 (예: 01012345678 → 010-1234-5678). 규격 외는 원본 반환 */
+export function formatPhoneNumber(raw: string): string {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return '';
+  const d = trimmed.replace(/[^0-9]/g, '');
+  if (!d) return trimmed;
+  if (d.length === 11) return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`;
+  if (d.length === 10) {
+    return d.startsWith('02')
+      ? `${d.slice(0, 2)}-${d.slice(2, 6)}-${d.slice(6)}`
+      : `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
+  }
+  if (d.length === 9 && d.startsWith('02')) return `${d.slice(0, 2)}-${d.slice(2, 5)}-${d.slice(5)}`;
+  if (d.length === 8) return `${d.slice(0, 4)}-${d.slice(4)}`;
+  return trimmed;
 }
 
 export function createStandardLaborContractTemplateBundle(): TemplateBundle {

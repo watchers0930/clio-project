@@ -1,5 +1,6 @@
 import type { TemplateBundle } from '@/lib/templates/template-schema';
 import { computeRemainingLeaveDays } from '@/lib/templates/leave-application';
+import { formatSalaryAmount, formatPhoneNumber } from '@/lib/templates/standard-labor-contract';
 
 function escapeHtml(value: string) {
   return value
@@ -106,6 +107,14 @@ export function buildTemplatePreviewData(bundle: TemplateBundle, name: string) {
     replacements.employment_period_display = (startDate || endDate) ? `(계약기간 : ${startDate} ~ ${endDate})` : '';
   } else {
     replacements.employment_period_display = '';
+  }
+
+  // 표준근로계약서: 임금액 천단위 콤마+한글 병기, 근로자 연락처 하이픈 자동
+  if (replacements.salary_amount !== undefined) {
+    replacements.salary_amount_display = formatSalaryAmount(replacements.salary_amount);
+  }
+  if (replacements.employee_contact !== undefined) {
+    replacements.employee_contact_display = formatPhoneNumber(replacements.employee_contact);
   }
 
   // 휴가원: 미리보기용 남은 휴가일수 계산
