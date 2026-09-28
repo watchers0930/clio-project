@@ -17,6 +17,9 @@ import { isProposalTemplateName } from '@/lib/templates/proposal';
 import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
 import { loadCompanyLogoContext } from '@/lib/settings/company-logo';
 
+// PDF 서버 렌더(puppeteer/chromium 콜드스타트 대비) 실행시간 확보
+export const maxDuration = 60;
+
 /* ── 한국어 순서 표현(첫째/둘째 등)이 문장 중간에 있으면 앞에 줄바꿈 삽입 ── */
 function normalizeOrdinals(text: string): string {
   return text.replace(
@@ -625,6 +628,12 @@ export async function GET(
           const sigImg = `<div style="text-align:right;margin-top:32px;padding-right:40px;"><img src="data:image/png;base64,${sigBase64}" style="width:120px;height:60px;object-fit:contain;" alt="서명" /></div>`;
           const htmlStr = rendered.buffer.toString('utf-8');
           rendered = { ...rendered, buffer: Buffer.from(htmlStr.replace('</body>', `${sigImg}</body>`), 'utf-8') };
+        }
+        // HTML → 서버에서 실제 PDF로 변환
+        {
+          const { htmlToPdf } = await import('@/lib/renderers/html-to-pdf');
+          const pdfBuffer = await htmlToPdf(rendered.buffer.toString('utf-8'));
+          rendered = { buffer: pdfBuffer, mimeType: 'application/pdf', extension: 'pdf', fileName: `${doc.title}.pdf` };
         }
         break;
       case 'docx':

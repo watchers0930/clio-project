@@ -644,7 +644,13 @@ export async function POST(request: NextRequest) {
 
       // PDF/DOCX/HWPX 마크다운 → 파일 렌더링 → Storage 업로드
       if (format === 'pdf' || format === 'hwpx' || format === 'docx') {
-        const rendered = await renderDocument(generationResult, theme);
+        let rendered = await renderDocument(generationResult, theme);
+        // PDF: renderDocument는 HTML을 반환 → 서버에서 실제 PDF로 변환 (인쇄창 불필요, 미리보기와 100% 동일)
+        if (format === 'pdf' && rendered.extension === 'html') {
+          const { htmlToPdf } = await import('@/lib/renderers/html-to-pdf');
+          const pdfBuffer = await htmlToPdf(rendered.buffer.toString('utf-8'));
+          rendered = { buffer: pdfBuffer, mimeType: 'application/pdf', extension: 'pdf', fileName: rendered.fileName.replace(/\.html$/, '.pdf') };
+        }
         const filePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
         const { error: upErr } = await supabase.storage
           .from('files')

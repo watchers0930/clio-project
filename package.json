@@ -1,6 +1,6 @@
 {
   "name": "clio-project",
-  "version": "7.67.8",
+  "version": "7.68.0",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -16,6 +16,7 @@
     "@ai-sdk/google": "^3.0.79",
     "@ai-sdk/openai": "^3.0.48",
     "@daily-co/daily-js": "^0.92.2",
+    "@sparticuz/chromium": "^153.0.0",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.100.0",
     "adm-zip": "^0.5.17",
@@ -41,6 +42,7 @@
     "pg": "^8.20.0",
     "pizzip": "^3.2.0",
     "pptxgenjs": "^4.0.1",
+    "puppeteer-core": "^25.12.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-force-graph-2d": "^1.29.1",
