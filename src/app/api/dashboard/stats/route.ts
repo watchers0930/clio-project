@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { filterAccessibleDocumentRows, filterAccessibleFileRows, getUserRoleInfo } from '@/lib/permissions';
+import { mimeToType } from '@/lib/utils/format';
 
 /** ISO 날짜 → YYYY-WW (주차) */
 function toWeekKey(dateStr: string): string {
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
       supabase.from('users').select('*', { count: 'exact', head: true }),
       supabase.from('templates').select('*', { count: 'exact', head: true }),
       supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(10),
-      supabase.from('files').select('id, name, department_id, created_at, uploaded_by'),
+      supabase.from('files').select('id, name, type, department_id, created_at, uploaded_by'),
       supabase.from('departments').select('id, name'),
       // 문서 + 작성자 부서 (created_by → users.department_id)
       admin.from('documents').select('id, created_by, users:created_by(department_id)'),
@@ -105,8 +106,21 @@ export async function GET(request: NextRequest) {
     const fileTypeBreakdown: Record<string, number> = {};
     const uploadWeekMap: Record<string, number> = {};
 
+    // 유효한 확장자로 볼 수 있는지: 짧은 영숫자만 (제목·이메일명 등은 '기타'로)
+    const isValidExt = (v: string) => v.length > 0 && v.length <= 5 && /^[A-Z0-9]+$/.test(v);
     for (const f of accessibleFileList) {
-      const ext = f.name.split('.').pop()?.toLowerCase() ?? 'unknown';
+      let ext = '기타';
+      // 1) mime 타입 우선 (PDF/DOCX/XLSX…)
+      const fileType = (f as { type?: string | null }).type ?? null;
+      if (fileType) {
+        const mapped = mimeToType(fileType, f.name);
+        if (isValidExt(mapped)) ext = mapped;
+      }
+      // 2) mime로 못 정하면 파일명 확장자 (점 있고 짧은 영숫자일 때만)
+      if (ext === '기타' && f.name.includes('.')) {
+        const raw = f.name.split('.').pop()!.toUpperCase().trim();
+        if (isValidExt(raw)) ext = raw;
+      }
       fileTypeBreakdown[ext] = (fileTypeBreakdown[ext] ?? 0) + 1;
       const wk = toWeekKey(f.created_at);
       uploadWeekMap[wk] = (uploadWeekMap[wk] ?? 0) + 1;
