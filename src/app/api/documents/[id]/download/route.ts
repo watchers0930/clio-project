@@ -429,6 +429,7 @@ export async function GET(
               ...inlineInputs,
               author: signerName,
               signature_image_src: signatureBufferToDataUrl(companySealBuffer ?? signatureBuffer),
+              employee_signature_src: signatureBufferToDataUrl(signatureBuffer),
               company_logo_src: signatureBufferToDataUrl(companyLogoContext.buffer),
               company_logo_pattern_size: companyLogoContext.patternSize,
             };
@@ -548,8 +549,10 @@ export async function GET(
     const mergedDocumentInputs = {
       ...embeddedInputs,
       author: signerName,
-      // 재직증명서는 회사 직인 우선(없으면 개인 서명)
+      // 재직증명서·근로계약서는 회사 직인 우선(없으면 개인 서명)
       signature_image_src: signatureBufferToDataUrl(companySealBuffer ?? signatureBuffer),
+      // 근로계약서 근로자 서명란: 로그인 이용자 개인 서명
+      employee_signature_src: signatureBufferToDataUrl(signatureBuffer),
       company_logo_src: signatureBufferToDataUrl(companyLogoContext.buffer),
       company_logo_pattern_size: companyLogoContext.patternSize,
     };

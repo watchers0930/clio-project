@@ -208,7 +208,7 @@ function buildDocumentInputInstructions(documentInputs: Record<string, string>) 
   // (base64 data URL은 수만 토큰을 차지해 TPM 한도 초과를 유발하므로 반드시 제외)
   const SKIP_KEYS = new Set([
     'report_title', 'subtitle', 'today_work', 'tomorrow_work', 'note',
-    'signature_image_src', 'company_logo_src', 'company_logo_pattern_size',
+    'signature_image_src', 'employee_signature_src', 'company_logo_src', 'company_logo_pattern_size',
   ]);
 
   for (const [key, value] of Object.entries(documentInputs)) {
@@ -378,6 +378,7 @@ export async function POST(request: NextRequest) {
       signature_image_src: signatureBufferToDataUrl(
         (isEmploymentCertificateTemplateName(templateName) || isStandardLaborContractTemplateName(templateName)) && companySealBuffer ? companySealBuffer : signatureBuffer,
       ),
+      employee_signature_src: signatureBufferToDataUrl(signatureBuffer),
       company_logo_src: signatureBufferToDataUrl(companyLogoContext.buffer),
       company_logo_pattern_size: companyLogoContext.patternSize,
       source_file_names: sourceFileNames.join(', '),
@@ -605,7 +606,7 @@ export async function POST(request: NextRequest) {
       // 서명/로고 base64는 다운로드 시 재생성되므로 embed에서 제외 (DB content 비대화 방지)
       const embeddableDocumentInputs = Object.fromEntries(
         Object.entries(resolvedDocumentInputs).filter(
-          ([key]) => key !== 'signature_image_src' && key !== 'company_logo_src',
+          ([key]) => key !== 'signature_image_src' && key !== 'employee_signature_src' && key !== 'company_logo_src',
         ),
       );
       const markdownContent = shouldEmbedInputs

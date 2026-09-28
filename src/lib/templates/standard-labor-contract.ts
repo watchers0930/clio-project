@@ -137,7 +137,7 @@ html,body{margin:0;padding:0;}
       <div class="sign-role">(근로자)</div>
       <div class="sign-line"><span class="sign-label">주 소</span> <span>{{employee_address}}</span></div>
       <div class="sign-line"><span class="sign-label">연 락 처</span> <span>{{employee_contact_display}}</span></div>
-      <div class="sign-line"><span class="sign-label">성 명</span> <span>{{employee_name}} <span class="sign-seal">(서명 또는 인)</span></span></div>
+      <div class="sign-line"><span class="sign-label">성 명</span> <span>{{employee_name}}<span class="seal"><span class="seal-text">(서명)</span><img class="seal-image" src="{{employee_signature_src}}" alt="서명" /></span></span></div>
     </div>
   </div>
 </article>
