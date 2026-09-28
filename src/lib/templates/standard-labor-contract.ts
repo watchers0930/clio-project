@@ -2,6 +2,9 @@ import type { TemplateBundle, TemplateFieldDefinition } from '@/lib/templates/te
 
 export const STANDARD_LABOR_CONTRACT_TEMPLATE_NAME = '표준근로계약서';
 
+/** 비밀유지의무 조항 본문 (문서 layoutHtml·입력화면 서약 박스 공용) */
+export const NDA_CLAUSE_TEXT = '근로자는 재직 중은 물론 퇴직 후에도 업무상 알게 된 회사의 영업비밀·기술정보·고객정보 및 일체의 기밀사항을 제3자에게 누설하거나 부정한 목적으로 사용하지 아니하며, 이를 위반할 경우 관계 법령 및 회사 규정에 따른 책임을 진다.';
+
 export const STANDARD_LABOR_CONTRACT_FIELDS: TemplateFieldDefinition[] = [
   { key: 'report_title', label: '문서 제목', type: 'text', required: true, defaultValue: '표준근로계약서' },
   { key: 'employer_name', label: '사업주(사업체명)', type: 'text', required: true, defaultValue: '주식회사 비엠아이씨앤에스' },
@@ -110,7 +113,7 @@ export const STANDARD_LABOR_CONTRACT_TEMPLATE_HTML = `
       <div class="sub">- 사업주와 근로자는 각자가 근로계약, 취업규칙, 단체협약을 지키고 성실하게 이행하여야 함</div>
     </li>
     <li><div class="term-title">11. 비밀유지의무</div>
-      <div class="sub">- 근로자는 재직 중은 물론 퇴직 후에도 업무상 알게 된 회사의 영업비밀·기술정보·고객정보 및 일체의 기밀사항을 제3자에게 누설하거나 부정한 목적으로 사용하지 아니하며, 이를 위반할 경우 관계 법령 및 회사 규정에 따른 책임을 진다.</div>
+      <div class="sub">- ${NDA_CLAUSE_TEXT}</div>
       <div class="sub nda-agree">{{nda_agree_opt0}} 위 비밀유지의무에 동의하며 이를 성실히 준수할 것을 서약합니다.</div>
     </li>
     <li><div class="term-title">12. 기 타</div>

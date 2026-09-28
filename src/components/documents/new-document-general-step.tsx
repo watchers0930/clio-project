@@ -4,7 +4,7 @@ import { renderTemplatePreviewHtml } from '@/lib/templates/template-preview';
 import type { TemplateItem } from '@/components/documents/page-types';
 import { LeaveEmployeePicker } from '@/components/documents/LeaveEmployeePicker';
 import { EmploymentCertAutofill } from '@/components/documents/EmploymentCertAutofill';
-import { formatSalaryAmount, formatPhoneNumber } from '@/lib/templates/standard-labor-contract';
+import { formatSalaryAmount, formatPhoneNumber, NDA_CLAUSE_TEXT } from '@/lib/templates/standard-labor-contract';
 
 const AUTO_INPUT_FIELD_KEYS = new Set([
   'author',
@@ -88,8 +88,10 @@ export function NewDocumentGeneralStep({
     ? renderTemplatePreviewHtml(previewBundle, selectedTemplateItem.name)
     : undefined;
   const autoFields = templateFields.filter((field) => field.autoFill);
-  const allManualFields = templateFields.filter((field) => !field.autoFill && !field.aiAssist);
+  // nda_agree(비밀유지 동의)는 왼쪽 필드목록이 아니라 오른쪽 서약 박스에서 별도 처리
+  const allManualFields = templateFields.filter((field) => !field.autoFill && !field.aiAssist && field.key !== 'nda_agree');
   const aiFields = templateFields.filter((field) => field.aiAssist);
+  const isStandardLaborContract = Boolean(selectedTemplateItem?.name && /근로계약서/.test(selectedTemplateItem.name));
 
   const isEmploymentCert = selectedTemplateItem?.name === '재직증명서';
   // 재직증명서: 본인 정보 자동입력 → 제출용도만 입력.
@@ -325,6 +327,24 @@ export function NewDocumentGeneralStep({
           </div>
         )}
         {selectedTemplateItem && <div style={{ height: 20 }} />}
+        {isStandardLaborContract && (
+          <div className="rounded-2xl border border-primary/30 bg-primary-tint p-4">
+            <p className="text-sm font-medium text-foreground" style={{ marginBottom: 8 }}>비밀유지의무 서약</p>
+            <div className="max-h-44 overflow-y-auto rounded-lg border border-border bg-white px-3 py-2.5 text-xs leading-relaxed text-foreground-secondary" style={{ marginBottom: 12 }}>
+              {NDA_CLAUSE_TEXT}
+            </div>
+            <label className="flex items-start gap-2 text-sm text-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={documentInputs.nda_agree === '동의'}
+                onChange={(e) => onSetDocumentInputs((prev) => ({ ...prev, nda_agree: e.target.checked ? '동의' : '' }))}
+                className="mt-0.5 rounded border-border text-primary focus:ring-primary"
+              />
+              <span>위 비밀유지의무에 동의하며 이를 성실히 준수할 것을 서약합니다.</span>
+            </label>
+          </div>
+        )}
+        {isStandardLaborContract && <div style={{ height: 20 }} />}
         <div className="flex flex-col">
           <p className="text-sm text-foreground-secondary" style={{ marginBottom: 10 }}>추가 지시사항 (선택)</p>
           <textarea
