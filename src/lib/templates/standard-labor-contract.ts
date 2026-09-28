@@ -30,7 +30,7 @@ export const STANDARD_LABOR_CONTRACT_FIELDS: TemplateFieldDefinition[] = [
   { key: 'social_insurance', label: '사회보험 적용', type: 'checkbox', options: ['고용보험', '산재보험', '국민연금', '건강보험'], defaultValue: '고용보험,산재보험,국민연금,건강보험' },
   { key: 'nda_agree', label: '비밀유지의무 동의', type: 'checkbox', options: ['동의'], defaultValue: '동의' },
   { key: 'contract_date', label: '계약 체결일', type: 'date', required: true, defaultValue: '{{report_date}}' },
-  { key: 'company_address', label: '사업체 주소', type: 'textarea', defaultValue: '서울특별시 강남구 강남대로 354(혜천빌딩) 1126-5호' },
+  { key: 'company_address', label: '사업체 주소', type: 'textarea', defaultValue: '서울시 금천구 디지털로10길 78. 813호' },
   { key: 'representative_name', label: '대표자', type: 'text', defaultValue: '김동의' },
   { key: 'company_phone', label: '사업체 전화', type: 'text', defaultValue: '010-8490-9271' },
   { key: 'employee_address', label: '근로자 주소', type: 'textarea', placeholder: '예: 서울특별시 ...' },

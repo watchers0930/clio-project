@@ -16,7 +16,7 @@ export const EMPLOYMENT_CERTIFICATE_FIELDS: TemplateFieldDefinition[] = [
   { key: 'company_name', label: '회사명', type: 'text', defaultValue: '주식회사 비엠아이씨앤에스' },
   { key: 'representative_name', label: '대표자', type: 'text', defaultValue: '김동의' },
   { key: 'business_registration_no', label: '사업자등록번호', type: 'text', defaultValue: '263-87-03481' },
-  { key: 'company_address', label: '회사 주소', type: 'textarea', defaultValue: '서울특별시 강남구 강남대로 354(혜천빌딩) 1126-5호' },
+  { key: 'company_address', label: '회사 주소', type: 'textarea', defaultValue: '서울시 금천구 디지털로10길 78. 813호' },
   { key: 'company_phone', label: '회사 전화', type: 'text', defaultValue: '010-8490-9271' },
 ];
 
