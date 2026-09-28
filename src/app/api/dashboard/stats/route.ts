@@ -56,11 +56,12 @@ export async function GET(request: NextRequest) {
     const flowWindowStartIso = new Date(Date.now() - flowWindowDays * 24 * 60 * 60 * 1000).toISOString();
 
     const [r1, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13] = await Promise.all([
-      supabase.from('files').select('*', { count: 'exact', head: true }),
+      // 파일 통계는 업로드 파일만 집계 (Gmail 연동 이메일 인덱스 제외 → /files 목록과 일치)
+      supabase.from('files').select('*', { count: 'exact', head: true }).or('source.is.null,source.eq.upload'),
       supabase.from('users').select('*', { count: 'exact', head: true }),
       supabase.from('templates').select('*', { count: 'exact', head: true }),
       supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(10),
-      supabase.from('files').select('id, name, type, department_id, created_at, uploaded_by'),
+      supabase.from('files').select('id, name, type, department_id, created_at, uploaded_by').or('source.is.null,source.eq.upload'),
       supabase.from('departments').select('id, name'),
       // 문서 + 작성자 부서 (created_by → users.department_id)
       admin.from('documents').select('id, created_by, users:created_by(department_id)'),
