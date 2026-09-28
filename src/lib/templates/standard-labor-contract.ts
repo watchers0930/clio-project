@@ -25,6 +25,7 @@ export const STANDARD_LABOR_CONTRACT_FIELDS: TemplateFieldDefinition[] = [
   { key: 'pay_date', label: '임금지급일', type: 'text', defaultValue: '매월 25일', placeholder: '예: 매월 25일' },
   { key: 'pay_method', label: '지급방법', type: 'select', options: ['근로자에게 직접지급', '근로자 명의 예금통장에 입금'], defaultValue: '근로자 명의 예금통장에 입금' },
   { key: 'social_insurance', label: '사회보험 적용', type: 'checkbox', options: ['고용보험', '산재보험', '국민연금', '건강보험'], defaultValue: '고용보험,산재보험,국민연금,건강보험' },
+  { key: 'nda_agree', label: '비밀유지의무 동의', type: 'checkbox', options: ['동의'], defaultValue: '동의' },
   { key: 'contract_date', label: '계약 체결일', type: 'date', required: true, defaultValue: '{{report_date}}' },
   { key: 'company_address', label: '사업체 주소', type: 'textarea', defaultValue: '서울특별시 강남구 강남대로 354(혜천빌딩) 1126-5호' },
   { key: 'representative_name', label: '대표자', type: 'text', defaultValue: '김동의' },
@@ -57,6 +58,7 @@ export const STANDARD_LABOR_CONTRACT_TEMPLATE_HTML = `
 .labor-contract .sub{padding-left:5mm;line-height:1.7;}
 .labor-contract .insurance span{margin-right:5mm;white-space:nowrap;}
 .labor-contract .opt-inline span{margin-right:4mm;white-space:nowrap;}
+.labor-contract .nda-agree{margin-top:2mm;font-weight:600;}
 .labor-contract .sign-date{margin:9mm 0 7mm;text-align:center;letter-spacing:0.5mm;}
 .labor-contract .sign-party{margin:0 0 5mm;}
 .labor-contract .sign-role{font-weight:700;margin-bottom:1.5mm;}
@@ -107,7 +109,11 @@ export const STANDARD_LABOR_CONTRACT_TEMPLATE_HTML = `
     <li><div class="term-title">10. 근로계약, 취업규칙 등의 성실한 이행의무</div>
       <div class="sub">- 사업주와 근로자는 각자가 근로계약, 취업규칙, 단체협약을 지키고 성실하게 이행하여야 함</div>
     </li>
-    <li><div class="term-title">11. 기 타</div>
+    <li><div class="term-title">11. 비밀유지의무</div>
+      <div class="sub">- 근로자는 재직 중은 물론 퇴직 후에도 업무상 알게 된 회사의 영업비밀·기술정보·고객정보 및 일체의 기밀사항을 제3자에게 누설하거나 부정한 목적으로 사용하지 아니하며, 이를 위반할 경우 관계 법령 및 회사 규정에 따른 책임을 진다.</div>
+      <div class="sub nda-agree">{{nda_agree_opt0}} 위 비밀유지의무에 동의하며 이를 성실히 준수할 것을 서약합니다.</div>
+    </li>
+    <li><div class="term-title">12. 기 타</div>
       <div class="sub">- 이 계약에 정함이 없는 사항은 근로기준법령에 의함</div>
     </li>
   </ol>
