@@ -30,16 +30,25 @@ import {
   APPROVAL_REQUEST_TEMPLATE_HTML,
   isApprovalRequestTemplateName,
 } from '@/lib/templates/approval-request';
+import {
+  createStandardLaborContractTemplateBundle,
+  STANDARD_LABOR_CONTRACT_TEMPLATE_HTML,
+  isStandardLaborContractTemplateName,
+} from '@/lib/templates/standard-labor-contract';
 
 export interface TemplateFieldDefinition {
   key: string;
   label: string;
-  type: 'text' | 'textarea' | 'date';
+  type: 'text' | 'textarea' | 'date' | 'checkbox' | 'select';
   required?: boolean;
   placeholder?: string;
   defaultValue?: string;
   autoFill?: 'user' | 'source' | 'document';
   aiAssist?: boolean;
+  /** checkbox(다중선택)·select(단일선택) 타입의 선택지 목록 */
+  options?: string[];
+  /** 다른 필드 값에 따라 입력폼 표시 여부를 결정하는 조건 */
+  showWhen?: { field: string; equals?: string; notEquals?: string };
 }
 
 export interface TemplateSectionDefinition {
@@ -124,6 +133,10 @@ function buildDefaultHtml(name: string, sections: TemplateSectionDefinition[]) {
 
   if (isApprovalRequestTemplateName(name)) {
     return APPROVAL_REQUEST_TEMPLATE_HTML;
+  }
+
+  if (isStandardLaborContractTemplateName(name)) {
+    return STANDARD_LABOR_CONTRACT_TEMPLATE_HTML;
   }
 
   const tocItems = sections
@@ -276,6 +289,28 @@ export function createTemplateBundle(params: {
       fields: [
         ...approvalBundle.fields,
         ...placeholderFields.filter((field) => !approvalBundle.fields.some((base) => base.key === field.key)),
+      ],
+    };
+  }
+
+  if (isStandardLaborContractTemplateName(params.name)) {
+    const laborBundle = createStandardLaborContractTemplateBundle();
+    const placeholderFields = Array.isArray(params.placeholders)
+      ? params.placeholders
+          .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
+          .map((item, index) => ({
+            key: String(item.key ?? `placeholder_${index + 1}`),
+            label: String(item.label ?? item.key ?? `플레이스홀더 ${index + 1}`),
+            type: 'text' as const,
+            placeholder: typeof item.context === 'string' ? item.context : undefined,
+          }))
+      : [];
+
+    return {
+      ...laborBundle,
+      fields: [
+        ...laborBundle.fields,
+        ...placeholderFields.filter((field) => !laborBundle.fields.some((base) => base.key === field.key)),
       ],
     };
   }

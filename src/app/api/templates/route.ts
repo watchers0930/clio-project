@@ -24,6 +24,10 @@ import {
   createApprovalRequestTemplateBundle,
   APPROVAL_REQUEST_TEMPLATE_NAME,
 } from '@/lib/templates/approval-request';
+import {
+  createStandardLaborContractTemplateBundle,
+  STANDARD_LABOR_CONTRACT_TEMPLATE_NAME,
+} from '@/lib/templates/standard-labor-contract';
 import { extractTemplateFileInnerHtml } from '@/lib/templates/template-file-preview';
 import type { DbTemplate } from '@/lib/supabase/types';
 
@@ -91,6 +95,7 @@ type TemplateRowWithJoins = DbTemplate & {
 const BUILTIN_EMPLOYMENT_CERTIFICATE_TEMPLATE_ID = '__builtin_employment_certificate__';
 const BUILTIN_LEAVE_APPLICATION_TEMPLATE_ID = '__builtin_leave_application__';
 const BUILTIN_APPROVAL_REQUEST_TEMPLATE_ID = '__builtin_approval_request__';
+const BUILTIN_STANDARD_LABOR_CONTRACT_TEMPLATE_ID = '__builtin_standard_labor_contract__';
 
 function mergeTemplateFields(
   baseFields: TemplateFieldDefinition[],
@@ -265,6 +270,27 @@ export async function GET(request: NextRequest) {
         id: BUILTIN_APPROVAL_REQUEST_TEMPLATE_ID,
         name: APPROVAL_REQUEST_TEMPLATE_NAME,
         description: '기안–검토–승인 결재란 품의서 (기안자 전자서명)',
+        content: bundle.outline,
+        department: '전사',
+        departmentId: null,
+        scope: '전사 공용',
+        placeholders: [],
+        templateMode: bundle.mode,
+        templateHtml: bundle.layoutHtml,
+        templateFields: bundle.fields,
+        templateSections: bundle.sections,
+        lastUpdated: '',
+        usageCount: 0,
+        templateFile: null,
+      });
+    }
+
+    if (!tplList.some((template) => template.name === STANDARD_LABOR_CONTRACT_TEMPLATE_NAME)) {
+      const bundle = createStandardLaborContractTemplateBundle();
+      tplList.push({
+        id: BUILTIN_STANDARD_LABOR_CONTRACT_TEMPLATE_ID,
+        name: STANDARD_LABOR_CONTRACT_TEMPLATE_NAME,
+        description: '고용노동부 표준근로계약서(기간의 정함이 없는 경우)',
         content: bundle.outline,
         department: '전사',
         departmentId: null,

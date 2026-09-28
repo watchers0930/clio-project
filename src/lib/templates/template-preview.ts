@@ -84,9 +84,28 @@ export function buildTemplatePreviewData(bundle: TemplateBundle, name: string) {
     if (field.type === 'date') {
       replacements[`${field.key}_ko`] = formatKoreanDate(replacements[field.key]);
     }
+    if (field.type === 'checkbox' || field.type === 'select') {
+      // 미리보기: 기본값이 있으면 그대로, 없으면 첫 옵션을 선택 샘플로 표시
+      const source = (field.defaultValue || field.options?.[0] || '')
+        .split(',').map((v) => v.trim()).filter(Boolean);
+      replacements[field.key] = source.join(', ');
+      (field.options ?? []).forEach((option, index) => {
+        replacements[`${field.key}_opt${index}`] = source.includes(option) ? '☑' : '☐';
+      });
+      replacements[`${field.key}_display`] = source.join(', ');
+    }
     if (field.key.endsWith('_items')) {
       replacements[`${field.key}_html`] = multilineToListItems(interpolateTemplateValue(fallbackValue, replacements));
     }
+  }
+
+  // 표준근로계약서: 정규직이 아닐 때만 계약기간 표시 (미리보기 기본값은 정규직→빈 문자열)
+  if (replacements.employment_type && replacements.employment_type !== '정규직') {
+    const startDate = replacements.employment_period_start_ko || replacements.employment_period_start || '';
+    const endDate = replacements.employment_period_end_ko || replacements.employment_period_end || '';
+    replacements.employment_period_display = (startDate || endDate) ? `(계약기간 : ${startDate} ~ ${endDate})` : '';
+  } else {
+    replacements.employment_period_display = '';
   }
 
   // 휴가원: 미리보기용 남은 휴가일수 계산

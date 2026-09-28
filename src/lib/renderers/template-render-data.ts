@@ -160,10 +160,26 @@ export function buildTemplateRenderData(params: {
     if (field.type === 'date') {
       replacements[`${field.key}_ko`] = formatKoreanDate(replacements[field.key]);
     }
+    if (field.type === 'checkbox' || field.type === 'select') {
+      const selected = replacements[field.key].split(',').map((v) => v.trim()).filter(Boolean);
+      (field.options ?? []).forEach((option, index) => {
+        replacements[`${field.key}_opt${index}`] = selected.includes(option) ? '☑' : '☐';
+      });
+      replacements[`${field.key}_display`] = selected.join(', ');
+    }
     if (field.key.endsWith('_items')) {
       const itemsValue = hasInputValue ? (documentInputs?.[field.key] ?? '') : fallbackValue;
       replacements[`${field.key}_html`] = multilineToListItems(interpolateTemplateValue(itemsValue, replacements));
     }
+  }
+
+  // 표준근로계약서: 정규직이 아닐 때만 계약기간 표시 문자열 구성
+  if (replacements.employment_type && replacements.employment_type !== '정규직') {
+    const startDate = replacements.employment_period_start_ko || replacements.employment_period_start || '';
+    const endDate = replacements.employment_period_end_ko || replacements.employment_period_end || '';
+    replacements.employment_period_display = (startDate || endDate) ? `(계약기간 : ${startDate} ~ ${endDate})` : '';
+  } else {
+    replacements.employment_period_display = '';
   }
 
   // 휴가원: 남은 휴가일수 자동계산 (입사일·기사용일수 기반)

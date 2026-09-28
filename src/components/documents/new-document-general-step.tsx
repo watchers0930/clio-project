@@ -26,12 +26,14 @@ interface NewDocumentGeneralStepProps {
   templateFields: Array<{
     key: string;
     label: string;
-    type: 'text' | 'textarea' | 'date';
+    type: 'text' | 'textarea' | 'date' | 'checkbox' | 'select';
     required?: boolean;
     placeholder?: string;
     defaultValue?: string;
     autoFill?: 'user' | 'source' | 'document';
     aiAssist?: boolean;
+    options?: string[];
+    showWhen?: { field: string; equals?: string; notEquals?: string };
   }>;
   allowedOutputFormats: readonly string[];
   extractedFieldKeys?: Set<string>;
@@ -90,11 +92,19 @@ export function NewDocumentGeneralStep({
   const isEmploymentCert = selectedTemplateItem?.name === '재직증명서';
   // 재직증명서: 본인 정보 자동입력 → 제출용도만 입력.
   // 단, 자동입력이 안 된 필수 필드(예: 프로필에 입사일 없음)는 숨기지 않고 보여준다.
-  const manualFields = isEmploymentCert
+  const baseManualFields = isEmploymentCert
     ? allManualFields.filter(
         (field) => field.key === 'purpose' || (field.required && !documentInputs[field.key]?.trim()),
       )
     : allManualFields;
+  // showWhen 조건부 필드: 다른 필드 값에 따라 입력폼 노출 (예: 근로의 종류가 정규직이 아닐 때만 계약기간)
+  const manualFields = baseManualFields.filter((field) => {
+    if (!field.showWhen) return true;
+    const depValue = (documentInputs[field.showWhen.field] ?? '').trim();
+    if (field.showWhen.equals !== undefined) return depValue === field.showWhen.equals;
+    if (field.showWhen.notEquals !== undefined) return depValue !== field.showWhen.notEquals;
+    return true;
+  });
 
   const handleCertAutofill = useCallback((p: {
     name: string; resident_no: string; address: string; department: string; position: string; hire_date: string;
@@ -151,6 +161,40 @@ export function NewDocumentGeneralStep({
                     placeholder={field.placeholder}
                     className="w-full px-4 py-2.5 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary"
                   />
+                ) : field.type === 'checkbox' ? (
+                  <div className="flex flex-wrap gap-x-4 gap-y-2 px-1 py-1">
+                    {(field.options ?? []).map((option) => {
+                      const selected = (documentInputs[field.key] ?? '').split(',').map((v) => v.trim()).filter(Boolean);
+                      const checked = selected.includes(option);
+                      return (
+                        <label key={option} className="flex items-center gap-2 text-sm text-foreground">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              const next = e.target.checked
+                                ? [...selected, option]
+                                : selected.filter((v) => v !== option);
+                              onSetDocumentInputs((prev) => ({ ...prev, [field.key]: next.join(',') }));
+                            }}
+                            className="rounded border-border text-primary focus:ring-primary"
+                          />
+                          {option}
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : field.type === 'select' ? (
+                  <select
+                    value={documentInputs[field.key] ?? ''}
+                    onChange={(e) => onSetDocumentInputs((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                    className="w-full px-4 py-2.5 rounded-xl border border-border bg-white text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="">선택하세요</option>
+                    {(field.options ?? []).map((option) => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
                 ) : (
                   <input
                     type={field.type === 'date' ? 'date' : 'text'}

@@ -21,6 +21,9 @@ export interface ContractSchema {
 
 /** 계약서 템플릿인지 판별 */
 export function isContractTemplate(name: string): boolean {
+  // 표준근로계약서는 재직증명서와 동일한 빌트인 html-template로 처리하므로
+  // 구조화 계약서 스키마(CONTRACT_SCHEMAS) 경로에서 제외한다.
+  if (name.includes('근로계약서')) return false;
   return name.includes('계약서') || name.includes('계약');
 }
 

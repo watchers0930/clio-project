@@ -348,10 +348,10 @@ export async function GET(
     const companyLogoContext = await loadCompanyLogoContext(createAdminSupabaseClient());
 
     const isProposalDocument = isProposalTemplateName(templateName);
-    const isEmploymentCertificateDocument = /재직\s*증명서/.test(templateName);
-    // 재직증명서 등 회사 발급 문서는 신청자가 누구든 회사 공용 직인을 쓴다.
+    // 재직증명서·표준근로계약서 등 회사 발급 문서는 신청자가 누구든 회사 공용 직인을 쓴다.
     // (개인 문서는 아래에서 신청자 본인 서명 signatureBuffer 사용)
-    const companySealBuffer = isEmploymentCertificateDocument
+    const isCompanyIssuedDocument = /재직\s*증명서|근로계약서/.test(templateName);
+    const companySealBuffer = isCompanyIssuedDocument
       ? await loadCompanySealBuffer(createAdminSupabaseClient())
       : null;
     const proposalPreviewHtml = isProposalDocument
@@ -437,7 +437,7 @@ export async function GET(
               documentInputs: templateDocumentInputs,
               templateName,
             });
-            if (signatureBuffer && !isEmploymentCertificateDocument) {
+            if (signatureBuffer && !isCompanyIssuedDocument) {
               const sigBase64 = signatureBuffer.toString('base64');
               const sigImg = `<div style="text-align:right;margin-top:32px;padding-right:40px;"><img src="data:image/png;base64,${sigBase64}" style="width:120px;height:60px;object-fit:contain;" alt="서명" /></div>`;
               const htmlStr = rendered.buffer.toString('utf-8');
@@ -617,7 +617,7 @@ export async function GET(
           documentInputs: mergedDocumentInputs,
           templateName,
         });
-        if (signatureBuffer && !isEmploymentCertificateDocument) {
+        if (signatureBuffer && !isCompanyIssuedDocument) {
           const sigBase64 = signatureBuffer.toString('base64');
           const sigImg = `<div style="text-align:right;margin-top:32px;padding-right:40px;"><img src="data:image/png;base64,${sigBase64}" style="width:120px;height:60px;object-fit:contain;" alt="서명" /></div>`;
           const htmlStr = rendered.buffer.toString('utf-8');
