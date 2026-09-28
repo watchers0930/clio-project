@@ -18,7 +18,7 @@ export const STANDARD_LABOR_CONTRACT_FIELDS: TemplateFieldDefinition[] = [
   { key: 'work_days_per_week', label: '근무일', type: 'text', defaultValue: '5일(월~금)', placeholder: '예: 5일(월~금)' },
   { key: 'weekly_holiday', label: '주휴일(요일 선택)', type: 'checkbox', options: ['월', '화', '수', '목', '금', '토', '일'], defaultValue: '일' },
   { key: 'salary_type', label: '임금 형태', type: 'select', required: true, options: ['월급', '일급', '시간급'], defaultValue: '월급' },
-  { key: 'salary_amount', label: '임금액', type: 'text', required: true, placeholder: '예: 3,000,000원' },
+  { key: 'salary_amount', label: '임금액', type: 'text', required: true, format: 'currency', placeholder: '숫자만 입력 (예: 3000000)' },
   { key: 'bonus', label: '상여금', type: 'select', options: ['있음', '없음'], defaultValue: '없음' },
   { key: 'bonus_amount', label: '상여금액', type: 'text', placeholder: '상여금 있음일 때 입력 (예: 연 500만원)' },
   { key: 'other_allowance', label: '기타급여(제수당 등)', type: 'textarea', placeholder: '예: 식대 100,000원, 직책수당 200,000원' },
@@ -30,7 +30,7 @@ export const STANDARD_LABOR_CONTRACT_FIELDS: TemplateFieldDefinition[] = [
   { key: 'representative_name', label: '대표자', type: 'text', defaultValue: '김동의' },
   { key: 'company_phone', label: '사업체 전화', type: 'text', defaultValue: '010-8490-9271' },
   { key: 'employee_address', label: '근로자 주소', type: 'textarea', placeholder: '예: 서울특별시 ...' },
-  { key: 'employee_contact', label: '근로자 연락처', type: 'text', placeholder: '예: 010-0000-0000' },
+  { key: 'employee_contact', label: '근로자 연락처', type: 'text', format: 'phone', placeholder: '숫자만 입력 (예: 01012345678)' },
 ];
 
 export const STANDARD_LABOR_CONTRACT_OUTLINE = [

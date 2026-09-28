@@ -13,7 +13,7 @@ export interface Template {
   content: string;
   templateMode?: 'html-template';
   templateHtml?: string;
-  templateFields?: { key: string; label: string; type: 'text' | 'textarea' | 'date' | 'checkbox' | 'select'; required?: boolean; placeholder?: string; autoFill?: 'user' | 'source' | 'document'; aiAssist?: boolean; options?: string[]; showWhen?: { field: string; equals?: string; notEquals?: string } }[];
+  templateFields?: { key: string; label: string; type: 'text' | 'textarea' | 'date' | 'checkbox' | 'select'; required?: boolean; placeholder?: string; autoFill?: 'user' | 'source' | 'document'; aiAssist?: boolean; options?: string[]; showWhen?: { field: string; equals?: string; notEquals?: string }; format?: 'currency' | 'phone' }[];
   templateSections?: { key: string; title: string; prompt: string }[];
   department: string;
   departmentId: string;

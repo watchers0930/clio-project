@@ -4,6 +4,7 @@ import { renderTemplatePreviewHtml } from '@/lib/templates/template-preview';
 import type { TemplateItem } from '@/components/documents/page-types';
 import { LeaveEmployeePicker } from '@/components/documents/LeaveEmployeePicker';
 import { EmploymentCertAutofill } from '@/components/documents/EmploymentCertAutofill';
+import { formatSalaryAmount, formatPhoneNumber } from '@/lib/templates/standard-labor-contract';
 
 const AUTO_INPUT_FIELD_KEYS = new Set([
   'author',
@@ -34,6 +35,7 @@ interface NewDocumentGeneralStepProps {
     aiAssist?: boolean;
     options?: string[];
     showWhen?: { field: string; equals?: string; notEquals?: string };
+    format?: 'currency' | 'phone';
   }>;
   allowedOutputFormats: readonly string[];
   extractedFieldKeys?: Set<string>;
@@ -195,6 +197,34 @@ export function NewDocumentGeneralStep({
                       <option key={option} value={option}>{option}</option>
                     ))}
                   </select>
+                ) : field.format === 'currency' ? (
+                  <div>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={(documentInputs[field.key] ?? '').replace(/[^0-9]/g, '')
+                        ? Number((documentInputs[field.key] ?? '').replace(/[^0-9]/g, '')).toLocaleString('en-US')
+                        : ''}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/[^0-9]/g, '');
+                        onSetDocumentInputs((prev) => ({ ...prev, [field.key]: digits }));
+                      }}
+                      placeholder={field.placeholder}
+                      className="w-full px-4 py-2.5 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    {(documentInputs[field.key] ?? '').replace(/[^0-9]/g, '') && (
+                      <p className="mt-1 text-xs text-primary">{formatSalaryAmount(documentInputs[field.key] ?? '')}</p>
+                    )}
+                  </div>
+                ) : field.format === 'phone' ? (
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={formatPhoneNumber(documentInputs[field.key] ?? '')}
+                    onChange={(e) => onSetDocumentInputs((prev) => ({ ...prev, [field.key]: e.target.value.replace(/[^0-9]/g, '') }))}
+                    placeholder={field.placeholder}
+                    className="w-full px-4 py-2.5 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
                 ) : (
                   <input
                     type={field.type === 'date' ? 'date' : 'text'}

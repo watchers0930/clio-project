@@ -49,6 +49,8 @@ export interface TemplateFieldDefinition {
   options?: string[];
   /** 다른 필드 값에 따라 입력폼 표시 여부를 결정하는 조건 */
   showWhen?: { field: string; equals?: string; notEquals?: string };
+  /** 입력란 실시간 포맷: currency(천단위 콤마+한글 미리보기), phone(하이픈) */
+  format?: 'currency' | 'phone';
 }
 
 export interface TemplateSectionDefinition {
