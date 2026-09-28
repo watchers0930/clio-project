@@ -46,9 +46,9 @@ export const STANDARD_LABOR_CONTRACT_OUTLINE = [
 
 export const STANDARD_LABOR_CONTRACT_TEMPLATE_HTML = `
 <style>
-@page{size:A4;margin:18mm 20mm;}
+@page{size:A4;margin:0;}
 html,body{margin:0;padding:0;}
-.labor-contract{box-sizing:border-box;width:auto;margin:0;padding:0;background:#fff;color:#111;font-family:Batang,"AppleMyungjo","Nanum Myeongjo","Noto Serif KR",serif;font-size:3.5mm;line-height:1.6;letter-spacing:-0.2px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.labor-contract{box-sizing:border-box;width:210mm;margin:0 auto;padding:18mm 20mm;background:#fff;color:#111;font-family:Batang,"AppleMyungjo","Nanum Myeongjo","Noto Serif KR",serif;font-size:3.5mm;line-height:1.6;letter-spacing:-0.2px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 .labor-contract *{box-sizing:border-box;}
 .labor-contract .title{margin:0 0 9mm;text-align:center;font-size:8mm;font-weight:700;letter-spacing:2mm;}
 .labor-contract .intro{margin:0 0 6mm;line-height:1.8;}
@@ -58,7 +58,7 @@ html,body{margin:0;padding:0;}
 .labor-contract .employ-period:empty{display:none;}
 .labor-contract .terms{margin:0;padding:0;list-style:none;}
 .labor-contract .terms > li{margin:0 0 6.6mm;}
-.labor-contract .term-page2{break-before:page;page-break-before:always;padding-top:14mm;}
+.labor-contract .term-page2{break-before:page;page-break-before:always;padding-top:18mm;}
 .labor-contract .term-title{font-weight:700;margin-bottom:1mm;}
 .labor-contract .sub{padding-left:5mm;line-height:1.7;}
 .labor-contract .insurance span{margin-right:5mm;white-space:nowrap;}
