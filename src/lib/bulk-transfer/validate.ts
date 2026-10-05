@@ -1,6 +1,6 @@
 // 하나은행 대량이체 - 서버 입력 검증 (순수 함수)
 import { normalizeBankToCode } from './bank-codes';
-import type { TransferItemInput, TransferPayeeInput, TransferSourceType } from './types';
+import type { FixedExpenseInput, TransferItemInput, TransferPayeeInput, TransferSourceType } from './types';
 
 type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -78,6 +78,36 @@ export function validatePayeeInput(
       account,
       account_holder: holder.value,
       notify_phone: phone.value,
+      memo: memo.value,
+    },
+  };
+}
+
+/** 월 고정지출 입력 검증 */
+export function validateFixedExpenseInput(raw: unknown): Result<FixedExpenseInput> {
+  if (!raw || typeof raw !== 'object') return { ok: false, error: '요청 본문이 올바르지 않습니다.' };
+  const b = raw as Record<string, unknown>;
+
+  const label = str(b.label);
+  if (!label) return { ok: false, error: '항목명은 필수입니다.' };
+  if (label.length > 100) return { ok: false, error: '항목명이 너무 깁니다. (최대 100자)' };
+
+  const amount = typeof b.amount === 'number' ? b.amount : Number(b.amount);
+  if (!Number.isFinite(amount) || amount < 0) {
+    return { ok: false, error: '금액은 0 이상의 숫자여야 합니다.' };
+  }
+  if (amount > 10_000_000_000) {
+    return { ok: false, error: '금액이 한도를 초과했습니다.' };
+  }
+
+  const memo = optStr(b.memo, 200, '메모');
+  if (!memo.ok) return memo;
+
+  return {
+    ok: true,
+    value: {
+      label,
+      amount: Math.round(amount), // 원 단위 정수
       memo: memo.value,
     },
   };

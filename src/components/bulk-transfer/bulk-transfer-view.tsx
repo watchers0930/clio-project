@@ -3,14 +3,23 @@
 import { useState } from 'react';
 import { useToast } from '@/components/ui/toast';
 import { useBulkTransfer } from '@/hooks/use-bulk-transfer';
-import type { TransferItem, TransferItemInput, TransferPayee, TransferPayeeInput } from '@/lib/bulk-transfer/types';
+import type {
+  FixedExpense,
+  FixedExpenseInput,
+  TransferItem,
+  TransferItemInput,
+  TransferPayee,
+  TransferPayeeInput,
+} from '@/lib/bulk-transfer/types';
 import { TransferList } from './transfer-list';
 import { PayeeManager } from './payee-manager';
 import { PayeeModal } from './payee-modal';
 import { TransferItemModal } from './transfer-item-modal';
 import { PdfImportModal } from './pdf-import-modal';
+import { FixedExpenseList } from './fixed-expense-list';
+import { FixedExpenseModal } from './fixed-expense-modal';
 
-type Tab = 'items' | 'payees';
+type Tab = 'items' | 'payees' | 'fixed';
 
 export function BulkTransferView() {
   const toast = useToast();
@@ -25,6 +34,10 @@ export function BulkTransferView() {
     updateItem,
     setItemStatus,
     deleteItem,
+    fixedExpenses,
+    createExpense,
+    updateExpense,
+    deleteExpense,
     exportItems,
   } = useBulkTransfer();
 
@@ -34,6 +47,8 @@ export function BulkTransferView() {
   const [itemModal, setItemModal] = useState(false);
   const [editingItem, setEditingItem] = useState<TransferItem | null>(null);
   const [pdfModal, setPdfModal] = useState(false);
+  const [expenseModal, setExpenseModal] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<FixedExpense | null>(null);
 
   // --- 거래처 핸들러 ---
   const openAddPayee = () => {
@@ -106,6 +121,34 @@ export function BulkTransferView() {
     }
   };
 
+  // --- 월 고정지출 핸들러 ---
+  const openAddExpense = () => {
+    setEditingExpense(null);
+    setExpenseModal(true);
+  };
+  const openEditExpense = (e: FixedExpense) => {
+    setEditingExpense(e);
+    setExpenseModal(true);
+  };
+  const submitExpense = async (input: FixedExpenseInput) => {
+    if (editingExpense) {
+      await updateExpense(editingExpense.id, input);
+      toast.success('고정지출이 수정되었습니다.');
+    } else {
+      await createExpense(input);
+      toast.success('고정지출이 추가되었습니다.');
+    }
+  };
+  const handleDeleteExpense = async (e: FixedExpense) => {
+    if (!window.confirm(`'${e.label}' 항목을 삭제하시겠습니까?`)) return;
+    try {
+      await deleteExpense(e.id);
+      toast.success('삭제되었습니다.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '삭제에 실패했습니다.');
+    }
+  };
+
   // 아이템 모달에서 "새 거래처" → 거래처 모달로 전환
   const addPayeeFromItem = () => {
     setItemModal(false);
@@ -135,9 +178,10 @@ export function BulkTransferView() {
         <div className="flex items-center gap-1 border-b border-border">
           <TabButton active={tab === 'items'} onClick={() => setTab('items')} label={`이체 목록 (${items.length})`} />
           <TabButton active={tab === 'payees'} onClick={() => setTab('payees')} label={`거래처 (${payees.length})`} />
+          <TabButton active={tab === 'fixed'} onClick={() => setTab('fixed')} label={`월 고정지출 (${fixedExpenses.length})`} />
         </div>
 
-        {tab === 'items' ? (
+        {tab === 'items' && (
           <TransferList
             items={items}
             onAdd={openAddItem}
@@ -147,8 +191,17 @@ export function BulkTransferView() {
             onToggleDone={(it) => void handleToggleDone(it)}
             onExport={handleExport}
           />
-        ) : (
+        )}
+        {tab === 'payees' && (
           <PayeeManager payees={payees} onAdd={openAddPayee} onEdit={openEditPayee} onDelete={(p) => void handleDeletePayee(p)} />
+        )}
+        {tab === 'fixed' && (
+          <FixedExpenseList
+            expenses={fixedExpenses}
+            onAdd={openAddExpense}
+            onEdit={openEditExpense}
+            onDelete={(e) => void handleDeleteExpense(e)}
+          />
         )}
       </div>
 
@@ -168,6 +221,12 @@ export function BulkTransferView() {
         onClose={() => setItemModal(false)}
         onAddPayee={addPayeeFromItem}
         onSubmit={submitItem}
+      />
+      <FixedExpenseModal
+        open={expenseModal}
+        editing={editingExpense}
+        onClose={() => setExpenseModal(false)}
+        onSubmit={submitExpense}
       />
     </>
   );

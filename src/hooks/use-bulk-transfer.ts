@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type {
+  FixedExpense,
+  FixedExpenseInput,
   TransferItem,
   TransferItemInput,
   TransferPayee,
@@ -19,19 +21,23 @@ async function jsonOrThrow<T>(res: Response): Promise<T> {
 export function useBulkTransfer() {
   const [payees, setPayees] = useState<TransferPayee[]>([]);
   const [items, setItems] = useState<TransferItem[]>([]);
+  const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [pRes, iRes] = await Promise.all([
+      const [pRes, iRes, eRes] = await Promise.all([
         fetch('/api/bulk-transfer/payees'),
         fetch('/api/bulk-transfer/items'),
+        fetch('/api/bulk-transfer/fixed-expenses'),
       ]);
       const p = (await pRes.json().catch(() => ({}))) as { data?: TransferPayee[] };
       const i = (await iRes.json().catch(() => ({}))) as { data?: TransferItem[] };
+      const e = (await eRes.json().catch(() => ({}))) as { data?: FixedExpense[] };
       setPayees(p.data ?? []);
       setItems(i.data ?? []);
+      setFixedExpenses(e.data ?? []);
     } finally {
       setLoading(false);
     }
@@ -116,6 +122,38 @@ export function useBulkTransfer() {
     setItems((prev) => prev.filter((it) => it.id !== id));
   }, []);
 
+  // --- 월 고정지출 ---
+  const createExpense = useCallback(async (input: FixedExpenseInput) => {
+    const res = await fetch('/api/bulk-transfer/fixed-expenses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    const saved = await jsonOrThrow<FixedExpense>(res);
+    setFixedExpenses((prev) => [saved, ...prev]);
+    return saved;
+  }, []);
+
+  const updateExpense = useCallback(async (id: string, input: FixedExpenseInput) => {
+    const res = await fetch(`/api/bulk-transfer/fixed-expenses/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    const saved = await jsonOrThrow<FixedExpense>(res);
+    setFixedExpenses((prev) => prev.map((e) => (e.id === id ? saved : e)));
+    return saved;
+  }, []);
+
+  const deleteExpense = useCallback(async (id: string) => {
+    const res = await fetch(`/api/bulk-transfer/fixed-expenses/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new Error(json.error ?? '삭제에 실패했습니다.');
+    }
+    setFixedExpenses((prev) => prev.filter((e) => e.id !== id));
+  }, []);
+
   /** 선택 건들을 하나은행 .xls로 내려받기. 성공 시 상태 재동기화. */
   const exportItems = useCallback(
     async (ids: string[]) => {
@@ -148,6 +186,7 @@ export function useBulkTransfer() {
   return {
     payees,
     items,
+    fixedExpenses,
     loading,
     createPayee,
     updatePayee,
@@ -156,6 +195,9 @@ export function useBulkTransfer() {
     updateItem,
     setItemStatus,
     deleteItem,
+    createExpense,
+    updateExpense,
+    deleteExpense,
     exportItems,
   };
 }

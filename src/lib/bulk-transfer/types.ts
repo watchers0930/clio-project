@@ -66,6 +66,23 @@ export interface TransferItemInput {
   source_id?: string | null;
 }
 
+// 월 고정지출 — 단순 가계부형 (거래처/계좌 연결 없음) --------------------------
+export interface FixedExpense {
+  id: string;
+  label: string; // 항목명 (예: 임대료, 4대보험)
+  amount: number; // 월 지출액(원)
+  memo: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// 월 고정지출 생성/수정 입력
+export interface FixedExpenseInput {
+  label: string;
+  amount: number;
+  memo: string | null;
+}
+
 // 하나은행 대량이체 파일 1행 (Sheet1 컬럼과 1:1 매핑)
 export interface HanaBulkRow {
   bankCode: string; // 입금은행 (3자리 코드)
