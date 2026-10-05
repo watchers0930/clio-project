@@ -1,11 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Plus, Pencil, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import type { FixedExpense } from '@/lib/bulk-transfer/types';
 
 interface Props {
   expenses: FixedExpense[];
+  balance: number;
+  onSaveBalance: (value: number) => Promise<void>;
   onAdd: () => void;
   onEdit: (e: FixedExpense) => void;
   onDelete: (e: FixedExpense) => void;
@@ -20,11 +22,31 @@ const SORT_LABELS: Record<SortKey, string> = {
   amount: '금액',
 };
 
-export function FixedExpenseList({ expenses, onAdd, onEdit, onDelete }: Props) {
+export function FixedExpenseList({ expenses, balance, onSaveBalance, onAdd, onEdit, onDelete }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('month');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [balanceInput, setBalanceInput] = useState('');
+  const [savingBal, setSavingBal] = useState(false);
 
   const total = useMemo(() => expenses.reduce((s, e) => s + Number(e.amount), 0), [expenses]);
+  const remaining = balance - total;
+
+  useEffect(() => {
+    setBalanceInput(balance ? balance.toLocaleString('ko-KR') : '');
+  }, [balance]);
+
+  const commitBalance = async () => {
+    const v = Number(balanceInput.replace(/\D/g, ''));
+    if (v === balance) return; // 변경 없음
+    setSavingBal(true);
+    try {
+      await onSaveBalance(v);
+    } catch {
+      setBalanceInput(balance ? balance.toLocaleString('ko-KR') : ''); // 실패 시 원복
+    } finally {
+      setSavingBal(false);
+    }
+  };
 
   const sorted = useMemo(() => {
     const factor = sortDir === 'asc' ? 1 : -1;
@@ -99,12 +121,39 @@ export function FixedExpenseList({ expenses, onAdd, onEdit, onDelete }: Props) {
         </div>
       </div>
 
-      {/* 합계 카드 */}
-      <div className="flex items-end justify-between rounded-xl border border-border bg-surface-secondary px-5 py-4">
-        <span className="text-[13px] font-medium text-foreground-secondary">고정지출 합계 ({expenses.length}건)</span>
-        <span className="font-mono text-[20px] font-semibold text-foreground">
-          {total.toLocaleString('ko-KR')}원
-        </span>
+      {/* 잔고·지출·잔액 카드 */}
+      <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface-secondary px-5 py-4">
+        <div className="flex items-center justify-between gap-3">
+          <label className="text-[13px] font-medium text-foreground-secondary" htmlFor="fe-balance">현재 잔고</label>
+          <div className="flex items-center gap-1.5">
+            <input
+              id="fe-balance"
+              value={balanceInput}
+              onChange={(e) => {
+                const digits = e.target.value.replace(/\D/g, '');
+                setBalanceInput(digits ? Number(digits).toLocaleString('ko-KR') : '');
+              }}
+              onBlur={() => void commitBalance()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+              }}
+              inputMode="numeric"
+              placeholder="0"
+              className="w-40 rounded-lg border border-border bg-white px-3 py-1.5 text-right font-mono text-[15px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            <span className="text-[13px] text-foreground-secondary">원</span>
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[13px] font-medium text-foreground-secondary">고정지출 합계 ({expenses.length}건)</span>
+          <span className="font-mono text-[15px] text-foreground">− {total.toLocaleString('ko-KR')}원</span>
+        </div>
+        <div className="flex items-end justify-between gap-3 border-t border-border pt-3">
+          <span className="text-[13px] font-semibold text-foreground">잔액 {savingBal && <span className="font-normal text-foreground-quaternary">(저장 중…)</span>}</span>
+          <span className={`font-mono text-[20px] font-semibold ${remaining < 0 ? 'text-red-500' : 'text-foreground'}`}>
+            {remaining.toLocaleString('ko-KR')}원
+          </span>
+        </div>
       </div>
 
       {/* 모바일: 카드 리스트 */}

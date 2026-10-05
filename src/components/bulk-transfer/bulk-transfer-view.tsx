@@ -36,6 +36,8 @@ export function BulkTransferView() {
     setItemStatus,
     deleteItem,
     fixedExpenses,
+    balance,
+    saveBalance,
     createExpense,
     updateExpense,
     deleteExpense,
@@ -149,6 +151,15 @@ export function BulkTransferView() {
       toast.error(err instanceof Error ? err.message : '삭제에 실패했습니다.');
     }
   };
+  const handleSaveBalance = async (value: number) => {
+    try {
+      await saveBalance(value);
+      toast.success('잔고가 저장되었습니다.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '잔고 저장에 실패했습니다.');
+      throw err; // 목록에서 입력값 원복
+    }
+  };
 
   // 아이템 모달에서 "새 거래처" → 거래처 모달로 전환
   const addPayeeFromItem = () => {
@@ -200,6 +211,8 @@ export function BulkTransferView() {
         {tab === 'fixed' && (
           <FixedExpenseList
             expenses={fixedExpenses}
+            balance={balance}
+            onSaveBalance={handleSaveBalance}
             onAdd={openAddExpense}
             onEdit={openEditExpense}
             onDelete={(e) => void handleDeleteExpense(e)}

@@ -22,22 +22,26 @@ export function useBulkTransfer() {
   const [payees, setPayees] = useState<TransferPayee[]>([]);
   const [items, setItems] = useState<TransferItem[]>([]);
   const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
+  const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [pRes, iRes, eRes] = await Promise.all([
+      const [pRes, iRes, eRes, bRes] = await Promise.all([
         fetch('/api/bulk-transfer/payees'),
         fetch('/api/bulk-transfer/items'),
         fetch('/api/bulk-transfer/fixed-expenses'),
+        fetch('/api/bulk-transfer/balance'),
       ]);
       const p = (await pRes.json().catch(() => ({}))) as { data?: TransferPayee[] };
       const i = (await iRes.json().catch(() => ({}))) as { data?: TransferItem[] };
       const e = (await eRes.json().catch(() => ({}))) as { data?: FixedExpense[] };
+      const b = (await bRes.json().catch(() => ({}))) as { data?: { balance?: number } };
       setPayees(p.data ?? []);
       setItems(i.data ?? []);
       setFixedExpenses(e.data ?? []);
+      setBalance(b.data?.balance ?? 0);
     } finally {
       setLoading(false);
     }
@@ -154,6 +158,17 @@ export function useBulkTransfer() {
     setFixedExpenses((prev) => prev.filter((e) => e.id !== id));
   }, []);
 
+  const saveBalance = useCallback(async (value: number) => {
+    const res = await fetch('/api/bulk-transfer/balance', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ balance: value }),
+    });
+    const saved = await jsonOrThrow<{ balance: number }>(res);
+    setBalance(saved.balance);
+    return saved.balance;
+  }, []);
+
   /** 선택 건들을 하나은행 .xls로 내려받기. 성공 시 상태 재동기화. */
   const exportItems = useCallback(
     async (ids: string[]) => {
@@ -187,6 +202,8 @@ export function useBulkTransfer() {
     payees,
     items,
     fixedExpenses,
+    balance,
+    saveBalance,
     loading,
     createPayee,
     updatePayee,
