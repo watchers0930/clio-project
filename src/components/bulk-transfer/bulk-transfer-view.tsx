@@ -18,8 +18,9 @@ import { TransferItemModal } from './transfer-item-modal';
 import { PdfImportModal } from './pdf-import-modal';
 import { FixedExpenseList } from './fixed-expense-list';
 import { FixedExpenseModal } from './fixed-expense-modal';
+import { FixedExpenseCompare } from './fixed-expense-compare';
 
-type Tab = 'items' | 'payees' | 'fixed';
+type Tab = 'items' | 'payees' | 'fixed' | 'compare';
 
 export function BulkTransferView() {
   const toast = useToast();
@@ -179,6 +180,7 @@ export function BulkTransferView() {
           <TabButton active={tab === 'items'} onClick={() => setTab('items')} label={`이체 목록 (${items.length})`} />
           <TabButton active={tab === 'payees'} onClick={() => setTab('payees')} label={`거래처 (${payees.length})`} />
           <TabButton active={tab === 'fixed'} onClick={() => setTab('fixed')} label={`월 고정지출 (${fixedExpenses.length})`} />
+          <TabButton active={tab === 'compare'} onClick={() => setTab('compare')} label="월별 비교표" />
         </div>
 
         {tab === 'items' && (
@@ -203,6 +205,7 @@ export function BulkTransferView() {
             onDelete={(e) => void handleDeleteExpense(e)}
           />
         )}
+        {tab === 'compare' && <FixedExpenseCompare expenses={fixedExpenses} />}
       </div>
 
       <PdfImportModal

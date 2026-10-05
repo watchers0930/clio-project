@@ -100,6 +100,11 @@ export function validateFixedExpenseInput(raw: unknown): Result<FixedExpenseInpu
     return { ok: false, error: '금액이 한도를 초과했습니다.' };
   }
 
+  const month = str(b.month);
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    return { ok: false, error: '적용 월(YYYY-MM)을 올바르게 선택해 주세요.' };
+  }
+
   const memo = optStr(b.memo, 200, '메모');
   if (!memo.ok) return memo;
 
@@ -108,6 +113,7 @@ export function validateFixedExpenseInput(raw: unknown): Result<FixedExpenseInpu
     value: {
       label,
       amount: Math.round(amount), // 원 단위 정수
+      month,
       memo: memo.value,
     },
   };

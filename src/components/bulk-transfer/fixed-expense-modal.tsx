@@ -21,9 +21,16 @@ function withComma(v: string): string {
   return digits ? Number(digits).toLocaleString('ko-KR') : '';
 }
 
+/** 현재 연-월 'YYYY-MM' */
+function currentMonth(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
 export function FixedExpenseModal({ open, editing, onClose, onSubmit }: Props) {
   const [label, setLabel] = useState('');
   const [amount, setAmount] = useState('');
+  const [month, setMonth] = useState('');
   const [memo, setMemo] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -32,6 +39,7 @@ export function FixedExpenseModal({ open, editing, onClose, onSubmit }: Props) {
     if (open) {
       setLabel(editing?.label ?? '');
       setAmount(editing ? Number(editing.amount).toLocaleString('ko-KR') : '');
+      setMonth(editing?.month ?? currentMonth());
       setMemo(editing?.memo ?? '');
       setError('');
     }
@@ -49,10 +57,14 @@ export function FixedExpenseModal({ open, editing, onClose, onSubmit }: Props) {
       setError('금액을 입력해 주세요.');
       return;
     }
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+      setError('적용 월을 선택해 주세요.');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
-      await onSubmit({ label: label.trim(), amount: amt, memo: memo.trim() || null });
+      await onSubmit({ label: label.trim(), amount: amt, month, memo: memo.trim() || null });
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : '저장에 실패했습니다.');
@@ -82,15 +94,26 @@ export function FixedExpenseModal({ open, editing, onClose, onSubmit }: Props) {
             />
           </div>
 
-          <div>
-            <label className={labelCls}>금액 (원)</label>
-            <input
-              value={amount}
-              onChange={(e) => setAmount(withComma(e.target.value))}
-              inputMode="numeric"
-              placeholder="0"
-              className={`${inputCls} text-right font-mono text-[15px]`}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>금액 (원)</label>
+              <input
+                value={amount}
+                onChange={(e) => setAmount(withComma(e.target.value))}
+                inputMode="numeric"
+                placeholder="0"
+                className={`${inputCls} text-right font-mono text-[15px]`}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>적용 월</label>
+              <input
+                type="month"
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                className={inputCls}
+              />
+            </div>
           </div>
 
           <div>
