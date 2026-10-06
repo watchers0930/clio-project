@@ -83,6 +83,24 @@ export interface FixedExpenseInput {
   memo: string | null;
 }
 
+// 월지출 — 그 달에만 발생하는 변동 지출 (월 구분 있음) ------------------------
+export interface MonthlyExpense {
+  id: string;
+  label: string;
+  amount: number;
+  month: string; // 'YYYY-MM'
+  memo: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MonthlyExpenseInput {
+  label: string;
+  amount: number;
+  month: string; // 'YYYY-MM'
+  memo: string | null;
+}
+
 // 하나은행 대량이체 파일 1행 (Sheet1 컬럼과 1:1 매핑)
 export interface HanaBulkRow {
   bankCode: string; // 입금은행 (3자리 코드)

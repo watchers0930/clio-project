@@ -6,6 +6,8 @@ import { useBulkTransfer } from '@/hooks/use-bulk-transfer';
 import type {
   FixedExpense,
   FixedExpenseInput,
+  MonthlyExpense,
+  MonthlyExpenseInput,
   TransferItem,
   TransferItemInput,
   TransferPayee,
@@ -18,8 +20,12 @@ import { TransferItemModal } from './transfer-item-modal';
 import { PdfImportModal } from './pdf-import-modal';
 import { FixedExpenseList } from './fixed-expense-list';
 import { FixedExpenseModal } from './fixed-expense-modal';
+import { MonthlyExpenseList } from './monthly-expense-list';
+import { MonthlyExpenseModal } from './monthly-expense-modal';
+import { ExpenseComparison } from './expense-comparison';
+import { currentMonth } from '@/lib/bulk-transfer/month-utils';
 
-type Tab = 'items' | 'payees' | 'fixed';
+type Tab = 'items' | 'payees' | 'fixed' | 'monthly' | 'compare';
 
 export function BulkTransferView() {
   const toast = useToast();
@@ -35,11 +41,15 @@ export function BulkTransferView() {
     setItemStatus,
     deleteItem,
     fixedExpenses,
+    monthlyExpenses,
     balance,
     saveBalance,
     createExpense,
     updateExpense,
     deleteExpense,
+    createMonthly,
+    updateMonthly,
+    deleteMonthly,
     exportItems,
   } = useBulkTransfer();
 
@@ -51,6 +61,9 @@ export function BulkTransferView() {
   const [pdfModal, setPdfModal] = useState(false);
   const [expenseModal, setExpenseModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<FixedExpense | null>(null);
+  const [monthlyModal, setMonthlyModal] = useState(false);
+  const [editingMonthly, setEditingMonthly] = useState<MonthlyExpense | null>(null);
+  const [monthlyDefaultMonth, setMonthlyDefaultMonth] = useState(currentMonth());
 
   // --- 거래처 핸들러 ---
   const openAddPayee = () => {
@@ -160,6 +173,35 @@ export function BulkTransferView() {
     }
   };
 
+  // --- 월지출 핸들러 ---
+  const openAddMonthly = (month: string) => {
+    setEditingMonthly(null);
+    setMonthlyDefaultMonth(month);
+    setMonthlyModal(true);
+  };
+  const openEditMonthly = (e: MonthlyExpense) => {
+    setEditingMonthly(e);
+    setMonthlyModal(true);
+  };
+  const submitMonthly = async (input: MonthlyExpenseInput) => {
+    if (editingMonthly) {
+      await updateMonthly(editingMonthly.id, input);
+      toast.success('월지출이 수정되었습니다.');
+    } else {
+      await createMonthly(input);
+      toast.success('월지출이 추가되었습니다.');
+    }
+  };
+  const handleDeleteMonthly = async (e: MonthlyExpense) => {
+    if (!window.confirm(`'${e.label}' 항목을 삭제하시겠습니까?`)) return;
+    try {
+      await deleteMonthly(e.id);
+      toast.success('삭제되었습니다.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '삭제에 실패했습니다.');
+    }
+  };
+
   // 아이템 모달에서 "새 거래처" → 거래처 모달로 전환
   const addPayeeFromItem = () => {
     setItemModal(false);
@@ -189,7 +231,9 @@ export function BulkTransferView() {
         <div className="flex items-center gap-1 border-b border-border">
           <TabButton active={tab === 'items'} onClick={() => setTab('items')} label={`이체 목록 (${items.length})`} />
           <TabButton active={tab === 'payees'} onClick={() => setTab('payees')} label={`거래처 (${payees.length})`} />
-          <TabButton active={tab === 'fixed'} onClick={() => setTab('fixed')} label={`월 고정지출 (${fixedExpenses.length})`} />
+          <TabButton active={tab === 'fixed'} onClick={() => setTab('fixed')} label={`고정지출 (${fixedExpenses.length})`} />
+          <TabButton active={tab === 'monthly'} onClick={() => setTab('monthly')} label={`월지출 (${monthlyExpenses.length})`} />
+          <TabButton active={tab === 'compare'} onClick={() => setTab('compare')} label="비교" />
         </div>
 
         {tab === 'items' && (
@@ -216,6 +260,17 @@ export function BulkTransferView() {
             onDelete={(e) => void handleDeleteExpense(e)}
           />
         )}
+        {tab === 'monthly' && (
+          <MonthlyExpenseList
+            expenses={monthlyExpenses}
+            onAdd={openAddMonthly}
+            onEdit={openEditMonthly}
+            onDelete={(e) => void handleDeleteMonthly(e)}
+          />
+        )}
+        {tab === 'compare' && (
+          <ExpenseComparison fixedExpenses={fixedExpenses} monthlyExpenses={monthlyExpenses} />
+        )}
       </div>
 
       <PdfImportModal
@@ -240,6 +295,13 @@ export function BulkTransferView() {
         editing={editingExpense}
         onClose={() => setExpenseModal(false)}
         onSubmit={submitExpense}
+      />
+      <MonthlyExpenseModal
+        open={monthlyModal}
+        editing={editingMonthly}
+        defaultMonth={monthlyDefaultMonth}
+        onClose={() => setMonthlyModal(false)}
+        onSubmit={submitMonthly}
       />
     </>
   );

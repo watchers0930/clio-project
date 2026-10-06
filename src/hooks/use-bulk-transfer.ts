@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import type {
   FixedExpense,
   FixedExpenseInput,
+  MonthlyExpense,
+  MonthlyExpenseInput,
   TransferItem,
   TransferItemInput,
   TransferPayee,
@@ -22,25 +24,29 @@ export function useBulkTransfer() {
   const [payees, setPayees] = useState<TransferPayee[]>([]);
   const [items, setItems] = useState<TransferItem[]>([]);
   const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
+  const [monthlyExpenses, setMonthlyExpenses] = useState<MonthlyExpense[]>([]);
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [pRes, iRes, eRes, bRes] = await Promise.all([
+      const [pRes, iRes, eRes, mRes, bRes] = await Promise.all([
         fetch('/api/bulk-transfer/payees'),
         fetch('/api/bulk-transfer/items'),
         fetch('/api/bulk-transfer/fixed-expenses'),
+        fetch('/api/bulk-transfer/monthly-expenses'),
         fetch('/api/bulk-transfer/balance'),
       ]);
       const p = (await pRes.json().catch(() => ({}))) as { data?: TransferPayee[] };
       const i = (await iRes.json().catch(() => ({}))) as { data?: TransferItem[] };
       const e = (await eRes.json().catch(() => ({}))) as { data?: FixedExpense[] };
+      const m = (await mRes.json().catch(() => ({}))) as { data?: MonthlyExpense[] };
       const b = (await bRes.json().catch(() => ({}))) as { data?: { balance?: number } };
       setPayees(p.data ?? []);
       setItems(i.data ?? []);
       setFixedExpenses(e.data ?? []);
+      setMonthlyExpenses(m.data ?? []);
       setBalance(b.data?.balance ?? 0);
     } finally {
       setLoading(false);
@@ -158,6 +164,38 @@ export function useBulkTransfer() {
     setFixedExpenses((prev) => prev.filter((e) => e.id !== id));
   }, []);
 
+  // --- 월지출 ---
+  const createMonthly = useCallback(async (input: MonthlyExpenseInput) => {
+    const res = await fetch('/api/bulk-transfer/monthly-expenses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    const saved = await jsonOrThrow<MonthlyExpense>(res);
+    setMonthlyExpenses((prev) => [saved, ...prev]);
+    return saved;
+  }, []);
+
+  const updateMonthly = useCallback(async (id: string, input: MonthlyExpenseInput) => {
+    const res = await fetch(`/api/bulk-transfer/monthly-expenses/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    const saved = await jsonOrThrow<MonthlyExpense>(res);
+    setMonthlyExpenses((prev) => prev.map((e) => (e.id === id ? saved : e)));
+    return saved;
+  }, []);
+
+  const deleteMonthly = useCallback(async (id: string) => {
+    const res = await fetch(`/api/bulk-transfer/monthly-expenses/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new Error(json.error ?? '삭제에 실패했습니다.');
+    }
+    setMonthlyExpenses((prev) => prev.filter((e) => e.id !== id));
+  }, []);
+
   const saveBalance = useCallback(async (value: number) => {
     const res = await fetch('/api/bulk-transfer/balance', {
       method: 'PUT',
@@ -202,6 +240,7 @@ export function useBulkTransfer() {
     payees,
     items,
     fixedExpenses,
+    monthlyExpenses,
     balance,
     saveBalance,
     loading,
@@ -215,6 +254,9 @@ export function useBulkTransfer() {
     createExpense,
     updateExpense,
     deleteExpense,
+    createMonthly,
+    updateMonthly,
+    deleteMonthly,
     exportItems,
   };
 }

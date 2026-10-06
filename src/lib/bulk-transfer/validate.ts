@@ -1,6 +1,6 @@
 // 하나은행 대량이체 - 서버 입력 검증 (순수 함수)
 import { normalizeBankToCode } from './bank-codes';
-import type { FixedExpenseInput, TransferItemInput, TransferPayeeInput, TransferSourceType } from './types';
+import type { FixedExpenseInput, MonthlyExpenseInput, TransferItemInput, TransferPayeeInput, TransferSourceType } from './types';
 
 type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -110,6 +110,37 @@ export function validateFixedExpenseInput(raw: unknown): Result<FixedExpenseInpu
       amount: Math.round(amount), // 원 단위 정수
       memo: memo.value,
     },
+  };
+}
+
+/** 월지출 입력 검증 */
+export function validateMonthlyExpenseInput(raw: unknown): Result<MonthlyExpenseInput> {
+  if (!raw || typeof raw !== 'object') return { ok: false, error: '요청 본문이 올바르지 않습니다.' };
+  const b = raw as Record<string, unknown>;
+
+  const label = str(b.label);
+  if (!label) return { ok: false, error: '항목명은 필수입니다.' };
+  if (label.length > 100) return { ok: false, error: '항목명이 너무 깁니다. (최대 100자)' };
+
+  const amount = typeof b.amount === 'number' ? b.amount : Number(b.amount);
+  if (!Number.isFinite(amount) || amount < 0) {
+    return { ok: false, error: '금액은 0 이상의 숫자여야 합니다.' };
+  }
+  if (amount > 10_000_000_000) {
+    return { ok: false, error: '금액이 한도를 초과했습니다.' };
+  }
+
+  const month = str(b.month);
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    return { ok: false, error: '월(YYYY-MM)을 올바르게 선택해 주세요.' };
+  }
+
+  const memo = optStr(b.memo, 200, '메모');
+  if (!memo.ok) return memo;
+
+  return {
+    ok: true,
+    value: { label, amount: Math.round(amount), month, memo: memo.value },
   };
 }
 
