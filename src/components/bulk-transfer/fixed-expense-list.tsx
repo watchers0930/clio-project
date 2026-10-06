@@ -13,17 +13,16 @@ interface Props {
   onDelete: (e: FixedExpense) => void;
 }
 
-type SortKey = 'month' | 'label' | 'amount';
+type SortKey = 'label' | 'amount';
 type SortDir = 'asc' | 'desc';
 
 const SORT_LABELS: Record<SortKey, string> = {
-  month: '적용 월',
   label: '항목명',
   amount: '금액',
 };
 
 export function FixedExpenseList({ expenses, balance, onSaveBalance, onAdd, onEdit, onDelete }: Props) {
-  const [sortKey, setSortKey] = useState<SortKey>('month');
+  const [sortKey, setSortKey] = useState<SortKey>('amount');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [balanceInput, setBalanceInput] = useState('');
   const [savingBal, setSavingBal] = useState(false);
@@ -51,19 +50,7 @@ export function FixedExpenseList({ expenses, balance, onSaveBalance, onAdd, onEd
   const sorted = useMemo(() => {
     const factor = sortDir === 'asc' ? 1 : -1;
     return [...expenses].sort((a, b) => {
-      if (sortKey === 'month') {
-        // 월 미지정(null)은 정렬 방향과 무관하게 항상 뒤로
-        const am = a.month ?? '';
-        const bm = b.month ?? '';
-        if (am && !bm) return -1;
-        if (!am && bm) return 1;
-        const cmp = am.localeCompare(bm);
-        if (cmp !== 0) return cmp * factor;
-        return a.label.localeCompare(b.label, 'ko-KR');
-      }
-      let cmp = 0;
-      if (sortKey === 'amount') cmp = Number(a.amount) - Number(b.amount);
-      else cmp = a.label.localeCompare(b.label, 'ko-KR');
+      const cmp = sortKey === 'amount' ? Number(a.amount) - Number(b.amount) : a.label.localeCompare(b.label, 'ko-KR');
       if (cmp === 0) return a.label.localeCompare(b.label, 'ko-KR');
       return cmp * factor;
     });
@@ -105,11 +92,10 @@ export function FixedExpenseList({ expenses, balance, onSaveBalance, onAdd, onEd
             }}
             className="h-9 rounded-xl border border-border bg-white px-3 text-[13px] text-foreground md:hidden"
           >
-            <option value="month:desc">월 최신순</option>
-            <option value="month:asc">월 오래된순</option>
             <option value="amount:desc">금액 높은순</option>
             <option value="amount:asc">금액 낮은순</option>
             <option value="label:asc">항목명 가나다순</option>
+            <option value="label:desc">항목명 역순</option>
           </select>
           <button
             onClick={onAdd}
@@ -168,10 +154,7 @@ export function FixedExpenseList({ expenses, balance, onSaveBalance, onAdd, onEd
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="break-words text-[14px] font-medium text-foreground">{e.label}</p>
-                  <p className="mt-0.5 text-[12px] text-foreground-secondary">
-                    {e.month ?? <span className="text-foreground-quaternary">월 미지정</span>}
-                    {e.memo ? ` · ${e.memo}` : ''}
-                  </p>
+                  {e.memo && <p className="mt-0.5 text-[12px] text-foreground-secondary">{e.memo}</p>}
                 </div>
                 <div className="flex flex-shrink-0 items-center gap-4">
                   <button onClick={() => onEdit(e)} className="text-foreground-secondary hover:text-primary transition-colors" title="수정">
@@ -195,15 +178,13 @@ export function FixedExpenseList({ expenses, balance, onSaveBalance, onAdd, onEd
       <div className="hidden overflow-x-auto rounded-xl border border-border md:block">
         <table className="w-full table-fixed text-[13px]">
           <colgroup>
-            <col className="w-[14%]" />
-            <col className="w-[30%]" />
-            <col className="w-[18%]" />
-            <col className="w-[26%]" />
+            <col className="w-[34%]" />
+            <col className="w-[20%]" />
+            <col className="w-[34%]" />
             <col className="w-[12%]" />
           </colgroup>
           <thead>
             <tr className="bg-surface-secondary">
-              <SortableTh label="적용 월" col="month" sortKey={sortKey} onClick={changeSort} icon={sortIcon('month')} />
               <SortableTh label="항목명" col="label" sortKey={sortKey} onClick={changeSort} icon={sortIcon('label')} />
               <SortableTh label="금액" col="amount" sortKey={sortKey} onClick={changeSort} align="right" icon={sortIcon('amount')} />
               <th className="px-4 py-3 text-left font-semibold text-foreground-secondary">메모</th>
@@ -213,16 +194,13 @@ export function FixedExpenseList({ expenses, balance, onSaveBalance, onAdd, onEd
           <tbody className="divide-y divide-border bg-white">
             {sorted.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-14 text-center text-[13px] text-foreground-tertiary">
+                <td colSpan={4} className="py-14 text-center text-[13px] text-foreground-tertiary">
                   등록된 고정지출이 없습니다. 항목 추가 버튼을 눌러 등록해 주세요.
                 </td>
               </tr>
             ) : (
               sorted.map((e) => (
                 <tr key={e.id} className="hover:bg-surface-secondary/50 transition-colors">
-                  <td className="px-4 py-3 text-foreground-secondary">
-                    {e.month ?? <span className="text-foreground-quaternary">미지정</span>}
-                  </td>
                   <td className="px-4 py-3 font-medium text-foreground truncate">{e.label}</td>
                   <td className="px-4 py-3 text-right font-mono text-foreground">{Number(e.amount).toLocaleString('ko-KR')}</td>
                   <td className="px-4 py-3 text-foreground-secondary truncate">{e.memo || '—'}</td>
@@ -243,7 +221,7 @@ export function FixedExpenseList({ expenses, balance, onSaveBalance, onAdd, onEd
           {sorted.length > 0 && (
             <tfoot>
               <tr className="border-t border-border bg-surface-secondary/60">
-                <td className="px-4 py-3 text-left font-semibold text-foreground" colSpan={2}>합계</td>
+                <td className="px-4 py-3 text-left font-semibold text-foreground">합계</td>
                 <td className="px-4 py-3 text-right font-mono font-semibold text-foreground">{total.toLocaleString('ko-KR')}</td>
                 <td colSpan={2} />
               </tr>

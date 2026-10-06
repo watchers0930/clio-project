@@ -4,14 +4,13 @@ import { getAuthUserId } from '@/lib/auth-helper';
 import { validateFixedExpenseInput } from '@/lib/bulk-transfer/validate';
 import type { FixedExpense } from '@/lib/bulk-transfer/types';
 
-const SELECT = 'id, label, amount, month, memo, created_at, updated_at';
+const SELECT = 'id, label, amount, memo, created_at, updated_at';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface RawExpense {
   id: string;
   label: string;
   amount: number | string;
-  month: string | null;
   memo: string | null;
   created_at: string;
   updated_at: string;
@@ -22,7 +21,6 @@ function mapExpense(r: RawExpense): FixedExpense {
     id: r.id,
     label: r.label,
     amount: Number(r.amount),
-    month: r.month,
     memo: r.memo,
     created_at: r.created_at,
     updated_at: r.updated_at,
@@ -58,7 +56,7 @@ export async function PATCH(
   const db = supabase as any;
   const { data, error } = await db
     .from('fixed_expenses')
-    .update({ label: input.label, amount: input.amount, month: input.month, memo: input.memo })
+    .update({ label: input.label, amount: input.amount, memo: input.memo })
     .eq('id', id)
     .eq('created_by', userId)
     .select(SELECT)

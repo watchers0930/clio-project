@@ -71,7 +71,6 @@ export interface FixedExpense {
   id: string;
   label: string; // 항목명 (예: 임대료, 4대보험)
   amount: number; // 월 지출액(원)
-  month: string | null; // 적용 월 'YYYY-MM' (비교표 pivot 기준)
   memo: string | null;
   created_at: string;
   updated_at: string;
@@ -81,7 +80,6 @@ export interface FixedExpense {
 export interface FixedExpenseInput {
   label: string;
   amount: number;
-  month: string; // 'YYYY-MM' (필수)
   memo: string | null;
 }
 
