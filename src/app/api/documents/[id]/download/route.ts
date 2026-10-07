@@ -12,6 +12,7 @@ import { injectSignatureDocx, injectSignatureHwpx } from '@/lib/utils/inject-sig
 import { signatureBufferToDataUrl } from '@/lib/utils/signature-data-url';
 import { loadCompanySealBuffer } from '@/lib/settings/company-seal';
 import { parseTemplateBundle, type TemplateBundle } from '@/lib/templates/template-schema';
+import { resolveBuiltinTemplateBundle } from '@/lib/templates/builtin';
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
 import { isProposalTemplateName } from '@/lib/templates/proposal';
 import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
@@ -310,18 +311,26 @@ export async function GET(
         .from('users').select('name').eq('id', signatureOwnerId).maybeSingle();
       signerName = nameData?.name ?? '';
       if (doc.template_id) {
-        const { data: templateData } = await adminClient
-          .from('templates')
-          .select('name, description, content, placeholders')
-          .eq('id', doc.template_id)
-          .maybeSingle();
-        if (templateData) {
-          templateName = templateData.name ?? '';
-          templateBundle = parseTemplateBundle(templateData.content, {
-            name: templateData.name,
-            description: templateData.description,
-            placeholders: templateData.placeholders,
-          });
+        // 빌트인 템플릿(근로계약서·품의서·휴가원·재직증명서)은 DB에 없고 코드에서 번들 생성.
+        // 이 분기가 없으면 templateBundle=null → PDF가 양식(표·조항·결재란) 대신 마크다운 텍스트로 렌더됨.
+        const builtin = resolveBuiltinTemplateBundle(doc.template_id);
+        if (builtin) {
+          templateName = builtin.name;
+          templateBundle = builtin.bundle;
+        } else {
+          const { data: templateData } = await adminClient
+            .from('templates')
+            .select('name, description, content, placeholders')
+            .eq('id', doc.template_id)
+            .maybeSingle();
+          if (templateData) {
+            templateName = templateData.name ?? '';
+            templateBundle = parseTemplateBundle(templateData.content, {
+              name: templateData.name,
+              description: templateData.description,
+              placeholders: templateData.placeholders,
+            });
+          }
         }
       }
     } catch { /* 이름 없으면 그냥 진행 */ }
@@ -447,6 +456,8 @@ export async function GET(
               const htmlStr = rendered.buffer.toString('utf-8');
               rendered = { ...rendered, buffer: Buffer.from(htmlStr.replace('</body>', `${sigImg}</body>`), 'utf-8') };
             }
+            // 결재란(품의서·휴가원 등) 서명 주입 — 재렌더 경로에도 적용(결재란 없는 문서는 무변경)
+            rendered = { ...rendered, buffer: Buffer.from(await applyApprovalSignatures(adminClient, doc.id, rendered.buffer.toString('utf-8')), 'utf-8') };
             const fileName = encodeURIComponent(rendered.fileName);
             return new NextResponse(new Uint8Array(rendered.buffer), {
               headers: {
@@ -585,11 +596,13 @@ export async function GET(
         });
       }
       // 실제 content → PDF(HTML) 렌더
-      const pdfRendered = await renderPdf(content, doc.title, theme, {
+      let pdfRendered = await renderPdf(content, doc.title, theme, {
         templateBundle,
         documentInputs: mergedDocumentInputs,
         templateName,
       });
+      // 결재란 서명 주입(결재란 없는 문서는 무변경)
+      pdfRendered = { ...pdfRendered, buffer: Buffer.from(await applyApprovalSignatures(createAdminSupabaseClient(), doc.id, pdfRendered.buffer.toString('utf-8')), 'utf-8') };
       const pdfFileName = encodeURIComponent(pdfRendered.fileName);
       return new NextResponse(new Uint8Array(pdfRendered.buffer), {
         headers: {
@@ -629,6 +642,8 @@ export async function GET(
           const htmlStr = rendered.buffer.toString('utf-8');
           rendered = { ...rendered, buffer: Buffer.from(htmlStr.replace('</body>', `${sigImg}</body>`), 'utf-8') };
         }
+        // 결재란 서명 주입(결재란 없는 문서는 무변경)
+        rendered = { ...rendered, buffer: Buffer.from(await applyApprovalSignatures(createAdminSupabaseClient(), doc.id, rendered.buffer.toString('utf-8')), 'utf-8') };
         // HTML → 서버에서 실제 PDF로 변환
         {
           const { htmlToPdf } = await import('@/lib/renderers/html-to-pdf');

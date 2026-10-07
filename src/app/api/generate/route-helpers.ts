@@ -6,22 +6,7 @@ import type { CorporateTheme, OutputFormat, RenderOutput } from '@/lib/renderers
 import { DEFAULT_THEME } from '@/lib/renderers/types';
 import { parseTemplateBundle, type TemplateBundle } from '@/lib/templates/template-schema';
 import { loadCompanyLogoContext } from '@/lib/settings/company-logo';
-import {
-  createEmploymentCertificateTemplateBundle,
-  EMPLOYMENT_CERTIFICATE_TEMPLATE_NAME,
-} from '@/lib/templates/employment-certificate';
-import {
-  createLeaveApplicationTemplateBundle,
-  LEAVE_APPLICATION_TEMPLATE_NAME,
-} from '@/lib/templates/leave-application';
-import {
-  createApprovalRequestTemplateBundle,
-  APPROVAL_REQUEST_TEMPLATE_NAME,
-} from '@/lib/templates/approval-request';
-import {
-  createStandardLaborContractTemplateBundle,
-  STANDARD_LABOR_CONTRACT_TEMPLATE_NAME,
-} from '@/lib/templates/standard-labor-contract';
+import { resolveBuiltinTemplate } from '@/lib/templates/builtin';
 
 const FONT_MAP: Record<string, string> = {
   '맑은 고딕': 'Malgun Gothic',
@@ -58,10 +43,6 @@ type FileChunkRow = {
   chunk_index: number;
 };
 
-const BUILTIN_EMPLOYMENT_CERTIFICATE_TEMPLATE_ID = '__builtin_employment_certificate__';
-const BUILTIN_LEAVE_APPLICATION_TEMPLATE_ID = '__builtin_leave_application__';
-const BUILTIN_APPROVAL_REQUEST_TEMPLATE_ID = '__builtin_approval_request__';
-const BUILTIN_STANDARD_LABOR_CONTRACT_TEMPLATE_ID = '__builtin_standard_labor_contract__';
 
 export function buildTheme(font: unknown): CorporateTheme {
   const fontParam = typeof font === 'string' ? font : '맑은 고딕';
@@ -206,44 +187,10 @@ export async function loadTemplateContext(
   templateFileName: string | null;
   format: OutputFormat;
 }> {
-  let tmpl: Pick<DbTemplate, 'name' | 'content' | 'description' | 'placeholders' | 'template_file_id'> | null = null;
-  if (templateId === BUILTIN_EMPLOYMENT_CERTIFICATE_TEMPLATE_ID) {
-    const bundle = createEmploymentCertificateTemplateBundle();
-    tmpl = {
-      name: EMPLOYMENT_CERTIFICATE_TEMPLATE_NAME,
-      content: JSON.stringify(bundle),
-      description: '직원 재직 사실 증명서 발급용 템플릿',
-      placeholders: [],
-      template_file_id: null,
-    };
-  } else if (templateId === BUILTIN_LEAVE_APPLICATION_TEMPLATE_ID) {
-    const bundle = createLeaveApplicationTemplateBundle();
-    tmpl = {
-      name: LEAVE_APPLICATION_TEMPLATE_NAME,
-      content: JSON.stringify(bundle),
-      description: '휴가 신청서 (남은 휴가일수 자동계산)',
-      placeholders: [],
-      template_file_id: null,
-    };
-  } else if (templateId === BUILTIN_APPROVAL_REQUEST_TEMPLATE_ID) {
-    const bundle = createApprovalRequestTemplateBundle();
-    tmpl = {
-      name: APPROVAL_REQUEST_TEMPLATE_NAME,
-      content: JSON.stringify(bundle),
-      description: '기안-검토-승인 결재란 품의서 (기안자 전자서명)',
-      placeholders: [],
-      template_file_id: null,
-    };
-  } else if (templateId === BUILTIN_STANDARD_LABOR_CONTRACT_TEMPLATE_ID) {
-    const bundle = createStandardLaborContractTemplateBundle();
-    tmpl = {
-      name: STANDARD_LABOR_CONTRACT_TEMPLATE_NAME,
-      content: JSON.stringify(bundle),
-      description: '고용노동부 표준근로계약서(기간의 정함이 없는 경우)',
-      placeholders: [],
-      template_file_id: null,
-    };
-  } else if (templateId) {
+  // 빌트인 템플릿(코드 내장)이면 공유 모듈에서 해석, 아니면 DB templates 조회.
+  let tmpl: Pick<DbTemplate, 'name' | 'content' | 'description' | 'placeholders' | 'template_file_id'> | null =
+    resolveBuiltinTemplate(templateId);
+  if (!tmpl && templateId) {
     const { data } = await supabase
       .from('templates')
       .select('name, content, description, placeholders, template_file_id')
