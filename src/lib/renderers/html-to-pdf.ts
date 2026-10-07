@@ -1,4 +1,16 @@
 import puppeteer from 'puppeteer-core';
+import { KOREAN_FONT_FACE_CSS } from './korean-fonts';
+
+/**
+ * 서버리스 Chromium에는 한글 폰트가 없어 한글이 깨진다(숫자·ASCII만 렌더).
+ * 생성 HTML <head>에 한글 @font-face(base64 임베드)를 주입해 어디서든 한글이 렌더되게 한다.
+ */
+function injectKoreanFonts(html: string): string {
+  const styleTag = `<style>${KOREAN_FONT_FACE_CSS}</style>`;
+  if (html.includes('</head>')) return html.replace('</head>', `${styleTag}</head>`);
+  if (html.includes('<body')) return html.replace('<body', `${styleTag}<body`);
+  return styleTag + html;
+}
 
 /**
  * HTML 문자열을 서버에서 실제 PDF(Buffer)로 변환한다.
@@ -34,7 +46,9 @@ export async function htmlToPdf(html: string): Promise<Buffer> {
   const browser = await puppeteer.launch(launchOptions);
   try {
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'load' });
+    await page.setContent(injectKoreanFonts(html), { waitUntil: 'load' });
+    // @font-face(base64) 디코딩 완료까지 대기 — 안 하면 fallback(한글 없음)으로 인쇄될 수 있음
+    await page.evaluate(() => document.fonts.ready);
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,
