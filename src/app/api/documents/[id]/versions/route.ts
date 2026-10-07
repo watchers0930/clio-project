@@ -4,6 +4,7 @@ import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
 import type { DbDocumentComment, DbUser } from '@/lib/supabase/types';
+import { kstDateFromISO } from '@/lib/utils/date-kst';
 
 /**
  * GET /api/documents/[id]/versions
@@ -106,7 +107,7 @@ export async function GET(
       id: v.id,
       title: v.title,
       versionNumber: v.version_number ?? 1,
-      createdAt: v.created_at?.split('T')[0] ?? '',
+      createdAt: kstDateFromISO(v.created_at),
       status: v.status,
       createdBy: v.created_by ? (userMap.get(v.created_by) ?? '') : '',
       isCurrent: v.id === id,

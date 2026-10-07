@@ -7,6 +7,7 @@ import { parseTemplateBundle } from '@/lib/templates/template-schema';
 import { generateDocumentContent } from '@/lib/ai/generate-document';
 import { embedDocument } from '@/lib/ai/embed-document';
 import { resolveVersionFields } from '@/app/api/generate/route-helpers';
+import { kstDateStr } from '@/lib/utils/date-kst';
 
 export const maxDuration = 60;
 
@@ -179,8 +180,7 @@ export async function POST(request: NextRequest) {
     });
 
     const proposalPlan = await buildProposalPlan(memos);
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const dateStr = kstDateStr();
     const documentInputs = {
       report_title: proposalPlan.title,
       subtitle: proposalPlan.subtitle,

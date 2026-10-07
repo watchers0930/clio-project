@@ -6,6 +6,7 @@ import { ArrowLeft, CheckCircle2, ChevronDown, ChevronRight, Download, GitBranch
 import { Spinner } from '@/components/ui';
 import { HtmlPreviewFrame } from '@/components/documents/html-preview-frame';
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
+import { kstDateFromISO } from '@/lib/utils/date-kst';
 
 export interface DocData {
   id: string;
@@ -315,7 +316,7 @@ export function DocumentViewerContent({
     const proposalHtml = renderProposalDocumentHtml({
       title: doc.title,
       content: doc.content ?? '',
-      createdAt: doc.created_at?.split('T')[0],
+      createdAt: kstDateFromISO(doc.created_at),
     });
 
     return (

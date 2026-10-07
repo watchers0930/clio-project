@@ -9,6 +9,7 @@ import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { computeDiff } from '@/lib/utils/myers-diff';
 import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
+import { kstDateFromISO } from '@/lib/utils/date-kst';
 
 type DocRow = {
   id: string;
@@ -103,13 +104,13 @@ export async function POST(
       from: {
         id: typedFromDoc.id,
         versionNumber: typedFromDoc.version_number ?? 1,
-        createdAt: typedFromDoc.created_at?.split('T')[0] ?? '',
+        createdAt: kstDateFromISO(typedFromDoc.created_at),
         title: typedFromDoc.title,
       },
       to: {
         id: typedToDoc.id,
         versionNumber: typedToDoc.version_number ?? 1,
-        createdAt: typedToDoc.created_at?.split('T')[0] ?? '',
+        createdAt: kstDateFromISO(typedToDoc.created_at),
         title: typedToDoc.title,
       },
     });

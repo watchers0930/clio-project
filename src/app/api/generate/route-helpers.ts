@@ -7,6 +7,7 @@ import { DEFAULT_THEME } from '@/lib/renderers/types';
 import { parseTemplateBundle, type TemplateBundle } from '@/lib/templates/template-schema';
 import { loadCompanyLogoContext } from '@/lib/settings/company-logo';
 import { resolveBuiltinTemplate } from '@/lib/templates/builtin';
+import { kstDateStr, kstTimeStr } from '@/lib/utils/date-kst';
 
 const FONT_MAP: Record<string, string> = {
   '맑은 고딕': 'Malgun Gothic',
@@ -288,9 +289,9 @@ export async function loadReferenceContent(
 }
 
 export function buildInstructionMeta(userName: string, userDept: string, instructions?: string) {
-  const now = new Date();
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  // 서버는 UTC로 동작 → KST 기준으로 생성일/시각 계산(새벽 날짜 밀림 방지)
+  const todayStr = kstDateStr();
+  const timeStr = kstTimeStr();
   const reportNo = `${todayStr.replace(/-/g, '')}-${String(Math.floor(Math.random() * 90) + 10)}-001`;
   const userMeta = `작성일: ${todayStr}\n작성시간: ${timeStr}\n보고번호: ${reportNo}\n작성자: ${userName}\n소속: ${userDept}`;
   return { todayStr, timeStr, reportNo, enrichedInstructions: instructions ? `${userMeta}\n\n${instructions}` : userMeta };

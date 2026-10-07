@@ -5,6 +5,7 @@ import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { embedDocument } from '@/lib/ai/embed-document';
 import { canAccessDocument, canManageDocument, getUserRoleInfo } from '@/lib/permissions';
+import { kstDateFromISO } from '@/lib/utils/date-kst';
 
 function extractTitleTokens(title: string) {
   return Array.from(new Set(
@@ -195,7 +196,7 @@ export async function GET(
         relatedMap.set(relatedId, {
           id: relatedId,
           title: (row.title as string) ?? '제목 없음',
-          createdAt: ((row.created_at as string) ?? '').split('T')[0] ?? '',
+          createdAt: kstDateFromISO(row.created_at as string),
           status: (row.status as string) ?? 'draft',
           versionNumber: Number(row.version_number ?? 1),
           relationLabel: resolvedRelationLabel,
@@ -278,7 +279,7 @@ export async function GET(
             ? {
                 id: originDocumentResult.data.id,
                 title: originDocumentResult.data.title,
-                createdAt: (originDocumentResult.data.created_at ?? '').split('T')[0] ?? '',
+                createdAt: kstDateFromISO(originDocumentResult.data.created_at),
                 status: originDocumentResult.data.status,
                 versionNumber: Number(originDocumentResult.data.version_number ?? 1),
                 relationLabel: formatOriginLabel(originContext),
@@ -287,7 +288,7 @@ export async function GET(
           derivedDocuments: (derivedDocumentsResult.data ?? []).map((row) => ({
             id: row.id,
             title: row.title,
-            createdAt: (row.created_at ?? '').split('T')[0] ?? '',
+            createdAt: kstDateFromISO(row.created_at),
             status: row.status,
             versionNumber: Number(row.version_number ?? 1),
             relationLabel: formatOriginLabel((row.origin_context as string | null) ?? null),

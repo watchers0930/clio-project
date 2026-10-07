@@ -9,6 +9,7 @@ import type { DbDocument, DbFileRecord, DbTemplate, DbUser } from '@/lib/supabas
 import { parseTemplateBundle } from '@/lib/templates/template-schema';
 import { canManageDocument, filterAccessibleDocumentRows, getUserRoleInfo } from '@/lib/permissions';
 import { buildDocumentInsertPayload, loadSourceChunksFromFiles } from '@/app/api/generate/route-helpers';
+import { kstDateStr, kstDateFromISO } from '@/lib/utils/date-kst';
 
 export const maxDuration = 60;
 
@@ -101,7 +102,7 @@ export async function GET(request: NextRequest) {
         title: d.title,
         template: tmplJoin?.name ?? '기본',
         templateId: d.template_id ?? null,
-        createdAt: d.created_at?.split('T')[0] ?? '',
+        createdAt: kstDateFromISO(d.created_at),
         status: ({ completed: '완료', draft: '초안', submitted: '결재중', approved: '승인됨', rejected: '반려됨' } as Record<string, string>)[d.status] ?? d.status,
         sourceCount: d.source_file_ids?.length ?? 0,
         sourceFileIds: d.source_file_ids ?? [],
@@ -160,8 +161,7 @@ export async function POST(request: NextRequest) {
     }) : null;
 
     const templateName = templateRow?.name ?? '문서';
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const dateStr = kstDateStr();
     const preferredTitle = typeof documentInputs?.report_title === 'string' && documentInputs.report_title.trim()
       ? documentInputs.report_title.trim()
       : templateName;
