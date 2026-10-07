@@ -12,7 +12,7 @@ import { injectSignatureDocx, injectSignatureHwpx } from '@/lib/utils/inject-sig
 import { signatureBufferToDataUrl } from '@/lib/utils/signature-data-url';
 import { loadCompanySealBuffer } from '@/lib/settings/company-seal';
 import { parseTemplateBundle, type TemplateBundle } from '@/lib/templates/template-schema';
-import { resolveBuiltinTemplateBundle } from '@/lib/templates/builtin';
+import { resolveBuiltinTemplateBundle, resolveBuiltinTemplateBundleByName } from '@/lib/templates/builtin';
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
 import { isProposalTemplateName } from '@/lib/templates/proposal';
 import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
@@ -331,6 +331,16 @@ export async function GET(
               placeholders: templateData.placeholders,
             });
           }
+        }
+      }
+      // 빌트인 템플릿으로 생성됐지만 template_id가 저장되지 않은(null) 문서 보정.
+      // buildDocumentInsertPayload가 '__builtin_' ID를 FK 제약 때문에 저장하지 않아 template_id=null이 됨
+      // → 문서 제목으로 양식을 추론해 번들을 복원(없으면 null 유지). 이게 없으면 PDF가 텍스트로 렌더됨.
+      if (!templateBundle) {
+        const byName = resolveBuiltinTemplateBundleByName(doc.title);
+        if (byName) {
+          templateName = byName.name;
+          templateBundle = byName.bundle;
         }
       }
     } catch { /* 이름 없으면 그냥 진행 */ }

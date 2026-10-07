@@ -3,18 +3,22 @@ import { parseTemplateBundle, type TemplateBundle } from '@/lib/templates/templa
 import {
   createEmploymentCertificateTemplateBundle,
   EMPLOYMENT_CERTIFICATE_TEMPLATE_NAME,
+  isEmploymentCertificateTemplateName,
 } from '@/lib/templates/employment-certificate';
 import {
   createLeaveApplicationTemplateBundle,
   LEAVE_APPLICATION_TEMPLATE_NAME,
+  isLeaveApplicationTemplateName,
 } from '@/lib/templates/leave-application';
 import {
   createApprovalRequestTemplateBundle,
   APPROVAL_REQUEST_TEMPLATE_NAME,
+  isApprovalRequestTemplateName,
 } from '@/lib/templates/approval-request';
 import {
   createStandardLaborContractTemplateBundle,
   STANDARD_LABOR_CONTRACT_TEMPLATE_NAME,
+  isStandardLaborContractTemplateName,
 } from '@/lib/templates/standard-labor-contract';
 
 /**
@@ -86,4 +90,21 @@ export function resolveBuiltinTemplateBundle(
     placeholders: rec.placeholders,
   });
   return bundle ? { name: rec.name, bundle } : null;
+}
+
+/**
+ * 문서 제목/템플릿명으로 빌트인 양식을 추론해 번들 반환.
+ * 빌트인 템플릿으로 생성된 문서는 template_id가 FK 제약으로 저장되지 않아(null) DB에서 식별 불가.
+ * 이때 제목(예: "표준근로계약서 (2026-... 생성)")으로 양식을 복원하는 폴백 경로.
+ */
+export function resolveBuiltinTemplateBundleByName(
+  name: string | undefined | null,
+): { name: string; bundle: TemplateBundle } | null {
+  if (!name) return null;
+  let id: string | null = null;
+  if (isStandardLaborContractTemplateName(name)) id = BUILTIN_STANDARD_LABOR_CONTRACT_TEMPLATE_ID;
+  else if (isEmploymentCertificateTemplateName(name)) id = BUILTIN_EMPLOYMENT_CERTIFICATE_TEMPLATE_ID;
+  else if (isLeaveApplicationTemplateName(name)) id = BUILTIN_LEAVE_APPLICATION_TEMPLATE_ID;
+  else if (isApprovalRequestTemplateName(name)) id = BUILTIN_APPROVAL_REQUEST_TEMPLATE_ID;
+  return id ? resolveBuiltinTemplateBundle(id) : null;
 }
