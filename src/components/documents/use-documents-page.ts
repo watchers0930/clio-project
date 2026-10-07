@@ -644,13 +644,22 @@ export function useDocumentsPage() {
             ? await fetch(generatedDownloadUrl)
             : null;
           if (!res?.ok) throw new Error('다운로드 실패');
-          const html = await res.text();
-          printWindow.document.open();
-          printWindow.document.write(html);
-          printWindow.document.close();
-          printWindow.onload = () => {
-            setTimeout(() => printWindow.print(), 300);
-          };
+          const contentType = res.headers.get('Content-Type') ?? '';
+          if (contentType.includes('application/pdf')) {
+            // 서버가 실제 PDF 바이너리를 반환(v7.68.0~): blob URL로 열어 브라우저 PDF 뷰어로 표시
+            const blobUrl = URL.createObjectURL(await res.blob());
+            printWindow.location.href = blobUrl;
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+          } else {
+            // 양식 HTML(휴가원·재직증명서 등)은 기존처럼 인쇄 창으로 렌더
+            const html = await res.text();
+            printWindow.document.open();
+            printWindow.document.write(html);
+            printWindow.document.close();
+            printWindow.onload = () => {
+              setTimeout(() => printWindow.print(), 300);
+            };
+          }
         } catch (e) {
           printWindow.close();
           throw e;
