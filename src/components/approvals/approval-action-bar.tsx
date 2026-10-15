@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { PenLine, Check, X, Zap, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { Spinner, ConfirmDialog } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
+import { csrfFetch } from '@/hooks/csrf-client';
 
 interface DocApprovalState {
   hasApproval: boolean;
@@ -36,7 +37,7 @@ export function ApprovalActionBar({ documentId, onDecided }: { documentId: strin
     if (!state?.requestId) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/approvals/${state.requestId}/decide`, {
+      const res = await csrfFetch(`/api/approvals/${state.requestId}/decide`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, comment: comment ?? '' }),

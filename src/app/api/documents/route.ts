@@ -1,3 +1,8 @@
+import { ApiError, errorResponse } from '@/lib/http/api-error';
+import { resolveBuiltinTemplate } from '@/lib/templates/builtin';
+import { embedLeaveInputs, serverLeaveInputs, linkGeneratedLeave, leaveLinkFailure } from '@/lib/leave/leave-document';
+import { isLeaveApplicationTemplateName } from '@/lib/templates/leave-application';
+import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
@@ -124,6 +129,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   try {
     const body = await request.json();
     const { templateId, sourceFileIds, instructions, content: providedContent, parentId, originDocumentId, originContext, documentInputs } = body;
@@ -132,12 +139,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '템플릿을 선택해주세요.' }, { status: 400 });
     }
 
-    const supabase = await createServerSupabaseClient();
+    const supabase = mutation.supabase;
     if (!supabase) {
       return NextResponse.json({ error: '데이터베이스가 설정되지 않았습니다.' }, { status: 503 });
     }
 
-    const authUserId = await getAuthUserId(supabase);
+    const authUserId = mutation.userId;
     if (!authUserId) {
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
     }
@@ -149,7 +156,8 @@ export async function POST(request: NextRequest) {
     const { data: authorInfo } = await supabase.from('users').select('name').eq('id', authUserId).single();
 
     // 템플릿 조회 (양식 파일 포함)
-    const { data: tmpl } = await supabase
+    const builtinTemplate = resolveBuiltinTemplate(templateId);
+    const { data: tmpl } = builtinTemplate ? {data:builtinTemplate} : await supabase
       .from('templates')
       .select('name, content, placeholders, template_file_id')
       .eq('id', templateId)
@@ -161,6 +169,8 @@ export async function POST(request: NextRequest) {
     }) : null;
 
     const templateName = templateRow?.name ?? '문서';
+    const leaveOverrides = await serverLeaveInputs(authUserId,templateName,documentInputs);
+    const leaveInputs = { ...(documentInputs ?? {}), ...leaveOverrides };
     const dateStr = kstDateStr();
     const preferredTitle = typeof documentInputs?.report_title === 'string' && documentInputs.report_title.trim()
       ? documentInputs.report_title.trim()
@@ -201,6 +211,7 @@ export async function POST(request: NextRequest) {
       try {
         const resolvedDocumentInputs = {
           ...(typeof documentInputs === 'object' && documentInputs ? documentInputs : {}),
+          ...leaveOverrides,
           author: (authorInfo as DbUser | null)?.name ?? '',
           report_date: dateStr,
         };
@@ -215,10 +226,11 @@ export async function POST(request: NextRequest) {
         });
       } catch (err) {
         console.error('[documents/POST] AI generation failed:', err);
-        const errMsg = err instanceof Error ? err.message : 'AI 문서 생성 실패';
-        return NextResponse.json({ error: `문서 생성 실패: ${errMsg}. 다시 시도해 주세요.`, aiError: true }, { status: 500 });
+          return NextResponse.json({ error: '문서 생성에 실패했습니다. 다시 시도해 주세요.', aiError: true }, { status: 500 });
       }
     }
+
+    if (isLeaveApplicationTemplateName(templateName)) docContent = embedLeaveInputs(docContent,leaveInputs);
 
     // 버전 번호 결정 (parentId가 있으면 기존 버전 + 1)
     let versionNumber = 1;
@@ -260,6 +272,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '문서 생성에 실패했습니다.' }, { status: 500 });
     }
 
+    try { await linkGeneratedLeave(authUserId,newDoc.id,templateName,leaveInputs); }
+    catch(error) { return NextResponse.json(leaveLinkFailure(error,newDoc.id),{status:409}); }
+
     // audit_logs
     await supabase.from('audit_logs').insert({
       user_id: authUserId,
@@ -287,12 +302,15 @@ export async function POST(request: NextRequest) {
         content: newDoc.content,
       },
     }, { status: 201 });
-  } catch {
+  } catch (error) {
+    if(error instanceof ApiError) return errorResponse(error);
     return NextResponse.json({ error: '문서 생성 중 오류가 발생했습니다.' }, { status: 500 });
   }
 }
 
 export async function DELETE(request: NextRequest) {
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -301,12 +319,12 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'ID가 필요합니다.' }, { status: 400 });
     }
 
-    const supabase = await createServerSupabaseClient();
+    const supabase = mutation.supabase;
     if (!supabase) {
       return NextResponse.json({ error: '데이터베이스가 설정되지 않았습니다.' }, { status: 503 });
     }
 
-    const authUserId = await getAuthUserId(supabase);
+    const authUserId = mutation.userId;
     if (!authUserId) {
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
     }
@@ -316,7 +334,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: '사용자 정보가 없습니다.' }, { status: 403 });
     }
 
-    const admin = createAdminSupabaseClient();
+    const admin = mutation.admin;
 
     const { data: targetDoc, error: targetDocError } = await admin
       .from('documents')
@@ -350,6 +368,10 @@ export async function DELETE(request: NextRequest) {
     if (chainIds.length === 0) {
       return NextResponse.json({ error: '삭제할 문서를 찾을 수 없습니다.' }, { status: 404 });
     }
+
+    const linkedLeave = await admin.from('leave_requests').select('id').in('document_id',chainIds).limit(1);
+    if (linkedLeave.error) return NextResponse.json({error:'휴가 연결 확인에 실패했습니다.'},{status:503});
+    if (linkedLeave.data?.length) return NextResponse.json({error:'휴가 신청에 연결된 문서는 삭제할 수 없습니다.'},{status:409});
 
     const { error: todoDeleteError } = await admin
       .from('todo_extractions')

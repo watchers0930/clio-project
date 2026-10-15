@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, type Dispatch, type SetStateAction, useState } from 'react';
+import { csrfFetch } from '@/hooks/csrf-client';
 import type { DocumentItem as Document } from '@/components/documents/page-types';
 import type { useToast } from '@/components/ui/toast';
 
@@ -58,7 +59,7 @@ export function useDocumentViewerActions({
 
     setSaving(true);
     try {
-      const res = await fetch(`/api/documents/${viewDoc.id}`, {
+      const res = await csrfFetch(`/api/documents/${viewDoc.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: editContent, title: editTitle }),
@@ -88,7 +89,7 @@ export function useDocumentViewerActions({
         if (editContent !== viewDoc.content) body.content = editContent;
         if (editTitle !== viewDoc.title) body.title = editTitle;
 
-        const res = await fetch(`/api/documents/${viewDoc.id}`, {
+        const res = await csrfFetch(`/api/documents/${viewDoc.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
@@ -121,7 +122,7 @@ export function useDocumentViewerActions({
 
       setSaving(true);
       try {
-        const res = await fetch(`/api/documents/${viewDoc.id}`, {
+        const res = await csrfFetch(`/api/documents/${viewDoc.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'draft' }),

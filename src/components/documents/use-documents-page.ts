@@ -16,6 +16,7 @@ import { formatDateInput, validateDateInput } from '@/components/documents/date-
 import { isWorklogTemplateName, WORKLOG_FIELDS } from '@/lib/templates/worklog';
 import type { TemplateFieldDefinition } from '@/lib/templates/template-schema';
 import { useDocumentViewerActions } from '@/components/documents/use-document-viewer-actions';
+import { csrfFetch } from '@/hooks/csrf-client';
 export {
   statusColor,
   statusDot,
@@ -106,6 +107,7 @@ export function useDocumentsPage() {
   const [selectedFont, setSelectedFont] = useState('맑은 고딕');
   const [downloadFormat, setDownloadFormat] = useState<string>('docx');
   const [initializedFromQuery, setInitializedFromQuery] = useState(false);
+  const [leavePrefillDone, setLeavePrefillDone] = useState(false);
   const [extractingFields, setExtractingFields] = useState(false);
   const [extractedFieldKeys, setExtractedFieldKeys] = useState<Set<string>>(new Set());
   const previousSelectedTemplateRef = useRef<string | null>(null);
@@ -274,7 +276,8 @@ export function useDocumentsPage() {
     if (initializedFromQuery || typeof window === 'undefined' || sourceFiles.length === 0) return;
 
     const params = new URLSearchParams(window.location.search);
-    const shouldOpenCreate = params.get('create') === 'true';
+    // 근태 휴가원 작성 흐름(templateName 기반)은 아래 전용 effect가 처리한다.
+    const shouldOpenCreate = params.get('create') === 'true' && !params.get('templateName');
     const selectedFileIds = params.get('files');
     const templateId = params.get('template');
     const initialInstructions = params.get('instructions');
@@ -327,6 +330,36 @@ export function useDocumentsPage() {
 
     setInitializedFromQuery(true);
   }, [initializedFromQuery, sourceFiles, docs, router, openDocModal]);
+
+  // 근태 '휴가원 작성' 진입(F02): 템플릿 ID 대신 templateName으로 들어오므로
+  // 로드된 템플릿에서 이름으로 실제 ID를 찾아 선택하고, 신청 내용을 문서 입력에
+  // 프리필한다. 이 값들(leave_type·기간·반차·사유)은 서버가 생성 문서를 기존
+  // 휴가 초안에 자동 연결할 때의 매칭 키이므로, 누락 시 중복 초안이 생성될 수 있다.
+  useEffect(() => {
+    if (leavePrefillDone || typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const templateName = params.get('templateName');
+    if (!templateName) {
+      setLeavePrefillDone(true);
+      return;
+    }
+    if (templates.length === 0) return; // 템플릿 로드 대기
+    const matched = templates.find((template) => template.name === templateName);
+    if (matched) {
+      setSelectedTemplate(matched.id);
+      const prefill: Record<string, string> = {};
+      for (const key of ['leave_type', 'leave_start_date', 'leave_end_date', 'half_day_slot', 'leave_reason']) {
+        const value = params.get(key);
+        if (value) prefill[key] = value;
+      }
+      if (Object.keys(prefill).length > 0) {
+        setDocumentInputs((prev) => ({ ...prev, ...prefill }));
+      }
+      setShowModal(true);
+      setStep(2); // 템플릿 선택 완료 → 입력 단계로 진입
+    }
+    setLeavePrefillDone(true);
+  }, [leavePrefillDone, templates]);
 
   useEffect(() => {
     const selectedTemplateItem = templates.find((template) => template.id === selectedTemplate);
@@ -526,7 +559,7 @@ export function useDocumentsPage() {
       const allowedFormats = getAllowedOutputFormats(selectedTemplateItem?.templateFile, isContract, selectedTemplateItem?.templateMode, selectedTemplateItem?.name);
       const actualFormat = allowedFormats.includes(outputFormat as AllowedOutputFormat) ? outputFormat : allowedFormats[0];
       if (actualFormat !== outputFormat) setOutputFormat(actualFormat);
-      const res = await fetch('/api/generate', {
+      const res = await csrfFetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -576,7 +609,7 @@ export function useDocumentsPage() {
   const handleDelete = (id: string) => openConfirm('이 문서를 삭제하시겠습니까?', '이 작업은 되돌릴 수 없습니다.', async () => {
     closeConfirm();
     try {
-      const res = await fetch(`/api/documents?id=${id}`, { method: 'DELETE' });
+      const res = await csrfFetch(`/api/documents?id=${id}`, { method: 'DELETE' });
       if (res.ok) {
         setDocs((prev) => prev.filter((doc) => doc.id !== id));
         setSelectedDocIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
@@ -591,7 +624,7 @@ export function useDocumentsPage() {
     openConfirm(`${count}개 문서 삭제`, '선택된 문서를 모두 삭제합니다. 이 작업은 되돌릴 수 없습니다.', async () => {
       closeConfirm();
       const ids = Array.from(selectedDocIds);
-      await Promise.all(ids.map((id) => fetch(`/api/documents?id=${id}`, { method: 'DELETE' })));
+      await Promise.all(ids.map((id) => csrfFetch(`/api/documents?id=${id}`, { method: 'DELETE' })));
       setDocs((prev) => prev.filter((doc) => !selectedDocIds.has(doc.id)));
       setSelectedDocIds(new Set());
     });
@@ -601,7 +634,7 @@ export function useDocumentsPage() {
     if (docs.length === 0) return;
     openConfirm(`전체 ${docs.length}개 문서 삭제`, '모든 문서를 삭제합니다. 이 작업은 되돌릴 수 없습니다.', async () => {
       closeConfirm();
-      await Promise.all(docs.map((doc) => fetch(`/api/documents?id=${doc.id}`, { method: 'DELETE' })));
+      await Promise.all(docs.map((doc) => csrfFetch(`/api/documents?id=${doc.id}`, { method: 'DELETE' })));
       setDocs([]);
       setSelectedDocIds(new Set());
     });

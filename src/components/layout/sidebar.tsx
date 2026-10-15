@@ -21,6 +21,7 @@ import {
   Briefcase,
   Banknote,
   Stamp,
+  CalendarClock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -39,6 +40,7 @@ const CORE_ITEMS: NavItem[] = [
   { key: 'documents', label: '새 문서 생성', href: '/documents', icon: FilePlus, description: '초안 작성 · 다운로드' },
   { key: 'files', label: '파일 등록', href: '/files', icon: FolderOpen, description: '문서 저장 · 관리' },
   { key: 'approvals', label: '결재함', href: '/approvals', icon: Stamp, description: '결재 요청 · 상신 현황' },
+  { key: 'attendance', label: '근태관리', href: '/attendance', icon: CalendarClock, description: '출퇴근 · 휴가 · 연차' },
 ];
 
 // 설정에서 ON/OFF 가능한 선택 메뉴

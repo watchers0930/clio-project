@@ -3,7 +3,7 @@ import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { embedDocument } from '@/lib/ai/embed-document';
 
 // 기존 documents 중 임베딩이 없는 것들을 일괄 처리하는 관리용 API
-// INTERNAL_API_SECRET 헤더 인증 필수
+// 서버 간 호출: 쿠키 세션·CSRF 대신 INTERNAL_API_SECRET 헤더로 인증한다.
 export async function POST(request: NextRequest) {
   const secret = request.headers.get('x-internal-secret');
   if (!secret || secret !== process.env.INTERNAL_API_SECRET) {

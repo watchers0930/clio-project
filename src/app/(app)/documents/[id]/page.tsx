@@ -18,6 +18,7 @@ import { Spinner } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
 import { SubmitApprovalButton } from '@/components/approvals/submit-approval-button';
 import { ApprovalActionBar } from '@/components/approvals/approval-action-bar';
+import { csrfFetch } from '@/hooks/csrf-client';
 
 export default function DocumentViewerPage() {
   const params = useParams();
@@ -140,7 +141,7 @@ export default function DocumentViewerPage() {
   const handleComplete = async () => {
     if (!doc) return;
     try {
-      const res = await fetch(`/api/documents/${id}`, {
+      const res = await csrfFetch(`/api/documents/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'completed' }),

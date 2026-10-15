@@ -11,6 +11,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { ExpiryAlertProvider } from '@/components/expiry/ExpiryAlertProvider';
 import { EventAlertProvider } from '@/components/schedule/event-alert-provider';
 import { OnboardingModal } from '@/components/common/OnboardingModal';
+import { useAttendanceHeartbeat } from '@/hooks/use-attendance-heartbeat';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -25,6 +26,9 @@ function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
   // 전용 뷰어 페이지: 패딩·푸터 없이 풀스크린
   const isViewer = /^\/documents\/[^/]+$/.test(pathname ?? '');
+
+  // Electron 생존 heartbeat — 앱 전역에 1회만 마운트 (웹에서는 비활성, §4.1)
+  useAttendanceHeartbeat();
 
   // 앱 마운트 시 Supabase auth 구독 시작
   useEffect(() => {

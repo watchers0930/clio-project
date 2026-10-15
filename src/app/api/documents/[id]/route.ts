@@ -1,3 +1,4 @@
+import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import type { ApiResponse } from '@/lib/supabase/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
@@ -308,17 +309,19 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   try {
     const { id } = await params;
     const body = await request.json();
     const { content, status, title } = body as { content?: string; status?: string; title?: string };
 
-    const supabase = await createServerSupabaseClient();
+    const supabase = mutation.supabase;
     if (!supabase) {
       return NextResponse.json<ApiResponse>({ success: false, error: 'DB 미설정' }, { status: 503 });
     }
 
-    const authUserId = await getAuthUserId(supabase);
+    const authUserId = mutation.userId;
     if (!authUserId) {
       return NextResponse.json<ApiResponse>({ success: false, error: '인증이 필요합니다.' }, { status: 401 });
     }
@@ -379,15 +382,17 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const mutation = await withMutation(_request);
+  if (mutation.error) return mutation.error;
   try {
     const { id } = await params;
 
-    const supabase = await createServerSupabaseClient();
+    const supabase = mutation.supabase;
     if (!supabase) {
       return NextResponse.json<ApiResponse>({ success: false, error: '데이터베이스가 설정되지 않았습니다.' }, { status: 503 });
     }
 
-    const authUserId = await getAuthUserId(supabase);
+    const authUserId = mutation.userId;
     if (!authUserId) {
       return NextResponse.json<ApiResponse>({ success: false, error: '인증이 필요합니다.' }, { status: 401 });
     }

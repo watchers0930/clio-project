@@ -1,5 +1,4 @@
 import type { TemplateBundle } from '@/lib/templates/template-schema';
-import { computeRemainingLeaveDays } from '@/lib/templates/leave-application';
 import { formatSalaryAmount, formatPhoneNumber } from '@/lib/templates/standard-labor-contract';
 
 export interface TemplateRenderSection {
@@ -191,11 +190,10 @@ export function buildTemplateRenderData(params: {
     replacements.employee_contact_display = formatPhoneNumber(replacements.employee_contact);
   }
 
-  // 휴가원: 남은 휴가일수 자동계산 (입사일·기사용일수 기반)
-  if (replacements.hire_date) {
-    const used = parseFloat(replacements.used_leave_days || '0') || 0;
-    const baseDate = replacements.report_date || replacements.leave_start_date || '';
-    replacements.remaining_leave_days = String(computeRemainingLeaveDays(replacements.hire_date, used, baseDate));
+  // SQL leave_balance가 정책의 유일 출처다. 서버 집계 스냅샷을 보존하고,
+  // 동기 미리보기에는 공휴일·신청 내역 없는 임의 계산값을 표시하지 않는다.
+  if (replacements.hire_date && !replacements.remaining_leave_days?.trim()) {
+    replacements.remaining_leave_days = '서버 확인 필요';
   }
 
   const sections = templateBundle.sections.map((section, index) => {

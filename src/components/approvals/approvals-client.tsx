@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Stamp, Inbox, Send, Check, X, Zap, FileText } from 'lucide-react';
 import { Spinner, ConfirmDialog } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
+import { csrfFetch } from '@/hooks/csrf-client';
 
 interface InboxItem {
   requestId: string;
@@ -63,7 +64,7 @@ export function ApprovalsClient() {
   const decide = async (item: InboxItem, action: 'approve' | 'reject' | 'delegate', comment?: string) => {
     setBusyId(item.requestId);
     try {
-      const res = await fetch(`/api/approvals/${item.requestId}/decide`, {
+      const res = await csrfFetch(`/api/approvals/${item.requestId}/decide`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, comment: comment ?? '' }),

@@ -19,30 +19,6 @@ export const LEAVE_APPLICATION_FIELDS: TemplateFieldDefinition[] = [
 
 export const LEAVE_APPLICATION_OUTLINE = ['# 휴가원', '## 신청자 정보', '## 휴가 내역'].join('\n');
 
-/** 남은 휴가일수 계산 (입사일·기사용일수·기준일 기반)
- * - 1년 미만: 입사일부터 만근 개월수(최대 11일)
- * - 1년 이상: 15일
- * - 남은일수 = 발생 - 기사용
- */
-export function computeRemainingLeaveDays(hireDate: string, usedDays: number, baseDate: string): number {
-  const hire = new Date(hireDate);
-  const base = baseDate ? new Date(baseDate) : hire;
-  if (Number.isNaN(hire.getTime()) || Number.isNaN(base.getTime())) return 0;
-
-  const firstAnniversary = new Date(hire.getFullYear() + 1, hire.getMonth(), hire.getDate());
-  let granted: number;
-  if (base < firstAnniversary) {
-    // 만근 개월수 (해당 월의 입사일자 도달 전이면 미포함)
-    let months = (base.getFullYear() - hire.getFullYear()) * 12 + (base.getMonth() - hire.getMonth());
-    if (base.getDate() < hire.getDate()) months -= 1;
-    granted = Math.min(Math.max(0, months), 11);
-  } else {
-    granted = 15;
-  }
-  const used = Number.isFinite(usedDays) ? usedDays : 0;
-  return Math.max(0, granted - used);
-}
-
 export const LEAVE_APPLICATION_TEMPLATE_HTML = `
 <style>
 @page{size:A4;margin:0;}

@@ -1,7 +1,8 @@
+import { uuid } from '@/lib/attendance/date';
+import { linkedLeave, submitLeaveApproval } from '@/lib/leave/leave-approval';
+import { errorResponse } from '@/lib/http/api-error';
+import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { createAdminSupabaseClient } from '@/lib/supabase/admin';
-import { getAuthUserId } from '@/lib/auth-helper';
 import { createNotifications } from '@/lib/notifications/create-notification';
 import { buildApprovalLine, type OrgMember } from '@/lib/approval/build-line';
 
@@ -13,28 +14,39 @@ const DEFAULT_DEPTH = 2;
 // POST /api/approvals — 문서 상신(결재 올리기)
 // body { documentId } — 본인이 작성한 문서만 상신 가능
 export async function POST(request: NextRequest) {
-  const supabase = await createServerSupabaseClient();
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
+  const supabase = mutation.supabase;
   if (!supabase) return NextResponse.json({ success: false, error: 'DB 미설정' }, { status: 503 });
 
-  const authUserId = await getAuthUserId(supabase);
+  const authUserId = mutation.userId;
   if (!authUserId) return NextResponse.json({ success: false, error: '인증 필요' }, { status: 401 });
 
   let documentId = '';
   try { const b = await request.json(); documentId = typeof b?.documentId === 'string' ? b.documentId : ''; } catch { /* */ }
-  if (!documentId) return NextResponse.json({ success: false, error: '문서 id가 필요합니다.' }, { status: 400 });
+  if (!uuid(documentId)) return NextResponse.json({ success: false, error: '문서 id가 필요합니다.' }, { status: 400 });
 
-  const admin = createAdminSupabaseClient();
+  const admin = mutation.admin;
 
   // 문서 조회 + 본인 문서 검증
   const { data: doc } = await admin
     .from('documents')
-    .select('id, title, template_id, created_by')
+    .select('id, title, template_id, created_by, content')
     .eq('id', documentId)
     .maybeSingle();
   if (!doc) return NextResponse.json({ success: false, error: '문서를 찾을 수 없습니다.' }, { status: 404 });
   if (doc.created_by !== authUserId) {
     return NextResponse.json({ success: false, error: '본인이 작성한 문서만 상신할 수 있습니다.' }, { status: 403 });
   }
+
+  try {
+    if (await linkedLeave(admin,documentId)) {
+      const {requestId,line}=await submitLeaveApproval(admin,authUserId,documentId);
+      return NextResponse.json({success:true,requestId,line});
+    }
+  } catch(error) { return errorResponse(error); }
+
+  if (/휴가원/.test(doc.title ?? '') || (doc.content ?? '').includes('"__template_name":"휴가원"')) return NextResponse.json({success:false,error:'휴가 신청 연결 후 상신해 주세요.'},{status:409});
 
   // 진행 중 결재 중복 방지
   const { data: existing } = await admin

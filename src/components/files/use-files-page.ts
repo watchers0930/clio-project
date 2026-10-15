@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
+import { csrfFetch } from '@/hooks/csrf-client';
 import type { FileItem, ScrapeResult } from './types';
 
 const PAGE_SIZE = 10;
@@ -183,7 +184,7 @@ export function useFilesPage() {
 
   const deleteAsset = useCallback(async (file: FileItem) => {
     if (file.sourceType === 'document') {
-      return fetch(`/api/documents?id=${file.id}`, { method: 'DELETE' });
+      return csrfFetch(`/api/documents?id=${file.id}`, { method: 'DELETE' });
     }
 
     return fetch(`/api/files/${file.id}`, { method: 'DELETE' });

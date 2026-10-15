@@ -1,7 +1,8 @@
+import { uuid } from '@/lib/attendance/date';
+import { decideLeaveApproval } from '@/lib/leave/leave-approval';
+import { errorResponse } from '@/lib/http/api-error';
+import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { createAdminSupabaseClient } from '@/lib/supabase/admin';
-import { getAuthUserId } from '@/lib/auth-helper';
 import { createNotifications } from '@/lib/notifications/create-notification';
 import { canDelegate } from '@/lib/approval/build-line';
 
@@ -12,22 +13,32 @@ type Action = 'approve' | 'reject' | 'delegate';
 // POST /api/approvals/[requestId]/decide — 현재 단계 결재자가 승인/반려/전결 처리
 // body { action: 'approve'|'reject'|'delegate', comment?: string }
 export async function POST(request: NextRequest, { params }: { params: Promise<{ requestId: string }> }) {
-  const supabase = await createServerSupabaseClient();
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
+  const supabase = mutation.supabase;
   if (!supabase) return NextResponse.json({ success: false, error: 'DB 미설정' }, { status: 503 });
 
-  const authUserId = await getAuthUserId(supabase);
+  const authUserId = mutation.userId;
   if (!authUserId) return NextResponse.json({ success: false, error: '인증 필요' }, { status: 401 });
 
   const { requestId } = await params;
+  if (!uuid(requestId)) return NextResponse.json({success:false,error:'결재 ID를 확인해 주세요.'},{status:400});
   let action: Action = 'approve';
   let comment = '';
   try {
     const b = await request.json();
-    if (b?.action === 'reject' || b?.action === 'delegate' || b?.action === 'approve') action = b.action;
+    if (!['reject','delegate','approve'].includes(b?.action)) return NextResponse.json({success:false,error:'결재 동작을 확인해 주세요.'},{status:400});
+    action = b.action;
     comment = typeof b?.comment === 'string' ? b.comment.trim().slice(0, 1000) : '';
-  } catch { /* */ }
+  } catch { return NextResponse.json({success:false,error:'올바른 JSON이 필요합니다.'},{status:400}); }
 
-  const admin = createAdminSupabaseClient();
+  const admin = mutation.admin;
+
+  try {
+    const linked=await admin.from('leave_requests').select('id').eq('approval_request_id',requestId).maybeSingle();
+    if (linked.error) return NextResponse.json({success:false,error:'휴가 결재 확인에 실패했습니다.'},{status:503});
+    if (linked.data) return NextResponse.json({success:true,...await decideLeaveApproval(admin,authUserId,requestId,action,comment)});
+  } catch(error) { return errorResponse(error); }
 
   // 결재 건 + 현재 단계
   const { data: req } = await admin

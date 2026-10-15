@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Stamp, ArrowUp, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
+import { csrfFetch } from '@/hooks/csrf-client';
 
 interface LineStep { step_order: number; name: string; rank_title: string; }
 
@@ -47,7 +48,7 @@ export function SubmitApprovalButton({ documentId, status, onSubmitted }: Props)
   const submit = async () => {
     setSubmitting(true);
     try {
-      const res = await fetch('/api/approvals', {
+      const res = await csrfFetch('/api/approvals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documentId }),
