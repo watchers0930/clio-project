@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
-import { fmtWorkDate } from './format';
+import { fmtWorkDate, todayKst } from './format';
 import type { AttendanceCorrectionInput, AttendanceDayView } from './types';
 
 interface Props {
@@ -67,9 +67,6 @@ function nowKstHour(): string {
 export function AttendanceCorrectionModal({ open, day, onClose, onSubmit }: Props) {
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
-  // 자동(기록값·현재시각 반올림) 선택이면 true → 버튼을 딤으로. 사용자가 직접 누르면 false.
-  const [checkInAuto, setCheckInAuto] = useState(false);
-  const [checkOutAuto, setCheckOutAuto] = useState(false);
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,8 +81,6 @@ export function AttendanceCorrectionModal({ open, day, onClose, onSubmit }: Prop
       // 기록이 있으면 그 값을, 없으면 현재 시각을 30분 기준 반올림해 자동 선택(딤).
       setCheckIn(inRec ? roundToHour(inRec) : nowKstHour());
       setCheckOut(outRec ? roundToHour(outRec) : nowKstHour());
-      setCheckInAuto(true);
-      setCheckOutAuto(true);
       setReason('');
       setError(null);
       setSubmitting(false);
@@ -94,6 +89,10 @@ export function AttendanceCorrectionModal({ open, day, onClose, onSubmit }: Prop
   }, [open, day]);
 
   if (!day) return null;
+
+  // '지난 시간'(현재 시각 이전) 버튼은 흐리게 표시 — 오늘 날짜 보정 시에만.
+  const isToday = day.workDate === todayKst();
+  const nowHour = isToday ? parseInt(nowKstHour(), 10) : -1;
 
   const run = async (mode: 'correct' | 'restore') => {
     setError(null);
@@ -136,21 +135,19 @@ export function AttendanceCorrectionModal({ open, day, onClose, onSubmit }: Prop
             {CHECK_IN_HOURS.map((h) => {
               const v = hourValue(h);
               const on = checkIn === v;
+              const past = nowHour > h; // 현재 시각 이전 = 지난 시간
               return (
                 <button
                   key={h}
                   type="button"
-                  onClick={() => {
-                    setCheckIn(on ? '' : v);
-                    setCheckInAuto(false);
-                  }}
+                  onClick={() => setCheckIn(on ? '' : v)}
                   className={
-                    'h-10 rounded-md border text-sm font-medium transition-colors cursor-pointer ' +
+                    'h-10 rounded-md border text-sm font-medium transition-all cursor-pointer ' +
                     (on
-                      ? checkInAuto
-                        ? 'border-primary/40 bg-primary/5 text-primary/60'
-                        : 'border-primary bg-primary/10 text-primary'
-                      : 'border-border text-foreground-secondary hover:bg-surface-secondary')
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : past
+                        ? 'border-border/60 text-foreground-tertiary opacity-50 hover:opacity-100 hover:bg-surface-secondary'
+                        : 'border-border text-foreground-secondary hover:bg-surface-secondary')
                   }
                 >
                   {h}시
@@ -166,21 +163,19 @@ export function AttendanceCorrectionModal({ open, day, onClose, onSubmit }: Prop
             {CHECK_OUT_HOURS.map((h) => {
               const v = hourValue(h);
               const on = checkOut === v;
+              const past = nowHour > h; // 현재 시각 이전 = 지난 시간
               return (
                 <button
                   key={h}
                   type="button"
-                  onClick={() => {
-                    setCheckOut(on ? '' : v);
-                    setCheckOutAuto(false);
-                  }}
+                  onClick={() => setCheckOut(on ? '' : v)}
                   className={
-                    'h-10 rounded-md border text-sm font-medium transition-colors cursor-pointer ' +
+                    'h-10 rounded-md border text-sm font-medium transition-all cursor-pointer ' +
                     (on
-                      ? checkOutAuto
-                        ? 'border-primary/40 bg-primary/5 text-primary/60'
-                        : 'border-primary bg-primary/10 text-primary'
-                      : 'border-border text-foreground-secondary hover:bg-surface-secondary')
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : past
+                        ? 'border-border/60 text-foreground-tertiary opacity-50 hover:opacity-100 hover:bg-surface-secondary'
+                        : 'border-border text-foreground-secondary hover:bg-surface-secondary')
                   }
                 >
                   {h}시
