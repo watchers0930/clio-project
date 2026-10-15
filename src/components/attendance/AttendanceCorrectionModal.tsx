@@ -45,9 +45,31 @@ function kstTimeToIso(workDate: string, time: string): string | null {
   return new Date(Date.UTC(y, m - 1, d, hh - 9, mm)).toISOString();
 }
 
+// "HH:MM"을 30분 기준으로 정시 반올림: 0~30분→그 시, 31~59분→다음 시
+function roundToHour(time: string): string {
+  if (!time) return '';
+  const [h, m] = time.split(':').map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return '';
+  return `${String(m <= 30 ? h : h + 1).padStart(2, '0')}:00`;
+}
+
+// 현재 KST 시각을 30분 기준 반올림한 정시
+function nowKstHour(): string {
+  const kst = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Seoul',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date());
+  return roundToHour(kst);
+}
+
 export function AttendanceCorrectionModal({ open, day, onClose, onSubmit }: Props) {
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
+  // 자동(기록값·현재시각 반올림) 선택이면 true → 버튼을 딤으로. 사용자가 직접 누르면 false.
+  const [checkInAuto, setCheckInAuto] = useState(false);
+  const [checkOutAuto, setCheckOutAuto] = useState(false);
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,8 +79,13 @@ export function AttendanceCorrectionModal({ open, day, onClose, onSubmit }: Prop
 
   useEffect(() => {
     if (open && day) {
-      setCheckIn(isoToKstTime(day.effectiveCheckIn));
-      setCheckOut(isoToKstTime(day.effectiveCheckOut));
+      const inRec = isoToKstTime(day.effectiveCheckIn);
+      const outRec = isoToKstTime(day.effectiveCheckOut);
+      // 기록이 있으면 그 값을, 없으면 현재 시각을 30분 기준 반올림해 자동 선택(딤).
+      setCheckIn(inRec ? roundToHour(inRec) : nowKstHour());
+      setCheckOut(outRec ? roundToHour(outRec) : nowKstHour());
+      setCheckInAuto(true);
+      setCheckOutAuto(true);
       setReason('');
       setError(null);
       setSubmitting(false);
@@ -113,11 +140,16 @@ export function AttendanceCorrectionModal({ open, day, onClose, onSubmit }: Prop
                 <button
                   key={h}
                   type="button"
-                  onClick={() => setCheckIn(on ? '' : v)}
+                  onClick={() => {
+                    setCheckIn(on ? '' : v);
+                    setCheckInAuto(false);
+                  }}
                   className={
                     'h-10 rounded-md border text-sm font-medium transition-colors cursor-pointer ' +
                     (on
-                      ? 'border-primary bg-primary/10 text-primary'
+                      ? checkInAuto
+                        ? 'border-primary/40 bg-primary/5 text-primary/60'
+                        : 'border-primary bg-primary/10 text-primary'
                       : 'border-border text-foreground-secondary hover:bg-surface-secondary')
                   }
                 >
@@ -138,11 +170,16 @@ export function AttendanceCorrectionModal({ open, day, onClose, onSubmit }: Prop
                 <button
                   key={h}
                   type="button"
-                  onClick={() => setCheckOut(on ? '' : v)}
+                  onClick={() => {
+                    setCheckOut(on ? '' : v);
+                    setCheckOutAuto(false);
+                  }}
                   className={
                     'h-10 rounded-md border text-sm font-medium transition-colors cursor-pointer ' +
                     (on
-                      ? 'border-primary bg-primary/10 text-primary'
+                      ? checkOutAuto
+                        ? 'border-primary/40 bg-primary/5 text-primary/60'
+                        : 'border-primary bg-primary/10 text-primary'
                       : 'border-border text-foreground-secondary hover:bg-surface-secondary')
                   }
                 >
