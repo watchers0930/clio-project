@@ -101,7 +101,7 @@ export function LeaveRequestForm({ open, onClose, onSubmit }: Props) {
   return (
     <Modal open={open} onClose={onClose} title="휴가 신청" size="md">
       <div className="flex flex-col gap-5">
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2.5">
           <span className="text-sm font-medium text-foreground">휴가 종류</span>
           <div className="grid grid-cols-4 gap-2">
             {TYPES.map((t) => (
@@ -122,7 +122,7 @@ export function LeaveRequestForm({ open, onClose, onSubmit }: Props) {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <label className="flex flex-col gap-1.5 text-sm">
+          <div className="flex flex-col gap-2.5 text-sm">
             <span className="font-medium text-foreground">{isSingleDay ? '날짜' : '시작일'}</span>
             <input
               type="date"
@@ -130,9 +130,9 @@ export function LeaveRequestForm({ open, onClose, onSubmit }: Props) {
               onChange={(e) => setStartDate(e.target.value)}
               className="h-11 rounded-md border border-border bg-white px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
-          </label>
+          </div>
           {!isSingleDay && (
-            <label className="flex flex-col gap-1.5 text-sm">
+            <div className="flex flex-col gap-2.5 text-sm">
               <span className="font-medium text-foreground">종료일</span>
               <input
                 type="date"
@@ -141,12 +141,12 @@ export function LeaveRequestForm({ open, onClose, onSubmit }: Props) {
                 onChange={(e) => setEndDate(e.target.value)}
                 className="h-11 rounded-md border border-border bg-white px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
-            </label>
+            </div>
           )}
         </div>
 
         {leaveType === 'half_day' && (
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2.5">
             <span className="text-sm font-medium text-foreground">반차 구분</span>
             <div className="grid grid-cols-2 gap-2">
               {(['am', 'pm'] as HalfDaySlot[]).map((slot) => (
@@ -167,7 +167,7 @@ export function LeaveRequestForm({ open, onClose, onSubmit }: Props) {
           </div>
         )}
 
-        <label className="flex flex-col gap-1.5 text-sm">
+        <div className="flex flex-col gap-2.5 text-sm">
           <span className="font-medium text-foreground">사유</span>
           <textarea
             value={reason}
@@ -176,7 +176,7 @@ export function LeaveRequestForm({ open, onClose, onSubmit }: Props) {
             placeholder="휴가 사유 (선택)"
             className="resize-none rounded-md border border-border bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
-        </label>
+        </div>
 
         <p className="rounded-md bg-surface-secondary px-3 py-2 text-[11px] leading-relaxed text-foreground-tertiary">
           근무일·차감 일수·잔여는 신청 시 서버에서 계산됩니다. 초안 생성 후 휴가원 문서를 연결하면 결재 상신할 수

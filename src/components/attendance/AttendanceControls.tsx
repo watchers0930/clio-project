@@ -63,7 +63,7 @@ export function AttendanceControls({ range, onRangeChange, onAddRecord }: Props)
   return (
     <div className="flex flex-col gap-3 rounded-md border border-border bg-surface-secondary/40 px-4 py-3">
       <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-        <label className="flex flex-col gap-1 text-xs">
+        <div className="flex flex-col gap-2.5 text-xs">
           <span className="font-medium text-foreground-secondary">시작일</span>
           <input
             type="date"
@@ -73,8 +73,8 @@ export function AttendanceControls({ range, onRangeChange, onAddRecord }: Props)
             className={inputCls}
             aria-label="조회 시작일"
           />
-        </label>
-        <label className="flex flex-col gap-1 text-xs">
+        </div>
+        <div className="flex flex-col gap-2.5 text-xs">
           <span className="font-medium text-foreground-secondary">종료일</span>
           <input
             type="date"
@@ -85,10 +85,10 @@ export function AttendanceControls({ range, onRangeChange, onAddRecord }: Props)
             className={inputCls}
             aria-label="조회 종료일"
           />
-        </label>
+        </div>
 
         <div className="ml-auto flex items-end gap-2">
-          <label className="flex flex-col gap-1 text-xs">
+          <div className="flex flex-col gap-2.5 text-xs">
             <span className="font-medium text-foreground-secondary">기록 추가</span>
             <input
               type="date"
@@ -98,7 +98,7 @@ export function AttendanceControls({ range, onRangeChange, onAddRecord }: Props)
               className={inputCls}
               aria-label="기록을 추가할 날짜"
             />
-          </label>
+          </div>
           <Button variant="secondary" size="sm" leftIcon={<CalendarPlus size={14} />} onClick={submitAdd}>
             이 날짜 보정
           </Button>

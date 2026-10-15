@@ -99,7 +99,7 @@ export function AttendanceCorrectionModal({ open, day, onClose, onSubmit }: Prop
     <Modal open={open} onClose={onClose} title="출퇴근 보정" description={fmtWorkDate(day.workDate)} size="md">
       <div className="flex flex-col gap-5">
         <div className="grid grid-cols-2 gap-4">
-          <label className="flex flex-col gap-1.5 text-sm">
+          <div className="flex flex-col gap-2.5 text-sm">
             <span className="font-medium text-foreground">출근 시각</span>
             <input
               type="time"
@@ -107,8 +107,8 @@ export function AttendanceCorrectionModal({ open, day, onClose, onSubmit }: Prop
               onChange={(e) => setCheckIn(e.target.value)}
               className="h-11 rounded-md border border-border bg-white px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
-          </label>
-          <label className="flex flex-col gap-1.5 text-sm">
+          </div>
+          <div className="flex flex-col gap-2.5 text-sm">
             <span className="font-medium text-foreground">퇴근 시각</span>
             <input
               type="time"
@@ -116,10 +116,10 @@ export function AttendanceCorrectionModal({ open, day, onClose, onSubmit }: Prop
               onChange={(e) => setCheckOut(e.target.value)}
               className="h-11 rounded-md border border-border bg-white px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
-          </label>
+          </div>
         </div>
 
-        <label className="flex flex-col gap-1.5 text-sm">
+        <div className="flex flex-col gap-2.5 text-sm">
           <span className="font-medium text-foreground">
             보정 사유 <span className="text-danger">*</span>
           </span>
@@ -133,7 +133,7 @@ export function AttendanceCorrectionModal({ open, day, onClose, onSubmit }: Prop
           <span className="self-end text-[11px] text-foreground-tertiary">
             {reason.length}/{REASON_MAX}
           </span>
-        </label>
+        </div>
 
         {error && <p className="rounded-md bg-danger/10 px-3 py-2 text-xs text-danger">{error}</p>}
 
