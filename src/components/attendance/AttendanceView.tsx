@@ -118,11 +118,6 @@ export function AttendanceView() {
       {tab === 'me' && (
         <div className="flex flex-col gap-4">
           <DesktopAutoLaunchSetting />
-          {!isElectron && (
-            <p className="rounded-md border border-border bg-surface-secondary px-4 py-3 text-xs text-foreground-secondary">
-              자동 출퇴근 기록은 데스크탑 앱에서 이루어집니다. 웹에서는 조회와 수동 보정만 가능합니다.
-            </p>
-          )}
           <AttendanceSummaryCard today={today} isElectron={isElectron} />
           <AttendanceControls
             range={attendance.range}

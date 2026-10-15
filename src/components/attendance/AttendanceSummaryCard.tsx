@@ -46,24 +46,36 @@ export function AttendanceSummaryCard({ today, isElectron }: Props) {
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <Metric icon={<LogIn size={16} />} label="출근 기준" value={fmtTime(today?.effectiveCheckIn)} />
-          <Metric
-            icon={<LogOut size={16} />}
-            label={today?.isToday ? '퇴근 기준 (갱신 중)' : '퇴근 기준'}
-            value={fmtTime(today?.effectiveCheckOut)}
-          />
-        </div>
+        {today && today.source !== 'none' ? (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <Metric icon={<LogIn size={16} />} label="출근 기준" value={fmtTime(today.effectiveCheckIn)} />
+              <Metric
+                icon={<LogOut size={16} />}
+                label={today.isToday ? '퇴근 기준 (갱신 중)' : '퇴근 기준'}
+                value={fmtTime(today.effectiveCheckOut)}
+              />
+            </div>
 
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-4 text-xs text-foreground-secondary">
-          <span className="inline-flex items-center gap-1.5">
-            <Activity size={13} />
-            마지막 신호 {fmtDateTime(today?.lastHeartbeatAt)}
-          </span>
-          {today?.isCorrected && <Badge variant="warning">보정됨</Badge>}
-          {today?.isSingleSignal && <Badge variant="default">단일 신호</Badge>}
-          {today && today.source === 'none' && <span>오늘 기록 없음</span>}
-        </div>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-4 text-xs text-foreground-secondary">
+              <span className="inline-flex items-center gap-1.5">
+                <Activity size={13} />
+                마지막 신호 {fmtDateTime(today.lastHeartbeatAt)}
+              </span>
+              {today.isCorrected && <Badge variant="warning">보정됨</Badge>}
+              {today.isSingleSignal && <Badge variant="default">단일 신호</Badge>}
+            </div>
+          </>
+        ) : (
+          <div className="rounded-md bg-surface-secondary px-4 py-8 text-center">
+            <p className="text-sm text-foreground-secondary">오늘 출퇴근 기록이 아직 없습니다.</p>
+            <p className="mt-1 text-xs text-foreground-tertiary">
+              {isElectron
+                ? '앱이 켜져 있으면 자동으로 기록됩니다.'
+                : '데스크탑 앱에서 자동 기록되며, 웹에서는 아래 ‘기록 추가’로 수동 입력할 수 있습니다.'}
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
