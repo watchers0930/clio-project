@@ -2,7 +2,8 @@
 
 // 연차 카드 — 부여·차감·예약·잔여·신청가능·계산 전제 (설계서 §5.5, §4.4)
 
-import { Info, AlertTriangle } from 'lucide-react';
+import { useState } from 'react';
+import { Info, AlertTriangle, ChevronDown } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { fmtDays } from './format';
@@ -21,6 +22,7 @@ const REASON_LABEL: Record<NonNullable<LeaveBalanceView['reason']>, string> = {
 };
 
 export function LeaveBalanceCard({ balance, loading, error }: Props) {
+  const [showGrants, setShowGrants] = useState(false);
   return (
     <Card>
       <CardContent className="flex flex-col gap-5">
@@ -61,19 +63,32 @@ export function LeaveBalanceCard({ balance, loading, error }: Props) {
 
             {balance.grants.length > 0 && (
               <div className="border-t border-border pt-3">
-                <p className="mb-2 text-xs font-medium text-foreground-secondary">부여 구간별 잔여</p>
-                <ul className="flex flex-col gap-1.5">
-                  {balance.grants.map((g, i) => (
-                    <li key={`${g.grantedOn}-${i}`} className="flex items-center justify-between text-xs">
-                      <span className="text-foreground-secondary">
-                        {g.grantedOn} ~ {g.expiresOn}
-                      </span>
-                      <span className="tabular-nums text-foreground">
-                        {fmtDays(g.remainingDays)} / {fmtDays(g.grantedDays)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                <button
+                  type="button"
+                  onClick={() => setShowGrants((v) => !v)}
+                  className="flex w-full cursor-pointer items-center justify-between text-xs font-medium text-foreground-secondary transition-colors hover:text-foreground"
+                  aria-expanded={showGrants}
+                >
+                  <span>부여 구간별 잔여 ({balance.grants.length}건)</span>
+                  <ChevronDown
+                    size={14}
+                    className={`transition-transform ${showGrants ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                {showGrants && (
+                  <ul className="mt-3 flex flex-col gap-2">
+                    {balance.grants.map((g, i) => (
+                      <li key={`${g.grantedOn}-${i}`} className="flex items-center justify-between text-xs">
+                        <span className="text-foreground-secondary">
+                          {g.grantedOn} ~ {g.expiresOn}
+                        </span>
+                        <span className="tabular-nums text-foreground">
+                          {fmtDays(g.remainingDays)} / {fmtDays(g.grantedDays)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )}
 
