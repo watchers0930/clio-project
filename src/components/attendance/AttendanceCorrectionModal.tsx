@@ -20,6 +20,11 @@ interface Props {
 
 const REASON_MAX = 500;
 
+// 출퇴근 시각은 1시간 단위 버튼으로 선택(직접 입력이 번거롭다는 피드백).
+const CHECK_IN_HOURS = [8, 9, 10, 11, 12]; // 오전 출근
+const CHECK_OUT_HOURS = [13, 14, 15, 16, 17, 18, 19, 20]; // 오후 퇴근
+const hourValue = (h: number) => `${String(h).padStart(2, '0')}:00`;
+
 function isoToKstTime(iso: string | null): string {
   if (!iso) return '';
   const d = new Date(iso);
@@ -98,24 +103,53 @@ export function AttendanceCorrectionModal({ open, day, onClose, onSubmit }: Prop
   return (
     <Modal open={open} onClose={onClose} title="출퇴근 보정" description={fmtWorkDate(day.workDate)} size="md">
       <div className="flex flex-col gap-5">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col gap-2.5 text-sm">
-            <span className="font-medium text-foreground">출근 시각</span>
-            <input
-              type="time"
-              value={checkIn}
-              onChange={(e) => setCheckIn(e.target.value)}
-              className="h-11 rounded-md border border-border bg-white px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
+        <div className="flex flex-col gap-2.5 text-sm">
+          <span className="font-medium text-foreground">출근 시각 (오전)</span>
+          <div className="grid grid-cols-5 gap-2">
+            {CHECK_IN_HOURS.map((h) => {
+              const v = hourValue(h);
+              const on = checkIn === v;
+              return (
+                <button
+                  key={h}
+                  type="button"
+                  onClick={() => setCheckIn(on ? '' : v)}
+                  className={
+                    'h-10 rounded-md border text-sm font-medium transition-colors cursor-pointer ' +
+                    (on
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border text-foreground-secondary hover:bg-surface-secondary')
+                  }
+                >
+                  {h}시
+                </button>
+              );
+            })}
           </div>
-          <div className="flex flex-col gap-2.5 text-sm">
-            <span className="font-medium text-foreground">퇴근 시각</span>
-            <input
-              type="time"
-              value={checkOut}
-              onChange={(e) => setCheckOut(e.target.value)}
-              className="h-11 rounded-md border border-border bg-white px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
+        </div>
+
+        <div className="flex flex-col gap-2.5 text-sm">
+          <span className="font-medium text-foreground">퇴근 시각 (오후)</span>
+          <div className="grid grid-cols-4 gap-2">
+            {CHECK_OUT_HOURS.map((h) => {
+              const v = hourValue(h);
+              const on = checkOut === v;
+              return (
+                <button
+                  key={h}
+                  type="button"
+                  onClick={() => setCheckOut(on ? '' : v)}
+                  className={
+                    'h-10 rounded-md border text-sm font-medium transition-colors cursor-pointer ' +
+                    (on
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border text-foreground-secondary hover:bg-surface-secondary')
+                  }
+                >
+                  {h}시
+                </button>
+              );
+            })}
           </div>
         </div>
 
