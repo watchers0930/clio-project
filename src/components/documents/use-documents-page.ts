@@ -8,7 +8,6 @@ import type {
   SourceFile,
   TemplateItem as Template,
   TemplateFile,
-  VersionItem,
 } from '@/components/documents/page-types';
 import type { ExtractedTodo } from '@/lib/ai/extract-todos';
 import { useToast } from '@/components/ui/toast';
@@ -17,6 +16,13 @@ import { isWorklogTemplateName, WORKLOG_FIELDS } from '@/lib/templates/worklog';
 import type { TemplateFieldDefinition } from '@/lib/templates/template-schema';
 import { useDocumentViewerActions } from '@/components/documents/use-document-viewer-actions';
 import { csrfFetch } from '@/hooks/csrf-client';
+import { getAllowedOutputFormats, type AllowedOutputFormat } from '@/components/documents/document-output-formats';
+import { useVersionPanel } from '@/components/documents/use-version-panel';
+import { useDocumentDeletion } from '@/components/documents/use-document-deletion';
+import { useFileUpload } from '@/components/documents/use-file-upload';
+import { useGeneratedFileDownload } from '@/components/documents/use-generated-file-download';
+import { useTemplateFieldDefaults } from '@/components/documents/use-template-field-defaults';
+import { useFieldExtraction } from '@/components/documents/use-field-extraction';
 export {
   statusColor,
   statusDot,
@@ -25,36 +31,11 @@ export {
 } from '@/components/documents/document-page-constants';
 import { TEMPLATE_DISPLAY_ORDER } from '@/components/documents/document-page-constants';
 
-type AllowedOutputFormat = 'docx' | 'hwpx' | 'pdf' | 'xlsx' | 'pptx';
 type GeneratedDownloadMeta = {
   fileName: string | null;
   extension: string | null;
   mimeType: string | null;
 };
-
-function interpolateFieldDefaultValue(value: string, inputs: Record<string, string>, fields: TemplateFieldDefinition[]) {
-  return value.replace(/\{\{([^}]+)\}\}/g, (_match, key: string) => {
-    const normalizedKey = key.trim();
-    const inputValue = inputs[normalizedKey]?.trim();
-    if (inputValue) return inputValue;
-    // 미입력 필드는 예시(placeholder)를 값으로 채우지 않고 비워둔다.
-    return '';
-  });
-}
-
-function getAllowedOutputFormats(templateFile: Template['templateFile'] | null | undefined, isContract: boolean, templateMode?: string, templateName?: string): AllowedOutputFormat[] {
-  if (isContract) return ['hwpx'];
-  if (templateName && /재직\s*증명서/.test(templateName)) return ['pdf'];
-  if (templateMode === 'html-template') return ['docx', 'pdf'];
-  if (!templateFile?.name) return ['docx', 'pdf', 'xlsx', 'pptx'];
-
-  const ext = templateFile.name.split('.').pop()?.toLowerCase() ?? '';
-  if (ext === 'docx' || ext === 'dotx') return ['docx', 'pdf'];
-  if (ext === 'hwpx' || ext === 'hwp') return ['hwpx', 'pdf'];
-  if (ext === 'xlsx' || ext === 'xls') return ['xlsx'];
-  if (ext === 'pptx' || ext === 'ppt') return ['pptx'];
-  return ['docx', 'pdf', 'xlsx', 'pptx'];
-}
 
 export function useDocumentsPage() {
   const toast = useToast();
@@ -85,17 +66,12 @@ export function useDocumentsPage() {
   const [fileSearch, setFileSearch] = useState('');
   const [fileDeptFilter, setFileDeptFilter] = useState('전체');
   const [fileTypeFilter, setFileTypeFilter] = useState('전체');
-  const [uploadingLocalFiles, setUploadingLocalFiles] = useState(false);
   const [shareDocId, setShareDocId] = useState<string | null>(null);
   const [shareDocTitle, setShareDocTitle] = useState('');
   const [selectedDocIds, setSelectedDocIds] = useState<Set<string>>(new Set());
   const [todoExtractOpen, setTodoExtractOpen] = useState(false);
   const [todoExtractInitial, setTodoExtractInitial] = useState<ExtractedTodo[]>([]);
   const [sttModalOpen, setSttModalOpen] = useState(false);
-  const [versionPanelDocId, setVersionPanelDocId] = useState<string | null>(null);
-  const [versionItems, setVersionItems] = useState<VersionItem[]>([]);
-  const [versionLoading, setVersionLoading] = useState(false);
-  const [newVersionDocId, setNewVersionDocId] = useState<string | null>(null);
   const [originDocumentId, setOriginDocumentId] = useState<string | null>(null);
   const [originContext, setOriginContext] = useState<string | null>(null);
   const [creationContextTitle, setCreationContextTitle] = useState('');
@@ -108,10 +84,6 @@ export function useDocumentsPage() {
   const [downloadFormat, setDownloadFormat] = useState<string>('docx');
   const [initializedFromQuery, setInitializedFromQuery] = useState(false);
   const [leavePrefillDone, setLeavePrefillDone] = useState(false);
-  const [extractingFields, setExtractingFields] = useState(false);
-  const [extractedFieldKeys, setExtractedFieldKeys] = useState<Set<string>>(new Set());
-  const previousSelectedTemplateRef = useRef<string | null>(null);
-  const autoDefaultInputValuesRef = useRef<Record<string, string>>({});
 
   const openConfirm = (title: string, description: string | undefined, onConfirm: () => void) => setConfirmState({ open: true, title, description, onConfirm });
   const closeConfirm = () => setConfirmState((state) => ({ ...state, open: false }));
@@ -227,38 +199,17 @@ export function useDocumentsPage() {
     }
   }, []);
 
-  const uploadLocalFiles = useCallback(async (files: FileList | null) => {
-    if (!files?.length) return;
-    setUploadingLocalFiles(true);
-    try {
-      const uploadedIds: string[] = [];
+  const { uploadingLocalFiles, uploadLocalFiles, toggleFile } = useFileUpload({
+    selectedFiles,
+    setSelectedFiles,
+    loadFiles,
+    toast,
+  });
 
-      for (const file of Array.from(files)) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('scope', 'company');
-
-        const res = await fetch('/api/files', { method: 'POST', body: formData });
-        const data = await res.json().catch(() => null);
-        if (!res.ok || !data?.data?.id) {
-          throw new Error(data?.error ?? `${file.name} 업로드 실패`);
-        }
-        uploadedIds.push(data.data.id as string);
-      }
-
-      await loadFiles();
-      setSelectedFiles((prev) => {
-        const next = new Set(prev);
-        uploadedIds.forEach((id) => next.add(id));
-        return next;
-      });
-      toast.success(`${uploadedIds.length}개 파일을 업로드하고 참조문서로 선택했습니다.`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : '로컬 파일 업로드에 실패했습니다.');
-    } finally {
-      setUploadingLocalFiles(false);
-    }
-  }, [loadFiles, toast]);
+  const openCreateModalRef = useRef<() => void>(() => {});
+  const { versionPanelDocId, versionItems, versionLoading, newVersionDocId, setVersionPanelDocId, setNewVersionDocId, openVersionPanel, handleVersionNew } = useVersionPanel({
+    openCreateModal: () => openCreateModalRef.current(),
+  });
 
   useEffect(() => {
     loadDocs();
@@ -361,71 +312,23 @@ export function useDocumentsPage() {
     setLeavePrefillDone(true);
   }, [leavePrefillDone, templates]);
 
-  useEffect(() => {
-    const selectedTemplateItem = templates.find((template) => template.id === selectedTemplate);
-    const isContract = selectedTemplateItem ? isContractTemplate(selectedTemplateItem.name) : false;
-    const allowedFormats = getAllowedOutputFormats(selectedTemplateItem?.templateFile, isContract, selectedTemplateItem?.templateMode, selectedTemplateItem?.name);
-
-    if (!allowedFormats.includes(outputFormat as AllowedOutputFormat)) {
-      setOutputFormat(allowedFormats[0]);
-    }
-
-    // 제안서 템플릿 선택 시 참조 제안서 목록 로드
-    if (selectedTemplate && selectedTemplateItem?.name === '제안서') {
-      loadReferenceDocuments(selectedTemplate);
-    } else {
-      setReferenceDocuments([]);
-      setReferenceDocId(null);
-    }
-
-    if (previousSelectedTemplateRef.current !== selectedTemplate) {
-      previousSelectedTemplateRef.current = selectedTemplate;
-      const fieldsWithDefaults = selectedTemplateItem?.templateFields?.filter((field) => field.defaultValue) ?? [];
-      autoDefaultInputValuesRef.current = {};
-      if (fieldsWithDefaults.length > 0) {
-        setDocumentInputs((prev) => {
-          const next = { ...prev };
-          for (const field of fieldsWithDefaults) {
-            if (!next[field.key]?.trim()) {
-              const defaultValue = interpolateFieldDefaultValue(field.defaultValue ?? '', next, selectedTemplateItem?.templateFields ?? []);
-              next[field.key] = defaultValue;
-              autoDefaultInputValuesRef.current[field.key] = defaultValue;
-            }
-          }
-          return next;
-        });
-      }
-    }
-  }, [selectedTemplate, templates, outputFormat, loadReferenceDocuments]);
-
-  useEffect(() => {
-    const selectedTemplateItem = templates.find((template) => template.id === selectedTemplate);
-    const fieldsWithDefaults = selectedTemplateItem?.templateFields?.filter((field) => field.defaultValue) ?? [];
-    if (fieldsWithDefaults.length === 0) return;
-
-    setDocumentInputs((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      for (const field of fieldsWithDefaults) {
-        const previousAutoValue = autoDefaultInputValuesRef.current[field.key];
-        const hasExistingValue = Object.prototype.hasOwnProperty.call(next, field.key);
-        if (hasExistingValue && next[field.key] !== previousAutoValue) continue;
-        const defaultValue = interpolateFieldDefaultValue(field.defaultValue ?? '', next, selectedTemplateItem?.templateFields ?? []);
-        if (next[field.key] !== defaultValue) {
-          next[field.key] = defaultValue;
-          changed = true;
-        }
-        autoDefaultInputValuesRef.current[field.key] = defaultValue;
-      }
-      return changed ? next : prev;
-    });
-  }, [documentInputs, selectedTemplate, templates]);
+  const { resetDefaults } = useTemplateFieldDefaults({
+    selectedTemplate,
+    templates,
+    outputFormat,
+    documentInputs,
+    setDocumentInputs,
+    setOutputFormat,
+    loadReferenceDocuments,
+    setReferenceDocuments,
+    setReferenceDocId,
+  });
 
   const resetModal = () => {
     setShowModal(false);
     setStep(1);
     setSelectedTemplate(null);
-    autoDefaultInputValuesRef.current = {};
+    resetDefaults();
     setSelectedFiles(new Set());
     setInstructions('');
     setCustomStructure('');
@@ -456,76 +359,17 @@ export function useDocumentsPage() {
     setExtractedFieldKeys(new Set());
   };
 
-  const extractFieldsFromSources = useCallback(async () => {
-    if (selectedFiles.size === 0) return;
-    const selectedTemplateItem = templates.find((t) => t.id === selectedTemplate);
-    if (!selectedTemplateItem) return;
-    const resolvedFields = (selectedTemplateItem.templateFields
-      ?? (isWorklogTemplateName(selectedTemplateItem.name) ? [...WORKLOG_FIELDS] : [
-        { key: 'report_title', label: '문서 제목', type: 'text' as const, required: true, placeholder: '예: 2026년 2분기 사업 보고서' },
-        { key: 'subtitle', label: '소제목', type: 'text' as const, placeholder: '예: 경영회의 보고용' },
-      ])) as TemplateFieldDefinition[];
-
-    const AUTO_INPUT_KEYS = new Set(['author', 'author_department', 'author_position', 'report_date', 'report_time']);
-    const targetFields = resolvedFields.filter((f) => !f.autoFill && !f.aiAssist && !AUTO_INPUT_KEYS.has(f.key));
-    if (targetFields.length === 0) return;
-
-    setExtractingFields(true);
-    try {
-      const res = await fetch('/api/generate/extract-fields', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sourceFileIds: Array.from(selectedFiles),
-          fields: targetFields.map((f) => ({ key: f.key, label: f.label, placeholder: f.placeholder })),
-          templateName: selectedTemplateItem.name,
-        }),
-      });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => null);
-        console.error('[extract-fields] API error:', res.status, errData);
-        toast.error(`참조파일 분석 실패: ${errData?.error ?? res.statusText}`);
-        return;
-      }
-      const data = await res.json();
-      if (data.reason === 'no_text') {
-        toast.info('선택한 참조파일에서 텍스트를 추출할 수 없습니다.');
-        return;
-      }
-      const extracted = (data.extractedInputs ?? {}) as Record<string, string>;
-      const filledCount = Object.values(extracted).filter((v) => v).length;
-      const newKeys = new Set<string>();
-      setDocumentInputs((prev) => {
-        const next = { ...prev };
-        for (const [key, value] of Object.entries(extracted)) {
-          if (value && !prev[key]?.trim()) {
-            next[key] = value;
-            newKeys.add(key);
-          }
-        }
-        return next;
-      });
-      setExtractedFieldKeys(newKeys);
-      if (filledCount > 0) {
-        toast.success(`참조파일에서 ${filledCount}개 항목을 자동 입력했습니다.`);
-      } else {
-        toast.info('참조파일에서 자동 입력할 항목을 찾지 못했습니다.');
-      }
-    } catch (err) {
-      console.error('[extract-fields] fetch error:', err);
-      toast.error('참조파일 분석 중 오류가 발생했습니다.');
-    } finally {
-      setExtractingFields(false);
-    }
-  }, [selectedFiles, templates, selectedTemplate, toast]);
+  const { extractingFields, extractedFieldKeys, setExtractedFieldKeys, extractFieldsFromSources } = useFieldExtraction({
+    selectedFiles,
+    templates,
+    selectedTemplate,
+    setDocumentInputs,
+    toast,
+  });
 
   const openCreateModal = () => { resetModal(); setShowModal(true); };
-  const toggleFile = (id: string) => setSelectedFiles((prev) => {
-    const next = new Set(prev);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    return next;
-  });
+  openCreateModalRef.current = openCreateModal;
+
   const canNext = () => {
     if (step === 1) return !!selectedTemplate;
     if (step === 3) {
@@ -606,132 +450,23 @@ export function useDocumentsPage() {
     }
   };
 
-  const handleDelete = (id: string) => openConfirm('이 문서를 삭제하시겠습니까?', '이 작업은 되돌릴 수 없습니다.', async () => {
-    closeConfirm();
-    try {
-      const res = await csrfFetch(`/api/documents?id=${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setDocs((prev) => prev.filter((doc) => doc.id !== id));
-        setSelectedDocIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
-      } else {
-        const data = await res.json().catch(() => null);
-        toast.error(data?.error ?? '문서를 삭제하지 못했습니다.');
-      }
-    } catch {
-      toast.error('네트워크 오류로 문서를 삭제하지 못했습니다.');
-    }
+  const { handleDelete, handleBulkDelete, handleDeleteAll, toggleDocSelect, toggleSelectAll } = useDocumentDeletion({
+    docs,
+    setDocs,
+    selectedDocIds,
+    setSelectedDocIds,
+    openConfirm,
+    closeConfirm,
+    toast,
   });
 
-  const handleBulkDelete = () => {
-    const count = selectedDocIds.size;
-    if (count === 0) return;
-    openConfirm(`${count}개 문서 삭제`, '선택된 문서를 모두 삭제합니다. 이 작업은 되돌릴 수 없습니다.', async () => {
-      closeConfirm();
-      const ids = Array.from(selectedDocIds);
-      await Promise.all(ids.map((id) => csrfFetch(`/api/documents?id=${id}`, { method: 'DELETE' })));
-      setDocs((prev) => prev.filter((doc) => !selectedDocIds.has(doc.id)));
-      setSelectedDocIds(new Set());
-    });
-  };
-
-  const handleDeleteAll = () => {
-    if (docs.length === 0) return;
-    openConfirm(`전체 ${docs.length}개 문서 삭제`, '모든 문서를 삭제합니다. 이 작업은 되돌릴 수 없습니다.', async () => {
-      closeConfirm();
-      await Promise.all(docs.map((doc) => csrfFetch(`/api/documents?id=${doc.id}`, { method: 'DELETE' })));
-      setDocs([]);
-      setSelectedDocIds(new Set());
-    });
-  };
-
-  const toggleDocSelect = (id: string) => setSelectedDocIds((prev) => {
-    const next = new Set(prev);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    return next;
+  const { handleDownloadGeneratedFile } = useGeneratedFileDownload({
+    generatedDoc,
+    generatedDownloadUrl,
+    generatedDownloadMeta,
+    outputFormat,
+    toast,
   });
-  const toggleSelectAll = () => setSelectedDocIds(selectedDocIds.size === docs.length ? new Set() : new Set(docs.map((doc) => doc.id)));
-
-  const openVersionPanel = async (docId: string) => {
-    setVersionPanelDocId(docId);
-    setVersionLoading(true);
-    setVersionItems([]);
-    try {
-      const res = await fetch(`/api/documents/${docId}/versions`);
-      const data = await res.json();
-      setVersionItems(data.versions ?? []);
-    } catch {
-    }
-    setVersionLoading(false);
-  };
-
-  const handleDownloadGeneratedFile = async () => {
-    if (!generatedDoc) return;
-    const opensPrintWindow = generatedDownloadMeta.extension === 'html' || generatedDownloadMeta.mimeType?.startsWith('text/html');
-    try {
-      if (opensPrintWindow) {
-        // 팝업은 사용자 클릭 제스처 내에서 먼저 열어야 차단되지 않는다 (await 전에 open).
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) { toast.error('팝업이 차단되었습니다. 팝업을 허용해 주세요.'); return; }
-        printWindow.document.write('<!doctype html><meta charset="utf-8"><title>문서 여는 중…</title><body style="font-family:sans-serif;padding:24px;color:#555">문서를 불러오는 중입니다…</body>');
-        try {
-          const res = generatedDoc.id
-            ? await fetch(`/api/documents/${generatedDoc.id}/download?format=pdf`)
-            : generatedDownloadUrl
-            ? await fetch(generatedDownloadUrl)
-            : null;
-          if (!res?.ok) throw new Error('다운로드 실패');
-          const contentType = res.headers.get('Content-Type') ?? '';
-          if (contentType.includes('application/pdf')) {
-            // 서버가 실제 PDF 바이너리를 반환(v7.68.0~): blob URL로 열어 브라우저 PDF 뷰어로 표시
-            const blobUrl = URL.createObjectURL(await res.blob());
-            printWindow.location.href = blobUrl;
-            setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-          } else {
-            // 양식 HTML(휴가원·재직증명서 등)은 기존처럼 인쇄 창으로 렌더
-            const html = await res.text();
-            printWindow.document.open();
-            printWindow.document.write(html);
-            printWindow.document.close();
-            printWindow.onload = () => {
-              setTimeout(() => printWindow.print(), 300);
-            };
-          }
-        } catch (e) {
-          printWindow.close();
-          throw e;
-        }
-        return;
-      }
-
-      const triggerBrowserDownload = (blob: Blob, fileName: string) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      };
-
-      if (generatedDownloadUrl) {
-        const res = await fetch(generatedDownloadUrl);
-        if (!res.ok) throw new Error('다운로드 실패');
-        const blob = await res.blob();
-        const extension = generatedDownloadMeta.extension ?? outputFormat;
-        triggerBrowserDownload(blob, generatedDownloadMeta.fileName ?? `${generatedDoc.title}.${extension}`);
-      } else {
-        // signed URL이 없는 경우 document ID로 직접 다운로드
-        const res = await fetch(`/api/documents/${generatedDoc.id}/download?format=${outputFormat}`);
-        if (!res.ok) throw new Error('다운로드 실패');
-        const blob = await res.blob();
-        triggerBrowserDownload(blob, generatedDownloadMeta.fileName ?? `${generatedDoc.title}.${outputFormat}`);
-      }
-    } catch {
-      toast.error('다운로드에 실패했습니다.');
-    }
-  };
 
   const startReuseDocument = (doc: Document) => {
     const params = new URLSearchParams({ create: 'true' });
@@ -752,6 +487,6 @@ export function useDocumentsPage() {
   return {
     router, loading, docs, showModal, step, selectedTemplate, selectedFiles, instructions, customStructure, documentInputs, aiAssistEnabled, aiAssistPrompt, generating, generatedDoc, outputFormat, generatedDownloadUrl, generatedDownloadMeta, generatedOutline, contractFormData, dateErrors, fileSearch, fileDeptFilter, fileTypeFilter, uploadingLocalFiles, shareDocId, shareDocTitle, selectedDocIds, viewDoc, editContent, editTitle, saving, qualityCheckDocId, todoExtractOpen, todoExtractInitial, sttModalOpen, showViewerComments, versionPanelDocId, versionItems, versionLoading, confirmState, templates, sourceFiles, selectedFont, downloadFormat, isEdited, isDraft, originDocumentId, originContext, creationContextTitle, referenceDocId, referenceDocuments, extractingFields, extractedFieldKeys,
     loadDocs, setShareDocId, setShareDocTitle, setTodoExtractOpen, setTodoExtractInitial, setSttModalOpen, setShowViewerComments, setQualityCheckDocId, setVersionPanelDocId, setStep, setSelectedTemplate, setSelectedFiles, setInstructions, setCustomStructure, setDocumentInputs, setAiAssistEnabled, setAiAssistPrompt, setOutputFormat, setContractFormData, setFileSearch, setFileDeptFilter, setFileTypeFilter, setEditContent, setEditTitle, setDownloadFormat, setSelectedFont, resetModal, openCreateModal, toggleFile, canNext, handleGenerate, handleDelete, handleBulkDelete, handleDeleteAll, toggleDocSelect, toggleSelectAll, openVersionPanel, openDocModal, handleSave, handleComplete, handleRevertToDraft, handleDownload, handleDownloadAiContext, handleViewerClose, handleDownloadGeneratedFile, handleDateInput, closeConfirm, startReuseDocument, openSearchFromDocument, uploadLocalFiles, setReferenceDocId, extractFieldsFromSources,
-    handleVersionNew: (docId: string) => { setNewVersionDocId(docId); setVersionPanelDocId(null); openCreateModal(); },
+    handleVersionNew,
   };
 }
