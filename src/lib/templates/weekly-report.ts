@@ -10,6 +10,9 @@ export const WEEKLY_REPORT_FIELDS: TemplateFieldDefinition[] = [
   { key: 'author_position', label: '직급', type: 'text', autoFill: 'user' },
   { key: 'next_week_plan', label: '차주 할 일', type: 'textarea', placeholder: '다음 주 계획을 작성하세요' },
   { key: 'report_date', label: '작성일', type: 'date', autoFill: 'document' },
+  // 금주 업무 행(날짜/내용/진행율/비고)의 JSON 배열. 모달의 전용 에디터로 입력하며,
+  // 렌더 시 work_rows_html(<tr> 조각)로 변환되어 표 tbody에 주입된다.
+  { key: 'work_rows', label: '금주 업무', type: 'textarea' },
 ];
 
 export const WEEKLY_REPORT_OUTLINE = ['# 주간업무', '## 금주 업무', '## 차주 할 일'].join('\n');
@@ -82,13 +85,7 @@ export const WEEKLY_REPORT_TEMPLATE_HTML = `
       <tr><th>날짜</th><th>내용</th><th>진행율</th><th>비고</th></tr>
     </thead>
     <tbody>
-      <tr><td class="center">&nbsp;</td><td></td><td class="center"></td><td></td></tr>
-      <tr><td class="center">&nbsp;</td><td></td><td class="center"></td><td></td></tr>
-      <tr><td class="center">&nbsp;</td><td></td><td class="center"></td><td></td></tr>
-      <tr><td class="center">&nbsp;</td><td></td><td class="center"></td><td></td></tr>
-      <tr><td class="center">&nbsp;</td><td></td><td class="center"></td><td></td></tr>
-      <tr><td class="center">&nbsp;</td><td></td><td class="center"></td><td></td></tr>
-      <tr><td class="center">&nbsp;</td><td></td><td class="center"></td><td></td></tr>
+      {{work_rows_html}}
     </tbody>
   </table>
 

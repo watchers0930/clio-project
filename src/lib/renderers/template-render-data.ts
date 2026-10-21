@@ -108,6 +108,27 @@ function interpolateTemplateValue(value: string, replacements: Record<string, st
   return value.replace(/\{\{([^}]+)\}\}/g, (_match, key: string) => replacements[key.trim()] ?? '');
 }
 
+/** 주간업무 금주 업무 행(JSON 배열) → 표 tbody <tr> 조각. 입력이 없으면 빈 행 1개로 표 형태 유지. */
+export function buildWorkRowsHtml(raw: string | undefined | null): string {
+  let rows: Array<Record<string, string>> = [];
+  try {
+    const parsed = JSON.parse(raw || '[]');
+    if (Array.isArray(parsed)) rows = parsed as Array<Record<string, string>>;
+  } catch {
+    // 파싱 실패 시 빈 표로 처리
+  }
+  const cells = rows
+    .filter((r) => r && (r.date || r.content || r.progress || r.note))
+    .map((r) =>
+      `<tr><td class="center">${escapeHtml(r.date ?? '')}</td><td>${escapeHtml(r.content ?? '')}</td>` +
+      `<td class="center">${escapeHtml(r.progress ?? '')}</td><td>${escapeHtml(r.note ?? '')}</td></tr>`,
+    );
+  if (cells.length === 0) {
+    return '<tr><td class="center">&nbsp;</td><td></td><td class="center"></td><td></td></tr>';
+  }
+  return cells.join('\n');
+}
+
 function formatKoreanDate(value: string) {
   const trimmed = value.trim();
   const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -171,6 +192,11 @@ export function buildTemplateRenderData(params: {
       const itemsValue = hasInputValue ? (documentInputs?.[field.key] ?? '') : fallbackValue;
       replacements[`${field.key}_html`] = multilineToListItems(interpolateTemplateValue(itemsValue, replacements));
     }
+  }
+
+  // 주간업무: 금주 업무 행(work_rows JSON 배열) → 표 tbody <tr> 조각(work_rows_html)
+  if (Object.prototype.hasOwnProperty.call(replacements, 'work_rows')) {
+    replacements.work_rows_html = buildWorkRowsHtml(replacements.work_rows);
   }
 
   // 표준근로계약서: 정규직이 아닐 때만 계약기간 표시 문자열 구성

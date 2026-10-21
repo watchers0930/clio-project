@@ -1,6 +1,7 @@
 import type { TemplateBundle } from '@/lib/templates/template-schema';
 import { formatSalaryAmount, formatPhoneNumber } from '@/lib/templates/standard-labor-contract';
 import { isWeeklyReportTemplateName } from '@/lib/templates/weekly-report';
+import { buildWorkRowsHtml } from '@/lib/renderers/template-render-data';
 
 function escapeHtml(value: string) {
   return value
@@ -137,6 +138,8 @@ export function buildTemplatePreviewData(bundle: TemplateBundle, name: string) {
     for (const key of ['author', 'author_department', 'author_position', 'report_date', 'report_date_ko', 'report_period', 'next_week_plan']) {
       replacements[key] = '';
     }
+    // 금주 업무 표: 미리보기는 입력이 없으므로 빈 행 1개로 표 형태만 보여준다.
+    replacements.work_rows_html = buildWorkRowsHtml('');
   }
 
   return replacements;

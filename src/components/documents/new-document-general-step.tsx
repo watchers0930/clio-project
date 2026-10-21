@@ -1,10 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createTemplateBundle } from '@/lib/templates/template-schema';
 import { renderTemplatePreviewHtml } from '@/lib/templates/template-preview';
 import type { TemplateItem } from '@/components/documents/page-types';
 import { LeaveEmployeePicker } from '@/components/documents/LeaveEmployeePicker';
 import { EmploymentCertAutofill } from '@/components/documents/EmploymentCertAutofill';
 import { useDocumentUserAutofill } from '@/components/documents/use-document-user-autofill';
+import { WeeklyWorkRowsEditor } from '@/components/documents/WeeklyWorkRowsEditor';
 import { formatSalaryAmount, formatPhoneNumber, NDA_CLAUSE_TEXT } from '@/lib/templates/standard-labor-contract';
 
 const AUTO_INPUT_FIELD_KEYS = new Set([
@@ -90,9 +91,10 @@ export function NewDocumentGeneralStep({
     : undefined;
   const autoFields = templateFields.filter((field) => field.autoFill);
   // nda_agree(비밀유지 동의)는 왼쪽 필드목록이 아니라 오른쪽 서약 박스에서 별도 처리
-  const allManualFields = templateFields.filter((field) => !field.autoFill && !field.aiAssist && field.key !== 'nda_agree');
+  const allManualFields = templateFields.filter((field) => !field.autoFill && !field.aiAssist && field.key !== 'nda_agree' && field.key !== 'work_rows');
   const aiFields = templateFields.filter((field) => field.aiAssist);
   const isStandardLaborContract = Boolean(selectedTemplateItem?.name && /근로계약서/.test(selectedTemplateItem.name));
+  const isWeeklyReport = Boolean(selectedTemplateItem?.name && /주간\s*업무/.test(selectedTemplateItem.name));
 
   const isEmploymentCert = selectedTemplateItem?.name === '재직증명서';
   // 재직증명서: 본인 정보 자동입력 → 제출용도만 입력.
@@ -117,6 +119,20 @@ export function NewDocumentGeneralStep({
     templateFields,
     onSetDocumentInputs,
   });
+
+  // 주간업무: 보고기간을 이번 주(월~금)로 자동 설정 (비어 있을 때만)
+  useEffect(() => {
+    if (!isWeeklyReport || documentInputs.report_period?.trim()) return;
+    const d = new Date();
+    const dow = d.getDay(); // 0=일 ~ 6=토
+    const mon = new Date(d);
+    mon.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow));
+    const fri = new Date(mon);
+    fri.setDate(mon.getDate() + 4);
+    const fmt = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+    const period = `${fmt(mon)} ~ ${fmt(fri)}`;
+    onSetDocumentInputs((prev) => (prev.report_period?.trim() ? prev : { ...prev, report_period: period }));
+  }, [isWeeklyReport, documentInputs.report_period, onSetDocumentInputs]);
 
   const handleCertAutofill = useCallback((p: {
     name: string; resident_no: string; address: string; department: string; position: string; hire_date: string;
@@ -247,6 +263,14 @@ export function NewDocumentGeneralStep({
               </div>
             ))}
           </div>
+          {isWeeklyReport && (
+            <div style={{ marginTop: 12 }}>
+              <WeeklyWorkRowsEditor
+                value={documentInputs.work_rows ?? ''}
+                onChange={(json) => onSetDocumentInputs((prev) => ({ ...prev, work_rows: json }))}
+              />
+            </div>
+          )}
         </div>
 
         {autoFields.length > 0 && (

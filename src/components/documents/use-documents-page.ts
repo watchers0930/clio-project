@@ -613,8 +613,12 @@ export function useDocumentsPage() {
       if (res.ok) {
         setDocs((prev) => prev.filter((doc) => doc.id !== id));
         setSelectedDocIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+      } else {
+        const data = await res.json().catch(() => null);
+        toast.error(data?.error ?? '문서를 삭제하지 못했습니다.');
       }
     } catch {
+      toast.error('네트워크 오류로 문서를 삭제하지 못했습니다.');
     }
   });
 
