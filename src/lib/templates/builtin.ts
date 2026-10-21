@@ -20,6 +20,11 @@ import {
   STANDARD_LABOR_CONTRACT_TEMPLATE_NAME,
   isStandardLaborContractTemplateName,
 } from '@/lib/templates/standard-labor-contract';
+import {
+  createWeeklyReportTemplateBundle,
+  WEEKLY_REPORT_TEMPLATE_NAME,
+  isWeeklyReportTemplateName,
+} from '@/lib/templates/weekly-report';
 
 /**
  * 빌트인(코드 내장) 템플릿 — DB `templates` 테이블에 없고 코드에서 생성한다.
@@ -30,6 +35,7 @@ export const BUILTIN_EMPLOYMENT_CERTIFICATE_TEMPLATE_ID = '__builtin_employment_
 export const BUILTIN_LEAVE_APPLICATION_TEMPLATE_ID = '__builtin_leave_application__';
 export const BUILTIN_APPROVAL_REQUEST_TEMPLATE_ID = '__builtin_approval_request__';
 export const BUILTIN_STANDARD_LABOR_CONTRACT_TEMPLATE_ID = '__builtin_standard_labor_contract__';
+export const BUILTIN_WEEKLY_REPORT_TEMPLATE_ID = '__builtin_weekly_report__';
 
 type BuiltinTemplateRecord = Pick<
   DbTemplate,
@@ -73,6 +79,14 @@ export function resolveBuiltinTemplate(
         placeholders: [],
         template_file_id: null,
       };
+    case BUILTIN_WEEKLY_REPORT_TEMPLATE_ID:
+      return {
+        name: WEEKLY_REPORT_TEMPLATE_NAME,
+        content: JSON.stringify(createWeeklyReportTemplateBundle()),
+        description: '담당-팀장-대표 결재란 주간업무 보고 (작성자 전자서명)',
+        placeholders: [],
+        template_file_id: null,
+      };
     default:
       return null;
   }
@@ -106,5 +120,6 @@ export function resolveBuiltinTemplateBundleByName(
   else if (isEmploymentCertificateTemplateName(name)) id = BUILTIN_EMPLOYMENT_CERTIFICATE_TEMPLATE_ID;
   else if (isLeaveApplicationTemplateName(name)) id = BUILTIN_LEAVE_APPLICATION_TEMPLATE_ID;
   else if (isApprovalRequestTemplateName(name)) id = BUILTIN_APPROVAL_REQUEST_TEMPLATE_ID;
+  else if (isWeeklyReportTemplateName(name)) id = BUILTIN_WEEKLY_REPORT_TEMPLATE_ID;
   return id ? resolveBuiltinTemplateBundle(id) : null;
 }

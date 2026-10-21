@@ -1,5 +1,6 @@
 import type { TemplateBundle } from '@/lib/templates/template-schema';
 import { formatSalaryAmount, formatPhoneNumber } from '@/lib/templates/standard-labor-contract';
+import { isWeeklyReportTemplateName } from '@/lib/templates/weekly-report';
 
 function escapeHtml(value: string) {
   return value
@@ -128,6 +129,15 @@ export function buildTemplatePreviewData(bundle: TemplateBundle, name: string) {
       `${index + 1}. ${section.prompt}\n\n- 자동 입력 데이터와 AI 생성 결과가 이 영역에 반영됩니다.`
     );
   });
+
+  // 주간업무: 미리보기는 빈 양식으로 보여준다(더미 인적·날짜 데이터 제거).
+  // 제목만 양식명으로 두고 작성자/부서/직급/기간/차주 계획은 비운다.
+  if (isWeeklyReportTemplateName(name)) {
+    replacements.report_title = name;
+    for (const key of ['author', 'author_department', 'author_position', 'report_date', 'report_date_ko', 'report_period', 'next_week_plan']) {
+      replacements[key] = '';
+    }
+  }
 
   return replacements;
 }

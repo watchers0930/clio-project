@@ -28,6 +28,10 @@ import {
   createStandardLaborContractTemplateBundle,
   STANDARD_LABOR_CONTRACT_TEMPLATE_NAME,
 } from '@/lib/templates/standard-labor-contract';
+import {
+  createWeeklyReportTemplateBundle,
+  WEEKLY_REPORT_TEMPLATE_NAME,
+} from '@/lib/templates/weekly-report';
 import { extractTemplateFileInnerHtml } from '@/lib/templates/template-file-preview';
 import type { DbTemplate } from '@/lib/supabase/types';
 
@@ -96,6 +100,7 @@ const BUILTIN_EMPLOYMENT_CERTIFICATE_TEMPLATE_ID = '__builtin_employment_certifi
 const BUILTIN_LEAVE_APPLICATION_TEMPLATE_ID = '__builtin_leave_application__';
 const BUILTIN_APPROVAL_REQUEST_TEMPLATE_ID = '__builtin_approval_request__';
 const BUILTIN_STANDARD_LABOR_CONTRACT_TEMPLATE_ID = '__builtin_standard_labor_contract__';
+const BUILTIN_WEEKLY_REPORT_TEMPLATE_ID = '__builtin_weekly_report__';
 
 function mergeTemplateFields(
   baseFields: TemplateFieldDefinition[],
@@ -291,6 +296,27 @@ export async function GET(request: NextRequest) {
         id: BUILTIN_STANDARD_LABOR_CONTRACT_TEMPLATE_ID,
         name: STANDARD_LABOR_CONTRACT_TEMPLATE_NAME,
         description: '고용노동부 표준근로계약서(기간의 정함이 없는 경우)',
+        content: bundle.outline,
+        department: '전사',
+        departmentId: null,
+        scope: '전사 공용',
+        placeholders: [],
+        templateMode: bundle.mode,
+        templateHtml: bundle.layoutHtml,
+        templateFields: bundle.fields,
+        templateSections: bundle.sections,
+        lastUpdated: '',
+        usageCount: 0,
+        templateFile: null,
+      });
+    }
+
+    if (!tplList.some((template) => template.name === WEEKLY_REPORT_TEMPLATE_NAME)) {
+      const bundle = createWeeklyReportTemplateBundle();
+      tplList.push({
+        id: BUILTIN_WEEKLY_REPORT_TEMPLATE_ID,
+        name: WEEKLY_REPORT_TEMPLATE_NAME,
+        description: '담당–팀장–대표 결재란 주간업무 보고 (작성자 전자서명)',
         content: bundle.outline,
         department: '전사',
         departmentId: null,

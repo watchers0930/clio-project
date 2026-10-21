@@ -11,7 +11,7 @@ export const statusDot: Record<string, string> = {
 export const FONT_OPTIONS = ['맑은 고딕', '나눔고딕', '바탕', '돋움', '굴림', '나눔명조', 'Arial', 'Times New Roman'];
 export const DOWNLOAD_FORMAT_OPTIONS = ['docx', 'hwpx', 'pdf'] as const;
 export const TEMPLATE_ICONS: Record<string, string> = {
-  '주간업무보고서': '📊',
+  '주간업무': '📊',
   '회의록': '📝',
   '기술설계문서': '💡',
   '마케팅_캠페인_기획서': '🎯',
@@ -33,7 +33,7 @@ export const TEMPLATE_DISPLAY_ORDER: string[] = [
   '표준근로계약서',
   '휴가원',
   '품의서',
-  '주간업무보고서',
+  '주간업무',
   '업무일지',
   '회의록',
 ];

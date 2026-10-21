@@ -35,6 +35,11 @@ import {
   STANDARD_LABOR_CONTRACT_TEMPLATE_HTML,
   isStandardLaborContractTemplateName,
 } from '@/lib/templates/standard-labor-contract';
+import {
+  createWeeklyReportTemplateBundle,
+  WEEKLY_REPORT_TEMPLATE_HTML,
+  isWeeklyReportTemplateName,
+} from '@/lib/templates/weekly-report';
 
 export interface TemplateFieldDefinition {
   key: string;
@@ -135,6 +140,10 @@ function buildDefaultHtml(name: string, sections: TemplateSectionDefinition[]) {
 
   if (isApprovalRequestTemplateName(name)) {
     return APPROVAL_REQUEST_TEMPLATE_HTML;
+  }
+
+  if (isWeeklyReportTemplateName(name)) {
+    return WEEKLY_REPORT_TEMPLATE_HTML;
   }
 
   if (isStandardLaborContractTemplateName(name)) {
@@ -291,6 +300,28 @@ export function createTemplateBundle(params: {
       fields: [
         ...approvalBundle.fields,
         ...placeholderFields.filter((field) => !approvalBundle.fields.some((base) => base.key === field.key)),
+      ],
+    };
+  }
+
+  if (isWeeklyReportTemplateName(params.name)) {
+    const weeklyBundle = createWeeklyReportTemplateBundle();
+    const placeholderFields = Array.isArray(params.placeholders)
+      ? params.placeholders
+          .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
+          .map((item, index) => ({
+            key: String(item.key ?? `placeholder_${index + 1}`),
+            label: String(item.label ?? item.key ?? `플레이스홀더 ${index + 1}`),
+            type: 'text' as const,
+            placeholder: typeof item.context === 'string' ? item.context : undefined,
+          }))
+      : [];
+
+    return {
+      ...weeklyBundle,
+      fields: [
+        ...weeklyBundle.fields,
+        ...placeholderFields.filter((field) => !weeklyBundle.fields.some((base) => base.key === field.key)),
       ],
     };
   }
