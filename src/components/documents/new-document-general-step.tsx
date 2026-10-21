@@ -154,8 +154,7 @@ export function NewDocumentGeneralStep({
 
   return (
     <>
-    <div className="grid md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-6">
-      <div className="space-y-5">
+    <div className="space-y-5">
         <div>
           <p className="text-sm font-medium text-foreground" style={{ marginBottom: 8 }}>{isWorklogTemplate ? '수동 입력' : '문서 기본 정보'}</p>
           {isEmploymentCert && (
@@ -210,7 +209,7 @@ export function NewDocumentGeneralStep({
         {autoFields.length > 0 && (
           <div>
             <p className="text-sm font-medium text-foreground" style={{ marginBottom: 8 }}>자동 입력</p>
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               {autoFields.map((field) => (
                 <div key={field.key}>
                   <label className="block text-xs text-foreground-secondary" style={{ marginBottom: 6 }}>
@@ -274,9 +273,7 @@ export function NewDocumentGeneralStep({
             </p>
           )}
         </div>
-      </div>
 
-      <div className="space-y-5">
         {selectedTemplateItem && (
           <div className="rounded-2xl border border-border bg-surface-secondary px-4 py-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -313,17 +310,30 @@ export function NewDocumentGeneralStep({
           </div>
         )}
         {isStandardLaborContract && <div style={{ height: 20 }} />}
+        {selectedTemplate === '__none__' && (
+          <div>
+            <p className="text-sm font-medium text-foreground" style={{ marginBottom: 5 }}>문서 구조 *</p>
+            <p className="text-xs text-foreground-secondary" style={{ marginBottom: 8 }}>AI가 이 구조를 따라 문서를 생성합니다</p>
+            <textarea
+              value={customStructure}
+              onChange={(e) => onSetCustomStructure(e.target.value)}
+              placeholder={"예:\n# 업무일지\n## 오늘의 업무\n- 주요 업무 내용 1\n- 주요 업무 내용 2\n## 문제점 및 해결 방안\n## 내일의 계획"}
+              rows={6}
+              className="w-full px-4 py-3 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none font-mono"
+            />
+          </div>
+        )}
+        <div style={{ height: 8 }} />
         <div className="flex flex-col">
           <p className="text-sm text-foreground-secondary" style={{ marginBottom: 10 }}>추가 지시사항 (선택)</p>
           <textarea
             value={instructions}
             onChange={(e) => onSetInstructions(e.target.value)}
             placeholder="예: 핵심 수치 위주로 요약해 주세요. 표 형태로 정리해 주세요."
-            rows={10}
+            rows={5}
             className="w-full px-4 py-3 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
           />
         </div>
-        <div style={{ height: 20 }} />
         <div className="rounded-2xl border border-border-tint bg-primary-tint p-4">
           <label className="flex items-center gap-3">
             <input
@@ -347,20 +357,6 @@ export function NewDocumentGeneralStep({
             />
           )}
         </div>
-        {selectedTemplate === '__none__' && (
-          <div>
-            <p className="text-sm font-medium text-foreground" style={{ marginBottom: 5 }}>문서 구조 *</p>
-            <p className="text-xs text-foreground-secondary" style={{ marginBottom: 8 }}>AI가 이 구조를 따라 문서를 생성합니다</p>
-            <textarea
-              value={customStructure}
-              onChange={(e) => onSetCustomStructure(e.target.value)}
-              placeholder={"예:\n# 업무일지\n## 오늘의 업무\n- 주요 업무 내용 1\n- 주요 업무 내용 2\n## 문제점 및 해결 방안\n## 내일의 계획"}
-              rows={6}
-              className="w-full px-4 py-3 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none font-mono"
-            />
-          </div>
-        )}
-      </div>
     </div>
     {selectedTemplateItem && (
       <NewDocumentPreviewModal
