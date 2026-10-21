@@ -66,12 +66,23 @@ export function useLeaveRequests(statusFilter?: LeaveStatus) {
     [upsert],
   );
 
+  /** 초안(draft) 삭제 — 서버가 본인·상태(draft) 검증 */
+  const remove = useCallback(
+    async (id: string): Promise<void> => {
+      const res = await apiMutate<{ id: string }>(`/api/leave-requests/${id}`, 'DELETE');
+      if (!res.ok) throw new Error(resolveError(res.status, res.error));
+      setRequests((prev) => prev.filter((r) => r.id !== id));
+    },
+    [],
+  );
+
   return {
     requests,
     loading,
     error,
     reload: load,
     create,
+    remove,
     update: (id: string, patchInput: Omit<LeaveUpdateInput, 'action'>) =>
       patch(id, { action: 'update', ...patchInput }),
     linkDocument: (id: string, documentId: string) =>

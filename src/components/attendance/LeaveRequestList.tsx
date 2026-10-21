@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, Send, Link2, Stamp } from 'lucide-react';
+import { FileText, Send, Link2, Stamp, Trash2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge, type BadgeVariant } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
@@ -22,6 +22,7 @@ interface Props {
   loading: boolean;
   error: string | null;
   onSubmit: (id: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
 }
 
 const STATUS_VARIANT: Record<LeaveStatus, BadgeVariant> = {
@@ -56,7 +57,7 @@ function leaveDocUrl(r: LeaveRequestView): string {
   return `/documents?${params.toString()}`;
 }
 
-export function LeaveRequestList({ requests, loading, error, onSubmit }: Props) {
+export function LeaveRequestList({ requests, loading, error, onSubmit, onDelete }: Props) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -64,6 +65,16 @@ export function LeaveRequestList({ requests, loading, error, onSubmit }: Props) 
     setBusyId(id);
     try {
       await onSubmit(id);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const remove = async (id: string) => {
+    if (!window.confirm('이 휴가 신청(초안)을 삭제하시겠습니까?')) return;
+    setBusyId(id);
+    try {
+      await onDelete(id);
     } finally {
       setBusyId(null);
     }
@@ -124,6 +135,16 @@ export function LeaveRequestList({ requests, loading, error, onSubmit }: Props) 
                   >
                     {busyId === r.id ? <Spinner size="sm" variant="white" /> : <Send size={13} />}
                     {r.status === 'rejected' ? '재상신' : '상신'}
+                  </button>
+                )}
+                {r.status === 'draft' && (
+                  <button
+                    onClick={() => remove(r.id)}
+                    disabled={busyId === r.id}
+                    className="inline-flex items-center gap-1 rounded-sm px-2 py-1.5 text-xs text-danger transition-colors hover:bg-danger/10 disabled:opacity-50 cursor-pointer"
+                  >
+                    <Trash2 size={13} />
+                    삭제
                   </button>
                 )}
               </div>

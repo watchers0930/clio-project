@@ -106,6 +106,16 @@ export function AttendanceView() {
     }
   };
 
+  const handleDeleteLeave = async (id: string) => {
+    try {
+      await leave.remove(id);
+      toast.success('휴가 신청을 삭제했습니다.');
+      void balance.reload();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '삭제에 실패했습니다.');
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
@@ -145,6 +155,7 @@ export function AttendanceView() {
             loading={leave.loading}
             error={leave.error}
             onSubmit={handleSubmitLeave}
+            onDelete={handleDeleteLeave}
           />
         </div>
       )}

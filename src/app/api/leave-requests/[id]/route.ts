@@ -43,3 +43,32 @@ export async function PATCH(
     return writeLeave(admin, userId, id, input);
   });
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  return handleAttendance(request, true, async ({ admin, userId }) => {
+    const { id } = await params;
+    if (!uuid(id)) throw new ApiError("휴가 ID를 확인해 주세요.");
+    // 본인 소유 + 상신 전(초안) 상태만 삭제 허용. pending/approved/rejected는
+    // 결재 진행/이력이 있어 삭제 대신 취소·반려 절차를 따른다(승인자료 보호).
+    const found = await admin
+      .from("leave_requests")
+      .select("id,status")
+      .eq("id", id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    databaseError(found.error);
+    if (!found.data) throw new ApiError("휴가 신청을 찾을 수 없습니다.", 404);
+    if (found.data.status !== "draft")
+      throw new ApiError("상신 전(초안) 휴가만 삭제할 수 있습니다.", 409);
+    const del = await admin
+      .from("leave_requests")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", userId);
+    databaseError(del.error);
+    return { id, deleted: true };
+  });
+}
