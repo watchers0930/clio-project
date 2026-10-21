@@ -28,6 +28,8 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
+    // textOnly: 문서 자동생성 없이 전사/요약 텍스트만 반환(회의록 작성 폼에 채워 수정·보완용)
+    const textOnly = formData.get('textOnly') === 'true';
 
     if (!file) {
       return NextResponse.json({ success: false, error: '오디오 파일이 필요합니다.' }, { status: 400 });
@@ -59,6 +61,17 @@ export async function POST(request: NextRequest) {
     } catch (err) {
       console.error('[transcribe] summary error:', err);
       summary = { summary: transcript.slice(0, 500), keyPoints: [], actionItems: [] };
+    }
+
+    // textOnly: 여기서 전사/요약 텍스트만 반환하고 문서 자동생성은 건너뛴다
+    if (textOnly) {
+      return NextResponse.json({
+        success: true,
+        transcript,
+        summary: summary.summary,
+        keyPoints: summary.keyPoints,
+        actionItems: summary.actionItems,
+      });
     }
 
     // 3. 회의록 템플릿 찾기

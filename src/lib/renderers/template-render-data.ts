@@ -84,6 +84,9 @@ function getSectionBodyFromInputs(sectionTitle: string, documentInputs?: Record<
   if (normalized.includes('금일업무')) return documentInputs.today_work || '';
   if (normalized.includes('명일업무') || normalized.includes('익일업무') || normalized.includes('차일업무')) return documentInputs.tomorrow_work || '';
   if (normalized === '비고' || normalized.includes('특이사항')) return documentInputs.note || '';
+  // 회의록: 회의 내용(요약)·회의 결과 섹션을 직접 입력값에서 채운다
+  if (normalized.includes('회의내용')) return documentInputs.meeting_summary || '';
+  if (normalized.includes('회의결과')) return documentInputs.meeting_result || '';
   return '';
 }
 

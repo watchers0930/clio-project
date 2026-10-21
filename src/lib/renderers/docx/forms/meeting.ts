@@ -30,8 +30,8 @@ export function buildMeetingDocxChildren(
   documentInputs?: Record<string, string>,
 ): (Paragraph | Table)[] {
   const elements: (Paragraph | Table)[] = [];
-  const LABEL_W = 22;
-  const VALUE_W = 78;
+  const LABEL_W = 18;
+  const VALUE_W = 32;
 
   // 결재란 (담당/팀장/대표, 서명=담당)
   const emptyApprovalCell = (widthPct: number) => new TableCell({
@@ -83,23 +83,21 @@ export function buildMeetingDocxChildren(
 
   elements.push(new Paragraph({ spacing: { after: 300 } }));
 
-  // 회의 정보 표
-  const metaRow = (label: string, value: string) => new TableRow({
-    children: [
-      leaveLabelCell(label, fontFamily, fontSize, 1, LABEL_W),
-      leaveValueCell(value, fontFamily, fontSize, 1, VALUE_W),
-    ],
-  });
+  // 회의 정보 표 (프리뷰와 동일한 2열 배치: 작성자|소속, 직급|작성일, 작성시간|장소, 참석자 전체폭)
+  const pair = (label: string, value: string) => [
+    leaveLabelCell(label, fontFamily, fontSize, 1, LABEL_W),
+    leaveValueCell(value, fontFamily, fontSize, 1, VALUE_W),
+  ];
   elements.push(new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     rows: [
-      metaRow('작성자', r.author ?? ''),
-      metaRow('소속', r.author_department ?? ''),
-      metaRow('직급', r.author_position ?? ''),
-      metaRow('작성일', r.report_date_ko ?? r.report_date ?? ''),
-      metaRow('작성시간', r.report_time ?? ''),
-      metaRow('장소', r.meeting_place ?? ''),
-      metaRow('참석자', r.attendees ?? ''),
+      new TableRow({ children: [...pair('작성자', r.author ?? ''), ...pair('소속', r.author_department ?? '')] }),
+      new TableRow({ children: [...pair('직급', r.author_position ?? ''), ...pair('작성일', r.report_date_ko ?? r.report_date ?? '')] }),
+      new TableRow({ children: [...pair('작성시간', r.report_time ?? ''), ...pair('장소', r.meeting_place ?? '')] }),
+      new TableRow({ children: [
+        leaveLabelCell('참석자', fontFamily, fontSize, 1, LABEL_W),
+        leaveValueCell(r.attendees ?? '', fontFamily, fontSize, 3, 82),
+      ] }),
     ],
   }));
 

@@ -6,6 +6,7 @@ import { LeaveEmployeePicker } from '@/components/documents/LeaveEmployeePicker'
 import { EmploymentCertAutofill } from '@/components/documents/EmploymentCertAutofill';
 import { useDocumentUserAutofill } from '@/components/documents/use-document-user-autofill';
 import { WeeklyWorkRowsEditor } from '@/components/documents/WeeklyWorkRowsEditor';
+import { MeetingContentInput } from '@/components/documents/MeetingContentInput';
 import { TemplateFieldInput } from '@/components/documents/TemplateFieldInput';
 import { NewDocumentPreviewModal } from '@/components/documents/NewDocumentPreviewModal';
 import { NDA_CLAUSE_TEXT } from '@/lib/templates/standard-labor-contract';
@@ -97,6 +98,7 @@ export function NewDocumentGeneralStep({
   const aiFields = templateFields.filter((field) => field.aiAssist);
   const isStandardLaborContract = Boolean(selectedTemplateItem?.name && /근로계약서/.test(selectedTemplateItem.name));
   const isWeeklyReport = Boolean(selectedTemplateItem?.name && /주간\s*업무/.test(selectedTemplateItem.name));
+  const isMeeting = selectedTemplateItem?.name === '회의록';
 
   const isEmploymentCert = selectedTemplateItem?.name === '재직증명서';
   // 재직증명서: 본인 정보 자동입력 → 제출용도만 입력.
@@ -190,6 +192,16 @@ export function NewDocumentGeneralStep({
               <WeeklyWorkRowsEditor
                 value={documentInputs.work_rows ?? ''}
                 onChange={(json) => onSetDocumentInputs((prev) => ({ ...prev, work_rows: json }))}
+              />
+            </div>
+          )}
+          {isMeeting && (
+            <div style={{ marginTop: 12 }}>
+              <MeetingContentInput
+                summaryValue={documentInputs.meeting_summary ?? ''}
+                resultValue={documentInputs.meeting_result ?? ''}
+                onChangeSummary={(v) => onSetDocumentInputs((prev) => ({ ...prev, meeting_summary: v }))}
+                onChangeResult={(v) => onSetDocumentInputs((prev) => ({ ...prev, meeting_result: v }))}
               />
             </div>
           )}
