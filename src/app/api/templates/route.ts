@@ -3,162 +3,22 @@ import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { mimeToType, formatSize } from '@/lib/utils/format';
-import { sanitizeFileName, validateFile } from '@/lib/utils/sanitize';
 import {
-  createTemplateBundle,
   parseTemplateBundle,
   serializeTemplateBundle,
   type TemplateSectionDefinition,
   type TemplateBundle,
   type TemplateFieldDefinition,
 } from '@/lib/templates/template-schema';
-import {
-  createEmploymentCertificateTemplateBundle,
-  EMPLOYMENT_CERTIFICATE_TEMPLATE_NAME,
-} from '@/lib/templates/employment-certificate';
-import {
-  createLeaveApplicationTemplateBundle,
-  LEAVE_APPLICATION_TEMPLATE_NAME,
-} from '@/lib/templates/leave-application';
-import {
-  createApprovalRequestTemplateBundle,
-  APPROVAL_REQUEST_TEMPLATE_NAME,
-} from '@/lib/templates/approval-request';
-import {
-  createStandardLaborContractTemplateBundle,
-  STANDARD_LABOR_CONTRACT_TEMPLATE_NAME,
-} from '@/lib/templates/standard-labor-contract';
-import {
-  createWeeklyReportTemplateBundle,
-  WEEKLY_REPORT_TEMPLATE_NAME,
-} from '@/lib/templates/weekly-report';
-import { extractTemplateFileInnerHtml } from '@/lib/templates/template-file-preview';
 import type { DbTemplate } from '@/lib/supabase/types';
-
-function formatErrorDetail(error: unknown) {
-  if (!error || typeof error !== 'object') {
-    return '알 수 없는 오류';
-  }
-
-  const maybeError = error as {
-    message?: string;
-    code?: string;
-    details?: string;
-    hint?: string;
-  };
-
-  const parts = [
-    maybeError.message,
-    maybeError.code ? `code=${maybeError.code}` : null,
-    maybeError.details,
-    maybeError.hint,
-  ].filter(Boolean);
-
-  return parts.join(' | ') || '알 수 없는 오류';
-}
-
-function parseJsonArrayField<T>(value: FormDataEntryValue | null) {
-  if (typeof value !== 'string' || !value.trim()) return [] as T[];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed as T[] : [] as T[];
-  } catch {
-    return [] as T[];
-  }
-}
-
-async function loadTemplateFileSource(admin: ReturnType<typeof createAdminSupabaseClient>, templateFileId: string) {
-  const { data: fileRow, error } = await admin
-    .from('files')
-    .select('name, type, storage_path')
-    .eq('id', templateFileId)
-    .single();
-
-  if (error || !fileRow?.storage_path) {
-    throw new Error(`템플릿 파일 조회 실패: ${formatErrorDetail(error)}`);
-  }
-
-  const { data: blob, error: downloadError } = await admin.storage.from('files').download(fileRow.storage_path);
-  if (downloadError || !blob) {
-    throw new Error(`템플릿 파일 다운로드 실패: ${formatErrorDetail(downloadError)}`);
-  }
-
-  return {
-    fileName: fileRow.name,
-    buffer: Buffer.from(await blob.arrayBuffer()),
-  };
-}
-
-type TemplateFileJoin = { id: string; name: string; type: string; size: number } | null;
-type TemplateDepartmentJoin = { name: string } | null;
-type TemplateRowWithJoins = DbTemplate & {
-  departments?: TemplateDepartmentJoin;
-  template_file?: TemplateFileJoin;
-};
-
-const BUILTIN_EMPLOYMENT_CERTIFICATE_TEMPLATE_ID = '__builtin_employment_certificate__';
-const BUILTIN_LEAVE_APPLICATION_TEMPLATE_ID = '__builtin_leave_application__';
-const BUILTIN_APPROVAL_REQUEST_TEMPLATE_ID = '__builtin_approval_request__';
-const BUILTIN_STANDARD_LABOR_CONTRACT_TEMPLATE_ID = '__builtin_standard_labor_contract__';
-const BUILTIN_WEEKLY_REPORT_TEMPLATE_ID = '__builtin_weekly_report__';
-
-function mergeTemplateFields(
-  baseFields: TemplateFieldDefinition[],
-  nextFields: TemplateFieldDefinition[],
-) {
-  const seen = new Set<string>();
-  const merged: TemplateFieldDefinition[] = [];
-
-  for (const field of [...baseFields, ...nextFields]) {
-    if (!field?.key || seen.has(field.key)) continue;
-    seen.add(field.key);
-    merged.push(field);
-  }
-
-  return merged;
-}
-
-async function resolveTemplateBundle(params: {
-  admin: ReturnType<typeof createAdminSupabaseClient>;
-  name: string;
-  description?: string;
-  outline?: string;
-  placeholders?: unknown;
-  templateBundle?: TemplateBundle | null;
-  templateFileId?: string | null;
-}) {
-  const baseBundle = params.templateBundle ?? createTemplateBundle({
-    name: params.name,
-    description: params.description,
-    outline: params.outline,
-    placeholders: params.placeholders,
-  });
-
-  if (!params.templateFileId) {
-    return baseBundle;
-  }
-
-  const { buffer, fileName } = await loadTemplateFileSource(params.admin, params.templateFileId);
-  const layoutHtml = await extractTemplateFileInnerHtml({ buffer, fileName });
-  if (!layoutHtml.trim()) {
-    return baseBundle;
-  }
-
-  const placeholderFields = Array.isArray(params.placeholders)
-    ? (params.placeholders as Array<Record<string, unknown>>).map((placeholder, index) => ({
-        key: String(placeholder.key ?? `placeholder_${index + 1}`),
-        label: String(placeholder.label ?? placeholder.key ?? `플레이스홀더 ${index + 1}`),
-        type: 'text' as const,
-        placeholder: typeof placeholder.context === 'string' ? placeholder.context : undefined,
-      }))
-    : [];
-
-  return {
-    ...baseBundle,
-    layoutHtml,
-    fields: mergeTemplateFields(baseBundle.fields, placeholderFields),
-  };
-}
+import {
+  formatErrorDetail,
+  parseJsonArrayField,
+  resolveTemplateBundle,
+  uploadTemplateFile,
+  type TemplateRowWithJoins,
+} from './route-helpers';
+import { appendBuiltinTemplates } from './builtin-list';
 
 export async function GET(request: NextRequest) {
   try {
@@ -227,164 +87,12 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    if (!tplList.some((template) => template.name === EMPLOYMENT_CERTIFICATE_TEMPLATE_NAME)) {
-      const bundle = createEmploymentCertificateTemplateBundle();
-      tplList.push({
-        id: BUILTIN_EMPLOYMENT_CERTIFICATE_TEMPLATE_ID,
-        name: EMPLOYMENT_CERTIFICATE_TEMPLATE_NAME,
-        description: '직원 재직 사실 증명서 발급용 템플릿',
-        content: bundle.outline,
-        department: '전사',
-        departmentId: null,
-        scope: '전사 공용',
-        placeholders: [],
-        templateMode: bundle.mode,
-        templateHtml: bundle.layoutHtml,
-        templateFields: bundle.fields,
-        templateSections: bundle.sections,
-        lastUpdated: '',
-        usageCount: 0,
-        templateFile: null,
-      });
-    }
-
-    if (!tplList.some((template) => template.name === LEAVE_APPLICATION_TEMPLATE_NAME)) {
-      const bundle = createLeaveApplicationTemplateBundle();
-      tplList.push({
-        id: BUILTIN_LEAVE_APPLICATION_TEMPLATE_ID,
-        name: LEAVE_APPLICATION_TEMPLATE_NAME,
-        description: '휴가 신청서 (남은 휴가일수 자동계산)',
-        content: bundle.outline,
-        department: '전사',
-        departmentId: null,
-        scope: '전사 공용',
-        placeholders: [],
-        templateMode: bundle.mode,
-        templateHtml: bundle.layoutHtml,
-        templateFields: bundle.fields,
-        templateSections: bundle.sections,
-        lastUpdated: '',
-        usageCount: 0,
-        templateFile: null,
-      });
-    }
-
-    if (!tplList.some((template) => template.name === APPROVAL_REQUEST_TEMPLATE_NAME)) {
-      const bundle = createApprovalRequestTemplateBundle();
-      tplList.push({
-        id: BUILTIN_APPROVAL_REQUEST_TEMPLATE_ID,
-        name: APPROVAL_REQUEST_TEMPLATE_NAME,
-        description: '기안–검토–승인 결재란 품의서 (기안자 전자서명)',
-        content: bundle.outline,
-        department: '전사',
-        departmentId: null,
-        scope: '전사 공용',
-        placeholders: [],
-        templateMode: bundle.mode,
-        templateHtml: bundle.layoutHtml,
-        templateFields: bundle.fields,
-        templateSections: bundle.sections,
-        lastUpdated: '',
-        usageCount: 0,
-        templateFile: null,
-      });
-    }
-
-    if (!tplList.some((template) => template.name === STANDARD_LABOR_CONTRACT_TEMPLATE_NAME)) {
-      const bundle = createStandardLaborContractTemplateBundle();
-      tplList.push({
-        id: BUILTIN_STANDARD_LABOR_CONTRACT_TEMPLATE_ID,
-        name: STANDARD_LABOR_CONTRACT_TEMPLATE_NAME,
-        description: '고용노동부 표준근로계약서(기간의 정함이 없는 경우)',
-        content: bundle.outline,
-        department: '전사',
-        departmentId: null,
-        scope: '전사 공용',
-        placeholders: [],
-        templateMode: bundle.mode,
-        templateHtml: bundle.layoutHtml,
-        templateFields: bundle.fields,
-        templateSections: bundle.sections,
-        lastUpdated: '',
-        usageCount: 0,
-        templateFile: null,
-      });
-    }
-
-    if (!tplList.some((template) => template.name === WEEKLY_REPORT_TEMPLATE_NAME)) {
-      const bundle = createWeeklyReportTemplateBundle();
-      tplList.push({
-        id: BUILTIN_WEEKLY_REPORT_TEMPLATE_ID,
-        name: WEEKLY_REPORT_TEMPLATE_NAME,
-        description: '담당–팀장–대표 결재란 주간업무 보고 (작성자 전자서명)',
-        content: bundle.outline,
-        department: '전사',
-        departmentId: null,
-        scope: '전사 공용',
-        placeholders: [],
-        templateMode: bundle.mode,
-        templateHtml: bundle.layoutHtml,
-        templateFields: bundle.fields,
-        templateSections: bundle.sections,
-        lastUpdated: '',
-        usageCount: 0,
-        templateFile: null,
-      });
-    }
+    appendBuiltinTemplates(tplList);
 
     return NextResponse.json({ templates: tplList });
   } catch {
     return NextResponse.json({ templates: [], error: '템플릿 목록 조회 중 오류가 발생했습니다.' }, { status: 500 });
   }
-}
-
-/** 파일 업로드 → files 테이블 INSERT → process 파이프라인 호출 → file.id 반환 */
-async function uploadTemplateFile(supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>, file: File, authUserId: string, requestOrigin: string): Promise<{ id: string | null; error?: string }> {
-  if (!supabase) return { id: null, error: 'DB 미연결' };
-  const admin = createAdminSupabaseClient();
-  const validationError = validateFile(file);
-  if (validationError) return { id: null, error: `파일 검증 실패: ${validationError}` };
-  const normalizedName = sanitizeFileName(file.name.normalize('NFC'));
-  const ext = normalizedName.split('.').pop()?.toLowerCase() ?? 'bin';
-  const uuid = crypto.randomUUID();
-  const storagePath = `uploads/templates/${uuid}.${ext}`;
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-  const { error: uploadError } = await admin.storage.from('files').upload(storagePath, buffer, {
-    contentType: file.type || undefined,
-  });
-  if (uploadError) {
-    const detail = formatErrorDetail(uploadError);
-    console.error('[templates] storage upload:', detail);
-    return { id: null, error: `Storage 업로드 실패: ${detail}` };
-  }
-
-  const { data, error } = await admin.from('files').insert({
-    name: normalizedName,
-    type: file.type,
-    size: file.size,
-    department_id: null,
-    uploaded_by: authUserId,
-    status: 'processing',
-    storage_path: storagePath,
-  }).select('id').single();
-
-  if (error) {
-    const detail = formatErrorDetail(error);
-    console.error('[templates] file insert:', detail);
-    await admin.storage.from('files').remove([storagePath]).catch(() => {});
-    return { id: null, error: `DB 저장 실패: ${detail}` };
-  }
-
-  // 텍스트 추출/청킹/임베딩 파이프라인 호출
-  const internalSecret = process.env.INTERNAL_API_SECRET || '';
-  fetch(`${requestOrigin}/api/files/process`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': internalSecret },
-    body: JSON.stringify({ fileId: data.id }),
-  }).then(() => {}, (err) => console.error('[templates] process pipeline error:', err));
-
-  return { id: data.id };
 }
 
 export async function POST(request: NextRequest) {
