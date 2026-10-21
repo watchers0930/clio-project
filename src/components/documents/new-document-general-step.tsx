@@ -4,6 +4,7 @@ import { renderTemplatePreviewHtml } from '@/lib/templates/template-preview';
 import type { TemplateItem } from '@/components/documents/page-types';
 import { LeaveEmployeePicker } from '@/components/documents/LeaveEmployeePicker';
 import { EmploymentCertAutofill } from '@/components/documents/EmploymentCertAutofill';
+import { useDocumentUserAutofill } from '@/components/documents/use-document-user-autofill';
 import { formatSalaryAmount, formatPhoneNumber, NDA_CLAUSE_TEXT } from '@/lib/templates/standard-labor-contract';
 
 const AUTO_INPUT_FIELD_KEYS = new Set([
@@ -108,6 +109,13 @@ export function NewDocumentGeneralStep({
     if (field.showWhen.equals !== undefined) return depValue === field.showWhen.equals;
     if (field.showWhen.notEquals !== undefined) return depValue !== field.showWhen.notEquals;
     return true;
+  });
+
+  // 로그인 사용자 본인 정보(이름·소속·직급·입사일·연락처 등)를 비어 있는 필드에 프리필
+  useDocumentUserAutofill({
+    templateName: selectedTemplateItem?.name,
+    templateFields,
+    onSetDocumentInputs,
   });
 
   const handleCertAutofill = useCallback((p: {
@@ -251,9 +259,11 @@ export function NewDocumentGeneralStep({
                     {field.label}
                   </label>
                   <div className="w-full px-4 py-2.5 rounded-xl border border-dashed border-border bg-surface-secondary text-sm text-foreground-secondary">
-                    {AUTO_INPUT_FIELD_KEYS.has(field.key)
-                      ? '로그인 사용자 정보와 현재 날짜 기준으로 자동 입력됩니다.'
-                      : '시스템이 자동 입력합니다.'}
+                    {documentInputs[field.key]?.trim()
+                      ? <span className="text-foreground">{documentInputs[field.key]}</span>
+                      : AUTO_INPUT_FIELD_KEYS.has(field.key)
+                        ? '로그인 사용자 정보와 현재 날짜 기준으로 자동 입력됩니다.'
+                        : '시스템이 자동 입력합니다.'}
                   </div>
                 </div>
               ))}

@@ -75,12 +75,14 @@ export async function resolveVersionFields(supabase: SupabaseClient, parentId?: 
 export async function loadUserGenerationContext(supabase: SupabaseClient, authUserId: string) {
   const { data: userData } = await supabase
     .from('users')
-    .select('name, position, signature_path, departments:department_id(name)')
+    .select('name, position, rank_title, signature_path, departments:department_id(name)')
     .eq('id', authUserId)
     .single();
   const userRow = userData as (DbUser & { departments?: { name: string } | null }) | null;
   const userName = userRow?.name ?? '';
-  const userPosition = userRow?.position ?? '';
+  // 직급: position이 비어 있으면 직급명(rank_title "팀장" 등)으로 대체.
+  // 운영 사용자 다수가 position 공란이라 이 fallback이 없으면 문서 직급이 빈칸으로 들어간다.
+  const userPosition = (userRow?.position?.trim() || userRow?.rank_title || '') ?? '';
   const userDept = userRow?.departments?.name ?? '';
   const signaturePath = userRow?.signature_path ?? null;
   let signatureBuffer: Buffer | null = null;

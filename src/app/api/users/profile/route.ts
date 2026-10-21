@@ -19,12 +19,14 @@ export async function GET() {
     const admin = createAdminSupabaseClient();
     const { data } = await admin
       .from('users')
-      .select('name, resident_no, address, position, hire_date, phone, departments:department_id(name)')
+      .select('name, resident_no, address, position, rank_title, hire_date, phone, departments:department_id(name)')
       .eq('id', authUserId)
       .single();
 
     const dept = (data as { departments?: { name?: string } | null } | null)?.departments;
     const p = (data ?? {}) as Record<string, unknown>;
+    // 직급: position 공란이면 직급명(rank_title)으로 대체 (운영 사용자 다수가 position 비어 있음)
+    const position = ((p.position as string)?.trim() || (p.rank_title as string) || '') ?? '';
 
     return NextResponse.json(
       {
@@ -34,7 +36,7 @@ export async function GET() {
           resident_no: (p.resident_no as string) ?? '',
           address: (p.address as string) ?? '',
           department: dept?.name ?? '',
-          position: (p.position as string) ?? '',
+          position,
           hire_date: (p.hire_date as string) ?? '',
           phone: (p.phone as string) ?? '',
         },
