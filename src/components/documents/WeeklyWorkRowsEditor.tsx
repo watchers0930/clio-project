@@ -41,7 +41,7 @@ export function WeeklyWorkRowsEditor({
   };
   const removeRow = (index: number) => commit(rows.filter((_, i) => i !== index));
 
-  const inputCls = 'w-full px-3 py-2 rounded-lg border border-border bg-white text-sm text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary';
+  const inputCls = 'w-full px-3 py-2.5 rounded-lg border border-border bg-white text-sm text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary';
 
   return (
     <div>
@@ -50,7 +50,7 @@ export function WeeklyWorkRowsEditor({
       {/* 추가된 행 목록 */}
       {rows.length > 0 && (
         <div className="rounded-xl border border-border overflow-hidden" style={{ marginBottom: 10 }}>
-          <div className="grid grid-cols-[1.4fr_2.6fr_0.9fr_1.4fr_auto] gap-0 bg-surface-secondary text-xs font-medium text-foreground-secondary">
+          <div className="grid grid-cols-[1.1fr_4fr_0.9fr_1.3fr_auto] gap-0 bg-surface-secondary text-xs font-medium text-foreground-secondary">
             <div className="px-3 py-2">날짜</div>
             <div className="px-3 py-2">내용</div>
             <div className="px-3 py-2">진행율</div>
@@ -58,7 +58,7 @@ export function WeeklyWorkRowsEditor({
             <div className="px-3 py-2" style={{ width: 36 }} />
           </div>
           {rows.map((row, index) => (
-            <div key={index} className="grid grid-cols-[1.4fr_2.6fr_0.9fr_1.4fr_auto] gap-0 border-t border-border text-sm text-foreground">
+            <div key={index} className="grid grid-cols-[1.1fr_4fr_0.9fr_1.3fr_auto] gap-0 border-t border-border text-sm text-foreground">
               <div className="px-3 py-2 break-words">{row.date}</div>
               <div className="px-3 py-2 break-words">{row.content}</div>
               <div className="px-3 py-2 break-words">{row.progress}</div>
@@ -78,7 +78,7 @@ export function WeeklyWorkRowsEditor({
       )}
 
       {/* 입력 폼 + 추가 버튼 */}
-      <div className="grid grid-cols-[1.4fr_2.6fr_0.9fr_1.4fr] gap-2" style={{ marginBottom: 8 }}>
+      <div className="grid grid-cols-[1.1fr_4fr_0.9fr_1.3fr] gap-2" style={{ marginBottom: 8 }}>
         <input className={inputCls} placeholder="예: 10/21 (화)" value={draft.date} onChange={(e) => setDraft((d) => ({ ...d, date: e.target.value }))} />
         <input className={inputCls} placeholder="업무 내용" value={draft.content} onChange={(e) => setDraft((d) => ({ ...d, content: e.target.value }))} />
         <input className={inputCls} placeholder="예: 50%" value={draft.progress} onChange={(e) => setDraft((d) => ({ ...d, progress: e.target.value }))} />
