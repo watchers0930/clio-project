@@ -6,7 +6,9 @@ import { LeaveEmployeePicker } from '@/components/documents/LeaveEmployeePicker'
 import { EmploymentCertAutofill } from '@/components/documents/EmploymentCertAutofill';
 import { useDocumentUserAutofill } from '@/components/documents/use-document-user-autofill';
 import { WeeklyWorkRowsEditor } from '@/components/documents/WeeklyWorkRowsEditor';
-import { formatSalaryAmount, formatPhoneNumber, NDA_CLAUSE_TEXT } from '@/lib/templates/standard-labor-contract';
+import { TemplateFieldInput } from '@/components/documents/TemplateFieldInput';
+import { NewDocumentPreviewModal } from '@/components/documents/NewDocumentPreviewModal';
+import { NDA_CLAUSE_TEXT } from '@/lib/templates/standard-labor-contract';
 
 const AUTO_INPUT_FIELD_KEYS = new Set([
   'author',
@@ -174,93 +176,13 @@ export function NewDocumentGeneralStep({
           )}
           <div className="grid grid-cols-1 gap-3">
             {manualFields.map((field) => (
-              <div key={field.key}>
-                <label className="flex items-center gap-1.5 text-xs text-foreground-secondary" style={{ marginBottom: 6 }}>
-                  {field.label} {field.required && <span className="text-danger">*</span>}
-                  {extractedFieldKeys?.has(field.key) && (
-                    <span className="inline-flex items-center rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">참조파일에서 추출</span>
-                  )}
-                </label>
-                {field.type === 'textarea' ? (
-                  <textarea
-                    value={documentInputs[field.key] ?? ''}
-                    onChange={(e) => onSetDocumentInputs((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                    rows={3}
-                    placeholder={field.placeholder}
-                    className="w-full px-4 py-2.5 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                ) : field.type === 'checkbox' ? (
-                  <div className="flex flex-wrap gap-x-4 gap-y-2 px-1 py-1">
-                    {(field.options ?? []).map((option) => {
-                      const selected = (documentInputs[field.key] ?? '').split(',').map((v) => v.trim()).filter(Boolean);
-                      const checked = selected.includes(option);
-                      return (
-                        <label key={option} className="flex items-center gap-2 text-sm text-foreground">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(e) => {
-                              const next = e.target.checked
-                                ? [...selected, option]
-                                : selected.filter((v) => v !== option);
-                              onSetDocumentInputs((prev) => ({ ...prev, [field.key]: next.join(',') }));
-                            }}
-                            className="rounded border-border text-primary focus:ring-primary"
-                          />
-                          {option}
-                        </label>
-                      );
-                    })}
-                  </div>
-                ) : field.type === 'select' ? (
-                  <select
-                    value={documentInputs[field.key] ?? ''}
-                    onChange={(e) => onSetDocumentInputs((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-xl border border-border bg-white text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="">선택하세요</option>
-                    {(field.options ?? []).map((option) => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
-                ) : field.format === 'currency' ? (
-                  <div>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={(documentInputs[field.key] ?? '').replace(/[^0-9]/g, '')
-                        ? Number((documentInputs[field.key] ?? '').replace(/[^0-9]/g, '')).toLocaleString('en-US')
-                        : ''}
-                      onChange={(e) => {
-                        const digits = e.target.value.replace(/[^0-9]/g, '');
-                        onSetDocumentInputs((prev) => ({ ...prev, [field.key]: digits }));
-                      }}
-                      placeholder={field.placeholder}
-                      className="w-full px-4 py-2.5 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                    {(documentInputs[field.key] ?? '').replace(/[^0-9]/g, '') && (
-                      <p className="mt-1 text-xs text-primary">{formatSalaryAmount(documentInputs[field.key] ?? '')}</p>
-                    )}
-                  </div>
-                ) : field.format === 'phone' ? (
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={formatPhoneNumber(documentInputs[field.key] ?? '')}
-                    onChange={(e) => onSetDocumentInputs((prev) => ({ ...prev, [field.key]: e.target.value.replace(/[^0-9]/g, '') }))}
-                    placeholder={field.placeholder}
-                    className="w-full px-4 py-2.5 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                ) : (
-                  <input
-                    type={field.type === 'date' ? 'date' : 'text'}
-                    value={documentInputs[field.key] ?? ''}
-                    onChange={(e) => onSetDocumentInputs((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                    placeholder={field.placeholder}
-                    className="w-full px-4 py-2.5 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                )}
-              </div>
+              <TemplateFieldInput
+                key={field.key}
+                field={field}
+                value={documentInputs[field.key] ?? ''}
+                onChange={onSetDocumentInputs}
+                extracted={extractedFieldKeys?.has(field.key)}
+              />
             ))}
           </div>
           {isWeeklyReport && (
@@ -428,39 +350,14 @@ export function NewDocumentGeneralStep({
         )}
       </div>
     </div>
-    {previewOpen && selectedTemplateItem && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="new-doc-template-preview-title">
-        <div className="mx-4 flex max-h-[88vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
-          <div className="flex items-center justify-between border-b border-border px-6 py-5">
-            <div>
-              <h2 id="new-doc-template-preview-title" className="text-lg font-semibold text-foreground">{selectedTemplateItem.name}</h2>
-              <p className="mt-1 text-sm text-foreground-secondary">{selectedTemplateItem.description || '템플릿 미리보기'}</p>
-            </div>
-            <button onClick={() => setPreviewOpen(false)} className="rounded-lg p-1 text-foreground-secondary hover:bg-surface-secondary">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto px-6 py-5">
-            <div className="rounded-2xl border border-border bg-surface-secondary p-3">
-              <iframe
-                title="selected-template-preview-modal"
-                src={previewSrc}
-                srcDoc={previewSrc ? undefined : previewDoc}
-                className="h-[720px] w-full rounded-xl border border-border bg-white"
-              />
-            </div>
-          </div>
-          <div className="flex justify-end border-t border-border px-6 py-4">
-            <button
-              type="button"
-              onClick={() => setPreviewOpen(false)}
-              className="rounded-xl border border-border px-5 py-2.5 text-sm text-foreground-secondary transition-colors hover:bg-surface-secondary"
-            >
-              닫기
-            </button>
-          </div>
-        </div>
-      </div>
+    {selectedTemplateItem && (
+      <NewDocumentPreviewModal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        templateItem={selectedTemplateItem}
+        previewSrc={previewSrc}
+        previewDoc={previewDoc}
+      />
     )}
     </>
   );
