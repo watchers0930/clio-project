@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, ChevronDown, ChevronRight, Download, GitBranch, Link2, MoreHorizontal, Printer, Search } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import { HtmlPreviewFrame } from '@/components/documents/html-preview-frame';
+import { useServerRenderedPreview, BUILTIN_FORM_TITLE_RE } from '@/components/documents/use-server-rendered-preview';
+
+const EMBEDDED_INPUTS_RE = /^<!--(?:PROPOSAL_INPUTS|DOCUMENT_INPUTS):/;
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
 import { kstDateFromISO } from '@/lib/utils/date-kst';
 
@@ -311,6 +314,15 @@ export function DocumentViewerContent({
 }: ContentProps) {
   const fileBased = isFileBased(doc);
   const isProposal = doc.template_name === '제안서';
+  // 양식 렌더 대상 판별(훅 규칙상 early return 전에 호출)
+  const isServerTemplate = !isProposal && !!doc.template_id;
+  const hasEmbeddedInputs = EMBEDDED_INPUTS_RE.test(doc.content ?? '');
+  const isBuiltinForm = !isProposal && !isServerTemplate && hasEmbeddedInputs && BUILTIN_FORM_TITLE_RE.test(doc.title);
+  const useHtmlPreview = !fileBased && (isServerTemplate || isBuiltinForm);
+  const serverPreview = useServerRenderedPreview(
+    { id: doc.id, template: doc.template_name ?? '', templateId: doc.template_id, title: doc.title, content: doc.content ?? '' },
+    '맑은 고딕',
+  );
 
   if (isProposal) {
     const proposalHtml = renderProposalDocumentHtml({
@@ -344,6 +356,28 @@ export function DocumentViewerContent({
             <div className="flex h-full items-center justify-center">
               <Spinner />
             </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (useHtmlPreview) {
+    return (
+      <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-white">
+        <div className="min-h-0 flex-1 p-4 sm:p-5">
+          {serverPreview.loading ? (
+            <div className="flex h-full items-center justify-center"><Spinner /></div>
+          ) : serverPreview.error || !serverPreview.html ? (
+            <div ref={contentRef} className="leading-relaxed p-2">
+              {doc.content ? renderContent(doc.content) : <p className="text-[14px] text-foreground-quaternary">문서 내용이 없습니다.</p>}
+            </div>
+          ) : (
+            <HtmlPreviewFrame
+              title={doc.title}
+              html={serverPreview.html}
+              className="h-full min-h-[720px] w-full rounded-xl border border-border bg-white"
+            />
           )}
         </div>
       </div>
