@@ -30,14 +30,18 @@ export function HtmlPreviewFrame({ html, title, className, fit }: HtmlPreviewFra
     const ifr = iframeRef.current;
     const doc = ifr?.contentDocument;
     if (!ifr || !doc?.body) return;
-    const cw = ifr.clientWidth || ifr.offsetWidth;
-    const sw = Math.max(doc.body.scrollWidth, doc.documentElement.scrollWidth);
-    const scale = sw > cw && sw > 0 ? cw / sw : 1;
     const el = doc.body;
+    // A4 인쇄 여백(body padding 20mm 등)은 화면 미리보기에선 불필요하게 커서 내용을 작게 만든다.
+    // 화면용으로 축소해 콘텐츠를 키운 뒤 scale/높이를 측정한다.
+    el.style.margin = '0';
+    el.style.padding = '10px';
+    el.style.boxSizing = 'border-box';
+    const cw = ifr.clientWidth || ifr.offsetWidth;
+    const sw = Math.max(el.scrollWidth, doc.documentElement.scrollWidth);
+    const scale = sw > cw && sw > 0 ? cw / sw : 1;
     el.style.transformOrigin = 'top left';
     el.style.transform = `scale(${scale})`;
-    el.style.margin = '0';
-    const sh = Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight);
+    const sh = Math.max(el.scrollHeight, doc.documentElement.scrollHeight);
     setFittedHeight(Math.ceil(sh * scale));
   };
 
