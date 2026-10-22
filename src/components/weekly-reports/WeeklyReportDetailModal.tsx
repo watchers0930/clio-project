@@ -28,7 +28,7 @@ export function WeeklyReportDetailModal({ report, onClose }: WeeklyReportDetailM
   );
 
   return (
-    <Modal open={report !== null} onClose={onClose} size="lg" title={report?.title ?? '주간업무'}>
+    <Modal open={report !== null} onClose={onClose} size="xl" title={report?.title ?? '주간업무'}>
       {report && (
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3 text-sm text-foreground-secondary">
