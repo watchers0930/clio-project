@@ -259,9 +259,9 @@ export function NewDocumentGeneralStep({
               <button
                 key={format.value}
                 onClick={() => onSetOutputFormat(format.value)}
-                className={`p-3 rounded-xl border text-center transition-all ${outputFormat === format.value ? 'border-primary bg-primary-tint ring-2 ring-primary/30' : 'border-border hover:border-primary'}`}
+                className={`p-3 rounded-xl border transition-all flex flex-col items-center justify-center text-center ${outputFormat === format.value ? 'border-primary bg-primary-tint ring-2 ring-primary/30' : 'border-border hover:border-primary'}`}
               >
-                <span className="text-xl">{format.icon}</span>
+                <span className="text-xl leading-none">{format.icon}</span>
                 <p className="text-xs font-bold text-foreground mt-1">{format.label}</p>
                 <p className="text-[10px] text-foreground-secondary">{format.desc}</p>
               </button>
