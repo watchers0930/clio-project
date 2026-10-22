@@ -154,7 +154,7 @@ export function NewDocumentGeneralStep({
 
   return (
     <>
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
         <div>
           <p className="text-sm font-medium text-foreground" style={{ marginBottom: 8 }}>{isWorklogTemplate ? '수동 입력' : '문서 기본 정보'}</p>
           {isEmploymentCert && (
