@@ -43,9 +43,10 @@ export function WeeklyReportDetailModal({ report, onClose }: WeeklyReportDetailM
               <div className="flex h-[400px] items-center justify-center"><Spinner /></div>
             ) : !serverPreview.error && serverPreview.html ? (
               <HtmlPreviewFrame
+                fit
                 title={report.title}
                 html={serverPreview.html}
-                className="h-[70vh] min-h-[600px] w-full rounded-xl border border-border bg-white"
+                className="w-full rounded-xl border border-border bg-white"
               />
             ) : report.content.trim() ? (
               <DocumentMarkdownBody content={report.content} />
