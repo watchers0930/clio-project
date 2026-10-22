@@ -68,6 +68,14 @@ export function isManagerOrAbove(role: string): boolean {
 }
 
 /**
+ * 전사 직원 주간업무를 조회할 수 있는 권한(대표이사 또는 시스템 관리자).
+ * 대표(rank_level=1)는 role이 manager라 role 게이트로는 못 막으므로 rank_level을 함께 본다.
+ */
+export function canViewAllWeeklyReports(role: string, rankLevel: number | null | undefined): boolean {
+  return role === 'admin' || (typeof rankLevel === 'number' && rankLevel <= 1);
+}
+
+/**
  * 사용자가 파일을 삭제할 수 있는지 확인
  * - admin: 무조건 가능
  * - manager: 자기 부서 파일

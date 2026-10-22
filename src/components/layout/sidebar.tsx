@@ -22,6 +22,7 @@ import {
   Banknote,
   Stamp,
   CalendarClock,
+  ClipboardList,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -56,6 +57,11 @@ const OPTIONAL_ITEMS: NavItem[] = [
   { key: 'bulk-transfer', label: '대량이체', href: '/bulk-transfer', icon: Banknote, description: '하나은행 대량이체 파일' },
 ];
 
+// 대표이사/관리자 전용 메뉴 (접근 차단은 API 403이 담당, 여기선 노출만 제어)
+const ADMIN_ITEMS: NavItem[] = [
+  { key: 'weekly-reports', label: '직원 주간업무', href: '/weekly-reports', icon: ClipboardList, description: '전사 주간업무 조회' },
+];
+
 interface SidebarProps {
   collapsed?: boolean;
   onToggle?: () => void;
@@ -71,6 +77,12 @@ function Sidebar({ collapsed = false, onToggle, mobile = false }: SidebarProps) 
 
   const enabledOptional = (user?.sidebar_menus ?? []) as string[];
   const visibleOptional = OPTIONAL_ITEMS.filter((item) => enabledOptional.includes(item.key));
+
+  // 대표이사(rank_level<=1) 또는 관리자(role='admin')에게만 노출. 실제 접근 차단은 API 403이 담당.
+  // rank_level은 User 타입에 없지만 /api/auth/me 가 select('*')로 내려주므로 런타임에 존재한다.
+  const rankLevel = (user as { rank_level?: number | null } | null)?.rank_level;
+  const canViewAdminMenu =
+    user?.role === 'admin' || (typeof rankLevel === 'number' && rankLevel <= 1);
 
   // 안 읽은 메시지 수 폴링
   useEffect(() => {
@@ -194,6 +206,16 @@ function Sidebar({ collapsed = false, onToggle, mobile = false }: SidebarProps) 
 
         {/* 선택 메뉴 */}
         {visibleOptional.map(renderItem)}
+
+        {/* 관리자 메뉴 구분선 */}
+        {canViewAdminMenu && (
+          <div className={cn('my-2', collapsed && !mobile ? 'mx-2' : 'mx-1')}>
+            <div className="border-t border-white/10" />
+          </div>
+        )}
+
+        {/* 관리자 메뉴 (대표이사/관리자 전용) */}
+        {canViewAdminMenu && ADMIN_ITEMS.map(renderItem)}
 
         {/* 설정 구분선 */}
         <div className={cn('mt-auto pt-2', collapsed && !mobile ? 'mx-2' : 'mx-1')}>
