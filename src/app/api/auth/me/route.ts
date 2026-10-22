@@ -50,6 +50,8 @@ export async function GET(request: NextRequest) {
           avatar_url: profile.avatar_url,
           signature_path: profile.signature_path ?? null,
           sidebar_menus: (profile.sidebar_menus as string[] | null) ?? [],
+          rank_level: (profile as { rank_level?: number | null }).rank_level ?? null,
+          rank_title: (profile as { rank_title?: string | null }).rank_title ?? null,
           created_at: profile.created_at,
         }
       : {

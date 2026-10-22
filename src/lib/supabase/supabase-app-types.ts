@@ -33,6 +33,8 @@ export interface User {
   is_active?: boolean;
   signature_path?: string | null;
   sidebar_menus?: string[] | null;
+  rank_level?: number | null;
+  rank_title?: string | null;
   created_at: string;
 }
 
