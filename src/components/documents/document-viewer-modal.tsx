@@ -3,7 +3,7 @@ import { DocumentCommentPanel } from '@/components/documents/DocumentCommentPane
 import { HtmlPreviewFrame } from '@/components/documents/html-preview-frame';
 import type { DocumentItem } from '@/components/documents/page-types';
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
-import { useServerRenderedPreview } from '@/components/documents/use-server-rendered-preview';
+import { useServerRenderedPreview, BUILTIN_FORM_TITLE_RE } from '@/components/documents/use-server-rendered-preview';
 import { DocumentMarkdownBody } from '@/components/documents/document-markdown-body';
 
 const EMBEDDED_INPUTS_RE = /^<!--(?:PROPOSAL_INPUTS|DOCUMENT_INPUTS):/;
@@ -91,9 +91,12 @@ export function DocumentViewerModal({
   // 빌트인 템플릿(품의서·재직증명서·휴가원 등)은 template_id 없이 저장되고 본문 앞에
   // <!--DOCUMENT_INPUTS--> 주석이 붙는다. 주석을 걷어낸 마크다운 본문을 렌더한다.
   const hasEmbeddedInputs = EMBEDDED_INPUTS_RE.test(viewDoc.content ?? '');
-  const isMarkdownTemplate = !isProposal && !isServerTemplate && hasEmbeddedInputs;
-  // iframe(HTML) 프리뷰 = 제안서(클라 렌더) + 서버 템플릿
-  const useHtmlPreview = isProposal || isServerTemplate;
+  // 빌트인 양식(template_id null + 제목이 빌트인 양식 + DOCUMENT_INPUTS)은 서버 양식 렌더로 보낸다.
+  const isBuiltinForm = !isProposal && !isServerTemplate && hasEmbeddedInputs && BUILTIN_FORM_TITLE_RE.test(viewDoc.title ?? '');
+  // 커스텀 구조 마크다운(빌트인 양식이 아닌)만 마크다운으로 렌더
+  const isMarkdownTemplate = !isProposal && !isServerTemplate && !isBuiltinForm && hasEmbeddedInputs;
+  // iframe(HTML) 프리뷰 = 제안서(클라 렌더) + 서버 템플릿 + 빌트인 양식
+  const useHtmlPreview = isProposal || isServerTemplate || isBuiltinForm;
   const availableDownloadFormats = isProposal ? ['pdf'] : downloadFormatOptions;
   const proposalHtml = isProposal
     ? renderProposalDocumentHtml({

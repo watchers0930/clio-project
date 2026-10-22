@@ -6,8 +6,14 @@ interface ServerRenderTarget {
   id: string;
   template: string;
   templateId?: string | null;
+  title?: string;
   content?: string;
 }
+
+// 빌트인 양식(template_id가 FK 제약으로 null 저장되는)을 제목으로 식별.
+// download inline 렌더가 제목으로 번들을 복원하므로 이 문서도 서버 양식 렌더 대상이다.
+export const BUILTIN_FORM_TITLE_RE = /주간\s*업무|품의서|휴가원|재직\s*증명서|근로계약서/;
+const EMBEDDED_INPUTS_RE = /^<!--(?:PROPOSAL_INPUTS|DOCUMENT_INPUTS):/;
 
 interface ServerRenderedPreview {
   html: string;
@@ -31,7 +37,13 @@ export function useServerRenderedPreview(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
-  const enabled = !!doc && doc.template !== '제안서' && !!doc.templateId;
+  // templateId가 있거나, 빌트인 양식(제목 매칭 + DOCUMENT_INPUTS 임베드)이면 서버 양식 렌더.
+  const isBuiltinForm =
+    !doc?.templateId &&
+    !!doc?.title &&
+    BUILTIN_FORM_TITLE_RE.test(doc.title) &&
+    EMBEDDED_INPUTS_RE.test(doc?.content ?? '');
+  const enabled = !!doc && doc.template !== '제안서' && (!!doc.templateId || isBuiltinForm);
   const docId = doc?.id ?? '';
   // content가 저장으로 갱신되면 refetch → "저장 후 반영"
   const content = doc?.content ?? '';

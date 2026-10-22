@@ -17,8 +17,14 @@ export async function GET(request: NextRequest) {
     const authUserId = await getAuthUserId(supabase);
     if (!authUserId) return NextResponse.json({ success: false, error: '인증이 필요합니다.' }, { status: 401 });
 
-    const { data: me } = await supabase.from('users').select('role, rank_level').eq('id', authUserId).single();
-    if (!me || !canViewAllWeeklyReports(me.role as string, (me as { rank_level?: number | null }).rank_level)) {
+    const admin = createAdminSupabaseClient();
+    // 권한 판별용 본인 프로필은 admin으로 조회(세션 RLS/컬럼 제약 영향 배제, 본인 id라 안전)
+    const { data: me, error: meErr } = await admin.from('users').select('role, rank_level').eq('id', authUserId).single();
+    if (meErr) console.error('[weekly-reports/overview] me 조회 실패:', meErr.message);
+    const myRole = (me as { role?: string } | null)?.role ?? '';
+    const myRank = (me as { rank_level?: number | null } | null)?.rank_level;
+    if (!me || !canViewAllWeeklyReports(myRole, myRank)) {
+      console.error('[weekly-reports/overview] 권한 거부:', { authUserId, myRole, myRank });
       return NextResponse.json({ success: false, error: '대표이사 또는 관리자만 접근할 수 있습니다.' }, { status: 403 });
     }
 
@@ -28,7 +34,6 @@ export async function GET(request: NextRequest) {
     const dateFrom = searchParams.get('dateFrom');
     const dateTo = searchParams.get('dateTo');
 
-    const admin = createAdminSupabaseClient();
     let query = admin
       .from('documents')
       .select('id, title, content, status, created_at, created_by, author:created_by(name, rank_title, department_id, departments:department_id(name))')
