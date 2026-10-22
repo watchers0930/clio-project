@@ -94,7 +94,7 @@ export function NewDocumentGeneralStep({
     : undefined;
   const autoFields = templateFields.filter((field) => field.autoFill);
   // nda_agree(비밀유지 동의)는 왼쪽 필드목록이 아니라 오른쪽 서약 박스에서 별도 처리
-  const allManualFields = templateFields.filter((field) => !field.autoFill && !field.aiAssist && field.key !== 'nda_agree' && field.key !== 'work_rows');
+  const allManualFields = templateFields.filter((field) => !field.autoFill && !field.aiAssist && field.key !== 'nda_agree' && field.key !== 'work_rows' && field.key !== 'next_week_plan');
   const aiFields = templateFields.filter((field) => field.aiAssist);
   const isStandardLaborContract = Boolean(selectedTemplateItem?.name && /근로계약서/.test(selectedTemplateItem.name));
   const isWeeklyReport = Boolean(selectedTemplateItem?.name && /주간\s*업무/.test(selectedTemplateItem.name));
@@ -155,6 +155,27 @@ export function NewDocumentGeneralStep({
   return (
     <>
     <div className="flex flex-col gap-6">
+        {autoFields.length > 0 && (
+          <div>
+            <p className="text-sm font-medium text-foreground" style={{ marginBottom: 8 }}>자동 입력</p>
+            <div className="grid grid-cols-2 gap-3">
+              {autoFields.map((field) => (
+                <div key={field.key}>
+                  <label className="block text-xs text-foreground-secondary" style={{ marginBottom: 6 }}>
+                    {field.label}
+                  </label>
+                  <div className="w-full px-4 py-2.5 rounded-xl border border-dashed border-border bg-surface-secondary text-sm text-foreground-secondary">
+                    {documentInputs[field.key]?.trim()
+                      ? <span className="text-foreground">{documentInputs[field.key]}</span>
+                      : AUTO_INPUT_FIELD_KEYS.has(field.key)
+                        ? '로그인 사용자 정보와 현재 날짜 기준으로 자동 입력됩니다.'
+                        : '시스템이 자동 입력합니다.'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <div>
           <p className="text-sm font-medium text-foreground" style={{ marginBottom: 8 }}>{isWorklogTemplate ? '수동 입력' : '문서 기본 정보'}</p>
           {isEmploymentCert && (
@@ -194,6 +215,14 @@ export function NewDocumentGeneralStep({
               />
             </div>
           )}
+          {isWeeklyReport && templateFields.find((f) => f.key === 'next_week_plan') && (
+            <TemplateFieldInput
+              field={templateFields.find((f) => f.key === 'next_week_plan')!}
+              value={documentInputs.next_week_plan ?? ''}
+              onChange={onSetDocumentInputs}
+              extracted={extractedFieldKeys?.has('next_week_plan')}
+            />
+          )}
           {isMeeting && (
             <div style={{ marginTop: 12 }}>
               <MeetingContentInput
@@ -205,28 +234,6 @@ export function NewDocumentGeneralStep({
             </div>
           )}
         </div>
-
-        {autoFields.length > 0 && (
-          <div>
-            <p className="text-sm font-medium text-foreground" style={{ marginBottom: 8 }}>자동 입력</p>
-            <div className="grid grid-cols-2 gap-3">
-              {autoFields.map((field) => (
-                <div key={field.key}>
-                  <label className="block text-xs text-foreground-secondary" style={{ marginBottom: 6 }}>
-                    {field.label}
-                  </label>
-                  <div className="w-full px-4 py-2.5 rounded-xl border border-dashed border-border bg-surface-secondary text-sm text-foreground-secondary">
-                    {documentInputs[field.key]?.trim()
-                      ? <span className="text-foreground">{documentInputs[field.key]}</span>
-                      : AUTO_INPUT_FIELD_KEYS.has(field.key)
-                        ? '로그인 사용자 정보와 현재 날짜 기준으로 자동 입력됩니다.'
-                        : '시스템이 자동 입력합니다.'}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {aiFields.length > 0 && (
           <div className="rounded-2xl border border-border-tint bg-primary-tint p-4">
@@ -274,7 +281,7 @@ export function NewDocumentGeneralStep({
           )}
         </div>
 
-        {selectedTemplateItem && (
+        {false && selectedTemplateItem && (
           <div className="rounded-2xl border border-border bg-surface-secondary px-4 py-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
@@ -321,6 +328,7 @@ export function NewDocumentGeneralStep({
             />
           </div>
         )}
+        {false && (
         <div className="flex flex-col">
           <p className="text-sm text-foreground-secondary" style={{ marginBottom: 10 }}>추가 지시사항 (선택)</p>
           <textarea
@@ -331,6 +339,8 @@ export function NewDocumentGeneralStep({
             className="w-full px-4 py-3 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
           />
         </div>
+        )}
+        {false && (
         <div className="rounded-2xl border border-border-tint bg-primary-tint p-4">
           <label className="flex items-center gap-3">
             <input
@@ -354,12 +364,13 @@ export function NewDocumentGeneralStep({
             />
           )}
         </div>
+        )}
     </div>
-    {selectedTemplateItem && (
+    {false && selectedTemplateItem && (
       <NewDocumentPreviewModal
         open={previewOpen}
         onClose={() => setPreviewOpen(false)}
-        templateItem={selectedTemplateItem}
+        templateItem={selectedTemplateItem!}
         previewSrc={previewSrc}
         previewDoc={previewDoc}
       />
