@@ -14,10 +14,9 @@ export interface WeeklyReport {
   authorDept: string;
 }
 
+/** overview는 공통 parse 규약을 따라 실데이터를 data로 감싼다 → res.data = { reports } */
 export interface OverviewResponse {
-  success: boolean;
   reports?: WeeklyReport[];
-  error?: string;
 }
 
 /** GET /api/org/members 반환 구조 */

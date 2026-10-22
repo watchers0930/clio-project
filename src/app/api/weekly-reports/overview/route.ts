@@ -70,7 +70,8 @@ export async function GET(request: NextRequest) {
 
     if (departmentId) reports = reports.filter((x) => x.authorDeptId === departmentId);
 
-    return NextResponse.json({ success: true, reports }, { headers: { 'Cache-Control': 'no-store, max-age=0' } });
+    // 공통 apiGet/parse 규약에 맞춰 실데이터는 data로 감싼다(parse가 json.data를 추출).
+    return NextResponse.json({ success: true, data: { reports } }, { headers: { 'Cache-Control': 'no-store, max-age=0' } });
   } catch (err) {
     console.error('[weekly-reports/overview]', err instanceof Error ? err.message : 'unknown');
     return NextResponse.json({ success: false, error: '주간업무 조회 중 오류가 발생했습니다.' }, { status: 500 });

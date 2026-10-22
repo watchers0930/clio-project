@@ -50,13 +50,18 @@ export function WeeklyReportsClient() {
   const [selected, setSelected] = useState<WeeklyReport | null>(null);
 
   // 직원·부서 목록 1회 로드
+  // org/members는 평면 응답({success, departments, members})을 반환하므로(LeaveEmployeePicker와 공유)
+  // data로 감싸는 apiGet 규약 대신 raw fetch로 직접 파싱한다.
   useEffect(() => {
-    void apiGet<OrgMembersResponse>('/api/org/members').then((res) => {
-      if (res.ok && res.data?.success) {
-        setDepartments(res.data.departments ?? []);
-        setMembers(res.data.members ?? []);
-      }
-    });
+    void fetch('/api/org/members', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((j: OrgMembersResponse) => {
+        if (j?.success) {
+          setDepartments(j.departments ?? []);
+          setMembers(j.members ?? []);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const load = useCallback(async (f: WeeklyReportFilters) => {
@@ -73,11 +78,11 @@ export function WeeklyReportsClient() {
     if (res.status === 403) {
       setForbidden(true);
       setReports([]);
-    } else if (res.ok && res.data?.success) {
+    } else if (res.ok && res.data) {
       setForbidden(false);
       setReports(res.data.reports ?? []);
     } else {
-      setError(res.data?.error ?? res.error ?? '주간업무 조회에 실패했습니다.');
+      setError(res.error ?? '주간업무 조회에 실패했습니다.');
       setReports([]);
     }
     setLoading(false);
