@@ -15,7 +15,7 @@ import { parseTemplateBundle, type TemplateBundle } from '@/lib/templates/templa
 import { resolveBuiltinTemplateBundle, resolveBuiltinTemplateBundleByName } from '@/lib/templates/builtin';
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
 import { isProposalTemplateName } from '@/lib/templates/proposal';
-import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
+import { canAccessDocument, getUserRoleInfo, canViewAllWeeklyReports } from '@/lib/permissions';
 import { loadCompanyLogoContext } from '@/lib/settings/company-logo';
 
 // PDF 서버 렌더(puppeteer/chromium 콜드스타트 대비) 실행시간 확보
@@ -271,6 +271,24 @@ export async function GET(
           .eq('id', id)
           .single();
         doc = adminDoc;
+      } else {
+        // 전사 주간업무 조회 권한자(대표/관리자)는 주간업무 빌트인 문서를 inline 양식으로 열람 허용.
+        // overview 조회와 동일 범위(title~주간업무 + template_id NULL)라 접근 권한이 일관된다.
+        const { data: wr } = await admin
+          .from('documents')
+          .select('id, title, content, storage_path, parent_id, template_id')
+          .eq('id', id)
+          .single();
+        if (wr && wr.template_id === null && /주간\s*업무/.test(wr.title ?? '')) {
+          const { data: me } = await admin
+            .from('users')
+            .select('role, rank_level')
+            .eq('id', authUserId)
+            .single();
+          if (me && canViewAllWeeklyReports(me.role, (me as { rank_level?: number | null }).rank_level)) {
+            doc = wr;
+          }
+        }
       }
     }
 

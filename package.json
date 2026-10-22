@@ -1,6 +1,6 @@
 {
   "name": "clio-project",
-  "version": "7.81.8",
+  "version": "7.81.9",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
