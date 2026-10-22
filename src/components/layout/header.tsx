@@ -44,7 +44,7 @@ function Header({
   })();
 
   return (
-    <header className="h-[68px] border-b border-border bg-white/92 backdrop-blur-md flex-shrink-0 lg:h-[72px]">
+    <header className="relative z-40 h-[68px] border-b border-border bg-white/92 backdrop-blur-md flex-shrink-0 lg:h-[72px]">
       <div className="flex h-full items-center px-4 sm:px-6 lg:px-10">
         {/* Left — mobile menu only */}
         <div className="flex items-center gap-3">

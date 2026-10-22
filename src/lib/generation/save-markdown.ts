@@ -8,12 +8,8 @@ import type {
 } from "@/lib/renderers/types";
 import { renderDocument } from "@/lib/renderers";
 import { buildDocumentInsertPayload, type VersionFields } from "./context";
-import { buildDocumentSummary, isMouTemplateName } from "./form-overrides";
-import { isBusinessPlanTemplateName } from "@/lib/templates/business-plan";
-import { isEmploymentCertificateTemplateName } from "@/lib/templates/employment-certificate";
+import { buildDocumentSummary } from "./form-overrides";
 import { isLeaveApplicationTemplateName } from "@/lib/templates/leave-application";
-import { isApprovalRequestTemplateName } from "@/lib/templates/approval-request";
-import { isStandardLaborContractTemplateName } from "@/lib/templates/standard-labor-contract";
 import {
   linkGeneratedLeave,
   leaveLinkFailure,
@@ -59,16 +55,9 @@ export async function saveMarkdown(input: SaveMarkdownInput) {
     dateStr,
   } = input;
 
-  // 제안서/사업계획서: documentInputs를 콘텐츠 앞에 HTML 코멘트로 저장 (다운로드 시 표지 복원용)
-  const shouldEmbedInputs =
-    isProposalTemplate ||
-    isBusinessPlanTemplateName(templateName) ||
-    isMouTemplateName(templateName) ||
-    isEmploymentCertificateTemplateName(templateName) ||
-    isLeaveApplicationTemplateName(templateName) ||
-    isApprovalRequestTemplateName(templateName) ||
-    isStandardLaborContractTemplateName(templateName);
-  // 서명/로고 base64는 다운로드 시 재생성되므로 embed에서 제외 (DB content 비대화 방지)
+  // 모든 양식: documentInputs를 콘텐츠 앞 HTML 코멘트로 저장(다운로드 재렌더 시 입력값 복원).
+  // 과거엔 일부 양식만 저장해 주간업무·회의록 등은 재다운로드 시 내용이 비었다.
+  // 서명/로고 base64는 다운로드 시 재생성되므로 embed에서 제외 (DB content 비대화 방지).
   const embeddableDocumentInputs = Object.fromEntries(
     Object.entries(resolvedDocumentInputs).filter(
       ([key]) =>
@@ -82,9 +71,7 @@ export async function saveMarkdown(input: SaveMarkdownInput) {
         generationResult.markdown ?? "",
         embeddableDocumentInputs,
       )
-    : shouldEmbedInputs
-      ? `<!--DOCUMENT_INPUTS:${JSON.stringify(embeddableDocumentInputs)}-->\n${generationResult.markdown}`
-      : (generationResult.markdown ?? "");
+    : `<!--DOCUMENT_INPUTS:${JSON.stringify(embeddableDocumentInputs)}-->\n${generationResult.markdown ?? ""}`;
 
   const payload = buildDocumentInsertPayload({
     title,
