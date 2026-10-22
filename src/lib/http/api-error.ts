@@ -16,6 +16,17 @@ export function databaseError(
   error: { code?: string; message?: string } | null,
 ) {
   if (!error) return;
+  // P0001(커스텀 RAISE)은 코드가 전부 동일하므로 message로 원인을 세분화한다.
+  // (DB 함수 leave_assert/leave_write의 raise exception 문구와 연동 — 문구 변경 시 함께 갱신)
+  if (error.code === "P0001") {
+    const m = error.message ?? "";
+    let msg = "요청이 현재 상태와 충돌합니다. 잔여량·겹침·연결 상태를 확인해 주세요.";
+    if (m.includes("insufficient balance")) msg = "휴가 잔여일수가 부족합니다. 신청 기간을 줄여 주세요.";
+    else if (m.includes("overlap")) msg = "이미 신청·승인된 휴가와 기간이 겹칩니다. 날짜를 확인해 주세요.";
+    else if (m.includes("leave locked")) msg = "이미 상신되어 수정할 수 없는 휴가원입니다.";
+    else if (m.includes("linked document locked")) msg = "연결된 문서가 있어 내용을 변경할 수 없습니다.";
+    throw new ApiError(msg, 409);
+  }
   const messages: Record<string, [string, number]> = {
     P0001: [
       "요청이 현재 상태와 충돌합니다. 잔여량·겹침·연결 상태를 확인해 주세요.",
