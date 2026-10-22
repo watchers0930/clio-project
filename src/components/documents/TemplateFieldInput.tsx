@@ -24,8 +24,10 @@ interface TemplateFieldInputProps {
 }
 
 export function TemplateFieldInput({ field, value, onChange, extracted }: TemplateFieldInputProps) {
+  // textarea·checkbox 등 긴 입력은 2칼럼 그리드에서 한 줄 전체를 차지한다.
+  const fullWidth = field.type === 'textarea' || field.type === 'checkbox';
   return (
-    <div>
+    <div className={fullWidth ? 'sm:col-span-2' : undefined}>
       <label className="flex items-center gap-1.5 text-xs text-foreground-secondary" style={{ marginBottom: 6 }}>
         {field.label} {field.required && <span className="text-danger">*</span>}
         {extracted && (

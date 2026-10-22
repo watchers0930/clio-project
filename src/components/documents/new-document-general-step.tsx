@@ -154,7 +154,7 @@ export function NewDocumentGeneralStep({
 
   return (
     <>
-    <div className="space-y-5">
+    <div className="space-y-6">
         <div>
           <p className="text-sm font-medium text-foreground" style={{ marginBottom: 8 }}>{isWorklogTemplate ? '수동 입력' : '문서 기본 정보'}</p>
           {isEmploymentCert && (
@@ -175,7 +175,7 @@ export function NewDocumentGeneralStep({
               />
             </div>
           )}
-          <div className="grid grid-cols-1 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {manualFields.map((field) => (
               <TemplateFieldInput
                 key={field.key}
@@ -291,7 +291,6 @@ export function NewDocumentGeneralStep({
             </div>
           </div>
         )}
-        {selectedTemplateItem && <div style={{ height: 20 }} />}
         {isStandardLaborContract && (
           <div className="rounded-2xl border border-primary/30 bg-primary-tint p-4">
             <p className="text-sm font-medium text-foreground" style={{ marginBottom: 8 }}>비밀유지의무 서약</p>
@@ -309,7 +308,6 @@ export function NewDocumentGeneralStep({
             </label>
           </div>
         )}
-        {isStandardLaborContract && <div style={{ height: 20 }} />}
         {selectedTemplate === '__none__' && (
           <div>
             <p className="text-sm font-medium text-foreground" style={{ marginBottom: 5 }}>문서 구조 *</p>
@@ -323,7 +321,6 @@ export function NewDocumentGeneralStep({
             />
           </div>
         )}
-        <div style={{ height: 8 }} />
         <div className="flex flex-col">
           <p className="text-sm text-foreground-secondary" style={{ marginBottom: 10 }}>추가 지시사항 (선택)</p>
           <textarea
