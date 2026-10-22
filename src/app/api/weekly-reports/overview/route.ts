@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     const { data: rows, error } = await query;
     if (error) {
       console.error('[weekly-reports/overview]', error.message);
-      return NextResponse.json({ success: false, error: '주간업무 조회에 실패했습니다.' }, { status: 500 });
+      return NextResponse.json({ success: false, error: `주간업무 조회 실패(디버그): ${error.message}` }, { status: 500 });
     }
 
     type AuthorJoin = { name?: string; rank_title?: string; department_id?: string | null; departments?: { name?: string } | null } | null;
@@ -73,6 +73,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, reports }, { headers: { 'Cache-Control': 'no-store, max-age=0' } });
   } catch (err) {
     console.error('[weekly-reports/overview]', err instanceof Error ? err.message : 'unknown');
-    return NextResponse.json({ success: false, error: '주간업무 조회 중 오류가 발생했습니다.' }, { status: 500 });
+    return NextResponse.json({ success: false, error: `주간업무 조회 오류(디버그): ${err instanceof Error ? err.message : String(err)}` }, { status: 500 });
   }
 }
