@@ -5,6 +5,7 @@ import type { DocumentItem } from '@/components/documents/page-types';
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
 import { useServerRenderedPreview, BUILTIN_FORM_TITLE_RE } from '@/components/documents/use-server-rendered-preview';
 import { DocumentMarkdownBody } from '@/components/documents/document-markdown-body';
+import { stripEmbeddedInputs, getEmbeddedInputsPrefix } from '@/lib/documents/embedded-inputs';
 
 const EMBEDDED_INPUTS_RE = /^<!--(?:PROPOSAL_INPUTS|DOCUMENT_INPUTS):/;
 
@@ -97,6 +98,11 @@ export function DocumentViewerModal({
   const isMarkdownTemplate = !isProposal && !isServerTemplate && !isBuiltinForm && hasEmbeddedInputs;
   // iframe(HTML) 프리뷰 = 제안서(클라 렌더) + 서버 템플릿 + 빌트인 양식
   const useHtmlPreview = isProposal || isServerTemplate || isBuiltinForm;
+  // 원문 편집 textarea에는 입력값 메타 주석(<!--DOCUMENT_INPUTS:...-->)을 숨겨 보여주고,
+  // 편집 결과에는 주석 접두부를 다시 붙여 저장 content에 보존한다(레이아웃 복원용).
+  const editDisplayContent = stripEmbeddedInputs(editContent);
+  const handleEditContentChange = (value: string) =>
+    onChangeContent(getEmbeddedInputsPrefix(editContent) + value);
   const availableDownloadFormats = isProposal ? ['pdf'] : downloadFormatOptions;
   const proposalHtml = isProposal
     ? renderProposalDocumentHtml({
@@ -228,8 +234,8 @@ export function DocumentViewerModal({
                         </p>
                       )}
                       <textarea
-                        value={editContent}
-                        onChange={(e) => onChangeContent(e.target.value)}
+                        value={editDisplayContent}
+                        onChange={(e) => handleEditContentChange(e.target.value)}
                         className="w-full h-full min-h-[360px] text-sm text-foreground leading-relaxed bg-transparent resize-none focus:outline-none font-mono"
                         placeholder="문서 내용을 편집하세요..."
                       />
@@ -268,8 +274,8 @@ export function DocumentViewerModal({
                     </div>
                   ) : (
                     <textarea
-                      value={editContent}
-                      onChange={(e) => onChangeContent(e.target.value)}
+                      value={editDisplayContent}
+                      onChange={(e) => handleEditContentChange(e.target.value)}
                       className="w-full h-full min-h-[360px] text-sm text-foreground leading-relaxed bg-transparent resize-none focus:outline-none font-mono"
                       placeholder="문서 내용을 편집하세요..."
                     />
@@ -277,8 +283,8 @@ export function DocumentViewerModal({
                 </div>
               ) : isDraft ? (
                 <textarea
-                  value={editContent}
-                  onChange={(e) => onChangeContent(e.target.value)}
+                  value={editDisplayContent}
+                  onChange={(e) => handleEditContentChange(e.target.value)}
                   className="w-full h-full min-h-[400px] text-sm text-foreground leading-relaxed bg-transparent resize-none focus:outline-none font-mono"
                   placeholder="문서 내용을 편집하세요..."
                 />
