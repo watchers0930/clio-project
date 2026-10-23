@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { ApiResponse } from '@/lib/supabase/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { requireAdmin } from '@/lib/http/admin-guard';
 
 export async function GET(
   _request: NextRequest,
@@ -65,6 +66,8 @@ export async function PUT(
     if (!authUserId) {
       return NextResponse.json<ApiResponse>({ success: false, error: '인증이 필요합니다.' }, { status: 401 });
     }
+    const guard = await requireAdmin(supabase, authUserId);
+    if (guard) return guard;
 
     const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (body.name !== undefined) updateData.name = body.name;
@@ -109,6 +112,8 @@ export async function DELETE(
     if (!authUserId) {
       return NextResponse.json<ApiResponse>({ success: false, error: '인증이 필요합니다.' }, { status: 401 });
     }
+    const guard = await requireAdmin(supabase, authUserId);
+    if (guard) return guard;
 
     void request; // lint
 

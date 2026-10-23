@@ -346,6 +346,11 @@ export function MenusSection() {
   const [saving, setSaving] = useState<string | null>(null);
   const [enabled, setEnabled] = useState<string[]>((user?.sidebar_menus ?? []) as string[]);
 
+  // 대량이체는 대표(rank_level<=1)·관리자(role='admin')만 설정 가능(사이드바 노출 조건과 동일).
+  const rankLevel = (user as { rank_level?: number | null } | null)?.rank_level;
+  const canViewAdminMenu = user?.role === 'admin' || (typeof rankLevel === 'number' && rankLevel <= 1);
+  const visibleOptions = MENU_OPTIONS.filter((opt) => canViewAdminMenu || opt.key !== 'bulk-transfer');
+
   const toggle = async (key: string) => {
     const next = enabled.includes(key)
       ? enabled.filter((k) => k !== key)
@@ -378,7 +383,7 @@ export function MenusSection() {
       </div>
 
       <div className="divide-y divide-border rounded-xl border border-border overflow-hidden">
-        {MENU_OPTIONS.map((opt) => {
+        {visibleOptions.map((opt) => {
           const Icon = opt.icon;
           const isOn = enabled.includes(opt.key);
           const isSaving = saving === opt.key;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { requireAdminOrCeo } from '@/lib/http/admin-guard';
 import { encryptPassword, decryptPassword } from '@/lib/crypto/credentials';
 
 type CredRow = { id: string; site_name: string; site_url: string; username: string; enc_password: string; created_at: string };
@@ -13,6 +14,9 @@ export async function GET() {
 
   const userId = await getAuthUserId(supabase);
   if (!userId) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+
+  const guard = await requireAdminOrCeo(supabase, userId);
+  if (guard) return guard;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
@@ -42,6 +46,9 @@ export async function POST(request: NextRequest) {
 
   const userId = await getAuthUserId(supabase);
   if (!userId) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+
+  const guard = await requireAdminOrCeo(supabase, userId);
+  if (guard) return guard;
 
   const body = await request.json() as { site_name?: string; site_url?: string; username?: string; password?: string };
   const { site_name, site_url, username, password } = body;

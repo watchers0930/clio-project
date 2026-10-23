@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { requireAdminOrCeo } from '@/lib/http/admin-guard';
 import { encryptPassword } from '@/lib/crypto/credentials';
 
 interface BulkItem {
@@ -17,6 +18,9 @@ export async function POST(request: NextRequest) {
 
   const userId = await getAuthUserId(supabase);
   if (!userId) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+
+  const guard = await requireAdminOrCeo(supabase, userId);
+  if (guard) return guard;
 
   const body = await request.json() as { items?: BulkItem[] };
   const items = body.items;

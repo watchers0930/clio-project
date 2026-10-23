@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { requireAdminOrCeo } from '@/lib/http/admin-guard';
 import bcrypt from 'bcryptjs';
 
 // GET — 비밀번호 설정 여부 조회
@@ -11,6 +12,9 @@ export async function GET() {
 
   const userId = await getAuthUserId(supabase);
   if (!userId) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+
+  const guard = await requireAdminOrCeo(supabase, userId);
+  if (guard) return guard;
 
   const admin = createAdminSupabaseClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -31,6 +35,9 @@ export async function POST(request: NextRequest) {
 
   const userId = await getAuthUserId(supabase);
   if (!userId) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+
+  const guard = await requireAdminOrCeo(supabase, userId);
+  if (guard) return guard;
 
   const { password } = await request.json() as { password?: string };
   if (!password || password.length < 4) {

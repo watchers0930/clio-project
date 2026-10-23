@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { requireAdminOrCeo } from '@/lib/http/admin-guard';
 import { encryptPassword } from '@/lib/crypto/credentials';
 
 // PATCH — 수정
@@ -15,6 +16,9 @@ export async function PATCH(
 
   const userId = await getAuthUserId(supabase);
   if (!userId) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+
+  const guard = await requireAdminOrCeo(supabase, userId);
+  if (guard) return guard;
 
   const body = await request.json() as { site_name?: string; site_url?: string; username?: string; password?: string };
   const { site_name, site_url, username, password } = body;
@@ -52,6 +56,9 @@ export async function DELETE(
 
   const userId = await getAuthUserId(supabase);
   if (!userId) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+
+  const guard = await requireAdminOrCeo(supabase, userId);
+  if (guard) return guard;
 
   const admin = createAdminSupabaseClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

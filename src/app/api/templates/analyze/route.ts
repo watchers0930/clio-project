@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { requireAdmin } from '@/lib/http/admin-guard';
 import { analyzeDocumentStructure } from '@/lib/ai/analyze-template';
 import { extractText } from '@/lib/ai/extract-text';
 import { randomUUID } from 'crypto';
@@ -55,6 +56,8 @@ export async function POST(request: NextRequest) {
     if (!authUserId) {
       return NextResponse.json({ success: false, error: '인증 필요' }, { status: 401 });
     }
+    const guard = await requireAdmin(supabase, authUserId);
+    if (guard) return guard;
     const admin = createAdminSupabaseClient();
 
     const formData = await request.formData();

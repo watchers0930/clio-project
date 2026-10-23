@@ -307,11 +307,11 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
 
   const settingsTabs = [
     { id: 'menus', label: '메뉴', icon: <LayoutGrid size={15} /> },
-    { id: 'departments', label: '부서', icon: <Building2 size={15} /> },
+    ...(isAdmin ? [{ id: 'departments', label: '부서', icon: <Building2 size={15} /> }] : []),
     ...(isAdmin ? [{ id: 'users', label: '사용자', icon: <Users size={15} /> }] : []),
     ...(isAdmin ? [{ id: 'org-chart', label: '조직도', icon: <Network size={15} /> }] : []),
     { id: 'signature', label: '서명', icon: <PenLine size={15} /> },
-    { id: 'templates', label: '템플릿', icon: <FileText size={15} /> },
+    ...(isAdmin ? [{ id: 'templates', label: '템플릿', icon: <FileText size={15} /> }] : []),
     { id: 'memo-lock', label: '메모 잠금', icon: <Lock size={15} /> },
     { id: 'gmail', label: 'Gmail', icon: <Mail size={15} /> },
     { id: 'local-sync', label: '로컬 동기화', icon: <HardDrive size={15} /> },
@@ -355,7 +355,7 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
       </div>
 
       {tab === 'menus' && <div><MenusSection /></div>}
-      {tab === 'departments' && <div><DepartmentsSection departments={departments} onOpenDeptModal={openDeptModal} onDeleteDept={deleteDept} /></div>}
+      {tab === 'departments' && isAdmin && <div><DepartmentsSection departments={departments} onOpenDeptModal={openDeptModal} onDeleteDept={deleteDept} /></div>}
       {tab === 'users' && isAdmin && (
         <div>
         <UsersSection
@@ -399,7 +399,7 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
         />
         </div>
       )}
-      {tab === 'templates' && <div><TemplatesPage /></div>}
+      {tab === 'templates' && isAdmin && <div><TemplatesPage /></div>}
       {tab === 'gmail' && <GmailSection successParam={gmailSuccess} errorParam={gmailError} msgParam={gmailMsg} />}
       {tab === 'org-chart' && isAdmin && <div><OrgChartSection /></div>}
       {tab === 'memo-lock' && <MemoLockSection />}

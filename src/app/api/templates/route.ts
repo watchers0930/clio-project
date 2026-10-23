@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { requireAdmin } from '@/lib/http/admin-guard';
 import { mimeToType, formatSize } from '@/lib/utils/format';
 import {
   parseTemplateBundle,
@@ -106,6 +107,8 @@ export async function POST(request: NextRequest) {
     if (!authUserId) {
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
     }
+    const guard = await requireAdmin(supabase, authUserId);
+    if (guard) return guard;
     const admin = createAdminSupabaseClient();
 
     const contentType = request.headers.get('content-type') ?? '';
@@ -261,6 +264,8 @@ export async function PUT(request: NextRequest) {
     if (!authUserId) {
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
     }
+    const guard = await requireAdmin(supabase, authUserId);
+    if (guard) return guard;
     const admin = createAdminSupabaseClient();
 
     const contentType = request.headers.get('content-type') ?? '';
@@ -438,6 +443,8 @@ export async function DELETE(request: NextRequest) {
     if (!authUserId) {
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
     }
+    const guard = await requireAdmin(supabase, authUserId);
+    if (guard) return guard;
 
     const { error } = await supabase.from('templates').delete().eq('id', id);
     if (error) {

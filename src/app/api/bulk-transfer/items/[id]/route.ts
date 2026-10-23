@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { requireAdminOrCeo } from '@/lib/http/admin-guard';
 import { decryptPassword } from '@/lib/crypto/credentials';
 import { validateItemInput } from '@/lib/bulk-transfer/validate';
 import { mapItem, type RawItem } from '@/lib/bulk-transfer/map';
@@ -24,6 +25,9 @@ export async function PATCH(
 
   const userId = await getAuthUserId(supabase);
   if (!userId) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+
+  const guard = await requireAdminOrCeo(supabase, userId);
+  if (guard) return guard;
 
   let body: unknown;
   try {
@@ -102,6 +106,9 @@ export async function DELETE(
 
   const userId = await getAuthUserId(supabase);
   if (!userId) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+
+  const guard = await requireAdminOrCeo(supabase, userId);
+  if (guard) return guard;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any;
