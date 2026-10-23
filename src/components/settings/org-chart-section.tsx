@@ -18,9 +18,10 @@ export interface OrgUser {
 // 직위 프리셋 — 선택 시 rank_level·rank_title을 함께 설정한다.
 const RANK_PRESETS = [
   { level: 1, title: '대표' },
-  { level: 2, title: '이사' },
-  { level: 3, title: '팀장' },
-  { level: 4, title: '사원' },
+  { level: 2, title: '부대표' },
+  { level: 3, title: '이사' },
+  { level: 4, title: '팀장' },
+  { level: 5, title: '사원' },
 ];
 
 function rankLabel(u: OrgUser): string {
@@ -163,9 +164,9 @@ export function OrgChartSection() {
       <div className="bg-card rounded-2xl border border-border p-8">
         <h3 className="text-[14px] font-semibold mb-1">조직 트리 미리보기</h3>
         <p className="text-[12px] text-foreground-secondary mb-4">직위 레벨 순으로 정렬한 결재 상위 흐름입니다.</p>
-        <div className="flex flex-col gap-1.5">
+        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
           {tree.map((u) => (
-            <div key={u.id} className="flex items-center gap-2.5 text-[13px]" style={{ paddingLeft: `${Math.min((u.rank_level ?? 5) - 1, 6) * 20}px` }}>
+            <div key={u.id} className="flex items-center gap-2.5 text-[13px]" style={{ paddingLeft: `${Math.min((u.rank_level ?? 5) - 1, 4) * 12}px` }}>
               <span className="text-[10.5px] font-bold text-white bg-[#2E6FF2] px-2 py-0.5 rounded min-w-[44px] text-center">{rankLabel(u)}</span>
               <span className="font-medium text-foreground">{u.name}</span>
               <span className="text-[11.5px] text-foreground-secondary">
