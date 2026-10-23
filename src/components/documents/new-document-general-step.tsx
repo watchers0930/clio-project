@@ -1,23 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
-import { createTemplateBundle } from '@/lib/templates/template-schema';
-import { renderTemplatePreviewHtml } from '@/lib/templates/template-preview';
 import type { TemplateItem } from '@/components/documents/page-types';
-import { LeaveEmployeePicker } from '@/components/documents/LeaveEmployeePicker';
-import { EmploymentCertAutofill } from '@/components/documents/EmploymentCertAutofill';
-import { useDocumentUserAutofill } from '@/components/documents/use-document-user-autofill';
-import { WeeklyWorkRowsEditor } from '@/components/documents/WeeklyWorkRowsEditor';
-import { MeetingContentInput } from '@/components/documents/MeetingContentInput';
-import { TemplateFieldInput } from '@/components/documents/TemplateFieldInput';
-import { NewDocumentPreviewModal } from '@/components/documents/NewDocumentPreviewModal';
-import { NDA_CLAUSE_TEXT } from '@/lib/templates/standard-labor-contract';
-
-const AUTO_INPUT_FIELD_KEYS = new Set([
-  'author',
-  'author_department',
-  'author_position',
-  'report_date',
-  'report_time',
-]);
+import type { TemplateFieldDefinition } from '@/lib/templates/template-schema';
+import { DocumentInputFields } from '@/components/documents/document-input-fields';
+import { useDocumentInputAutofill } from '@/components/documents/use-document-input-autofill';
 
 interface NewDocumentGeneralStepProps {
   isWorklogTemplate: boolean;
@@ -29,19 +13,7 @@ interface NewDocumentGeneralStepProps {
   instructions: string;
   customStructure: string;
   outputFormat: string;
-  templateFields: Array<{
-    key: string;
-    label: string;
-    type: 'text' | 'textarea' | 'date' | 'checkbox' | 'select';
-    required?: boolean;
-    placeholder?: string;
-    defaultValue?: string;
-    autoFill?: 'user' | 'source' | 'document';
-    aiAssist?: boolean;
-    options?: string[];
-    showWhen?: { field: string; equals?: string; notEquals?: string };
-    format?: 'currency' | 'phone';
-  }>;
+  templateFields: TemplateFieldDefinition[];
   allowedOutputFormats: readonly string[];
   extractedFieldKeys?: Set<string>;
   onSetDocumentInputs: (updater: (prev: Record<string, string>) => Record<string, string>) => void;
@@ -52,6 +24,11 @@ interface NewDocumentGeneralStepProps {
   onSetCustomStructure: (value: string) => void;
 }
 
+/**
+ * 새 문서 생성 폼의 "기본 정보" step.
+ * 입력값 영역은 생성·편집 공용 `DocumentInputFields`로 위임하고,
+ * 이 컴포넌트는 생성 전용 설정(출력 포맷·커스텀 구조)과 생성 자동채움 정책만 조합한다.
+ */
 export function NewDocumentGeneralStep({
   isWorklogTemplate,
   selectedTemplate,
@@ -72,309 +49,88 @@ export function NewDocumentGeneralStep({
   onSetAiAssistPrompt,
   onSetCustomStructure,
 }: NewDocumentGeneralStepProps) {
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const previewBaseBundle = selectedTemplateItem
-    ? createTemplateBundle({
-        name: selectedTemplateItem.name,
-        description: selectedTemplateItem.description,
-        outline: selectedTemplateItem.content,
-      })
-    : null;
-  const previewBundle = selectedTemplateItem && previewBaseBundle
-    ? {
-        ...previewBaseBundle,
-        layoutHtml: selectedTemplateItem.templateHtml || previewBaseBundle.layoutHtml,
-        fields: selectedTemplateItem.templateFields ?? [],
-        sections: selectedTemplateItem.templateSections ?? [],
-      }
-    : null;
-  const previewSrc = selectedTemplateItem?.templateFile ? `/api/templates/${selectedTemplateItem.id}/preview-html` : undefined;
-  const previewDoc = selectedTemplateItem && !selectedTemplateItem.templateFile && previewBundle
-    ? renderTemplatePreviewHtml(previewBundle, selectedTemplateItem.name)
-    : undefined;
-  const autoFields = templateFields.filter((field) => field.autoFill);
-  // nda_agree(비밀유지 동의)는 왼쪽 필드목록이 아니라 오른쪽 서약 박스에서 별도 처리
-  const allManualFields = templateFields.filter((field) => !field.autoFill && !field.aiAssist && field.key !== 'nda_agree' && field.key !== 'work_rows' && field.key !== 'next_week_plan');
-  const aiFields = templateFields.filter((field) => field.aiAssist);
-  const isStandardLaborContract = Boolean(selectedTemplateItem?.name && /근로계약서/.test(selectedTemplateItem.name));
-  const isWeeklyReport = Boolean(selectedTemplateItem?.name && /주간\s*업무/.test(selectedTemplateItem.name));
-  const isMeeting = selectedTemplateItem?.name === '회의록';
+  // 미사용(과거 보조 입력 UI) — 인터페이스/상위 호출 호환을 위해 수신만 한다.
+  void aiAssistEnabled;
+  void aiAssistPrompt;
+  void instructions;
+  void onSetInstructions;
+  void onSetAiAssistEnabled;
+  void onSetAiAssistPrompt;
 
-  const isEmploymentCert = selectedTemplateItem?.name === '재직증명서';
-  // 재직증명서: 본인 정보 자동입력 → 제출용도만 입력.
-  // 단, 자동입력이 안 된 필수 필드(예: 프로필에 입사일 없음)는 숨기지 않고 보여준다.
-  const baseManualFields = isEmploymentCert
-    ? allManualFields.filter(
-        (field) => field.key === 'purpose' || (field.required && !documentInputs[field.key]?.trim()),
-      )
-    : allManualFields;
-  // showWhen 조건부 필드: 다른 필드 값에 따라 입력폼 노출 (예: 근로의 종류가 정규직이 아닐 때만 계약기간)
-  const manualFields = baseManualFields.filter((field) => {
-    if (!field.showWhen) return true;
-    const depValue = (documentInputs[field.showWhen.field] ?? '').trim();
-    if (field.showWhen.equals !== undefined) return depValue === field.showWhen.equals;
-    if (field.showWhen.notEquals !== undefined) return depValue !== field.showWhen.notEquals;
-    return true;
-  });
+  const templateName = selectedTemplateItem?.name;
+  const isWeeklyReport = Boolean(templateName && /주간\s*업무/.test(templateName));
 
-  // 로그인 사용자 본인 정보(이름·소속·직급·입사일·연락처 등)를 비어 있는 필드에 프리필
-  useDocumentUserAutofill({
-    templateName: selectedTemplateItem?.name,
+  // 생성 자동채움: 본인 정보 프리필 + 주간업무 보고기간 이번 주 설정(비어 있을 때만)
+  useDocumentInputAutofill({
+    mode: 'create',
+    templateName,
     templateFields,
+    isWeeklyReport,
+    reportPeriod: documentInputs.report_period,
     onSetDocumentInputs,
   });
 
-  // 주간업무: 보고기간을 이번 주(월~금)로 자동 설정 (비어 있을 때만)
-  useEffect(() => {
-    if (!isWeeklyReport || documentInputs.report_period?.trim()) return;
-    const d = new Date();
-    const dow = d.getDay(); // 0=일 ~ 6=토
-    const mon = new Date(d);
-    mon.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow));
-    const fri = new Date(mon);
-    fri.setDate(mon.getDate() + 4);
-    const fmt = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
-    const period = `${fmt(mon)} ~ ${fmt(fri)}`;
-    onSetDocumentInputs((prev) => (prev.report_period?.trim() ? prev : { ...prev, report_period: period }));
-  }, [isWeeklyReport, documentInputs.report_period, onSetDocumentInputs]);
-
-  const handleCertAutofill = useCallback((p: {
-    name: string; resident_no: string; address: string; department: string; position: string; hire_date: string;
-  }) => {
-    onSetDocumentInputs((prev) => ({
-      ...prev,
-      employee_name: p.name || prev.employee_name || '',
-      resident_registration_no: p.resident_no || prev.resident_registration_no || '',
-      employee_address: p.address || prev.employee_address || '',
-      department: p.department || prev.department || '',
-      position: p.position || prev.position || '',
-      employment_start_date: p.hire_date || prev.employment_start_date || '',
-    }));
-  }, [onSetDocumentInputs]);
-
   return (
-    <>
     <div className="flex flex-col gap-6">
-        {autoFields.length > 0 && (
-          <div>
-            <p className="text-sm font-medium text-foreground" style={{ marginBottom: 8 }}>자동 입력</p>
-            <div className="grid grid-cols-2 gap-3">
-              {autoFields.map((field) => (
-                <div key={field.key}>
-                  <label className="block text-xs text-foreground-secondary" style={{ marginBottom: 6 }}>
-                    {field.label}
-                  </label>
-                  <div className="w-full px-4 py-2.5 rounded-xl border border-dashed border-border bg-surface-secondary text-sm text-foreground-secondary">
-                    {documentInputs[field.key]?.trim()
-                      ? <span className="text-foreground">{documentInputs[field.key]}</span>
-                      : AUTO_INPUT_FIELD_KEYS.has(field.key)
-                        ? '로그인 사용자 정보와 현재 날짜 기준으로 자동 입력됩니다.'
-                        : '시스템이 자동 입력합니다.'}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        <div>
-          <p className="text-sm font-medium text-foreground" style={{ marginBottom: 8 }}>{isWorklogTemplate ? '수동 입력' : '문서 기본 정보'}</p>
-          {isEmploymentCert && (
-            <div style={{ marginBottom: 12 }}>
-              <EmploymentCertAutofill onLoaded={handleCertAutofill} />
-            </div>
-          )}
-          {selectedTemplateItem?.name === '휴가원' && (
-            <div style={{ marginBottom: 12 }}>
-              <LeaveEmployeePicker
-                onSelect={(m, deptName) => onSetDocumentInputs((prev) => ({
-                  ...prev,
-                  department: deptName || prev.department || '',
-                  employee_name: m.name,
-                  hire_date: m.hire_date ?? prev.hire_date ?? '',
-                  emergency_contact: m.phone ?? prev.emergency_contact ?? '',
-                }))}
-              />
-            </div>
-          )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {manualFields.map((field) => (
-              <TemplateFieldInput
-                key={field.key}
-                field={field}
-                value={documentInputs[field.key] ?? ''}
-                onChange={onSetDocumentInputs}
-                extracted={extractedFieldKeys?.has(field.key)}
-              />
-            ))}
-          </div>
-          {isWeeklyReport && (
-            <div style={{ marginTop: 12 }}>
-              <WeeklyWorkRowsEditor
-                value={documentInputs.work_rows ?? ''}
-                onChange={(json) => onSetDocumentInputs((prev) => ({ ...prev, work_rows: json }))}
-              />
-            </div>
-          )}
-          {isWeeklyReport && templateFields.find((f) => f.key === 'next_week_plan') && (
-            <TemplateFieldInput
-              field={templateFields.find((f) => f.key === 'next_week_plan')!}
-              value={documentInputs.next_week_plan ?? ''}
-              onChange={onSetDocumentInputs}
-              extracted={extractedFieldKeys?.has('next_week_plan')}
-            />
-          )}
-          {isMeeting && (
-            <div style={{ marginTop: 12 }}>
-              <MeetingContentInput
-                summaryValue={documentInputs.meeting_summary ?? ''}
-                resultValue={documentInputs.meeting_result ?? ''}
-                onChangeSummary={(v) => onSetDocumentInputs((prev) => ({ ...prev, meeting_summary: v }))}
-                onChangeResult={(v) => onSetDocumentInputs((prev) => ({ ...prev, meeting_result: v }))}
-              />
-            </div>
-          )}
-        </div>
+      <DocumentInputFields
+        mode="create"
+        templateName={templateName}
+        templateFields={templateFields}
+        documentInputs={documentInputs}
+        onSetDocumentInputs={onSetDocumentInputs}
+        extractedFieldKeys={extractedFieldKeys}
+        manualLabel={isWorklogTemplate ? '수동 입력' : '문서 기본 정보'}
+      />
 
-        {aiFields.length > 0 && (
-          <div className="rounded-2xl border border-border-tint bg-primary-tint p-4">
-            <p className="text-sm font-medium text-foreground">AI 자동 입력</p>
-            <div className="mt-3 space-y-3">
-              {aiFields.map((field) => (
-                <div key={field.key}>
-                  <label className="block text-xs text-foreground-secondary" style={{ marginBottom: 6 }}>
-                    {field.label}
-                  </label>
-                  <div className="w-full px-4 py-2.5 rounded-xl border border-border-tint bg-white text-sm text-foreground-secondary">
-                    선택한 소스 파일 분석과 AI 보강 설정을 기준으로 자동 반영됩니다.
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div>
-          <p className="text-sm font-medium text-foreground" style={{ marginBottom: 8 }}>출력 포맷</p>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { value: 'docx', label: 'DOCX', icon: '📄', desc: '문서 파일' },
-              { value: 'hwpx', label: 'HWPX', icon: '📝', desc: '한글 문서' },
-              { value: 'pdf', label: 'PDF', icon: '📕', desc: '인쇄용 문서' },
-              { value: 'xlsx', label: 'XLSX', icon: '📊', desc: 'Excel 보고서' },
-              { value: 'pptx', label: 'PPTX', icon: '📙', desc: '프레젠테이션' },
-            ].filter((format) => allowedOutputFormats.includes(format.value)).map((format) => (
+      <div>
+        <p className="text-sm font-medium text-foreground" style={{ marginBottom: 8 }}>출력 포맷</p>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { value: 'docx', label: 'DOCX', icon: '📄', desc: '문서 파일' },
+            { value: 'hwpx', label: 'HWPX', icon: '📝', desc: '한글 문서' },
+            { value: 'pdf', label: 'PDF', icon: '📕', desc: '인쇄용 문서' },
+            { value: 'xlsx', label: 'XLSX', icon: '📊', desc: 'Excel 보고서' },
+            { value: 'pptx', label: 'PPTX', icon: '📙', desc: '프레젠테이션' },
+          ]
+            .filter((format) => allowedOutputFormats.includes(format.value))
+            .map((format) => (
               <button
                 key={format.value}
                 onClick={() => onSetOutputFormat(format.value)}
-                className={`p-3 rounded-xl border transition-all flex flex-col items-center justify-center text-center ${outputFormat === format.value ? 'border-primary bg-primary-tint ring-2 ring-primary/30' : 'border-border hover:border-primary'}`}
+                className={`p-3 rounded-xl border transition-all flex flex-col items-center justify-center text-center ${
+                  outputFormat === format.value
+                    ? 'border-primary bg-primary-tint ring-2 ring-primary/30'
+                    : 'border-border hover:border-primary'
+                }`}
               >
                 <span className="text-xl leading-none">{format.icon}</span>
                 <p className="text-xs font-bold text-foreground mt-1">{format.label}</p>
                 <p className="text-[10px] text-foreground-secondary">{format.desc}</p>
               </button>
             ))}
-          </div>
-          {selectedTemplateItem?.templateFile?.name && (
-            <p className="mt-2 text-xs text-foreground-secondary">
-              현재 템플릿 파일 형식은 <span className="font-medium text-foreground">{selectedTemplateItem.templateFile.type}</span>이며, 호환되는 출력 포맷만 표시됩니다.
-            </p>
-          )}
         </div>
+        {selectedTemplateItem?.templateFile?.name && (
+          <p className="mt-2 text-xs text-foreground-secondary">
+            현재 템플릿 파일 형식은{' '}
+            <span className="font-medium text-foreground">{selectedTemplateItem.templateFile.type}</span>이며, 호환되는
+            출력 포맷만 표시됩니다.
+          </p>
+        )}
+      </div>
 
-        {false && selectedTemplateItem && (
-          <div className="rounded-2xl border border-border bg-surface-secondary px-4 py-4">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-sm font-medium text-foreground">템플릿 양식 미리보기</p>
-                <p className="mt-1 text-xs text-foreground-secondary">새 문서 미리보기는 팝업에서 확인합니다.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPreviewOpen(true)}
-                className="inline-flex items-center justify-center rounded-xl bg-foreground px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary"
-              >
-                미리보기 열기
-              </button>
-            </div>
-          </div>
-        )}
-        {isStandardLaborContract && (
-          <div className="rounded-2xl border border-primary/30 bg-primary-tint p-4">
-            <p className="text-sm font-medium text-foreground" style={{ marginBottom: 8 }}>비밀유지의무 서약</p>
-            <div className="max-h-44 overflow-y-auto rounded-lg border border-border bg-white px-3 py-2.5 text-xs leading-relaxed text-foreground-secondary" style={{ marginBottom: 12 }}>
-              {NDA_CLAUSE_TEXT}
-            </div>
-            <label className="flex items-start gap-2 text-sm text-foreground cursor-pointer">
-              <input
-                type="checkbox"
-                checked={documentInputs.nda_agree === '동의'}
-                onChange={(e) => onSetDocumentInputs((prev) => ({ ...prev, nda_agree: e.target.checked ? '동의' : '' }))}
-                className="mt-0.5 rounded border-border text-primary focus:ring-primary"
-              />
-              <span>위 비밀유지의무에 동의하며 이를 성실히 준수할 것을 서약합니다.</span>
-            </label>
-          </div>
-        )}
-        {selectedTemplate === '__none__' && (
-          <div>
-            <p className="text-sm font-medium text-foreground" style={{ marginBottom: 5 }}>문서 구조 *</p>
-            <p className="text-xs text-foreground-secondary" style={{ marginBottom: 8 }}>AI가 이 구조를 따라 문서를 생성합니다</p>
-            <textarea
-              value={customStructure}
-              onChange={(e) => onSetCustomStructure(e.target.value)}
-              placeholder={"예:\n# 업무일지\n## 오늘의 업무\n- 주요 업무 내용 1\n- 주요 업무 내용 2\n## 문제점 및 해결 방안\n## 내일의 계획"}
-              rows={6}
-              className="w-full px-4 py-3 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none font-mono"
-            />
-          </div>
-        )}
-        {false && (
-        <div className="flex flex-col">
-          <p className="text-sm text-foreground-secondary" style={{ marginBottom: 10 }}>추가 지시사항 (선택)</p>
+      {selectedTemplate === '__none__' && (
+        <div>
+          <p className="text-sm font-medium text-foreground" style={{ marginBottom: 5 }}>문서 구조 *</p>
+          <p className="text-xs text-foreground-secondary" style={{ marginBottom: 8 }}>AI가 이 구조를 따라 문서를 생성합니다</p>
           <textarea
-            value={instructions}
-            onChange={(e) => onSetInstructions(e.target.value)}
-            placeholder="예: 핵심 수치 위주로 요약해 주세요. 표 형태로 정리해 주세요."
-            rows={5}
-            className="w-full px-4 py-3 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+            value={customStructure}
+            onChange={(e) => onSetCustomStructure(e.target.value)}
+            placeholder={'예:\n# 업무일지\n## 오늘의 업무\n- 주요 업무 내용 1\n- 주요 업무 내용 2\n## 문제점 및 해결 방안\n## 내일의 계획'}
+            rows={6}
+            className="w-full px-4 py-3 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none font-mono"
           />
         </div>
-        )}
-        {false && (
-        <div className="rounded-2xl border border-border-tint bg-primary-tint p-4">
-          <label className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              checked={aiAssistEnabled}
-              onChange={(e) => onSetAiAssistEnabled(e.target.checked)}
-              className="rounded border-primary/30 text-primary focus:ring-primary"
-            />
-            <div>
-              <p className="text-sm font-medium text-foreground">AI 보강 사용</p>
-              <p className="text-xs text-foreground-secondary">비어 있는 항목과 서술을 AI가 참조 자료 기준으로 보강합니다.</p>
-            </div>
-          </label>
-          {aiAssistEnabled && (
-            <textarea
-              value={aiAssistPrompt}
-              onChange={(e) => onSetAiAssistPrompt(e.target.value)}
-              placeholder="예: 실행안 중심으로 보강하고, 불확실한 값은 [확인필요]로 남겨주세요."
-              rows={3}
-              className="mt-3 w-full px-4 py-3 rounded-xl border border-border-tint bg-white text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-            />
-          )}
-        </div>
-        )}
+      )}
     </div>
-    {false && selectedTemplateItem && (
-      <NewDocumentPreviewModal
-        open={previewOpen}
-        onClose={() => setPreviewOpen(false)}
-        templateItem={selectedTemplateItem!}
-        previewSrc={previewSrc}
-        previewDoc={previewDoc}
-      />
-    )}
-    </>
   );
 }

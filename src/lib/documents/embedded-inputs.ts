@@ -19,3 +19,47 @@ export function getEmbeddedInputsPrefix(content: string): string {
   const match = content.match(EMBEDDED_INPUTS_RE);
   return match ? match[0] : '';
 }
+
+
+export type ParseEmbeddedInputsResult =
+  | { ok: true; inputs: Record<string, string>; prefix: string }
+  | { ok: false; reason: 'no-comment' | 'proposal' | 'invalid-json' | 'invalid-shape' };
+
+/** Only the leading, single-line DOCUMENT_INPUTS comment is editable. */
+export function parseEmbeddedInputs(content: string): ParseEmbeddedInputsResult {
+  if (content.startsWith('<!--PROPOSAL_INPUTS:')) return { ok: false, reason: 'proposal' };
+  if (!content.startsWith('<!--DOCUMENT_INPUTS:')) return { ok: false, reason: 'no-comment' };
+  const match = content.match(/^<!--DOCUMENT_INPUTS:([^\r\n]*?)-->(?:\r?\n)?/);
+  if (!match) return { ok: false, reason: 'invalid-json' };
+  let inputs: unknown;
+  try { inputs = JSON.parse(match[1]); }
+  catch { return { ok: false, reason: 'invalid-json' }; }
+  if (!isStringRecord(inputs)) return { ok: false, reason: 'invalid-shape' };
+  return { ok: true, inputs, prefix: match[0] };
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    && (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null)
+    && Object.values(value).every((entry) => typeof entry === 'string');
+}
+
+export type BuildContentResult =
+  | { ok: true; content: string; changed: boolean }
+  | { ok: false; reason: 'no-comment' | 'proposal' | 'invalid-json' | 'invalid-shape' };
+
+export function buildContentWithInputs(content: string, patch: Record<string, string>): BuildContentResult {
+  const parsed = parseEmbeddedInputs(content);
+  if (!parsed.ok) return parsed;
+  if (!isStringRecord(patch)) return { ok: false, reason: 'invalid-shape' };
+  const merged = { ...parsed.inputs, ...patch };
+  const keys = Object.keys(merged);
+  if (keys.length === Object.keys(parsed.inputs).length
+    && keys.every((key) => Object.hasOwn(parsed.inputs, key) && merged[key] === parsed.inputs[key])) {
+    return { ok: true, content, changed: false };
+  }
+  // JSON unicode escapes are decoded by JSON.parse; raw comment terminators never enter HTML.
+  const serialized = JSON.stringify(merged).replace(/-->/g, '--\\u003e');
+  const commentEnd = content.indexOf('-->') + 3;
+  return { ok: true, content: `<!--DOCUMENT_INPUTS:${serialized}-->${content.slice(commentEnd)}`, changed: true };
+}

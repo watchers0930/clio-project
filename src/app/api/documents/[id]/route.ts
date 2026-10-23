@@ -1,3 +1,4 @@
+import { validateDocumentUpdate } from '@/schemas/document-update';
 import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import type { ApiResponse } from '@/lib/supabase/types';
@@ -313,8 +314,13 @@ export async function PATCH(
   if (mutation.error) return mutation.error;
   try {
     const { id } = await params;
-    const body = await request.json();
-    const { content, status, title } = body as { content?: string; status?: string; title?: string };
+    let body: unknown;
+    try { body = await request.json(); }
+    catch { return NextResponse.json<ApiResponse>({ success: false, error: '유효한 JSON 요청이 필요합니다.' }, { status: 400 }); }
+    const validated = validateDocumentUpdate(body);
+    if (!validated.ok) return NextResponse.json<ApiResponse>({ success: false, error: validated.error }, { status: 400 });
+    const { updates } = validated;
+    const { content, status } = updates;
 
     const supabase = mutation.supabase;
     if (!supabase) {
@@ -334,15 +340,6 @@ export async function PATCH(
     const canManage = await canManageDocument(supabase, authUserId, roleInfo.role, id);
     if (!canManage) {
       return NextResponse.json<ApiResponse>({ success: false, error: '문서 수정 권한이 없습니다.' }, { status: 403 });
-    }
-
-    const updates: Record<string, unknown> = {};
-    if (content !== undefined) updates.content = content;
-    if (status !== undefined) updates.status = status;
-    if (title !== undefined) updates.title = title;
-
-    if (Object.keys(updates).length === 0) {
-      return NextResponse.json<ApiResponse>({ success: false, error: '수정할 내용이 없습니다.' }, { status: 400 });
     }
 
     const { data, error } = await supabase
@@ -374,7 +371,7 @@ export async function PATCH(
 
     return NextResponse.json<ApiResponse>({ success: true, data });
   } catch {
-    return NextResponse.json<ApiResponse>({ success: false, error: '문서 수정 중 오류' }, { status: 500 });
+    return NextResponse.json<ApiResponse>({ success: false, error: '문서 수정에 실패했습니다.' }, { status: 500 });
   }
 }
 

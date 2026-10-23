@@ -1,3 +1,4 @@
+import { createWorklogTemplateBundle, WORKLOG_TEMPLATE_NAME, isWorklogTemplateName } from '@/lib/templates/worklog';
 import type { DbTemplate } from '@/lib/supabase/types';
 import { parseTemplateBundle, type TemplateBundle } from '@/lib/templates/template-schema';
 import {
@@ -35,6 +36,7 @@ export const BUILTIN_EMPLOYMENT_CERTIFICATE_TEMPLATE_ID = '__builtin_employment_
 export const BUILTIN_LEAVE_APPLICATION_TEMPLATE_ID = '__builtin_leave_application__';
 export const BUILTIN_APPROVAL_REQUEST_TEMPLATE_ID = '__builtin_approval_request__';
 export const BUILTIN_STANDARD_LABOR_CONTRACT_TEMPLATE_ID = '__builtin_standard_labor_contract__';
+export const BUILTIN_WORKLOG_TEMPLATE_ID = '__builtin_worklog__';
 export const BUILTIN_WEEKLY_REPORT_TEMPLATE_ID = '__builtin_weekly_report__';
 
 type BuiltinTemplateRecord = Pick<
@@ -87,6 +89,14 @@ export function resolveBuiltinTemplate(
         placeholders: [],
         template_file_id: null,
       };
+    case BUILTIN_WORKLOG_TEMPLATE_ID:
+      return {
+        name: WORKLOG_TEMPLATE_NAME,
+        content: JSON.stringify(createWorklogTemplateBundle()),
+        description: '일일 업무보고서',
+        placeholders: [],
+        template_file_id: null,
+      };
     default:
       return null;
   }
@@ -121,5 +131,6 @@ export function resolveBuiltinTemplateBundleByName(
   else if (isLeaveApplicationTemplateName(name)) id = BUILTIN_LEAVE_APPLICATION_TEMPLATE_ID;
   else if (isApprovalRequestTemplateName(name)) id = BUILTIN_APPROVAL_REQUEST_TEMPLATE_ID;
   else if (isWeeklyReportTemplateName(name)) id = BUILTIN_WEEKLY_REPORT_TEMPLATE_ID;
+  else if (isWorklogTemplateName(name)) id = BUILTIN_WORKLOG_TEMPLATE_ID;
   return id ? resolveBuiltinTemplateBundle(id) : null;
 }

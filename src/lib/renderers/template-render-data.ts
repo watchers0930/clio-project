@@ -116,7 +116,9 @@ export function buildWorkRowsHtml(raw: string | undefined | null): string {
   let rows: Array<Record<string, string>> = [];
   try {
     const parsed = JSON.parse(raw || '[]');
-    if (Array.isArray(parsed)) rows = parsed as Array<Record<string, string>>;
+    if (Array.isArray(parsed)) rows = parsed.filter((row): row is Record<string, string> =>
+      row !== null && typeof row === 'object' && !Array.isArray(row)
+      && ['date', 'content', 'progress', 'note'].every((key) => row[key] === undefined || typeof row[key] === 'string'));
   } catch {
     // 파싱 실패 시 빈 표로 처리
   }
@@ -168,7 +170,7 @@ export function buildTemplateRenderData(params: {
   }
 
   Object.entries(documentInputs ?? {}).forEach(([key, value]) => {
-    replacements[key] = value || replacements[key] || '';
+    replacements[key] = value;
     if (key.endsWith('_items')) {
       replacements[`${key}_html`] = multilineToListItems(value || '');
     }
@@ -178,7 +180,7 @@ export function buildTemplateRenderData(params: {
     const hasInputValue = Object.prototype.hasOwnProperty.call(documentInputs ?? {}, field.key);
     const fallbackValue = field.defaultValue || field.placeholder || '';
     const fieldValue = hasInputValue
-      ? (documentInputs?.[field.key] || fallbackValue || replacements[field.key] || '')
+      ? (documentInputs?.[field.key] ?? '')
       : (replacements[field.key] || fallbackValue);
     replacements[field.key] = interpolateTemplateValue(fieldValue, replacements);
     if (field.type === 'date') {

@@ -1,3 +1,7 @@
+import type { TemplateBundle } from '@/lib/templates/template-schema';
+
+export const WORKLOG_TEMPLATE_NAME = '업무일지';
+
 const WORKLOG_TEMPLATE_PATTERN = /(업무일지|업무\s*일지|work\s*log)/i;
 
 export const WORKLOG_FIELDS = [
@@ -78,4 +82,15 @@ export function isWorklogTemplateName(templateName: string | null | undefined) {
 
 export function getWorklogDocumentTitle(dateStr: string, templateName?: string | null) {
   return `${templateName && templateName.trim() ? templateName.trim() : '업무일지'} (${dateStr} 생성)`;
+}
+
+export function createWorklogTemplateBundle(): TemplateBundle {
+  return {
+    version: 1,
+    mode: 'html-template',
+    layoutHtml: WORKLOG_TEMPLATE_HTML,
+    outline: WORKLOG_OUTLINE,
+    fields: [...WORKLOG_FIELDS],
+    sections: [],
+  };
 }

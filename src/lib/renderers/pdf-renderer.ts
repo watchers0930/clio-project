@@ -20,7 +20,9 @@ function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function markdownFragmentToHtml(md: string, options?: { indentByHeading?: boolean }): string {
@@ -151,12 +153,19 @@ function buildTemplateHtml(
   // 미입력 필드에 예시(placeholder)가 값으로 들어간 경우 빈칸으로 처리한다.
   const placeholderByKey = new Map((templateBundle.fields ?? []).map((f) => [f.key, f.placeholder ?? '']));
 
+  const htmlKeys = new Set([
+    ...data.sections.map((section) => `${section.key}_body`),
+    ...templateBundle.fields.filter((field) => field.key.endsWith('_items')).map((field) => `${field.key}_html`),
+    ...(Object.hasOwn(replacements, 'work_rows') ? ['work_rows_html'] : []),
+  ]);
   const bodyHtml = templateBundle.layoutHtml.replace(/\{\{([^}]+)\}\}/g, (_match, key: string) => {
     const k = key.trim();
     const val = replacements[k] ?? '';
     const ph = placeholderByKey.get(k);
     if (ph && val === ph) return '';
-    return val;
+    if (htmlKeys.has(k)) return val;
+    if (k.endsWith('_src') && val && !/^data:image\/(?:png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(val)) return '';
+    return escapeHtml(val);
   });
 
   return `<!DOCTYPE html>

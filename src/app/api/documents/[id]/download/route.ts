@@ -1,3 +1,4 @@
+import { renderStoredFilePreview, renderLatestInputForm } from '@/lib/documents/inline-render';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
@@ -21,187 +22,6 @@ import { loadCompanyLogoContext } from '@/lib/settings/company-logo';
 // PDF 서버 렌더(puppeteer/chromium 콜드스타트 대비) 실행시간 확보
 export const maxDuration = 60;
 
-/* ── 한국어 순서 표현(첫째/둘째 등)이 문장 중간에 있으면 앞에 줄바꿈 삽입 ── */
-function normalizeOrdinals(text: string): string {
-  return text.replace(
-    /([^\n])\s*(첫째|둘째|셋째|넷째|다섯째|여섯째|일곱째|여덟째|아홉째|열째|마지막으로)[,，]/g,
-    '$1\n$2,'
-  );
-}
-
-/* ── 추가된 마크다운 섹션 → HWPX 테이블과 동일한 HTML로 변환 ── */
-function renderAppendedSections(markdown: string): string {
-  const sections: { title: string; lines: string[] }[] = [];
-  let current: { title: string; lines: string[] } | null = null;
-
-  for (const line of normalizeOrdinals(markdown).split('\n')) {
-    if (/^#{1,3}\s/.test(line)) {
-      if (current) sections.push(current);
-      current = { title: line.replace(/^#+\s/, ''), lines: [] };
-    } else {
-      if (!current) current = { title: '', lines: [] };
-      current.lines.push(line);
-    }
-  }
-  if (current) sections.push(current);
-
-  return sections
-    .filter(s => s.title || s.lines.some(l => l.trim()))
-    .map(({ title, lines }) => {
-      const contentHtml = lines
-        .map(l => l.trim() ? `<p style="margin:2px 0;">${l}</p>` : '')
-        .join('');
-      const tdStyle = 'border:1px solid #ccc;padding:5px 9px;vertical-align:top;font-size:13px;';
-      const titleRow = title
-        ? `<tr><td style="${tdStyle}font-weight:700;">${title}</td></tr>`
-        : '';
-      return `<table style="border-collapse:collapse;width:100%;margin:10px 0;">${titleRow}<tr><td style="${tdStyle}">${contentHtml}</td></tr></table>`;
-    })
-    .join('');
-}
-
-/* ── HWPX 섹션 XML → HTML 변환 (테이블 구조 보존) ──────────── */
-function hwpxExtractTexts(xml: string): string[] {
-  const texts: string[] = [];
-  const re = /<(?:hp|hh):t[^>]*>([^<]*)<\/(?:hp|hh):t>/g;
-  let m;
-  while ((m = re.exec(xml)) !== null) {
-    if (m[1].trim()) texts.push(m[1]);
-  }
-  return texts;
-}
-
-function hwpxRenderTable(tblXml: string, signerName?: string): string {
-  // 서명·헤더 테이블 전체 제거
-  const allTexts = hwpxExtractTexts(tblXml);
-  // (서명)/(인)이 셀 단독 텍스트인 서명 전용 테이블만 제거 (내용 테이블 안에 서명자 이름이 포함된 경우 제외)
-  if (
-    allTexts.some(t => t.trim() === '(서명)' || t.trim() === '(인)') ||
-    allTexts.some(t => t.trim() === '담당')
-  ) return '';
-
-  const rows: string[] = [];
-  const trRe = /<(?:hp|hh):tr[\s>]/g;
-  let trM;
-  let skipRows = 0; // 타이틀 행 rowSpan으로 인해 건너뛸 행 수
-
-  while ((trM = trRe.exec(tblXml)) !== null) {
-    const trStart = trM.index;
-    const trNs = tblXml.slice(trStart + 1, trStart + 3);
-    const trEnd = tblXml.indexOf(`</${trNs}:tr>`, trStart);
-    if (trEnd < 0) continue;
-    const trXml = tblXml.slice(trStart, trEnd + `</${trNs}:tr>`.length);
-
-    // 타이틀 행 감지: 작성/검토/승인 결재 헤더 셀이 있는 행 → 제목+결재 행
-    const rowTexts = hwpxExtractTexts(trXml);
-    const approvalLabels = ['작성', '검토', '승인', '결재'];
-    const hasApprovalCols = approvalLabels.filter(l => rowTexts.includes(l)).length >= 2;
-    if (hasApprovalCols) {
-      // 첫 번째 셀 전체 XML에서 rowSpan 추출
-      const firstTcStart = trXml.search(/<(?:hp|hh):tc[\s>]/);
-      const firstTcEnd = firstTcStart >= 0 ? trXml.indexOf('</hp:tc>', firstTcStart) : -1;
-      const firstTcXml = firstTcEnd > 0 ? trXml.slice(firstTcStart, firstTcEnd + 8) : '';
-      const firstRowSpan = parseInt(firstTcXml.match(/rowSpan="(\d+)"/)?.[1] ?? '1');
-      skipRows = Math.max(0, firstRowSpan - 1);
-      continue;
-    }
-    if (skipRows > 0) { skipRows--; continue; }
-
-    // 셀 데이터 1차 수집
-    const cellData: Array<{ paragraphs: string[] }> = [];
-    const tcRe = /<(?:hp|hh):tc[\s>]/g;
-    let tcM;
-    while ((tcM = tcRe.exec(trXml)) !== null) {
-      const tcStart = tcM.index;
-      const tcNs = trXml.slice(tcStart + 1, tcStart + 3);
-      const tcEnd = trXml.indexOf(`</${tcNs}:tc>`, tcStart);
-      if (tcEnd < 0) continue;
-      const tcXml = trXml.slice(tcStart, tcEnd + `</${tcNs}:tc>`.length);
-      const pRe2 = /<(?:hp|hh):p[\s>][\s\S]*?<\/(?:hp|hh):p>/g;
-      let pM2;
-      const paragraphs: string[] = [];
-      while ((pM2 = pRe2.exec(tcXml)) !== null) {
-        const pTexts = hwpxExtractTexts(pM2[0]);
-        if (pTexts.length > 0) paragraphs.push(pTexts.join(''));
-      }
-      cellData.push({ paragraphs });
-    }
-
-    // 셀 렌더링: 이전 셀 레이블 기반으로 값 셀 보정
-    const cells: string[] = [];
-    for (let i = 0; i < cellData.length; i++) {
-      let { paragraphs } = cellData[i];
-      const prevLabel = i > 0 ? cellData[i - 1].paragraphs.join('').replace(/\s/g, '') : '';
-
-      // 작성일자 오른쪽 값 셀: 날짜만 (첫 단락만 표시)
-      if (prevLabel === '작성일자' && paragraphs.length > 1) {
-        paragraphs = [paragraphs[0]];
-      }
-      // 작성자 오른쪽 빈 셀: 로그인 사용자 이름 주입
-      if (prevLabel === '작성자' && paragraphs.join('') === '' && signerName) {
-        paragraphs = [signerName];
-      }
-
-      const cellTextFlat = paragraphs.join('');
-      const cellHtml = paragraphs.join('<br>');
-      const boldLabels = ['보고처', '보고서명', '취급', '회의일자', '회의 일자', '장소', '참석자', '정보(자료) 출처', '정보출처', '보고 내용과 의견', '보고내용과 의견', '문제점'];
-      const isBold = boldLabels.some(label => cellTextFlat.trim() === label || cellTextFlat.includes(label));
-      const tdStyle = `border:1px solid #ccc;padding:5px 9px;vertical-align:top;font-size:13px;${isBold ? 'font-weight:700;' : ''}`;
-      cells.push(`<td style="${tdStyle}">${cellHtml}</td>`);
-    }
-    if (cells.length > 0) rows.push(`<tr>${cells.join('')}</tr>`);
-  }
-  if (rows.length === 0) return '';
-  return `<table style="border-collapse:collapse;width:100%;margin:10px 0;">${rows.join('')}</table>`;
-}
-
-function parseHwpxSection(xml: string, signerName?: string): string {
-  const result: string[] = [];
-
-  // 테이블 위치 먼저 수집 (최상위만)
-  type Range = { s: number; e: number };
-  const tblRanges: Range[] = [];
-  const tblTagRe = /<(hp|hh):tbl[\s>]/g;
-  let tM;
-  while ((tM = tblTagRe.exec(xml)) !== null) {
-    const ns = tM[1];
-    const startTag = `<${ns}:tbl`;
-    const endTag = `</${ns}:tbl>`;
-    // 이미 다른 테이블 안에 있으면 스킵
-    if (tblRanges.some(r => tM!.index >= r.s && tM!.index < r.e)) continue;
-    let depth = 1, pos = tM.index + startTag.length;
-    while (depth > 0 && pos < xml.length) {
-      const ns2 = xml.indexOf(startTag, pos);
-      const ne = xml.indexOf(endTag, pos);
-      if (ne < 0) { depth = 0; break; }
-      if (ns2 >= 0 && ns2 < ne) { depth++; pos = ns2 + startTag.length; }
-      else { depth--; pos = ne + endTag.length; }
-    }
-    if (pos > tM.index) tblRanges.push({ s: tM.index, e: pos });
-  }
-  tblRanges.sort((a, b) => a.s - b.s);
-
-  // 테이블과 테이블 사이 구간에서 <hp:p> 단락 추출
-  let cursor = 0;
-  const processText = (fragment: string) => {
-    const pRe = /<(?:hp|hh):p[\s>][\s\S]*?<\/(?:hp|hh):p>/g;
-    let pM;
-    while ((pM = pRe.exec(fragment)) !== null) {
-      const texts = hwpxExtractTexts(pM[0]);
-      if (texts.length > 0) result.push(`<p style="margin:3px 0;">${texts.join('')}</p>`);
-    }
-  };
-
-  for (const range of tblRanges) {
-    if (cursor < range.s) processText(xml.slice(cursor, range.s));
-    result.push(hwpxRenderTable(xml.slice(range.s, range.e), signerName));
-    cursor = range.e;
-  }
-  if (cursor < xml.length) processText(xml.slice(cursor));
-
-  return result.join('');
-}
-
 /**
  * GET /api/documents/[id]/download?font=맑은고딕&format=docx
  * 문서 내용을 선택된 포맷으로 변환하여 다운로드
@@ -224,7 +44,8 @@ export async function GET(
   try {
     const { id } = await params;
     const url = new URL(_request.url);
-    const fontParam = url.searchParams.get('font') ?? '맑은 고딕';
+    const requestedFont = url.searchParams.get('font') ?? '맑은 고딕';
+    const fontParam = Object.hasOwn(FONT_MAP, requestedFont) ? requestedFont : '맑은 고딕';
     const format = url.searchParams.get('format') ?? 'docx';
     const fontFamily = FONT_MAP[fontParam] ?? 'Malgun Gothic';
 
@@ -246,12 +67,12 @@ export async function GET(
     const canAccess = await canAccessDocument(supabase, authUserId, roleInfo.role, roleInfo.department_id, id);
 
     // 본인 문서 조회, 없으면 결재자인지 확인 후 admin으로 조회
-    let doc: { id: string; title: string; content: string | null; storage_path: string | null; parent_id: string | null; template_id?: string | null } | null = null;
+    let doc: { id: string; title: string; content: string | null; storage_path: string | null; parent_id: string | null; template_id?: string | null; created_by?: string | null } | null = null;
     if (canAccess) {
       const admin = createAdminSupabaseClient();
       const { data: accessibleDoc } = await admin
         .from('documents')
-        .select('id, title, content, storage_path, parent_id, template_id')
+        .select('id, title, content, storage_path, parent_id, template_id, created_by')
         .eq('id', id)
         .single();
       doc = accessibleDoc;
@@ -267,7 +88,7 @@ export async function GET(
       if (approval) {
         const { data: adminDoc } = await admin
           .from('documents')
-          .select('id, title, content, storage_path, parent_id, template_id')
+          .select('id, title, content, storage_path, parent_id, template_id, created_by')
           .eq('id', id)
           .single();
         doc = adminDoc;
@@ -276,7 +97,7 @@ export async function GET(
         // overview 조회와 동일 범위(title~주간업무 + template_id NULL)라 접근 권한이 일관된다.
         const { data: wr } = await admin
           .from('documents')
-          .select('id, title, content, storage_path, parent_id, template_id')
+          .select('id, title, content, storage_path, parent_id, template_id, created_by')
           .eq('id', id)
           .single();
         if (wr && wr.template_id === null && /주간\s*업무/.test(wr.title ?? '')) {
@@ -320,14 +141,17 @@ export async function GET(
     let signerName = '';
     let templateBundle: TemplateBundle | null = null;
     let templateName = '';
+    let storedTemplateName = '';
     try {
       const adminClient = createAdminSupabaseClient();
-      const { data: docMeta } = await adminClient
-        .from('documents').select('created_by').eq('id', id).maybeSingle();
-      const signatureOwnerId = docMeta?.created_by ?? authUserId;
+      const signatureOwnerId = doc.created_by ?? authUserId;
       const { data: nameData } = await adminClient
-        .from('users').select('name').eq('id', signatureOwnerId).maybeSingle();
+        .from('users').select('name, signature_path').eq('id', signatureOwnerId).maybeSingle();
       signerName = nameData?.name ?? '';
+      if (!inline && nameData?.signature_path) {
+        const { data: sigBlob } = await adminClient.storage.from('files').download(nameData.signature_path);
+        if (sigBlob) signatureBuffer = Buffer.from(await sigBlob.arrayBuffer());
+      }
       if (doc.template_id) {
         // 빌트인 템플릿(근로계약서·품의서·휴가원·재직증명서)은 DB에 없고 코드에서 번들 생성.
         // 이 분기가 없으면 templateBundle=null → PDF가 양식(표·조항·결재란) 대신 마크다운 텍스트로 렌더됨.
@@ -343,6 +167,7 @@ export async function GET(
             .maybeSingle();
           if (templateData) {
             templateName = templateData.name ?? '';
+            storedTemplateName = templateName;
             templateBundle = parseTemplateBundle(templateData.content, {
               name: templateData.name,
               description: templateData.description,
@@ -362,36 +187,13 @@ export async function GET(
         }
       }
     } catch { /* 이름 없으면 그냥 진행 */ }
-    if (!inline) {
-      try {
-        const adminClient = createAdminSupabaseClient();
-        const { data: docMeta } = await adminClient
-          .from('documents')
-          .select('created_by')
-          .eq('id', id)
-          .maybeSingle();
-        const signatureOwnerId = docMeta?.created_by ?? authUserId;
-        const { data: userData, error: userErr } = await adminClient
-          .from('users')
-          .select('name, signature_path')
-          .eq('id', signatureOwnerId)
-          .maybeSingle();
-        if (!userErr && userData) {
-          signerName = userData.name ?? '';
-          if (userData.signature_path) {
-            const { data: sigBlob } = await adminClient.storage.from('files').download(userData.signature_path);
-            if (sigBlob) signatureBuffer = Buffer.from(await sigBlob.arrayBuffer());
-          }
-        }
-      } catch { /* 서명 없으면 그냥 진행 */ }
-    }
     const companyLogoContext = await loadCompanyLogoContext(createAdminSupabaseClient());
 
     const isProposalDocument = isProposalTemplateName(templateName);
     // 재직증명서·표준근로계약서 등 회사 발급 문서는 신청자가 누구든 회사 공용 직인을 쓴다.
     // (개인 문서는 아래에서 신청자 본인 서명 signatureBuffer 사용)
     const isCompanyIssuedDocument = /재직\s*증명서|근로계약서/.test(templateName);
-    const companySealBuffer = isCompanyIssuedDocument
+    const companySealBuffer = !inline && isCompanyIssuedDocument
       ? await loadCompanySealBuffer(createAdminSupabaseClient())
       : null;
     const proposalPreviewHtml = isProposalDocument
@@ -400,6 +202,27 @@ export async function GET(
           content: doc.content ?? '',
         })
       : '';
+
+    // Valid target forms use the latest saved inputs even when an old HTML file exists.
+    if (inline) {
+      const latest = await renderLatestInputForm({
+        document: doc,
+        templateName: storedTemplateName || undefined,
+        theme: { ...DEFAULT_THEME, fontFamily: fontParam, fontFamilyEn: fontFamily },
+        companyLogoSrc: signatureBufferToDataUrl(companyLogoContext.buffer),
+        companyLogoPatternSize: companyLogoContext.patternSize,
+      });
+      if (latest) {
+        const html = await applyApprovalSignatures(createAdminSupabaseClient(), doc.id, latest.buffer.toString('utf-8'));
+        const buffer = Buffer.from(html, 'utf-8');
+        return new NextResponse(new Uint8Array(buffer), { headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(latest.fileName)}`,
+          'Content-Length': String(buffer.length),
+          'Cache-Control': 'private, no-store',
+        } });
+      }
+    }
 
     // storage_path가 있고 inline(미리보기) 요청이면 실제 파일을 PDF로 서빙
     // storage_path가 있고 다운로드 요청이면 실제 파일을 원본 포맷으로 서빙
@@ -495,45 +318,9 @@ export async function GET(
               },
             });
           }
-          // 파일 기반 문서 → 파일에서 텍스트 추출 후 HTML 렌더
-          let extractedHtml = '';
-          try {
-            if (ext === 'docx') {
-              const mammoth = await import('mammoth');
-              const result = await mammoth.convertToHtml({ buffer: fileBuffer });
-              extractedHtml = result.value;
-            } else if (ext === 'hwpx') {
-              const PizZip = (await import('pizzip')).default;
-              const zip = new PizZip(fileBuffer);
-              const allFiles = Object.keys(zip.files);
-              console.log('[download] hwpx zip files:', allFiles);
-              const sectionFiles = allFiles
-                .filter(name => /^Contents\/section\d+\.xml$/i.test(name))
-                .sort();
-              console.log('[download] hwpx section files:', sectionFiles);
-              const sectionHtmlParts: string[] = [];
-              for (const name of sectionFiles) {
-                const xml = zip.file(name)?.asText() ?? '';
-                sectionHtmlParts.push(parseHwpxSection(xml, signerName || undefined));
-              }
-              extractedHtml = sectionHtmlParts.join('');
-            }
-          } catch (e) { console.error('[download] file parse error:', e); }
-
-          // appendedMarkdown은 파싱 성공 여부와 무관하게 항상 추가
-          if (appendedMarkdown) {
-            extractedHtml += renderAppendedSections(appendedMarkdown);
-          }
-
-          const bodyContent = extractedHtml
-            ? extractedHtml
-            : `<p style="color:#6e6e73;">이 파일(${ext.toUpperCase()})은 미리보기를 지원하지 않습니다.</p>`;
-
-          const signatureBlock = signatureBuffer
-            ? `<div style="text-align:right;margin-top:32px;padding-right:40px;"><img src="data:image/png;base64,${signatureBuffer.toString('base64')}" style="width:120px;height:60px;object-fit:contain;" alt="서명" /></div>`
-            : '';
-
-          const fileHtml = Buffer.from(`<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><style>body{font-family:'맑은 고딕',sans-serif;max-width:800px;margin:40px auto;padding:0 40px;font-size:13px;line-height:1.8;color:#1d1d1f;}h1{font-size:18px;font-weight:700;margin-bottom:24px;border-bottom:1px solid #e5e5e7;padding-bottom:12px;}p{margin:4px 0;}table{border-collapse:collapse;width:100%;margin:12px 0;}td,th{border:1px solid #ccc;padding:6px 10px;}</style></head><body><h1>${doc.title}</h1>${bodyContent}${signatureBlock}</body></html>`, 'utf-8');
+          const fileHtml = await renderStoredFilePreview({
+            fileBuffer, ext, title: doc.title, signerName, signatureBuffer, appendedMarkdown,
+          });
           return new NextResponse(new Uint8Array(fileHtml), {
             headers: {
               'Content-Type': 'text/html; charset=utf-8',

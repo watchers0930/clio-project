@@ -14,6 +14,43 @@ const isBlank = (r: WorkRow) =>
   !r.date?.trim() && !r.content?.trim() && !r.progress?.trim() && !r.note?.trim();
 
 /**
+ * work_rows(JSON 문자열)를 구조 검증하며 파싱한다. 공용 계약(§2.3): 값은 WorkRow 객체 배열이며
+ * date/content/progress/note는 모두 문자열이다.
+ *
+ * - 빈 문자열/공백 → 정상 빈 배열(생성 초기·전체 삭제).
+ * - JSON 오류·배열 아님·행이 객체 아님·null 행·필드 비문자열(숫자 등) → ok:false.
+ *   손상 데이터를 빈 배열로 오인해 덮어쓰거나(유실), null 행 렌더로 크래시하는 것을 막는다.
+ */
+export function parseWorkRows(
+  value: string,
+): { ok: true; rows: WorkRow[] } | { ok: false } {
+  const trimmed = (value ?? '').trim();
+  if (!trimmed) return { ok: true, rows: [] };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    return { ok: false };
+  }
+  if (!Array.isArray(parsed)) return { ok: false };
+  const rows: WorkRow[] = [];
+  for (const item of parsed) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return { ok: false };
+    const r = item as Record<string, unknown>;
+    if (
+      typeof r.date !== 'string' ||
+      typeof r.content !== 'string' ||
+      typeof r.progress !== 'string' ||
+      typeof r.note !== 'string'
+    ) {
+      return { ok: false };
+    }
+    rows.push({ date: r.date, content: r.content, progress: r.progress, note: r.note });
+  }
+  return { ok: true, rows };
+}
+
+/**
  * 주간업무 '금주 업무' 표의 동적 행 에디터.
  * 표에서 날짜/내용/진행율/비고를 직접 인라인 편집한다. 타이핑 즉시 상위
  * documentInputs.work_rows(JSON 문자열)에 반영되며, 마지막 빈 행에 입력하면
@@ -27,15 +64,33 @@ export function WeeklyWorkRowsEditor({
   value: string;
   onChange: (json: string) => void;
 }) {
-  const rows = useMemo<WorkRow[]>(() => {
-    try {
-      const parsed = JSON.parse(value || '[]');
-      return Array.isArray(parsed) ? (parsed as WorkRow[]) : [];
-    } catch {
-      return [];
-    }
-  }, [value]);
+  const parsed = useMemo(() => parseWorkRows(value), [value]);
 
+  // 손상 데이터는 표로 편집하지 않는다(덮어쓰기·크래시 방지). 원문 유지 + 명시적 복구만 허용.
+  if (!parsed.ok) {
+    return (
+      <div>
+        <p className="text-sm font-medium text-foreground" style={{ marginBottom: 8 }}>금주 업무</p>
+        <div className="rounded-xl border border-danger/40 bg-danger/5 px-4 py-3">
+          <p className="text-sm font-medium text-danger">금주 업무 데이터가 손상되어 표로 편집할 수 없습니다.</p>
+          <p className="text-xs text-foreground-secondary" style={{ marginTop: 4 }}>
+            기존 값을 덮어쓰지 않도록 편집을 막았습니다. <strong>원문 편집</strong>에서 직접 확인하거나,
+            아래 버튼으로 표를 비우고 다시 입력하세요.
+          </p>
+          <button
+            type="button"
+            onClick={() => onChange('[]')}
+            className="rounded-lg border border-danger px-3 py-1.5 text-xs font-medium text-danger transition-colors hover:bg-danger/10"
+            style={{ marginTop: 8 }}
+          >
+            금주 업무 표 비우고 다시 입력
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const rows = parsed.rows;
   // 편집용: 저장된 행 + 항상 마지막에 빈 입력 행 1개.
   const editRows = [...rows, { ...EMPTY }];
 

@@ -90,6 +90,7 @@ export default function DocumentsPage() {
         onOpenMemo={(doc) => state.router.push(`/memos?documentId=${encodeURIComponent(doc.id)}&documentTitle=${encodeURIComponent(doc.title)}`)}
         onOpenContractRisk={(doc) => state.router.push(`/contract-risk?source=${encodeURIComponent(doc.title)}`)}
         onSave={state.handleSave}
+        onSaveInputs={state.handleSaveInputs}
         onComplete={state.handleComplete}
         onRevertToDraft={state.handleRevertToDraft}
         onChangeDownloadFormat={state.setDownloadFormat}

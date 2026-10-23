@@ -6,6 +6,9 @@ import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
 import { useServerRenderedPreview, BUILTIN_FORM_TITLE_RE } from '@/components/documents/use-server-rendered-preview';
 import { DocumentMarkdownBody } from '@/components/documents/document-markdown-body';
 import { stripEmbeddedInputs, getEmbeddedInputsPrefix } from '@/lib/documents/embedded-inputs';
+import { resolveDocumentInputForm } from '@/lib/documents/resolve-input-form';
+import { DocumentInputEditor, getInputEditorAvailability, getInputValidationState } from '@/components/documents/document-input-editor';
+import { DocumentViewerFooter } from '@/components/documents/document-viewer-footer';
 
 const EMBEDDED_INPUTS_RE = /^<!--(?:PROPOSAL_INPUTS|DOCUMENT_INPUTS):/;
 
@@ -33,6 +36,7 @@ interface DocumentViewerModalProps {
   onOpenMemo: (doc: DocumentItem) => void;
   onOpenContractRisk: (doc: DocumentItem) => void;
   onSave: () => void;
+  onSaveInputs: () => Promise<boolean> | void;
   onComplete: () => void;
   onRevertToDraft: () => void;
   onChangeDownloadFormat: (value: string) => void;
@@ -67,6 +71,7 @@ export function DocumentViewerModal({
   onOpenMemo,
   onOpenContractRisk,
   onSave,
+  onSaveInputs,
   onComplete,
   onRevertToDraft,
   onChangeDownloadFormat,
@@ -76,9 +81,19 @@ export function DocumentViewerModal({
   onOpenTodoExtract,
   onCommentsReflected,
 }: DocumentViewerModalProps) {
-  const [proposalViewMode, setProposalViewMode] = useState<'preview' | 'edit'>('preview');
+  // preview = 레이아웃 보기 / edit = 원문 편집 / inputs = 입력값 편집(공용 폼)
+  const [viewMode, setViewMode] = useState<'preview' | 'edit' | 'inputs'>('preview');
+  const [lastDocId, setLastDocId] = useState<string | null>(viewDoc?.id ?? null);
   // 제안서를 제외한 템플릿 문서(품의서 등)는 서버 렌더 HTML 프리뷰 사용
   const serverPreview = useServerRenderedPreview(viewDoc, selectedFont);
+
+  // 문서를 열거나 다른 문서로 전환하면 항상 레이아웃 보기로 시작한다(stale 'inputs' 모드 방지).
+  // React 권장 "렌더 중 상태 조정" 패턴(effect 내 동기 setState 회피).
+  const docId = viewDoc?.id ?? null;
+  if (docId !== lastDocId) {
+    setLastDocId(docId);
+    setViewMode('preview');
+  }
 
   if (!viewDoc) return null;
 
@@ -92,8 +107,14 @@ export function DocumentViewerModal({
   // 빌트인 템플릿(품의서·재직증명서·휴가원 등)은 template_id 없이 저장되고 본문 앞에
   // <!--DOCUMENT_INPUTS--> 주석이 붙는다. 주석을 걷어낸 마크다운 본문을 렌더한다.
   const hasEmbeddedInputs = EMBEDDED_INPUTS_RE.test(viewDoc.content ?? '');
-  // 빌트인 양식(template_id null + 제목이 빌트인 양식 + DOCUMENT_INPUTS)은 서버 양식 렌더로 보낸다.
-  const isBuiltinForm = !isProposal && !isServerTemplate && hasEmbeddedInputs && BUILTIN_FORM_TITLE_RE.test(viewDoc.title ?? '');
+  // 빌트인 양식 식별: 제목 매칭(품의서·근로계약서 등) 또는 공용 resolver(ID/메타로 복원 가능한 4양식).
+  // BE inline 렌더도 같은 resolver를 우선하므로, 제목을 바꾼 재직증명서 등도 서버 렌더로 연결한다(MED#4).
+  const inputFormRecoverable = resolveDocumentInputForm({
+    title: viewDoc.title, templateId: viewDoc.templateId, templateName: viewDoc.template, content: viewDoc.content ?? '',
+  }).ok;
+  const isBuiltinForm =
+    !isProposal && !isServerTemplate && hasEmbeddedInputs &&
+    (BUILTIN_FORM_TITLE_RE.test(viewDoc.title ?? '') || inputFormRecoverable);
   // 커스텀 구조 마크다운(빌트인 양식이 아닌)만 마크다운으로 렌더
   const isMarkdownTemplate = !isProposal && !isServerTemplate && !isBuiltinForm && hasEmbeddedInputs;
   // iframe(HTML) 프리뷰 = 제안서(클라 렌더) + 서버 템플릿 + 빌트인 양식
@@ -103,6 +124,18 @@ export function DocumentViewerModal({
   const editDisplayContent = stripEmbeddedInputs(editContent);
   const handleEditContentChange = (value: string) =>
     onChangeContent(getEmbeddedInputsPrefix(editContent) + value);
+  // 입력값 편집 가용성은 제목이 아니라 resolver 결과로 판단한다(제목 변경 문서도 복원 가능 시 편집).
+  const inputEditability = isDraft
+    ? getInputEditorAvailability(viewDoc, editContent)
+    : { available: false, reason: '초안 상태에서만 입력값을 편집할 수 있습니다.' };
+  const showInputEditButton = isDraft && (isBuiltinForm || inputEditability.available);
+  // 필수값·손상 검증을 저장/완료 액션에 공유 적용(내부 입력값 저장만 막던 우회 차단, MED#3).
+  const inputValidation = isDraft
+    ? getInputValidationState(viewDoc, editContent)
+    : { applicable: false, valid: true, missingLabels: [] as string[] };
+  const inputInvalidTitle = inputValidation.valid
+    ? undefined
+    : `필수 입력값을 완성해야 합니다: ${inputValidation.missingLabels.join(', ')}`;
   const availableDownloadFormats = isProposal ? ['pdf'] : downloadFormatOptions;
   const proposalHtml = isProposal
     ? renderProposalDocumentHtml({
@@ -181,21 +214,36 @@ export function DocumentViewerModal({
               {useHtmlPreview ? (
                 <div className="flex h-full min-h-[400px] flex-col gap-3">
                   {isDraft && (
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <button
-                        onClick={() => setProposalViewMode('preview')}
+                        onClick={() => setViewMode('preview')}
                         className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                          proposalViewMode === 'preview'
+                          viewMode === 'preview'
                             ? 'bg-foreground text-white'
                             : 'border border-border text-foreground-secondary hover:bg-surface-secondary'
                         }`}
                       >
                         레이아웃 보기
                       </button>
+                      {showInputEditButton && (
+                        <button
+                          onClick={() => inputEditability.available && setViewMode('inputs')}
+                          disabled={!inputEditability.available}
+                          aria-disabled={!inputEditability.available}
+                          title={inputEditability.available ? undefined : inputEditability.reason}
+                          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                            viewMode === 'inputs'
+                              ? 'bg-foreground text-white'
+                              : 'border border-border text-foreground-secondary hover:bg-surface-secondary'
+                          }`}
+                        >
+                          입력값 편집
+                        </button>
+                      )}
                       <button
-                        onClick={() => setProposalViewMode('edit')}
+                        onClick={() => setViewMode('edit')}
                         className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                          proposalViewMode === 'edit'
+                          viewMode === 'edit'
                             ? 'bg-foreground text-white'
                             : 'border border-border text-foreground-secondary hover:bg-surface-secondary'
                         }`}
@@ -204,7 +252,15 @@ export function DocumentViewerModal({
                       </button>
                     </div>
                   )}
-                  {!isDraft || proposalViewMode === 'preview' ? (
+                  {isDraft && viewMode === 'inputs' ? (
+                    <DocumentInputEditor
+                      viewDoc={viewDoc}
+                      editContent={editContent}
+                      saving={saving}
+                      onChangeContent={onChangeContent}
+                      onSaveInputs={onSaveInputs}
+                    />
+                  ) : !isDraft || viewMode === 'preview' ? (
                     isProposal ? (
                       <HtmlPreviewFrame
                         title="proposal-preview"
@@ -216,8 +272,15 @@ export function DocumentViewerModal({
                         레이아웃을 불러오는 중입니다…
                       </div>
                     ) : serverPreview.error || !serverPreview.html ? (
-                      <div className="flex h-full min-h-[640px] w-full items-center justify-center rounded-xl border border-border bg-white text-sm text-foreground-secondary">
-                        레이아웃 미리보기를 불러오지 못했습니다. 원문 편집 또는 다운로드로 확인해 주세요.
+                      <div className="flex h-full min-h-[640px] w-full flex-col items-center justify-center gap-3 rounded-xl border border-border bg-white px-6 text-center text-sm text-foreground-secondary">
+                        <p>레이아웃 미리보기를 불러오지 못했습니다. 입력값은 저장되었을 수 있습니다.</p>
+                        <button
+                          type="button"
+                          onClick={() => serverPreview.refetch()}
+                          className="rounded-lg border border-primary px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary-tint"
+                        >
+                          미리보기 다시 시도
+                        </button>
                       </div>
                     ) : (
                       <HtmlPreviewFrame
@@ -247,9 +310,9 @@ export function DocumentViewerModal({
                   {isDraft && (
                     <div className="flex gap-2">
                       <button
-                        onClick={() => setProposalViewMode('preview')}
+                        onClick={() => setViewMode('preview')}
                         className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                          proposalViewMode === 'preview'
+                          viewMode === 'preview'
                             ? 'bg-foreground text-white'
                             : 'border border-border text-foreground-secondary hover:bg-surface-secondary'
                         }`}
@@ -257,9 +320,9 @@ export function DocumentViewerModal({
                         레이아웃 보기
                       </button>
                       <button
-                        onClick={() => setProposalViewMode('edit')}
+                        onClick={() => setViewMode('edit')}
                         className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                          proposalViewMode === 'edit'
+                          viewMode === 'edit'
                             ? 'bg-foreground text-white'
                             : 'border border-border text-foreground-secondary hover:bg-surface-secondary'
                         }`}
@@ -268,7 +331,7 @@ export function DocumentViewerModal({
                       </button>
                     </div>
                   )}
-                  {!isDraft || proposalViewMode === 'preview' ? (
+                  {!isDraft || viewMode === 'preview' ? (
                     <div className="h-full min-h-[400px] overflow-y-auto rounded-xl border border-border bg-white px-5 py-4">
                       <DocumentMarkdownBody content={isDraft ? editContent : viewDoc.content ?? ''} />
                     </div>
@@ -293,47 +356,28 @@ export function DocumentViewerModal({
               )}
             </div>
 
-            <div className="flex shrink-0 flex-col gap-3 border-t border-border px-4 py-4 min-w-0 sm:px-6 sm:py-4">
-              <div className="flex flex-wrap gap-2.5">
-                {isDraft && (
-                  <button onClick={onComplete} disabled={saving} className="px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-dark disabled:opacity-50 transition-colors whitespace-nowrap">
-                    {saving ? '처리 중...' : '완료 문서로 전환'}
-                  </button>
-                )}
-                {viewDoc.status === '완료' && (
-                  <button onClick={onRevertToDraft} disabled={saving} className="px-4 py-2.5 rounded-xl border border-border text-sm text-foreground-secondary hover:bg-surface-secondary disabled:opacity-50 transition-colors whitespace-nowrap">
-                    초안으로 되돌리기
-                  </button>
-                )}
-              </div>
-              <div className="flex min-w-0 flex-wrap items-center gap-2.5">
-                {isDraft && (
-                  <button onClick={onSave} disabled={saving || !isEdited} className="px-4 py-2.5 rounded-xl border border-primary text-sm text-primary font-medium hover:bg-surface-secondary disabled:opacity-40 transition-colors whitespace-nowrap">
-                    {saving ? '저장 중...' : '초안 저장'}
-                  </button>
-                )}
-                <select value={downloadFormat} onChange={(e) => onChangeDownloadFormat(e.target.value)} className="px-3 py-2.5 rounded-xl border border-border text-sm text-foreground-secondary bg-white">
-                  {availableDownloadFormats.map((format) => <option key={format} value={format}>{format.toUpperCase()}</option>)}
-                </select>
-                <select value={selectedFont} onChange={(e) => onChangeSelectedFont(e.target.value)} className="px-3 py-2.5 rounded-xl border border-border text-sm text-foreground-secondary bg-white max-w-[120px]">
-                  {fontOptions.map((font) => <option key={font} value={font}>{font}</option>)}
-                </select>
-                <button onClick={() => onOpenContractRisk(viewDoc)} className="px-4 py-2.5 rounded-xl border border-danger/30 text-sm text-danger font-medium hover:bg-danger/5 transition-colors whitespace-nowrap">
-                  계약 리스크 검토
-                </button>
-                <button onClick={() => onDownload(viewDoc)} className="px-4 py-2.5 rounded-xl border border-border text-sm text-foreground-secondary hover:bg-surface-secondary transition-colors whitespace-nowrap">
-                  다운로드
-                </button>
-                <button onClick={() => onOpenQualityCheck(viewDoc.id)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-primary text-sm text-primary font-medium hover:bg-primary-tint transition-colors whitespace-nowrap">
-                  AI 검수 시작
-                </button>
-                {(viewDoc.title.includes('회의록') || viewDoc.title.includes('회의')) && (
-                  <button onClick={onOpenTodoExtract} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-purple-500 text-sm text-purple-500 font-medium hover:bg-purple-50 transition-colors whitespace-nowrap">
-                    할일 추출
-                  </button>
-                )}
-              </div>
-            </div>
+            <DocumentViewerFooter
+              viewDoc={viewDoc}
+              isDraft={isDraft}
+              saving={saving}
+              isEdited={isEdited}
+              inputsMode={viewMode === 'inputs'}
+              inputValid={inputValidation.valid}
+              inputInvalidTitle={inputInvalidTitle}
+              downloadFormat={downloadFormat}
+              selectedFont={selectedFont}
+              availableDownloadFormats={availableDownloadFormats}
+              fontOptions={fontOptions}
+              onComplete={onComplete}
+              onRevertToDraft={onRevertToDraft}
+              onSave={onSave}
+              onChangeDownloadFormat={onChangeDownloadFormat}
+              onChangeSelectedFont={onChangeSelectedFont}
+              onOpenContractRisk={onOpenContractRisk}
+              onDownload={onDownload}
+              onOpenQualityCheck={onOpenQualityCheck}
+              onOpenTodoExtract={onOpenTodoExtract}
+            />
           </div>
 
           {showViewerComments && (

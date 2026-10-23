@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, type Dispatch, type SetStateAction, useState } from 'react';
+import { useCallback, useEffect, useRef, type Dispatch, type SetStateAction, useState } from 'react';
 import { csrfFetch } from '@/hooks/csrf-client';
 import type { DocumentItem as Document } from '@/components/documents/page-types';
 import type { useToast } from '@/components/ui/toast';
@@ -31,6 +31,14 @@ export function useDocumentViewerActions({
   const [editContent, setEditContent] = useState('');
   const [editTitle, setEditTitle] = useState('');
   const [saving, setSaving] = useState(false);
+  // 저장 경합 방지: 저장 응답이 돌아왔을 때 사용자가 이미 다른 문서로 전환했는지 판별한다.
+  const currentDocIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    currentDocIdRef.current = viewDoc?.id ?? null;
+  }, [viewDoc]);
+  // 편집 세션 식별자: 같은 문서를 닫았다 다시 열거나(재열기) 다른 문서로 갔다 돌아온 경우에도
+  // 이전 저장 응답이 새 편집 세션의 값을 덮지 않도록 열 때마다 증가시킨다.
+  const editSessionRef = useRef(0);
   const [qualityCheckDocId, setQualityCheckDocId] = useState<string | null>(null);
   const [showViewerComments, setShowViewerComments] = useState(false);
   const triggerBrowserDownload = (blob: Blob, fileName: string) => {
@@ -48,6 +56,7 @@ export function useDocumentViewerActions({
   };
 
   const openDocModal = useCallback((doc: Document) => {
+    editSessionRef.current += 1;
     setViewDoc(doc);
     setEditContent(doc.content ?? '');
     setEditTitle(doc.title);
@@ -75,6 +84,51 @@ export function useDocumentViewerActions({
       setSaving(false);
     }
   };
+
+  /**
+   * 입력값(content) 단독 저장. body는 { content }만 전송한다(title·status 미포함).
+   * - 성공 응답의 data.content를 진실원본으로 viewDoc·목록·편집기준을 동기화한다.
+   * - 저장 중 다른 문서로 전환되면(currentDocIdRef 불일치) 편집값은 덮지 않고 목록만 갱신한다.
+   * 반환: 저장 성공 여부(미리보기 실패와 저장 실패를 호출부가 구분할 수 있도록).
+   */
+  const handleSaveInputs = useCallback(async (): Promise<boolean> => {
+    if (!viewDoc) return false;
+    const targetId = viewDoc.id;
+    const snapshotContent = editContent;
+    const snapshotSession = editSessionRef.current;
+
+    setSaving(true);
+    try {
+      const res = await csrfFetch(`/api/documents/${targetId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: snapshotContent }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) {
+        throw new Error(typeof json?.error === 'string' ? json.error : '저장에 실패했습니다.');
+      }
+
+      const savedContent =
+        typeof json.data?.content === 'string' ? (json.data.content as string) : snapshotContent;
+
+      // 목록은 항상 최신화(어느 문서를 보든 데이터 정합 유지)
+      setDocs((prev) => prev.map((doc) => (doc.id === targetId ? { ...doc, content: savedContent } : doc)));
+      // 같은 문서 + 같은 편집 세션일 때만 뷰어 상태 반영(문서 전환·재열기 시 덮어쓰기 방지).
+      if (currentDocIdRef.current === targetId && editSessionRef.current === snapshotSession) {
+        // 저장 기준값(viewDoc.content)은 항상 savedContent로 동기화(isEdited 판정의 기준).
+        setViewDoc((prev) => (prev && prev.id === targetId ? { ...prev, content: savedContent } : prev));
+        // 편집값은 저장 요청 이후 추가 입력이 없을 때만 교체한다(응답이 신규 편집을 되돌리지 않도록).
+        setEditContent((prev) => (prev === snapshotContent ? savedContent : prev));
+      }
+      return true;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '저장에 실패했습니다.');
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, [viewDoc, editContent, setDocs, toast]);
 
   const handleComplete = () => {
     if (!viewDoc) return;
@@ -245,6 +299,7 @@ export function useDocumentViewerActions({
     setShowViewerComments,
     openDocModal,
     handleSave,
+    handleSaveInputs,
     handleComplete,
     handleRevertToDraft,
     handleDownload,
