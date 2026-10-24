@@ -30,6 +30,7 @@ export function DesktopAppBanner({ collapsed, mobile }: { collapsed?: boolean; m
   return (
     <a
       href={DOWNLOAD_URL}
+      download
       target="_blank"
       rel="noopener noreferrer"
       className="mx-3 mb-3 flex items-center gap-2.5 rounded-xl bg-primary/15 px-3 py-2.5 text-white transition-colors hover:bg-primary/25"
