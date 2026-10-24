@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { requireAdminOrCeo } from '@/lib/http/admin-guard';
+import { requireAccountUnlock } from '@/lib/http/account-unlock';
 import { encryptPassword } from '@/lib/crypto/credentials';
 
 interface BulkItem {
@@ -21,6 +22,9 @@ export async function POST(request: NextRequest) {
 
   const guard = await requireAdminOrCeo(supabase, userId);
   if (guard) return guard;
+
+  const locked = await requireAccountUnlock(supabase, request, userId);
+  if (locked) return locked;
 
   const body = await request.json() as { items?: BulkItem[] };
   const items = body.items;

@@ -57,6 +57,7 @@ export function TemplatePreviewModal({
               title={`${template.name}-preview-modal`}
               src={template.templateFile ? `/api/templates/${template.id}/preview-html` : undefined}
               srcDoc={template.templateFile ? undefined : previewDoc}
+              sandbox=""
               className="h-[720px] w-full rounded-xl border border-border bg-white"
             />
           </div>

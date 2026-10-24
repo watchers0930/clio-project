@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { requireAdminOrCeo } from '@/lib/http/admin-guard';
+import { setUnlockCookie } from '@/lib/http/account-unlock';
 import bcrypt from 'bcryptjs';
 
 // POST — 계정관리 진입 비밀번호 검증
@@ -32,5 +33,7 @@ export async function POST(request: NextRequest) {
   if (!hash) return NextResponse.json({ valid: false, notSet: true });
 
   const valid = await bcrypt.compare(password, hash);
-  return NextResponse.json({ valid });
+  const res = NextResponse.json({ valid });
+  if (valid) setUnlockCookie(res, userId, Date.now());
+  return res;
 }

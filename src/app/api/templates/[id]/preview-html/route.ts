@@ -4,8 +4,18 @@ import { getAuthUserId } from '@/lib/auth-helper';
 import { parseTemplateBundle } from '@/lib/templates/template-schema';
 import { renderTemplateFilePreviewHtml } from '@/lib/templates/template-file-preview';
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
+}
+
+// 미리보기 응답은 sandbox CSP로 스크립트 실행을 차단한다(저장형 XSS 방어).
+const PREVIEW_HEADERS = {
+  'Content-Type': 'text/html; charset=utf-8',
+  'Content-Security-Policy': 'sandbox',
+} as const;
+
 function wrapTemplateHtml(title: string, bodyHtml: string) {
-  return `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><style>body{font-family:'맑은 고딕',sans-serif;max-width:900px;margin:24px auto;padding:0 24px;font-size:13px;line-height:1.8;color:#1d1d1f;background:#fff;}h1{font-size:18px;font-weight:700;margin-bottom:24px;border-bottom:1px solid #e5e5e7;padding-bottom:12px;}p{margin:4px 0;}table{border-collapse:collapse;width:100%;margin:12px 0;}td,th{border:1px solid #ccc;padding:6px 10px;}img{max-width:100%;height:auto;}</style></head><body><h1>${title}</h1>${bodyHtml}</body></html>`;
+  return `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><style>body{font-family:'맑은 고딕',sans-serif;max-width:900px;margin:24px auto;padding:0 24px;font-size:13px;line-height:1.8;color:#1d1d1f;background:#fff;}h1{font-size:18px;font-weight:700;margin-bottom:24px;border-bottom:1px solid #e5e5e7;padding-bottom:12px;}p{margin:4px 0;}table{border-collapse:collapse;width:100%;margin:12px 0;}td,th{border:1px solid #ccc;padding:6px 10px;}img{max-width:100%;height:auto;}</style></head><body><h1>${escapeHtml(title)}</h1>${bodyHtml}</body></html>`;
 }
 
 export async function GET(
@@ -50,10 +60,7 @@ export async function GET(
             fileName: fileRow.name,
             title: templateRow.name,
           });
-          return new NextResponse(html, {
-            status: 200,
-            headers: { 'Content-Type': 'text/html; charset=utf-8' },
-          });
+          return new NextResponse(html, { status: 200, headers: PREVIEW_HEADERS });
         }
       }
     }
@@ -66,7 +73,7 @@ export async function GET(
 
     return new NextResponse(wrapTemplateHtml(templateRow.name, bundle.layoutHtml), {
       status: 200,
-      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      headers: PREVIEW_HEADERS,
     });
   } catch (error) {
     return new NextResponse(error instanceof Error ? error.message : 'Preview error', { status: 500 });

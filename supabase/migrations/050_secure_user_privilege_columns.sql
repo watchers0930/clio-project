@@ -16,6 +16,8 @@
 -- 후속 과제(별도): transfer_*/account_credentials/templates 테이블 RLS 역할 강화,
 --   users INSERT 경로(신규 가입 role 지정), 템플릿 미리보기 XSS, 계정관리 진입비번 서버 강제.
 
+-- INSERT도 포함: 사용자 세션이 role='admin'/rank_level을 지정한 신규 삽입(REST 직접 가입)을 차단.
+-- 정상 signup(role='user', rank_level=null)과 service_role(auth.uid null)은 통과한다.
 create or replace function public.prevent_self_privilege_escalation()
 returns trigger
 language plpgsql
@@ -23,10 +25,16 @@ security definer
 set search_path = public
 as $$
 begin
-  if auth.uid() is not null
-     and (new.role is distinct from old.role
-          or new.rank_level is distinct from old.rank_level) then
-    raise exception '권한(role/rank_level)은 직접 변경할 수 없습니다.';
+  if auth.uid() is not null then
+    if tg_op = 'INSERT' then
+      if new.role is distinct from 'user' or new.rank_level is not null then
+        raise exception '가입 시 권한(role/rank_level)을 지정할 수 없습니다.';
+      end if;
+    elsif tg_op = 'UPDATE' then
+      if new.role is distinct from old.role or new.rank_level is distinct from old.rank_level then
+        raise exception '권한(role/rank_level)은 직접 변경할 수 없습니다.';
+      end if;
+    end if;
   end if;
   return new;
 end;
@@ -34,5 +42,5 @@ $$;
 
 drop trigger if exists trg_prevent_self_privilege_escalation on public.users;
 create trigger trg_prevent_self_privilege_escalation
-  before update on public.users
+  before insert or update on public.users
   for each row execute function public.prevent_self_privilege_escalation();

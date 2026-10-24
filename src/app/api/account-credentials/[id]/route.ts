@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { requireAdminOrCeo } from '@/lib/http/admin-guard';
+import { requireAccountUnlock } from '@/lib/http/account-unlock';
 import { encryptPassword } from '@/lib/crypto/credentials';
 
 // PATCH — 수정
@@ -19,6 +20,9 @@ export async function PATCH(
 
   const guard = await requireAdminOrCeo(supabase, userId);
   if (guard) return guard;
+
+  const locked = await requireAccountUnlock(supabase, request, userId);
+  if (locked) return locked;
 
   const body = await request.json() as { site_name?: string; site_url?: string; username?: string; password?: string };
   const { site_name, site_url, username, password } = body;
@@ -47,7 +51,7 @@ export async function PATCH(
 
 // DELETE — 삭제
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
@@ -59,6 +63,9 @@ export async function DELETE(
 
   const guard = await requireAdminOrCeo(supabase, userId);
   if (guard) return guard;
+
+  const locked = await requireAccountUnlock(supabase, request, userId);
+  if (locked) return locked;
 
   const admin = createAdminSupabaseClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
