@@ -13,6 +13,21 @@
     "electron": "electron .",
     "electron:build": "electron-builder"
   },
+  "build": {
+    "appId": "kr.clio.desktop",
+    "productName": "CLIO",
+    "files": ["electron/**/*", "package.json"],
+    "directories": { "output": "dist-electron" },
+    "mac": {
+      "target": "dmg",
+      "icon": "electron/icon.icns",
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "electron/icon.ico"
+    }
+  },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.79",
     "@ai-sdk/google": "^3.0.79",
