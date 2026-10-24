@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, shell, dialog, powerMonitor } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
 const CLIO_URL = 'https://clioai.vercel.app';
 const HEARTBEAT_INTERVAL_MS = 180_000; // 3분 (설계서 §4.1) — main이 타이머 소유자, renderer가 실제 HTTP 수행
@@ -69,12 +70,115 @@ function stopHeartbeat() {
   }
 }
 
-/* ── 자동실행 (설계서 §4.1 §426) ── 설치 앱(packaged)에서만 지원. 개발 실행과 구분. */
+/* ── 자동실행 (설계서 §4.1 §426) ── 설치 앱(packaged)에서만 지원. 개발 실행과 구분.
+ *
+ * ⚠️ macOS 13+(Tahoe 포함)의 app.setLoginItemSettings는 내부적으로 SMAppService를 쓰며
+ * '코드 서명된 앱'을 요구한다. 미서명 배포(현재 CLIO)에서는 등록이 거부되어 status가
+ * 'not-found'로 '조용히 실패'한다(실측: write(true) 직후에도 status=not-found, 재부팅 시
+ * 자동실행 안 됨). 따라서 macOS는 setLoginItemSettings 대신
+ * ~/Library/LaunchAgents/kr.clio.desktop.plist 를 직접 생성/삭제하는 구식 launchd 방식으로
+ * 등록한다. 서명 없이 동작하며, 로그인 시 launchd가 LaunchAgents 폴더의 plist를 자동 로드한다.
+ * 상태(read)는 plist 파일 존재로 판정한다(즉시 반영, UI 되돌아감 없음).
+ * Windows 등은 기존 setLoginItemSettings가 정상 동작하므로 유지한다.
+ * 실제 OS 반영값은 auto-launch.log로 남겨 실기기에서 확정 검증한다(추측 금지). */
+
+const AUTO_LAUNCH_LABEL = 'kr.clio.desktop'; // build.appId와 동일
+
+// userData/auto-launch.log 에 실측 스냅샷 기록 (기능에 영향 주지 않는 보조 진단)
+function logAutoLaunch(action, snapshot) {
+  try {
+    const line = `[${new Date().toISOString()}] ${action} ${JSON.stringify(snapshot)}\n`;
+    fs.appendFileSync(path.join(app.getPath('userData'), 'auto-launch.log'), line);
+  } catch {
+    /* 로그 실패는 무시 */
+  }
+}
+
+// ── macOS: LaunchAgent(plist) 방식 ──
+function macLaunchAgentPath() {
+  return path.join(os.homedir(), 'Library', 'LaunchAgents', `${AUTO_LAUNCH_LABEL}.plist`);
+}
+
+// 설치된 .app 번들 경로 (exe = …/CLIO.app/Contents/MacOS/CLIO → …/CLIO.app)
+function macAppBundlePath() {
+  const exe = app.getPath('exe');
+  const marker = '/Contents/MacOS/';
+  const idx = exe.indexOf(marker);
+  return idx === -1 ? null : exe.slice(0, idx);
+}
+
+// open -a 로 .app 을 띄운다(이미 실행 중이면 중복 실행 안 함, Dock 정상)
+function macBuildPlist(appBundle) {
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
+    '<plist version="1.0">',
+    '<dict>',
+    '  <key>Label</key>',
+    `  <string>${AUTO_LAUNCH_LABEL}</string>`,
+    '  <key>ProgramArguments</key>',
+    '  <array>',
+    '    <string>/usr/bin/open</string>',
+    '    <string>-a</string>',
+    `    <string>${appBundle}</string>`,
+    '  </array>',
+    '  <key>RunAtLoad</key>',
+    '  <true/>',
+    '</dict>',
+    '</plist>',
+    '',
+  ].join('\n');
+}
+
+function macReadAutoLaunch() {
+  const p = macLaunchAgentPath();
+  const enabled = fs.existsSync(p);
+  logAutoLaunch('read', { enabled, status: enabled ? 'plist-present' : 'plist-absent', path: p });
+  return { openAtLogin: enabled, supported: true, requiresApproval: false };
+}
+
+function macWriteAutoLaunch(enabled) {
+  const p = macLaunchAgentPath();
+  const appBundle = macAppBundlePath();
+  if (enabled && !appBundle) {
+    logAutoLaunch('write-error', { message: 'app bundle path not resolved', exe: app.getPath('exe') });
+    return { openAtLogin: false, supported: false };
+  }
+  if (enabled) {
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.writeFileSync(p, macBuildPlist(appBundle), 'utf8');
+  } else if (fs.existsSync(p)) {
+    fs.unlinkSync(p);
+  }
+  const nowEnabled = fs.existsSync(p);
+  logAutoLaunch(`write(${!!enabled})`, {
+    enabled: nowEnabled,
+    status: nowEnabled ? 'plist-present' : 'plist-absent',
+    appBundle,
+  });
+  return { openAtLogin: nowEnabled, supported: true, requiresApproval: false };
+}
+
+// ── Windows 등: 기존 setLoginItemSettings (정상 동작) ──
+function nativeReadAutoLaunch() {
+  const s = app.getLoginItemSettings();
+  logAutoLaunch('read', { openAtLogin: s.openAtLogin, status: s.status ?? null });
+  return { openAtLogin: s.openAtLogin, supported: true, requiresApproval: false };
+}
+
+function nativeWriteAutoLaunch(enabled) {
+  app.setLoginItemSettings({ openAtLogin: !!enabled });
+  const s = app.getLoginItemSettings();
+  logAutoLaunch(`write(${!!enabled})`, { openAtLogin: s.openAtLogin, status: s.status ?? null });
+  return { openAtLogin: s.openAtLogin, supported: true, requiresApproval: false };
+}
+
 function readAutoLaunch() {
   if (!app.isPackaged) return { openAtLogin: false, supported: false };
   try {
-    return { openAtLogin: app.getLoginItemSettings().openAtLogin, supported: true };
-  } catch {
+    return process.platform === 'darwin' ? macReadAutoLaunch() : nativeReadAutoLaunch();
+  } catch (e) {
+    logAutoLaunch('read-error', { message: String(e && e.message) });
     return { openAtLogin: false, supported: false };
   }
 }
@@ -82,10 +186,9 @@ function readAutoLaunch() {
 function writeAutoLaunch(enabled) {
   if (!app.isPackaged) return { openAtLogin: false, supported: false };
   try {
-    app.setLoginItemSettings({ openAtLogin: !!enabled });
-    // OS가 실제로 반영한 값을 재조회해 반환(설정 실패 시 이전 값 유지)
-    return { openAtLogin: app.getLoginItemSettings().openAtLogin, supported: true };
-  } catch {
+    return process.platform === 'darwin' ? macWriteAutoLaunch(enabled) : nativeWriteAutoLaunch(enabled);
+  } catch (e) {
+    logAutoLaunch('write-error', { message: String(e && e.message) });
     return { openAtLogin: false, supported: false };
   }
 }

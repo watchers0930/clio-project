@@ -16,8 +16,12 @@ export interface ElectronAttendanceAPI {
   offHeartbeatTick: (cb: () => void) => void;
   onAppQuitting?: (cb: () => void) => void;
   offAppQuitting?: (cb: () => void) => void;
-  getAutoLaunch?: () => Promise<{ openAtLogin: boolean; supported?: boolean } | boolean>;
-  setAutoLaunch?: (enabled: boolean) => Promise<{ openAtLogin: boolean; supported?: boolean } | boolean>;
+  getAutoLaunch?: () => Promise<
+    { openAtLogin: boolean; supported?: boolean; requiresApproval?: boolean } | boolean
+  >;
+  setAutoLaunch?: (
+    enabled: boolean,
+  ) => Promise<{ openAtLogin: boolean; supported?: boolean; requiresApproval?: boolean } | boolean>;
 }
 
 type ElectronBridge = { attendance?: ElectronAttendanceAPI } | undefined;

@@ -8,17 +8,25 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { getElectronAttendance } from '@/hooks/use-attendance-heartbeat';
 
-function normalize(v: { openAtLogin: boolean; supported?: boolean } | boolean): {
+function normalize(
+  v: { openAtLogin: boolean; supported?: boolean; requiresApproval?: boolean } | boolean,
+): {
   openAtLogin: boolean;
   supported: boolean;
+  requiresApproval: boolean;
 } {
-  if (typeof v === 'boolean') return { openAtLogin: v, supported: true };
-  return { openAtLogin: v.openAtLogin, supported: v.supported ?? true };
+  if (typeof v === 'boolean') return { openAtLogin: v, supported: true, requiresApproval: false };
+  return {
+    openAtLogin: v.openAtLogin,
+    supported: v.supported ?? true,
+    requiresApproval: v.requiresApproval ?? false,
+  };
 }
 
 export function DesktopAutoLaunchSetting() {
   const [enabled, setEnabled] = useState(false);
   const [supported, setSupported] = useState(true);
+  const [requiresApproval, setRequiresApproval] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +45,7 @@ export function DesktopAutoLaunchSetting() {
       const v = normalize(await api.getAutoLaunch());
       setEnabled(v.openAtLogin);
       setSupported(v.supported);
+      setRequiresApproval(v.requiresApproval);
     } catch {
       setError('자동실행 설정을 읽지 못했습니다.');
     } finally {
@@ -58,10 +67,13 @@ export function DesktopAutoLaunchSetting() {
     const next = !enabled;
     try {
       const v = normalize(await api.setAutoLaunch(next));
-      // OS가 실제로 조회한 값을 반영(설정 실패 시 이전 값 유지될 수 있음)
       setEnabled(v.openAtLogin);
       setSupported(v.supported);
-      if (v.openAtLogin !== next) setError('OS에 자동실행 설정을 적용하지 못했습니다.');
+      setRequiresApproval(v.requiresApproval);
+      // 설정 호출은 성공했으나 OS가 반영하지 못한 경우에만 오류 표시
+      if (!v.supported || v.openAtLogin !== next) {
+        setError('OS에 자동실행 설정을 적용하지 못했습니다.');
+      }
     } catch {
       setError('자동실행 설정을 변경하지 못했습니다.');
     } finally {
@@ -82,6 +94,11 @@ export function DesktopAutoLaunchSetting() {
               컴퓨터 로그인 후 앱이 자동 실행되어 출근이 기록됩니다.
             </p>
             {!supported && <p className="mt-1 text-xs text-warning">이 환경에서는 자동실행을 지원하지 않습니다.</p>}
+            {enabled && requiresApproval && (
+              <p className="mt-1 text-xs text-warning">
+                macOS &gt; 시스템 설정 &gt; 일반 &gt; 로그인 항목에서 CLIO를 켜야 실제로 자동 실행됩니다.
+              </p>
+            )}
             {error && <p id={errorId} className="mt-1 text-xs text-danger">{error}</p>}
           </div>
         </div>
