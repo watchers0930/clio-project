@@ -14,6 +14,8 @@ import { apiMutate, resetCsrfToken } from './csrf-client';
 export interface ElectronAttendanceAPI {
   onHeartbeatTick: (cb: () => void) => void;
   offHeartbeatTick: (cb: () => void) => void;
+  onAppQuitting?: (cb: () => void) => void;
+  offAppQuitting?: (cb: () => void) => void;
   getAutoLaunch?: () => Promise<{ openAtLogin: boolean; supported?: boolean } | boolean>;
   setAutoLaunch?: (enabled: boolean) => Promise<{ openAtLogin: boolean; supported?: boolean } | boolean>;
 }
@@ -85,12 +87,17 @@ export function useAttendanceHeartbeat(): void {
     const onTick = () => void send();
 
     api.onHeartbeatTick(onTick);
+    // 정상 종료 직전: 마지막 heartbeat(퇴근시각 확정)를 즉시 전송(best-effort, main이 ~800ms 대기).
+    // 강제종료·방전 등으로 신호가 없어도 서버는 마지막 수신 heartbeat를 퇴근으로 쓰므로 안전망이 있다.
+    const onQuitting = () => void send();
+    api.onAppQuitting?.(onQuitting);
     void send(); // 인증 직후 즉시 1회 전송(§4.1)
 
     return () => {
       controller.abort(); // 진행 중 heartbeat 요청 취소(F07)
       clearRetry();
       api.offHeartbeatTick(onTick);
+      api.offAppQuitting?.(onQuitting);
       // 계정전환·재인증 시 이전 세션 CSRF 캐시·진행 중 발급을 무효화한다(F07).
       resetCsrfToken();
     };

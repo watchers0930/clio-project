@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
+import { DesktopAppBanner } from '@/components/layout/desktop-app-banner';
 import {
   Search,
   FolderOpen,
@@ -225,6 +226,8 @@ function Sidebar({ collapsed = false, onToggle, mobile = false }: SidebarProps) 
         {/* 설정 */}
         {renderItem({ key: 'settings', label: '설정', href: '/settings', icon: Settings, description: '메뉴 · 부서 · 사용자' })}
       </nav>
+
+      <DesktopAppBanner collapsed={collapsed} mobile={mobile} />
 
       {/* Bottom — 사용자 정보 */}
       <div className="flex-shrink-0 mb-5">

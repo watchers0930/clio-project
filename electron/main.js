@@ -139,6 +139,19 @@ if (!gotSingleInstanceLock) {
     if (process.platform !== 'darwin') app.quit();
   });
 
+  // 정상 종료 시 renderer가 마지막 heartbeat(퇴근시각 확정)를 보낼 짧은 시간을 준다.
+  // 강제종료·방전 등으로 신호가 없어도 서버는 마지막 수신 heartbeat를 퇴근으로 쓰므로 안전망이 있다.
+  let isQuittingAttendance = false;
+  app.on('before-quit', (e) => {
+    if (isQuittingAttendance) return;
+    const wc = mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents : null;
+    if (!wc || !wc.getURL().startsWith(CLIO_URL)) return;
+    e.preventDefault();
+    isQuittingAttendance = true;
+    wc.send('attendance:app-quitting');
+    setTimeout(() => app.quit(), 800);
+  });
+
   /* ── IPC 핸들러 ── */
 
   // 자동실행 상태 조회/변경 (sender 출처 검증 후에만)

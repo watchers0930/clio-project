@@ -2,6 +2,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 // heartbeat tick 구독 콜백 매핑 (off 시 동일 참조로 해제하기 위해 보관)
 const heartbeatListeners = new Map();
+// app-quitting(정상 종료 직전) 구독 콜백 매핑
+const quitListeners = new Map();
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // 파일을 네이티브 앱(한글, Word 등)으로 열기
@@ -36,6 +38,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
       if (listener) {
         ipcRenderer.removeListener('attendance:heartbeat-tick', listener);
         heartbeatListeners.delete(cb);
+      }
+    },
+    // 정상 종료 직전 신호 구독(renderer가 마지막 heartbeat=퇴근시각을 전송)
+    onAppQuitting: (cb) => {
+      if (typeof cb !== 'function') return;
+      const listener = () => cb();
+      quitListeners.set(cb, listener);
+      ipcRenderer.on('attendance:app-quitting', listener);
+    },
+    offAppQuitting: (cb) => {
+      const listener = quitListeners.get(cb);
+      if (listener) {
+        ipcRenderer.removeListener('attendance:app-quitting', listener);
+        quitListeners.delete(cb);
       }
     },
     // 자동실행 상태 조회/변경 → { openAtLogin, supported }
