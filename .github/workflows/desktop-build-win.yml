@@ -40,9 +40,11 @@ jobs:
         run: npm ci
 
       # 데스크탑앱은 clioai.vercel.app을 로드하는 wrapper라 next build가 필요 없다.
-      # electron-builder.yml의 win(nsis, x64) 설정으로 서명 없이 빌드한다(기존 로컬 빌드와 동일).
+      # electron-builder.yml의 win(nsis, x64) 설정으로 빌드한다(기존 로컬 빌드와 동일).
+      # --publish never: electron-builder의 자동 Release publish(GH_TOKEN 필요) 비활성화.
+      #                  업로드는 아래 softprops 스텝이 전담한다.
       - name: Build Windows installer
-        run: npm run electron:build -- --win
+        run: npm run electron:build -- --win --publish never
 
       # 버전 무관 영구 URL(releases/latest/download/CLIO-win.exe)을 위해 고정명 복사본을 만든다.
       - name: Create fixed-name copy
