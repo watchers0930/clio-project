@@ -148,7 +148,8 @@ export async function GET(
       const { data: nameData } = await adminClient
         .from('users').select('name, signature_path').eq('id', signatureOwnerId).maybeSingle();
       signerName = nameData?.name ?? '';
-      if (!inline && nameData?.signature_path) {
+      // 미리보기(inline)에도 담당란 작성자 서명을 표시하기 위해 서명 버퍼를 로드한다.
+      if (nameData?.signature_path) {
         const { data: sigBlob } = await adminClient.storage.from('files').download(nameData.signature_path);
         if (sigBlob) signatureBuffer = Buffer.from(await sigBlob.arrayBuffer());
       }
@@ -211,6 +212,7 @@ export async function GET(
         theme: { ...DEFAULT_THEME, fontFamily: fontParam, fontFamilyEn: fontFamily },
         companyLogoSrc: signatureBufferToDataUrl(companyLogoContext.buffer),
         companyLogoPatternSize: companyLogoContext.patternSize,
+        authorSignatureSrc: signatureBufferToDataUrl(signatureBuffer),
       });
       if (latest) {
         const html = await applyApprovalSignatures(createAdminSupabaseClient(), doc.id, latest.buffer.toString('utf-8'));

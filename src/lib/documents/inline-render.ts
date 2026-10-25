@@ -3,6 +3,8 @@ import { renderPdf } from '@/lib/renderers/pdf-renderer';
 import { parseEmbeddedInputs } from '@/lib/documents/embedded-inputs';
 import { resolveDocumentInputForm } from '@/lib/documents/resolve-input-form';
 import { resolveBuiltinTemplateBundleByName } from '@/lib/templates/builtin';
+import { isEmploymentCertificateTemplateName } from '@/lib/templates/employment-certificate';
+import { isStandardLaborContractTemplateName } from '@/lib/templates/standard-labor-contract';
 
 function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -199,6 +201,8 @@ export async function renderLatestInputForm(options: {
   theme: CorporateTheme;
   companyLogoSrc: string;
   companyLogoPatternSize: string;
+  /** 작성자(담당) 서명 data URL. 미리보기 담당란에 표시한다. 미설정이면 빈칸. */
+  authorSignatureSrc?: string;
 }): Promise<RenderOutput | null> {
   const { document: doc } = options;
   const content = doc.content ?? '';
@@ -210,14 +214,18 @@ export async function renderLatestInputForm(options: {
   if (!parsed.ok) return null;
   const builtin = resolveBuiltinTemplateBundleByName(resolved.form.templateName);
   if (!builtin) return null;
+  // 증명서·근로계약서의 signature_image_src는 '회사 직인' 자리이므로 작성자 서명을 넣지 않는다.
+  const isSealForm = isEmploymentCertificateTemplateName(resolved.form.templateName)
+    || isStandardLaborContractTemplateName(resolved.form.templateName);
+  const authorSig = options.authorSignatureSrc ?? '';
   return renderPdf(content.slice(parsed.prefix.length), doc.title, options.theme, {
     templateBundle: builtin.bundle,
     templateName: builtin.name,
     documentInputs: {
       ...parsed.inputs,
-      // Inline previews keep the saved author and exclude personal/company signature images.
-      signature_image_src: '',
-      employee_signature_src: '',
+      // 미리보기 담당란에 작성자 본인 서명을 표시. 회사 직인(seal 양식)은 계속 제외.
+      signature_image_src: isSealForm ? '' : authorSig,
+      employee_signature_src: authorSig,
       company_logo_src: options.companyLogoSrc,
       company_logo_pattern_size: options.companyLogoPatternSize,
     },
