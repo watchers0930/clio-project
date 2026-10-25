@@ -116,7 +116,7 @@ export function formatDateTimeLabel(value: string | null | undefined) {
 }
 
 export function formatStatusLabel(status: string) {
-  return ({ completed: '완료', draft: '초안', submitted: '결재중', approved: '승인됨', rejected: '반려됨' } as Record<string, string>)[status] ?? status;
+  return ({ completed: '완료', draft: '초안', in_approval: '결재중', submitted: '결재중', approved: '승인됨', rejected: '반려됨' } as Record<string, string>)[status] ?? status;
 }
 
 interface HeaderProps {

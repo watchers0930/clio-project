@@ -5,7 +5,8 @@ import type { BadgeVariant } from '@/components/ui/badge';
 const STATUS_LABELS: Record<string, string> = {
   completed: '완료',
   draft: '초안',
-  submitted: '결재중',
+  in_approval: '결재중', // 현재 결재 상정 상태값
+  submitted: '결재중', // 레거시 상태값(과거 데이터 호환)
   approved: '승인됨',
   rejected: '반려됨',
 };
@@ -13,6 +14,7 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_VARIANTS: Record<string, BadgeVariant> = {
   completed: 'success',
   approved: 'success',
+  in_approval: 'info',
   submitted: 'info',
   draft: 'default',
   rejected: 'danger',

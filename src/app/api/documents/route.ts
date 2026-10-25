@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
         template: tmplJoin?.name ?? '기본',
         templateId: d.template_id ?? null,
         createdAt: kstDateFromISO(d.created_at),
-        status: ({ completed: '완료', draft: '초안', submitted: '결재중', approved: '승인됨', rejected: '반려됨' } as Record<string, string>)[d.status] ?? d.status,
+        status: ({ completed: '완료', draft: '초안', in_approval: '결재중', submitted: '결재중', approved: '승인됨', rejected: '반려됨' } as Record<string, string>)[d.status] ?? d.status,
         sourceCount: d.source_file_ids?.length ?? 0,
         sourceFileIds: d.source_file_ids ?? [],
         content: d.content,
