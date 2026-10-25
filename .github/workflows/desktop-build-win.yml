@@ -1,0 +1,61 @@
+name: Build Desktop App (Windows)
+
+# Windows 설치파일(.exe)을 자동 빌드해 GitHub Release에 업로드한다.
+# macOS는 현재 로컬 빌드 흐름을 유지하므로 이 워크플로우에 포함하지 않는다.
+#
+# 실행 방법:
+#  1) 수동: Actions 탭 → 이 워크플로우 → Run workflow → release_tag 입력(예: desktop-v7.87.0)
+#  2) 태그 푸시: desktop-v* 태그를 push 하면 그 태그 Release에 자동 업로드
+#
+# 산출물: 버전명 exe + 고정명 CLIO-win.exe (고정명은 releases/latest/download/CLIO-win.exe 영구 URL용)
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: '업로드할 Release 태그 (예: desktop-v7.87.0)'
+        required: true
+        type: string
+  push:
+    tags:
+      - 'desktop-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-win:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # 데스크탑앱은 clioai.vercel.app을 로드하는 wrapper라 next build가 필요 없다.
+      # electron-builder.yml의 win(nsis, x64) 설정으로 서명 없이 빌드한다(기존 로컬 빌드와 동일).
+      - name: Build Windows installer
+        run: npm run electron:build -- --win
+
+      # 버전 무관 영구 URL(releases/latest/download/CLIO-win.exe)을 위해 고정명 복사본을 만든다.
+      - name: Create fixed-name copy
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          cp "dist-electron/CLIO Setup ${VERSION}.exe" "dist-electron/CLIO-win.exe"
+          ls -la dist-electron/*.exe
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.release_tag || github.ref_name }}
+          files: |
+            dist-electron/CLIO Setup *.exe
+            dist-electron/CLIO-win.exe
