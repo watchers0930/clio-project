@@ -26,7 +26,7 @@ export function decryptPassword(encoded: string): string {
   const iv = buf.subarray(0, 12);
   const tag = buf.subarray(12, 28);
   const ciphertext = buf.subarray(28);
-  const decipher = createDecipheriv(ALGO, key, iv);
+  const decipher = createDecipheriv(ALGO, key, iv, { authTagLength: 16 });
   decipher.setAuthTag(tag);
   return decipher.update(ciphertext) + decipher.final('utf8');
 }
