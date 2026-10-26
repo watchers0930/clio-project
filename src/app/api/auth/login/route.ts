@@ -43,8 +43,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    const __t0 = Date.now();
     const { data: authData, error: authError } =
       await supabase.auth.signInWithPassword({ email, password });
+    const __tAuth = Date.now() - __t0;
 
     if (authError || !authData.user) {
       return NextResponse.json<ApiResponse>(
@@ -54,11 +56,13 @@ export async function POST(request: NextRequest) {
     }
 
     // users 테이블에서 프로필 조회
+    const __t1 = Date.now();
     const { data: profile } = await supabase
       .from('users')
       .select('*')
       .eq('id', authData.user.id)
       .single();
+    const __tSelect = Date.now() - __t1;
 
     const user = profile ?? {
       id: authData.user.id,
@@ -83,6 +87,9 @@ export async function POST(request: NextRequest) {
     for (const cookie of cookiesToSet) {
       response.cookies.set(cookie.name, cookie.value, cookie.options);
     }
+
+    // [임시 진단] 단계별 소요시간 — 병목 측정 후 제거 예정
+    response.headers.set('Server-Timing', `auth;dur=${__tAuth}, select;dur=${__tSelect}, total;dur=${Date.now() - __t0}`);
 
     return response;
   } catch {
