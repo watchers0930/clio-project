@@ -1,6 +1,6 @@
 {
   "name": "clio-project",
-  "version": "7.88.6",
+  "version": "7.89.0",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -16,8 +16,13 @@
   "build": {
     "appId": "kr.clio.desktop",
     "productName": "CLIO",
-    "files": ["electron/**/*", "package.json"],
-    "directories": { "output": "dist-electron" },
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist-electron"
+    },
     "mac": {
       "target": "dmg",
       "icon": "electron/icon.icns",
