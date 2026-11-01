@@ -4,16 +4,16 @@
 // 서버(GET /api/weekly-reports/overview)에서 role='admin' 또는 rank_level<=1 재검증.
 // 403이면 접근 불가 안내를 보여준다. (GET이라 CSRF 토큰 불필요)
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ShieldAlert, FileText } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { apiGet } from '@/hooks/csrf-client';
 import { WeeklyReportDetailModal } from './WeeklyReportDetailModal';
-import { statusBadgeVariant, statusLabel, formatDate, groupByWeek } from './helpers';
+import { groupByWeek } from './helpers';
+import { WeekGroupRows } from './WeekGroupRows';
 import type {
   WeeklyReport,
   WeeklyReportFilters,
@@ -95,6 +95,16 @@ export function WeeklyReportsClient() {
   }, [filters, load]);
 
   const weekGroups = useMemo(() => groupByWeek(reports), [reports]);
+  // 아코디언: 기본은 최신 주차(첫 그룹)만 펼침. toggled에 든 키는 기본 상태를 뒤집는다.
+  const [toggled, setToggled] = useState<Set<string>>(() => new Set());
+  const isWeekOpen = (key: string, index: number) => (index === 0) !== toggled.has(key);
+  const toggleWeek = (key: string) =>
+    setToggled((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   const patch = (p: Partial<WeeklyReportFilters>) => setFilters((prev) => ({ ...prev, ...p }));
 
@@ -204,32 +214,15 @@ export function WeeklyReportsClient() {
                 </tr>
               </thead>
               <tbody>
-                {weekGroups.map(({ week, items }) => (
-                  <Fragment key={week.key}>
-                    <tr className="border-b border-border bg-surface-secondary/60">
-                      <td colSpan={6} className="px-4 py-2.5">
-                        <span className="font-semibold text-foreground">{week.label}</span>
-                        {week.range && <span className="ml-2.5 text-xs text-foreground-tertiary">{week.range}</span>}
-                        <span className="ml-2.5 text-xs text-foreground-secondary">{items.length}건</span>
-                      </td>
-                    </tr>
-                    {items.map((r) => (
-                      <tr key={r.id} className="border-b border-border last:border-0 hover:bg-surface-secondary/50">
-                        <td className="px-4 py-3 font-medium text-foreground">{r.authorName}</td>
-                        <td className="px-4 py-3 text-foreground-secondary">{r.authorRank || '-'}</td>
-                        <td className="px-4 py-3 text-foreground-secondary">{r.authorDept}</td>
-                        <td className="px-4 py-3 text-foreground-secondary">{formatDate(r.createdAt)}</td>
-                        <td className="px-4 py-3">
-                          <Badge variant={statusBadgeVariant(r.status)}>{statusLabel(r.status)}</Badge>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <Button variant="secondary" size="sm" onClick={() => setSelected(r)}>
-                            상세보기
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </Fragment>
+                {weekGroups.map(({ week, items }, i) => (
+                  <WeekGroupRows
+                    key={week.key}
+                    week={week}
+                    items={items}
+                    open={isWeekOpen(week.key, i)}
+                    onToggle={() => toggleWeek(week.key)}
+                    onSelect={setSelected}
+                  />
                 ))}
               </tbody>
             </table>
