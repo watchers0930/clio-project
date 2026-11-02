@@ -65,6 +65,12 @@
   --font-sans: 'Paperlogy', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+/* ⚠️ 클리오 간격 표준 (2026-11-02 운영 실측)
+   아래 * 리셋과 th/td·input·label 규칙은 @layer 밖이라 Tailwind 유틸(@layer utilities)을 항상 이긴다.
+   → margin 유틸(mt, mb, ml, mx-auto, space-y 등)은 적용되지 않고 0이다. 표 셀 padding 유틸, 라벨 mb도 무시된다.
+   → 신규 코드의 간격은 margin 대신 flex/grid gap 또는 부모 padding으로 준다.
+   → 이 규칙들을 @layer base로 옮기면 기존 화면 간격이 전면 변경된다(v7.89.2 적용 후 파일표 줄바꿈·사이드바 밀림으로 v7.89.3 롤백).
+     옮기려면 화면별 before/after 확인을 거쳐 점진적으로 정리할 것. */
 * { box-sizing: border-box; margin: 0; }
 
 body {
