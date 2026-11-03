@@ -49,6 +49,7 @@ test("HTTP contracts, auth, CSRF, admin scope, validation and service error mapp
   };
   let leaveRows: unknown[] = [];
   let approvalRows: unknown[] = [];
+  let holidayError: { code: string; message: string } | null = null;
   const predicates: Array<[string, string, unknown]> = [];
   class Query {
     columns = "";
@@ -105,7 +106,8 @@ test("HTTP contracts, auth, CSRF, admin scope, validation and service error mapp
             : this.table === "leave_requests"
               ? leaveRows
               : this.table === "approval_requests" ? approvalRows : [];
-      return Promise.resolve({ data, error: null, count: 1 }).then(
+      const error = this.table === "leave_calendar" ? holidayError : null;
+      return Promise.resolve({ data: error ? null : data, error, count: 1 }).then(
         resolve,
         reject,
       );
@@ -202,7 +204,15 @@ test("HTTP contracts, auth, CSRF, admin scope, validation and service error mapp
       req("attendance?from=2026-10-01&to=2026-10-31"),
     );
     assert.equal(response.headers.get("Cache-Control"), "private, no-store");
-    assert.deepEqual(Object.keys((await response.json()).data), ["days"]);
+    assert.deepEqual(Object.keys((await response.json()).data), ["days", "holidays"]);
+    // 공휴일 조회 실패는 근태 응답을 막지 않고 holidays=null로만 알린다.
+    holidayError = { code: "57014", message: "statement timeout" };
+    const degraded = await attendance.GET(req("attendance?from=2026-10-01&to=2026-10-31"));
+    assert.equal(degraded.status, 200);
+    const degradedBody = (await degraded.json()).data;
+    assert.equal(degradedBody.holidays, null);
+    assert.equal(degradedBody.days.length, 1);
+    holidayError = null;
     assert.equal(
       (await attendance.GET(req("attendance?from=bad&to=2026-10-31"))).status,
       400,

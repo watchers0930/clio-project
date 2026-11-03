@@ -72,7 +72,7 @@ export function AttendanceSummaryCard({ today, isElectron }: Props) {
             <p className="mt-1 text-xs text-foreground-tertiary">
               {isElectron
                 ? '앱이 켜져 있으면 자동으로 기록됩니다.'
-                : '데스크탑 앱에서 자동 기록되며, 웹에서는 아래 ‘기록 추가’로 수동 입력할 수 있습니다.'}
+                : '데스크탑 앱에서 자동 기록되며, 웹에서는 아래 달력에서 날짜를 눌러 수동 입력할 수 있습니다.'}
             </p>
           </div>
         )}

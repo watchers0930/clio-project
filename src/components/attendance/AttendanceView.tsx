@@ -13,8 +13,8 @@ import { useLeaveRequests } from '@/hooks/use-leave-requests';
 import { useLeaveBalance } from '@/hooks/use-leave-balance';
 import { getElectronAttendance } from '@/hooks/use-attendance-heartbeat';
 import { AttendanceSummaryCard } from './AttendanceSummaryCard';
-import { AttendanceControls } from './AttendanceControls';
-import { AttendanceMonthlyList } from './AttendanceMonthlyList';
+import { AttendanceCalendar } from './AttendanceCalendar';
+import { addMonths, ymOf } from './calendar-utils';
 import { AttendanceCorrectionModal } from './AttendanceCorrectionModal';
 import { LeaveBalanceCard } from './LeaveBalanceCard';
 import { LeaveRequestList } from './LeaveRequestList';
@@ -59,10 +59,8 @@ export function AttendanceView() {
   const [correctDay, setCorrectDay] = useState<AttendanceDayView | null>(null);
   const [formOpen, setFormOpen] = useState(false);
 
-  const today =
-    attendance.days.find((d) => d.isToday) ??
-    attendance.days.find((d) => d.workDate === todayKst()) ??
-    null;
+  // 지난 달을 보고 있어도 요약 카드는 오늘 기록을 보여준다(훅이 별도 보관).
+  const today = attendance.todayDay;
 
   // 무신호 날짜 수동 기록(F03): 이미 있는 날이면 그 행을, 없으면 version:0 빈 날을 보정 모달로 넘긴다.
   const handleAddRecord = (workDate: string) => {
@@ -70,10 +68,10 @@ export function AttendanceView() {
     setCorrectDay(existing ?? makeEmptyDay(workDate));
   };
 
-  // 구간을 바꾸면 조회 대상이 달라지므로 진행 중인 보정 모달 대상을 정리한다(F04).
-  const handleRangeChange: typeof attendance.setRange = (next) => {
+  // 달을 바꾸면 조회 대상이 달라지므로 진행 중인 보정 모달 대상을 정리한다(F04).
+  const changeMonth = (next: Parameters<typeof attendance.setMonth>[0]) => {
     setCorrectDay(null);
-    attendance.setRange(next);
+    attendance.setMonth(next);
   };
 
   const tabs = [
@@ -129,17 +127,22 @@ export function AttendanceView() {
         <div className="flex flex-col gap-4">
           <DesktopAutoLaunchSetting />
           <AttendanceSummaryCard today={today} isElectron={isElectron} />
-          <AttendanceControls
-            range={attendance.range}
-            onRangeChange={handleRangeChange}
-            onAddRecord={handleAddRecord}
-          />
-          <AttendanceMonthlyList
+          <AttendanceCalendar
+            month={attendance.month}
+            isCurrentMonth={attendance.isCurrentMonth}
+            today={attendance.today}
             days={attendance.days}
+            holidays={attendance.holidays}
+            holidaysError={attendance.holidaysError}
+            leaves={leave.requests}
+            leaveError={leave.error}
             loading={attendance.loading}
+            ready={attendance.ready}
             error={attendance.error}
-            range={attendance.range}
-            onCorrect={setCorrectDay}
+            onPrevMonth={() => changeMonth(addMonths(attendance.month, -1))}
+            onNextMonth={() => changeMonth(addMonths(attendance.month, 1))}
+            onThisMonth={() => changeMonth(ymOf(attendance.today))}
+            onSelectDate={handleAddRecord}
           />
         </div>
       )}

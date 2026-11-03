@@ -25,6 +25,12 @@ export interface AttendanceDayView {
   version: number;
 }
 
+// 공휴일·회사휴무 (GET /api/attendance 응답의 holidays) — 휴가 근무일 판정에 사용
+export interface HolidayView {
+  day: string; // 'YYYY-MM-DD'
+  label: string;
+}
+
 export interface LeaveRequestView {
   id: string;
   leaveType: LeaveType;

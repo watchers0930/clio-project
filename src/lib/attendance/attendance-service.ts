@@ -47,6 +47,17 @@ export async function attendanceDays(
   databaseError(error);
   return (data ?? []).map(attendanceView);
 }
+/** 조회 구간의 공휴일·회사휴무(leave_calendar, 인증 사용자 읽기 RLS) — 휴가 근무일 판정을 서버와 맞춘다 */
+export async function attendanceHolidays(client: Client, from: string, to: string) {
+  const { data, error } = await client
+    .from("leave_calendar")
+    .select("day,label")
+    .gte("day", from)
+    .lte("day", to)
+    .order("day");
+  databaseError(error);
+  return (data ?? []).map((r) => ({ day: r.day, label: r.label }));
+}
 export async function heartbeat(admin: Client, userId: string) {
   const { data, error } = await admin.rpc("attendance_heartbeat", {
     p_user: userId,
