@@ -36,7 +36,10 @@ export function resolveDocumentInputForm(input: {
   const parsed = parseEmbeddedInputs(input.content);
   const byId = resolveBuiltinTemplateBundle(input.templateId);
   if (byId && matchingKinds(byId.name).length === 0) return { ok: false, reason: 'not-target' };
-  const names = [input.templateName, parsed.ok ? parsed.inputs.__template_name : null]
+  // DB 템플릿 이름은 template_id가 있을 때만 의미가 있다. template_id 없는 빌트인 양식 문서는
+  // 목록 API가 자리표시('기본')를 넣으므로 이를 이름으로 쓰면 '모호' 오판 → 입력값 편집이 막힌다.
+  const dbTemplateName = input.templateId ? input.templateName : null;
+  const names = [dbTemplateName, parsed.ok ? parsed.inputs.__template_name : null]
     .filter((name): name is string => Boolean(name?.trim()));
   const namedKinds = new Set(names.flatMap(matchingKinds));
   if (namedKinds.size > 1) return { ok: false, reason: 'ambiguous' };
@@ -56,9 +59,9 @@ export function resolveDocumentInputForm(input: {
   if (!candidate && titleKinds.length > 1) return { ok: false, reason: 'ambiguous' };
   const resolved = candidate ?? resolveBuiltinTemplateBundleByName(input.title);
   const kinds = resolved ? matchingKinds(resolved.name) : [];
-  if (!resolved || kinds.length !== 1) {
-    return { ok: false, reason: parsed.ok && !resolved ? 'ambiguous' : 'not-target' };
-  }
+  // 양식을 못 찾았거나 입력값 편집 대상(4종)이 아니면 not-target, 여러 종에 걸치면 모호
+  if (!resolved || kinds.length === 0) return { ok: false, reason: 'not-target' };
+  if (kinds.length > 1) return { ok: false, reason: 'ambiguous' };
   if (!parsed.ok) {
     return { ok: false, reason: parsed.reason === 'no-comment' ? 'no-inputs'
       : parsed.reason === 'proposal' ? 'not-target' : 'parse-error' };

@@ -4,6 +4,7 @@ import { documentStatusLabel, userDocumentUpdateViolation } from '@/lib/document
 import { validateDocumentUpdate } from '@/schemas/document-update';
 import { buildContentWithInputs, parseEmbeddedInputs } from '@/lib/documents/embedded-inputs';
 import { getWeekInfo } from '@/components/weekly-reports/helpers';
+import { resolveDocumentInputForm } from '@/lib/documents/resolve-input-form';
 
 test('PATCH accepts only user-settable statuses (workflow states are approval-API only)', () => {
   for (const status of ['draft', 'completed']) {
@@ -72,4 +73,19 @@ test('weekly grouping uses KST Monday-Sunday weeks and Thursday month attributio
   assert.equal(getWeekInfo('2026-11-02T00:00:00Z')?.range, '2026.11.02 ~ 11.08');
   assert.equal(getWeekInfo('2026-11-08T23:45:05Z')?.label, '11월 2주차');
   assert.equal(getWeekInfo('not-a-date'), null);
+});
+
+test('builtin form docs without template_id resolve even when list API sends placeholder template name', () => {
+  // 운영 주간업무 문서 형태: template_id null, 목록 API template='기본', 선두 DOCUMENT_INPUTS
+  const content = `<!--DOCUMENT_INPUTS:${JSON.stringify({ report_title: '주간업무' })}-->\n# 주간업무\n`;
+  const base = { title: '주간업무 (2026-11-02 생성)', templateId: null, content };
+  const placeholder = resolveDocumentInputForm({ ...base, templateName: '기본' });
+  assert.equal(placeholder.ok, true);
+  if (placeholder.ok) assert.equal(placeholder.form.kind, 'weekly');
+  assert.deepEqual(resolveDocumentInputForm({ ...base, templateName: '기본' }), resolveDocumentInputForm({ ...base, templateName: null }));
+  // 입력값 편집 대상(4종)이 아닌 빌트인 양식은 '모호'가 아니라 '대상 아님'
+  assert.deepEqual(resolveDocumentInputForm({ ...base, title: '품의서 (2026-10-23 생성)', templateName: '기본' }), { ok: false, reason: 'not-target' });
+  // 커스텀 DB 템플릿(id 보유)이 빌트인 이름과 겹치면 여전히 차단
+  const custom = resolveDocumentInputForm({ ...base, templateId: '11111111-1111-4111-8111-111111111111', templateName: '주간업무' });
+  assert.equal(custom.ok, false);
 });
