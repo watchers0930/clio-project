@@ -18,6 +18,8 @@ import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
 import { isProposalTemplateName } from '@/lib/templates/proposal';
 import { canAccessDocument, getUserRoleInfo, canViewAllWeeklyReports } from '@/lib/permissions';
 import { loadCompanyLogoContext } from '@/lib/settings/company-logo';
+import { parseEmbeddedInputs } from '@/lib/documents/embedded-inputs';
+import { isWeeklyReportDocument } from '@/lib/documents/weekly-report-document';
 
 // PDF 서버 렌더(puppeteer/chromium 콜드스타트 대비) 실행시간 확보
 export const maxDuration = 60;
@@ -94,13 +96,13 @@ export async function GET(
         doc = adminDoc;
       } else {
         // 전사 주간업무 조회 권한자(대표/관리자)는 주간업무 빌트인 문서를 inline 양식으로 열람 허용.
-        // overview 조회와 동일 범위(title~주간업무 + template_id NULL)라 접근 권한이 일관된다.
+        // overview 조회와 동일 판별(isWeeklyReportDocument + template_id NULL)이라 접근 권한이 일관된다.
         const { data: wr } = await admin
           .from('documents')
           .select('id, title, content, storage_path, parent_id, template_id, created_by')
           .eq('id', id)
           .single();
-        if (wr && wr.template_id === null && /주간\s*업무/.test(wr.title ?? '')) {
+        if (wr && wr.template_id === null && isWeeklyReportDocument({ title: wr.title ?? '', content: wr.content })) {
           const { data: me } = await admin
             .from('users')
             .select('role, rank_level')
@@ -179,9 +181,11 @@ export async function GET(
       }
       // 빌트인 템플릿으로 생성됐지만 template_id가 저장되지 않은(null) 문서 보정.
       // buildDocumentInsertPayload가 '__builtin_' ID를 FK 제약 때문에 저장하지 않아 template_id=null이 됨
-      // → 문서 제목으로 양식을 추론해 번들을 복원(없으면 null 유지). 이게 없으면 PDF가 텍스트로 렌더됨.
+      // → 저장된 양식명(__template_name, 제목은 사용자가 바꿀 수 있음) 우선, 없으면 제목으로 번들 복원. 없으면 PDF가 텍스트로 렌더됨.
       if (!templateBundle) {
-        const byName = resolveBuiltinTemplateBundleByName(doc.title);
+        const embedded = parseEmbeddedInputs(doc.content ?? '');
+        const byName = (embedded.ok && embedded.inputs.__template_name ? resolveBuiltinTemplateBundleByName(embedded.inputs.__template_name) : null)
+          ?? resolveBuiltinTemplateBundleByName(doc.title);
         if (byName) {
           templateName = byName.name;
           templateBundle = byName.bundle;
