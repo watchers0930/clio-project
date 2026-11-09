@@ -1,4 +1,5 @@
 import { validateDocumentUpdate } from '@/schemas/document-update';
+import { userDocumentUpdateViolation } from '@/lib/documents/document-status';
 import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import type { ApiResponse } from '@/lib/supabase/types';
@@ -342,6 +343,16 @@ export async function PATCH(
       return NextResponse.json<ApiResponse>({ success: false, error: '문서 수정 권한이 없습니다.' }, { status: 403 });
     }
 
+    // 현재 상태 기준 전환 규칙(DB 트리거 052와 동일) — 결재 상태 위조·결재 중 문서 수정 차단
+    const { data: current } = await supabase.from('documents').select('status').eq('id', id).maybeSingle();
+    if (!current) {
+      return NextResponse.json<ApiResponse>({ success: false, error: '문서를 찾을 수 없습니다.' }, { status: 404 });
+    }
+    const violation = userDocumentUpdateViolation(current.status as string, updates);
+    if (violation) {
+      return NextResponse.json<ApiResponse>({ success: false, error: violation }, { status: 409 });
+    }
+
     const { data, error } = await supabase
       .from('documents')
       .update(updates)
@@ -350,6 +361,10 @@ export async function PATCH(
       .single();
 
     if (error) {
+      // 조회~수정 사이 결재 상신 등 경합 시 DB 트리거(052)가 거부 → 409로 사유 전달
+      if (error.code === 'P0001' && error.message.includes('결재')) {
+        return NextResponse.json<ApiResponse>({ success: false, error: error.message }, { status: 409 });
+      }
       console.error('[documents/[id]/PATCH]', error.message);
       return NextResponse.json<ApiResponse>({ success: false, error: '문서 수정에 실패했습니다.' }, { status: 500 });
     }

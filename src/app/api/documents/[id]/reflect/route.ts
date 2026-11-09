@@ -1,3 +1,4 @@
+import { isWorkflowLockedStatus } from '@/lib/documents/document-status';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
@@ -73,6 +74,9 @@ export async function POST(
       .single();
 
     if (!doc) return NextResponse.json({ success: false, error: '문서를 찾을 수 없습니다.' }, { status: 404 });
+    if (isWorkflowLockedStatus(doc.status)) {
+      return NextResponse.json({ success: false, error: '결재 중이거나 승인된 문서에는 댓글을 반영할 수 없습니다.' }, { status: 409 });
+    }
     if (!doc.content) return NextResponse.json({ success: false, error: '문서 내용이 없습니다.' }, { status: 400 });
 
     // 2. 선택된 댓글 조회

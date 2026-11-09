@@ -1,3 +1,4 @@
+import { isWorkflowLockedStatus } from '@/lib/documents/document-status';
 import { uuid } from '@/lib/attendance/date';
 import { linkedLeave, submitLeaveApproval } from '@/lib/leave/leave-approval';
 import { errorResponse } from '@/lib/http/api-error';
@@ -31,12 +32,16 @@ export async function POST(request: NextRequest) {
   // 문서 조회 + 본인 문서 검증
   const { data: doc } = await admin
     .from('documents')
-    .select('id, title, template_id, created_by, content')
+    .select('id, title, template_id, created_by, content, status')
     .eq('id', documentId)
     .maybeSingle();
   if (!doc) return NextResponse.json({ success: false, error: '문서를 찾을 수 없습니다.' }, { status: 404 });
   if (doc.created_by !== authUserId) {
     return NextResponse.json({ success: false, error: '본인이 작성한 문서만 상신할 수 있습니다.' }, { status: 403 });
+  }
+  // 결재 중·승인 문서 재상신 차단(승인 상태를 in_approval로 덮어써 승인 증적이 사라지는 것 방지)
+  if (isWorkflowLockedStatus(doc.status as string)) {
+    return NextResponse.json({ success: false, error: '이미 결재 중이거나 승인된 문서입니다.' }, { status: 409 });
   }
 
   try {

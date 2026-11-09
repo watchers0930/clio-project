@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, type Dispatch, type SetStateAction, useState } from 'react';
-import { csrfFetch } from '@/hooks/csrf-client';
+import { patchDocument, type DocumentPatch } from '@/lib/documents/patch-document';
 import type { DocumentItem as Document } from '@/components/documents/page-types';
 import type { useToast } from '@/components/ui/toast';
 
@@ -68,18 +68,13 @@ export function useDocumentViewerActions({
 
     setSaving(true);
     try {
-      const res = await csrfFetch(`/api/documents/${viewDoc.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: editContent, title: editTitle }),
-      });
-      if (!res.ok) throw new Error();
+      await patchDocument(viewDoc.id, { content: editContent, title: editTitle }, '저장에 실패했습니다.');
 
       const updated = { ...viewDoc, content: editContent, title: editTitle };
       setViewDoc(updated);
       setDocs((prev) => prev.map((doc) => (doc.id === viewDoc.id ? updated : doc)));
-    } catch {
-      toast.error('저장에 실패했습니다.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '저장에 실패했습니다.');
     } finally {
       setSaving(false);
     }
@@ -99,18 +94,8 @@ export function useDocumentViewerActions({
 
     setSaving(true);
     try {
-      const res = await csrfFetch(`/api/documents/${targetId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: snapshotContent }),
-      });
-      const json = await res.json().catch(() => null);
-      if (!res.ok || !json?.success) {
-        throw new Error(typeof json?.error === 'string' ? json.error : '저장에 실패했습니다.');
-      }
-
-      const savedContent =
-        typeof json.data?.content === 'string' ? (json.data.content as string) : snapshotContent;
+      const saved = await patchDocument(targetId, { content: snapshotContent }, '저장에 실패했습니다.');
+      const savedContent = typeof saved.content === 'string' ? saved.content : snapshotContent;
 
       // 목록은 항상 최신화(어느 문서를 보든 데이터 정합 유지)
       setDocs((prev) => prev.map((doc) => (doc.id === targetId ? { ...doc, content: savedContent } : doc)));
@@ -121,6 +106,7 @@ export function useDocumentViewerActions({
         // 편집값은 저장 요청 이후 추가 입력이 없을 때만 교체한다(응답이 신규 편집을 되돌리지 않도록).
         setEditContent((prev) => (prev === snapshotContent ? savedContent : prev));
       }
+      toast.success('입력값을 저장했습니다. 레이아웃 보기에 반영됩니다.');
       return true;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : '저장에 실패했습니다.');
@@ -139,16 +125,11 @@ export function useDocumentViewerActions({
 
       setSaving(true);
       try {
-        const body: Record<string, string> = { status: 'completed' };
+        const body: DocumentPatch = { status: 'completed' };
         if (editContent !== viewDoc.content) body.content = editContent;
         if (editTitle !== viewDoc.title) body.title = editTitle;
 
-        const res = await csrfFetch(`/api/documents/${viewDoc.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok) throw new Error();
+        await patchDocument(viewDoc.id, body, '상태 변경에 실패했습니다.');
 
         const updated = {
           ...viewDoc,
@@ -159,8 +140,8 @@ export function useDocumentViewerActions({
         };
         setViewDoc(updated);
         setDocs((prev) => prev.map((doc) => (doc.id === viewDoc.id ? updated : doc)));
-      } catch {
-        toast.error('상태 변경에 실패했습니다.');
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : '상태 변경에 실패했습니다.');
       } finally {
         setSaving(false);
       }
@@ -176,18 +157,13 @@ export function useDocumentViewerActions({
 
       setSaving(true);
       try {
-        const res = await csrfFetch(`/api/documents/${viewDoc.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'draft' }),
-        });
-        if (!res.ok) throw new Error();
+        await patchDocument(viewDoc.id, { status: 'draft' }, '상태 변경에 실패했습니다.');
 
         const updated = { ...viewDoc, status: '초안' as const };
         setViewDoc(updated);
         setDocs((prev) => prev.map((doc) => (doc.id === viewDoc.id ? updated : doc)));
-      } catch {
-        toast.error('상태 변경에 실패했습니다.');
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : '상태 변경에 실패했습니다.');
       } finally {
         setSaving(false);
       }

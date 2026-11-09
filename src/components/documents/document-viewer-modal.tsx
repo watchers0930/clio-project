@@ -9,6 +9,7 @@ import { stripEmbeddedInputs, getEmbeddedInputsPrefix } from '@/lib/documents/em
 import { resolveDocumentInputForm } from '@/lib/documents/resolve-input-form';
 import { DocumentInputEditor, getInputEditorAvailability, getInputValidationState } from '@/components/documents/document-input-editor';
 import { DocumentViewerFooter } from '@/components/documents/document-viewer-footer';
+import { ViewModeToggle, type DocumentViewMode } from '@/components/documents/view-mode-toggle';
 
 const EMBEDDED_INPUTS_RE = /^<!--(?:PROPOSAL_INPUTS|DOCUMENT_INPUTS):/;
 
@@ -82,8 +83,10 @@ export function DocumentViewerModal({
   onCommentsReflected,
 }: DocumentViewerModalProps) {
   // preview = 레이아웃 보기 / edit = 원문 편집 / inputs = 입력값 편집(공용 폼)
-  const [viewMode, setViewMode] = useState<'preview' | 'edit' | 'inputs'>('preview');
+  const [viewMode, setViewMode] = useState<DocumentViewMode>('preview');
   const [lastDocId, setLastDocId] = useState<string | null>(viewDoc?.id ?? null);
+  // 이 문서에서 입력값 저장이 성공했는지 — 미리보기 실패 시 '저장됨'을 사실일 때만 안내하기 위함
+  const [inputsSaved, setInputsSaved] = useState(false);
   // 제안서를 제외한 템플릿 문서(품의서 등)는 서버 렌더 HTML 프리뷰 사용
   const serverPreview = useServerRenderedPreview(viewDoc, selectedFont);
 
@@ -93,6 +96,7 @@ export function DocumentViewerModal({
   if (docId !== lastDocId) {
     setLastDocId(docId);
     setViewMode('preview');
+    setInputsSaved(false);
   }
 
   if (!viewDoc) return null;
@@ -214,43 +218,11 @@ export function DocumentViewerModal({
               {useHtmlPreview ? (
                 <div className="flex h-full min-h-[400px] flex-col gap-3">
                   {isDraft && (
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => setViewMode('preview')}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                          viewMode === 'preview'
-                            ? 'bg-foreground text-white'
-                            : 'border border-border text-foreground-secondary hover:bg-surface-secondary'
-                        }`}
-                      >
-                        레이아웃 보기
-                      </button>
-                      {showInputEditButton && (
-                        <button
-                          onClick={() => inputEditability.available && setViewMode('inputs')}
-                          disabled={!inputEditability.available}
-                          aria-disabled={!inputEditability.available}
-                          title={inputEditability.available ? undefined : inputEditability.reason}
-                          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                            viewMode === 'inputs'
-                              ? 'bg-foreground text-white'
-                              : 'border border-border text-foreground-secondary hover:bg-surface-secondary'
-                          }`}
-                        >
-                          입력값 편집
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setViewMode('edit')}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                          viewMode === 'edit'
-                            ? 'bg-foreground text-white'
-                            : 'border border-border text-foreground-secondary hover:bg-surface-secondary'
-                        }`}
-                      >
-                        원문 편집
-                      </button>
-                    </div>
+                    <ViewModeToggle
+                      viewMode={viewMode}
+                      onChange={setViewMode}
+                      inputEdit={showInputEditButton ? inputEditability : undefined}
+                    />
                   )}
                   {isDraft && viewMode === 'inputs' ? (
                     <DocumentInputEditor
@@ -258,7 +230,11 @@ export function DocumentViewerModal({
                       editContent={editContent}
                       saving={saving}
                       onChangeContent={onChangeContent}
-                      onSaveInputs={onSaveInputs}
+                      onSaveInputs={async () => {
+                        const ok = (await onSaveInputs()) === true;
+                        if (ok) setInputsSaved(true);
+                        return ok;
+                      }}
                     />
                   ) : !isDraft || viewMode === 'preview' ? (
                     isProposal ? (
@@ -273,7 +249,13 @@ export function DocumentViewerModal({
                       </div>
                     ) : serverPreview.error || !serverPreview.html ? (
                       <div className="flex h-full min-h-[640px] w-full flex-col items-center justify-center gap-3 rounded-xl border border-border bg-white px-6 text-center text-sm text-foreground-secondary">
-                        <p>레이아웃 미리보기를 불러오지 못했습니다. 입력값은 저장되었을 수 있습니다.</p>
+                        <p>
+                          {isEdited
+                            ? '레이아웃 미리보기를 불러오지 못했습니다. 저장하지 않은 변경사항이 있습니다 — 미리보기는 저장된 내용 기준입니다.'
+                            : inputsSaved
+                              ? '입력값은 저장되었지만 미리보기를 불러오지 못했습니다.'
+                              : '레이아웃 미리보기를 불러오지 못했습니다. 저장된 문서 내용에는 영향이 없습니다.'}
+                        </p>
                         <button
                           type="button"
                           onClick={() => serverPreview.refetch()}
@@ -307,30 +289,7 @@ export function DocumentViewerModal({
                 </div>
               ) : isMarkdownTemplate ? (
                 <div className="flex h-full min-h-[400px] flex-col gap-3">
-                  {isDraft && (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setViewMode('preview')}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                          viewMode === 'preview'
-                            ? 'bg-foreground text-white'
-                            : 'border border-border text-foreground-secondary hover:bg-surface-secondary'
-                        }`}
-                      >
-                        레이아웃 보기
-                      </button>
-                      <button
-                        onClick={() => setViewMode('edit')}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                          viewMode === 'edit'
-                            ? 'bg-foreground text-white'
-                            : 'border border-border text-foreground-secondary hover:bg-surface-secondary'
-                        }`}
-                      >
-                        원문 편집
-                      </button>
-                    </div>
-                  )}
+                  {isDraft && <ViewModeToggle viewMode={viewMode} onChange={setViewMode} />}
                   {!isDraft || viewMode === 'preview' ? (
                     <div className="h-full min-h-[400px] overflow-y-auto rounded-xl border border-border bg-white px-5 py-4">
                       <DocumentMarkdownBody content={isDraft ? editContent : viewDoc.content ?? ''} />

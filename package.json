@@ -1,6 +1,6 @@
 {
   "name": "clio-project",
-  "version": "7.90.0",
+  "version": "7.91.0",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "tsx --test \"src/**/*.test.ts\"",
     "electron": "electron .",
     "electron:build": "electron-builder"
   },
@@ -85,6 +86,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
     "tailwindcss": "^4",
+    "tsx": "4.23.15",
     "typescript": "^5"
   }
 }

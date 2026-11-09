@@ -16,9 +16,9 @@ import { VersionPanel, type VersionItem } from '@/components/documents/VersionPa
 import { TodoExtractModal } from '@/components/meetings/TodoExtractModal';
 import { Spinner } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
+import { patchDocument } from '@/lib/documents/patch-document';
 import { SubmitApprovalButton } from '@/components/approvals/submit-approval-button';
 import { ApprovalActionBar } from '@/components/approvals/approval-action-bar';
-import { csrfFetch } from '@/hooks/csrf-client';
 
 export default function DocumentViewerPage() {
   const params = useParams();
@@ -141,18 +141,11 @@ export default function DocumentViewerPage() {
   const handleComplete = async () => {
     if (!doc) return;
     try {
-      const res = await csrfFetch(`/api/documents/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'completed' }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setDoc((prev) => prev ? { ...prev, status: 'completed' } : prev);
-        toast.success('문서가 완료 처리되었습니다.');
-      }
-    } catch {
-      toast.error('상태 변경 실패');
+      await patchDocument(id, { status: 'completed' }, '상태 변경에 실패했습니다.');
+      setDoc((prev) => prev ? { ...prev, status: 'completed' } : prev);
+      toast.success('문서가 완료 처리되었습니다.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '상태 변경에 실패했습니다.');
     }
   };
 

@@ -1,3 +1,5 @@
+import { isUserSettableStatus } from '@/lib/documents/document-status';
+
 /** Validate the existing PATCH contract without transforming or rewriting content. */
 export type DocumentUpdate = { content?: string; title?: string; status?: string };
 export function validateDocumentUpdate(body: unknown):
@@ -16,7 +18,8 @@ export function validateDocumentUpdate(body: unknown):
   if (updates.title !== undefined && !updates.title.trim()) {
     return { ok: false, error: '문서 제목을 입력해 주세요.' };
   }
-  if (updates.status !== undefined && !['draft', 'completed', 'in_approval', 'approved', 'rejected'].includes(updates.status)) {
+  // 결재 상태(in_approval/approved/rejected)는 결재 API만 설정한다 — PATCH는 초안·완료만.
+  if (updates.status !== undefined && !isUserSettableStatus(updates.status)) {
     return { ok: false, error: '유효하지 않은 문서 상태입니다.' };
   }
   if (!Object.keys(updates).length) return { ok: false, error: '수정할 내용이 없습니다.' };

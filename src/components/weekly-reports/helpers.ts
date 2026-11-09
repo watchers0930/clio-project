@@ -1,17 +1,10 @@
 // 주간업무 조회 화면 표시용 순수 헬퍼 (상태 라벨·배지색·날짜 포맷)
 
 import type { BadgeVariant } from '@/components/ui/badge';
+import { documentStatusLabel, type DocumentStatusValue } from '@/lib/documents/document-status';
 
-const STATUS_LABELS: Record<string, string> = {
-  completed: '완료',
-  draft: '초안',
-  in_approval: '결재중', // 현재 결재 상정 상태값
-  submitted: '결재중', // 레거시 상태값(과거 데이터 호환)
-  approved: '승인됨',
-  rejected: '반려됨',
-};
-
-const STATUS_VARIANTS: Record<string, BadgeVariant> = {
+// 키 누락 시 타입 에러 — 상태값 단일 출처(DOCUMENT_STATUSES)와 동기화 강제
+const STATUS_VARIANTS: Record<DocumentStatusValue, BadgeVariant> = {
   completed: 'success',
   approved: 'success',
   in_approval: 'info',
@@ -21,11 +14,11 @@ const STATUS_VARIANTS: Record<string, BadgeVariant> = {
 };
 
 export function statusLabel(status: string): string {
-  return STATUS_LABELS[status] ?? status;
+  return documentStatusLabel(status);
 }
 
 export function statusBadgeVariant(status: string): BadgeVariant {
-  return STATUS_VARIANTS[status] ?? 'default';
+  return (STATUS_VARIANTS as Record<string, BadgeVariant>)[status] ?? 'default';
 }
 
 /** ISO 문자열 → 'YYYY.MM.DD' */

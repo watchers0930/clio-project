@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { documentStatusLabel } from '@/lib/documents/document-status';
 import { ArrowLeft, CheckCircle2, ChevronDown, ChevronRight, Download, GitBranch, Link2, MoreHorizontal, Printer, Search } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import { HtmlPreviewFrame } from '@/components/documents/html-preview-frame';
@@ -116,7 +117,7 @@ export function formatDateTimeLabel(value: string | null | undefined) {
 }
 
 export function formatStatusLabel(status: string) {
-  return ({ completed: '완료', draft: '초안', in_approval: '결재중', submitted: '결재중', approved: '승인됨', rejected: '반려됨' } as Record<string, string>)[status] ?? status;
+  return documentStatusLabel(status);
 }
 
 interface HeaderProps {
