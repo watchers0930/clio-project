@@ -3,10 +3,11 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { canViewAllWeeklyReports } from '@/lib/permissions';
+import { isWeeklyReportDocument, WEEKLY_REPORT_CANDIDATE_FILTER } from '@/lib/documents/weekly-report-document';
 
 /**
  * CEO/관리자 전용 — 전사 직원 주간업무 조회.
- * 주간업무 문서: title ~ '주간업무' + template_id IS NULL(빌트인).
+ * 주간업무 문서: template_id IS NULL(빌트인) + 양식 판별(isWeeklyReportDocument — 저장 양식명 우선, 옛 문서는 제목·고유 입력값).
  * 필터: employeeId(작성자)·departmentId(부서)·dateFrom/dateTo(작성일).
  */
 export async function GET(request: NextRequest) {
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
     let query = admin
       .from('documents')
       .select('id, title, content, status, created_at, created_by, author:created_by(name, rank_title, department_id, departments:department_id(name))')
-      .ilike('title', '%주간%업무%')
+      .or(WEEKLY_REPORT_CANDIDATE_FILTER)
       .is('template_id', null)
       .order('created_at', { ascending: false });
 
@@ -52,7 +53,10 @@ export async function GET(request: NextRequest) {
     }
 
     type AuthorJoin = { name?: string; rank_title?: string; department_id?: string | null; departments?: { name?: string } | null } | null;
-    let reports = ((rows ?? []) as Array<Record<string, unknown>>).map((r) => {
+    // 제목이 바뀐 주간업무도 포함되도록 후보를 넓게 가져온 뒤 양식 기준으로 최종 판별
+    let reports = ((rows ?? []) as Array<Record<string, unknown>>)
+      .filter((r) => isWeeklyReportDocument({ title: r.title as string, content: (r.content as string) ?? '' }))
+      .map((r) => {
       const author = r.author as AuthorJoin;
       return {
         id: r.id as string,

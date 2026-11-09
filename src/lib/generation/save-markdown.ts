@@ -66,6 +66,11 @@ export async function saveMarkdown(input: SaveMarkdownInput) {
         key !== "company_logo_src",
     ),
   );
+  // 빌트인 양식은 양식명을 함께 저장한다. 제목은 사용자가 입력한 보고서 제목으로 바뀌므로
+  // 제목만으로는 양식(예: 주간업무)을 판별할 수 없다(입력값 편집·주간업무 목록이 이 값을 우선 사용).
+  if (templateName && (!templateId || templateId.startsWith("__builtin_"))) {
+    embeddableDocumentInputs.__template_name = templateName;
+  }
   const markdownContent = isLeaveApplicationTemplateName(templateName)
     ? embedLeaveInputs(
         generationResult.markdown ?? "",
