@@ -39,7 +39,8 @@ export async function GET(request: NextRequest) {
 
   const { data: members } = await admin
     .from('users')
-    .select('id, name, email, manager_user_id, rank_level, rank_title');
+    .select('id, name, email, manager_user_id, rank_level, rank_title')
+    .eq('is_active', true); // 상신(approvals POST)과 같은 결재선
   const byId = new Map<string, OrgMember>((members ?? []).map((m: OrgMember) => [m.id, m]));
 
   const line = buildApprovalLine(requesterId, byId, depth);

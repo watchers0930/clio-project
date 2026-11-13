@@ -1,5 +1,8 @@
 import { validateDocumentUpdate } from '@/schemas/document-update';
 import { userDocumentUpdateViolation } from '@/lib/documents/document-status';
+import { countLockedDocumentReferences, isLockedDocumentError } from '@/lib/documents/locked-references';
+
+const LOCKED_ORIGIN_MESSAGE = '이 문서를 원본으로 하는 결재 중이거나 승인된 문서가 있어 삭제할 수 없습니다.';
 import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import type { ApiResponse } from '@/lib/supabase/types';
@@ -362,7 +365,7 @@ export async function PATCH(
 
     if (error) {
       // 조회~수정 사이 결재 상신 등 경합 시 DB 트리거(052)가 거부 → 409로 사유 전달
-      if (error.code === 'P0001' && error.message.includes('결재')) {
+      if (isLockedDocumentError(error)) {
         return NextResponse.json<ApiResponse>({ success: false, error: error.message }, { status: 409 });
       }
       console.error('[documents/[id]/PATCH]', error.message);
@@ -419,8 +422,17 @@ export async function DELETE(
       return NextResponse.json<ApiResponse>({ success: false, error: '문서 삭제 권한이 없습니다.' }, { status: 403 });
     }
 
+    // 결재 잠금 버전·파생 문서의 원본은 삭제 불가(연쇄 SET NULL이 052 트리거에 걸림)
+    const lockedChildren = await countLockedDocumentReferences(createAdminSupabaseClient(), ['parent_id', 'origin_document_id'], id);
+    if (lockedChildren > 0) {
+      return NextResponse.json<ApiResponse>({ success: false, error: LOCKED_ORIGIN_MESSAGE }, { status: 409 });
+    }
+
     const { error } = await supabase.from('documents').delete().eq('id', id);
     if (error) {
+      if (isLockedDocumentError(error)) {
+        return NextResponse.json<ApiResponse>({ success: false, error: LOCKED_ORIGIN_MESSAGE }, { status: 409 });
+      }
       console.error('[documents/[id]/DELETE]', error.message);
       return NextResponse.json<ApiResponse>({ success: false, error: '문서 삭제에 실패했습니다.' }, { status: 500 });
     }

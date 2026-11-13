@@ -5,6 +5,9 @@ import { getAuthUserId } from '@/lib/auth-helper';
 import type { DbUser } from '@/lib/supabase/types';
 import { getUserRoleInfo, isAdmin, isManagerOrAbove } from '@/lib/permissions';
 import { maskResidentNo } from '@/lib/format/personal';
+import { isLockedDocumentError } from '@/lib/documents/locked-references';
+import { countUserRetainedRecords, deactivationBlocker, syncAuthBanOrRevert } from '@/lib/users/user-activation';
+import { requireAdmin } from '@/lib/http/admin-guard';
 
 /**
  * GET /api/users — 사용자 목록
@@ -193,7 +196,7 @@ export async function PUT(request: NextRequest) {
     // 대상 사용자 현재 정보
     const { data: target } = await supabase
       .from('users')
-      .select('department_id, role')
+      .select('department_id, role, is_active')
       .eq('id', id)
       .single();
 
@@ -206,6 +209,21 @@ export async function PUT(request: NextRequest) {
       }
       if (role !== undefined) {
         return NextResponse.json({ success: false, error: '역할 변경은 관리자만 가능합니다.' }, { status: 403 });
+      }
+    }
+
+    // 활성 상태 변경: 활성 관리자만(requireAdmin), 자기 자신 비활성화 금지, 결재가 멈추는 비활성화 금지
+    if (isActive !== undefined && typeof isActive !== 'boolean') {
+      return NextResponse.json({ success: false, error: '활성 상태 값이 올바르지 않습니다.' }, { status: 400 });
+    }
+    const activeChanged = isActive !== undefined && isActive !== (target.is_active !== false);
+    if (activeChanged) {
+      const guard = await requireAdmin(supabase, authUserId);
+      if (guard) return guard;
+      if (id === authUserId) return NextResponse.json({ success: false, error: '자기 자신의 활성 상태는 변경할 수 없습니다.' }, { status: 400 });
+      if (!isActive) {
+        const blocker = await deactivationBlocker(createAdminSupabaseClient(), id);
+        if (blocker) return NextResponse.json({ success: false, error: blocker }, { status: 409 });
       }
     }
 
@@ -241,6 +259,10 @@ export async function PUT(request: NextRequest) {
     if (error) {
       console.error('[users/PUT]', error.message);
       return NextResponse.json({ success: false, error: '사용자 수정 실패' }, { status: 500 });
+    }
+
+    if (activeChanged && !(await syncAuthBanOrRevert(createAdminSupabaseClient(), id, isActive))) {
+      return NextResponse.json({ success: false, error: '로그인 차단 상태 변경에 실패했습니다. 다시 시도해주세요.' }, { status: 500 });
     }
 
     // Auth 동기화 (비밀번호/이메일 변경 — admin만)
@@ -325,17 +347,21 @@ export async function DELETE(request: NextRequest) {
     const authUserId = await getAuthUserId(supabase);
     if (!authUserId) return NextResponse.json({ success: false, error: '인증 필요' }, { status: 401 });
 
-    const myRole = await getUserRoleInfo(supabase, authUserId);
-    if (!myRole || !isAdmin(myRole.role)) {
-      return NextResponse.json({ success: false, error: '관리자 권한이 필요합니다.' }, { status: 403 });
-    }
+    const guard = await requireAdmin(supabase, authUserId); // 활성 관리자만(비활성 관리자의 잔여 토큰 차단)
+    if (guard) return guard;
 
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    const id = new URL(request.url).searchParams.get('id');
     if (!id) return NextResponse.json({ success: false, error: '사용자 ID 필수' }, { status: 400 });
 
     if (id === authUserId) {
       return NextResponse.json({ success: false, error: '자기 자신은 삭제할 수 없습니다.' }, { status: 400 });
+    }
+
+    // 결재·근태 기록이 있으면 영구 삭제 불가(CASCADE로 증적 소실) — 정리 작업보다 먼저 확인
+    const adminClient = createAdminSupabaseClient();
+    const retained = await countUserRetainedRecords(adminClient, id);
+    if (retained > 0) {
+      return NextResponse.json({ success: false, error: `결재·근태 기록(${retained}건)이 있는 사용자는 삭제할 수 없습니다. 비활성화를 사용해주세요.` }, { status: 409 });
     }
 
     // 채널 멤버십 제거
@@ -344,11 +370,13 @@ export async function DELETE(request: NextRequest) {
     // users 테이블에서 완전 삭제
     const { error } = await supabase.from('users').delete().eq('id', id);
     if (error) {
+      if (isLockedDocumentError(error)) {
+        return NextResponse.json({ success: false, error: '결재 기록이 있는 사용자는 삭제할 수 없습니다. 비활성화를 사용해주세요.' }, { status: 409 });
+      }
       return NextResponse.json({ success: false, error: '사용자 삭제 실패: ' + error.message }, { status: 500 });
     }
 
     // Supabase Auth에서도 삭제
-    const adminClient = createAdminSupabaseClient();
     try { await adminClient.auth.admin.deleteUser(id); } catch (e) { console.error("[users] auth delete failed:", e); }
 
     try {

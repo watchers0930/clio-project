@@ -233,19 +233,27 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
     }
   };
 
-  const deleteUser = (id: string, name: string) => {
-    openConfirm(`"${name}" 사용자를 비활성화하시겠습니까?`, '비활성화된 사용자는 로그인할 수 없습니다.', async () => {
+  // 퇴사자 등은 영구 삭제하지 않고 비활성화(결재·근태 기록 보존, 로그인 차단)
+  const toggleUserActive = (user: UserItem) => {
+    const activate = user.is_active === false;
+    const action = activate ? '재활성화' : '비활성화';
+    const detail = activate ? '재활성화하면 다시 로그인할 수 있습니다.' : '비활성화된 사용자는 로그인할 수 없습니다. 결재·근태 기록은 그대로 보존됩니다.';
+    openConfirm(`"${user.name}" 사용자를 ${action}하시겠습니까?`, detail, async () => {
       try {
-        const res = await fetch(`/api/users?id=${id}`, { method: 'DELETE' });
+        const res = await fetch('/api/users', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: user.id, isActive: activate }),
+        });
         const json = await res.json();
         if (!res.ok || !json.success) {
-          toast.error(json.error ?? '사용자 비활성화에 실패했습니다.');
+          toast.error(json.error ?? `사용자 ${action}에 실패했습니다.`);
           closeConfirm();
           return;
         }
         await loadUsers();
       } catch {
-        toast.error('사용자 삭제 중 오류가 발생했습니다.');
+        toast.error(`사용자 ${action} 중 오류가 발생했습니다.`);
       }
       closeConfirm();
     });
@@ -364,7 +372,7 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
           pendingChanges={pendingChanges}
           savingUserId={savingUserId}
           onOpenUserModal={openUserModal}
-          onDeleteUser={deleteUser}
+          onToggleUserActive={toggleUserActive}
           onSetPendingDept={setPendingDept}
           onSetPendingRole={setPendingRole}
           onSaveUserChanges={saveUserChanges}

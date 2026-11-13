@@ -3,6 +3,8 @@ import type { ApiResponse, LoginResponse } from '@/lib/supabase/types';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
+const INACTIVE_ACCOUNT_MESSAGE = '비활성화된 계정입니다. 관리자에게 문의해주세요.';
+
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
@@ -46,6 +48,10 @@ export async function POST(request: NextRequest) {
     const { data: authData, error: authError } =
       await supabase.auth.signInWithPassword({ email, password });
 
+    if (authError?.code === 'user_banned') {
+      return NextResponse.json<ApiResponse>({ success: false, error: INACTIVE_ACCOUNT_MESSAGE }, { status: 403 });
+    }
+
     if (authError || !authData.user) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: authError?.message ?? '로그인에 실패했습니다.' },
@@ -59,6 +65,14 @@ export async function POST(request: NextRequest) {
       .select('*')
       .eq('id', authData.user.id)
       .single();
+
+    // Auth 차단 이전에 비활성화된 계정 — 방금 만든 세션을 지우고 거부
+    if (profile?.is_active === false) {
+      await supabase.auth.signOut();
+      const denied = NextResponse.json<ApiResponse>({ success: false, error: INACTIVE_ACCOUNT_MESSAGE }, { status: 403 });
+      for (const cookie of cookiesToSet) denied.cookies.set(cookie.name, cookie.value, cookie.options);
+      return denied;
+    }
 
     const user = profile ?? {
       id: authData.user.id,

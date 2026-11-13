@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { buildReportDraftHref } from '@/lib/documents/navigation';
-import { ArrowRight, Building2, FileText, Plus, Share2, ShieldCheck, Trash2, Users, Pencil, Save, ArrowRightLeft, MessageSquare, CalendarDays, StickyNote, ShieldAlert, KeyRound, Briefcase, Banknote } from 'lucide-react';
+import { ArrowRight, Building2, FileText, Plus, Share2, ShieldCheck, Trash2, Users, Pencil, Save, ArrowRightLeft, MessageSquare, CalendarDays, StickyNote, ShieldAlert, KeyRound, Briefcase, Banknote, UserCheck, UserX } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import type { Department, UserItem } from '@/components/settings/types';
 import { ROLES } from '@/components/settings/types';
@@ -222,7 +222,7 @@ interface UsersSectionProps {
   pendingChanges: Record<string, { department_id?: string | null; role?: string }>;
   savingUserId: string | null;
   onOpenUserModal: (user?: UserItem) => void;
-  onDeleteUser: (id: string, name: string) => void;
+  onToggleUserActive: (user: UserItem) => void;
   onSetPendingDept: (userId: string, departmentId: string | null) => void;
   onSetPendingRole: (userId: string, role: string) => void;
   onSaveUserChanges: (userId: string) => void;
@@ -234,7 +234,7 @@ export function UsersSection({
   pendingChanges,
   savingUserId,
   onOpenUserModal,
-  onDeleteUser,
+  onToggleUserActive,
   onSetPendingDept,
   onSetPendingRole,
   onSaveUserChanges,
@@ -270,7 +270,12 @@ export function UsersSection({
 
             return (
               <tr key={user.id} className={`border-b border-border last:border-b-0 transition-colors ${hasPending ? 'bg-blue-50/60' : 'hover:bg-page-bg/50'}`}>
-                <td className="px-6 py-5 text-sm font-medium">{user.name}</td>
+                <td className="px-6 py-5 text-sm font-medium">
+                  <span className="inline-flex items-center gap-2">
+                    {user.name}
+                    {user.is_active === false && <span className="rounded-full bg-surface-secondary px-2 py-0.5 text-[11px] font-medium text-muted">비활성</span>}
+                  </span>
+                </td>
                 <td className="px-6 py-5 text-sm text-muted">{user.email}</td>
                 <td className="px-6 py-4">
                   <select
@@ -307,7 +312,11 @@ export function UsersSection({
                     </button>
                   )}
                   <button onClick={() => onOpenUserModal(user)} className="p-2 rounded-lg hover:bg-surface-secondary text-foreground-secondary"><Pencil size={14} /></button>
-                  <button onClick={() => onDeleteUser(user.id, user.name)} className="p-2 rounded-lg hover:bg-red-50 text-foreground-secondary hover:text-red-500"><Trash2 size={14} /></button>
+                  {user.is_active === false ? (
+                    <button onClick={() => onToggleUserActive(user)} title="재활성화" aria-label="재활성화" className="p-2 rounded-lg hover:bg-blue-50 text-foreground-secondary hover:text-primary"><UserCheck size={14} /></button>
+                  ) : (
+                    <button onClick={() => onToggleUserActive(user)} title="비활성화" aria-label="비활성화" className="p-2 rounded-lg hover:bg-red-50 text-foreground-secondary hover:text-red-500"><UserX size={14} /></button>
+                  )}
                 </td>
               </tr>
             );

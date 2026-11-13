@@ -3,6 +3,8 @@ import type { ApiResponse } from '@/lib/supabase/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { requireAdmin } from '@/lib/http/admin-guard';
+import { createAdminSupabaseClient } from '@/lib/supabase/admin';
+import { countLockedDocumentReferences, isLockedDocumentError } from '@/lib/documents/locked-references';
 
 export async function GET(
   _request: NextRequest,
@@ -117,8 +119,16 @@ export async function DELETE(
 
     void request; // lint
 
+    const lockedCount = await countLockedDocumentReferences(createAdminSupabaseClient(), ['template_id'], id);
+    if (lockedCount > 0) {
+      return NextResponse.json<ApiResponse>({ success: false, error: `결재 중이거나 승인된 문서(${lockedCount}건)가 사용하는 템플릿은 삭제할 수 없습니다.` }, { status: 409 });
+    }
+
     const { error } = await supabase.from('templates').delete().eq('id', id);
     if (error) {
+      if (isLockedDocumentError(error)) {
+        return NextResponse.json<ApiResponse>({ success: false, error: '결재 중이거나 승인된 문서가 사용하는 템플릿은 삭제할 수 없습니다.' }, { status: 409 });
+      }
       console.error('[templates/[id]/DELETE]', error.message);
       return NextResponse.json<ApiResponse>({ success: false, error: '템플릿 삭제에 실패했습니다.' }, { status: 500 });
     }

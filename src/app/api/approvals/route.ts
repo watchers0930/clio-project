@@ -75,7 +75,8 @@ export async function POST(request: NextRequest) {
   // 조직도 + 신청자 서명
   const { data: members } = await admin
     .from('users')
-    .select('id, name, email, manager_user_id, rank_level, rank_title, signature_path');
+    .select('id, name, email, manager_user_id, rank_level, rank_title, signature_path')
+    .eq('is_active', true); // 비활성(퇴사)자는 결재선 제외 — 휴가 결재(leave-approval)와 동일
   const byId = new Map<string, OrgMember>((members ?? []).map((m: OrgMember) => [m.id, m]));
   const requesterSig = (members ?? []).find((m: { id: string; signature_path?: string | null }) => m.id === authUserId)?.signature_path ?? null;
 
