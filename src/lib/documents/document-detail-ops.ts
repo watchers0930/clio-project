@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { canAccessDocument } from '@/lib/permissions';
 import { kstDateFromISO } from '@/lib/utils/date-kst';
+import { originContextLabel } from '@/lib/documents/origin-context';
 
 function extractTitleTokens(title: string) {
   return Array.from(new Set(
@@ -16,15 +17,9 @@ function extractTitleTokens(title: string) {
   ));
 }
 
+// 상세 화면의 원본·파생 문서는 출처를 모르면 '연결 문서 기반'으로 표시한다
 function formatOriginLabel(originContext: string | null | undefined) {
-  return ({
-    meeting_minutes: '회의 기반 문서',
-    meeting_followup: '회의 후속 문서',
-    report_update: '업데이트 보고서',
-    report_draft: '보고서 초안',
-    shared_followup: '공유 문서 기반 후속',
-    document_followup: '기준 문서 기반 후속',
-  } as Record<string, string>)[originContext ?? ''] ?? '연결 문서 기반';
+  return originContextLabel(originContext) ?? '연결 문서 기반';
 }
 
 /** 문서가 없으면 null(라우트가 404로 응답). 관련 문서는 사용자 세션 기준으로 접근 가능한 것만 담는다. */

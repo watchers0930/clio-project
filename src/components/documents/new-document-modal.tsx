@@ -4,7 +4,8 @@ import { getContractSchema } from '@/lib/contract-fields';
 import type { DocumentItem, SourceFile, TemplateItem } from '@/components/documents/page-types';
 import { isWorklogTemplateName, WORKLOG_FIELDS } from '@/lib/templates/worklog';
 import { NewDocumentGeneralStep } from '@/components/documents/new-document-general-step';
-import { DOCUMENT_RELATION_LABELS, TEMPLATE_ICONS } from '@/components/documents/document-page-constants';
+import { TEMPLATE_ICONS } from '@/components/documents/document-page-constants';
+import { originContextLabel } from '@/lib/documents/origin-context';
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
 import { ReferenceDocumentPicker } from '@/components/documents/reference-document-picker';
 
@@ -163,7 +164,7 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
     if (fileTypeFilter !== '전체' && file.type !== fileTypeFilter) return false;
     return true;
   });
-  const relationLabel = DOCUMENT_RELATION_LABELS[originContext ?? ''] ?? null;
+  const relationLabel = originContextLabel(originContext);
   const generatedProposalHtml = selectedTemplateItem?.name === '제안서' && generatedDoc
     ? renderProposalDocumentHtml({
         title: generatedDoc.title,

@@ -38,11 +38,3 @@ export const TEMPLATE_DISPLAY_ORDER: string[] = [
   '회의록',
 ];
 
-export const DOCUMENT_RELATION_LABELS: Record<string, string> = {
-  meeting_minutes: '회의 기반 문서',
-  meeting_followup: '회의 후속 문서',
-  report_update: '업데이트 보고서',
-  report_draft: '보고서 초안',
-  shared_followup: '공유 문서 기반 후속',
-  document_followup: '기준 문서 기반 후속',
-};

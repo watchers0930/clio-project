@@ -6,6 +6,7 @@ import { generateEmbedding } from '@/lib/ai/embeddings';
 import { summarizeText } from '@/lib/ai/summarize';
 import { filterAccessibleDocumentRows, filterAccessibleFileRows, getUserRoleInfo } from '@/lib/permissions';
 import { keywordFileSearch, getFileType, titleCoverageScore, type SearchResultItem } from '@/lib/search/keyword-file-search';
+import { originContextLabel as formatOriginLabel } from '@/lib/documents/origin-context';
 
 const SEARCH_AI_SUMMARY_ENABLED = process.env.ENABLE_SEARCH_AI_SUMMARY === 'true';
 
@@ -37,16 +38,6 @@ interface WorkLogRow { id: string; log_date: string; done: string | null; plan: 
 interface DeptRow { id: string; name: string }
 interface UserRow { id: string; department_id: string | null }
 
-function formatOriginLabel(originContext: string | null | undefined) {
-  return ({
-    meeting_minutes: '회의 기반 문서',
-    meeting_followup: '회의 후속 문서',
-    report_update: '업데이트 보고서',
-    report_draft: '보고서 초안',
-    shared_followup: '공유 문서 기반 후속',
-    document_followup: '기준 문서 기반 후속',
-  } as Record<string, string>)[originContext ?? ''] ?? null;
-}
 
 async function buildCreatorDepartmentMap(
   admin: ReturnType<typeof createAdminSupabaseClient>,
