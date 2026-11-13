@@ -45,8 +45,9 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
   const [savingUserId, setSavingUserId] = useState<string | null>(null);
   const toast = useToast();
 
-  const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; description?: string; onConfirm: () => void }>({ open: false, title: '', onConfirm: () => {} });
-  const openConfirm = (title: string, description: string | undefined, onConfirm: () => void) => setConfirmState({ open: true, title, description, onConfirm });
+  type ConfirmOptions = { confirmLabel?: string; variant?: 'danger' | 'primary' };
+  const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; description?: string; onConfirm: () => void } & ConfirmOptions>({ open: false, title: '', onConfirm: () => {} });
+  const openConfirm = (title: string, description: string | undefined, onConfirm: () => void, options: ConfirmOptions = {}) => setConfirmState({ open: true, title, description, onConfirm, ...options });
   const closeConfirm = () => setConfirmState((s) => ({ ...s, open: false }));
 
   const [showUserModal, setShowUserModal] = useState(false);
@@ -256,7 +257,7 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
         toast.error(`사용자 ${action} 중 오류가 발생했습니다.`);
       }
       closeConfirm();
-    });
+    }, { confirmLabel: action, variant: activate ? 'primary' : 'danger' });
   };
 
   const setPendingDept = (userId: string, departmentId: string | null) => {
@@ -459,8 +460,8 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
         open={confirmState.open}
         title={confirmState.title}
         description={confirmState.description}
-        confirmLabel="삭제"
-        variant="danger"
+        confirmLabel={confirmState.confirmLabel ?? '삭제'}
+        variant={confirmState.variant ?? 'danger'}
         onConfirm={confirmState.onConfirm}
         onCancel={closeConfirm}
       />
