@@ -4,22 +4,10 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { requireAdmin } from '@/lib/http/admin-guard';
 import { countLockedDocumentReferences, isLockedDocumentError } from '@/lib/documents/locked-references';
-import { mimeToType, formatSize } from '@/lib/utils/format';
-import {
-  parseTemplateBundle,
-  serializeTemplateBundle,
-  type TemplateSectionDefinition,
-  type TemplateBundle,
-  type TemplateFieldDefinition,
-} from '@/lib/templates/template-schema';
+import { serializeTemplateBundle, type TemplateBundle } from '@/lib/templates/template-schema';
 import type { DbTemplate } from '@/lib/supabase/types';
-import {
-  formatErrorDetail,
-  parseJsonArrayField,
-  resolveTemplateBundle,
-  uploadTemplateFile,
-  type TemplateRowWithJoins,
-} from './route-helpers';
+import { formatErrorDetail, resolveTemplateBundle, type TemplateRowWithJoins } from './route-helpers';
+import { readTemplateRequest, toTemplateResponse } from './template-io';
 import { appendBuiltinTemplates } from './builtin-list';
 
 export async function GET(request: NextRequest) {
@@ -55,39 +43,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ templates: [], error: '템플릿 목록 조회 중 오류가 발생했습니다.' }, { status: 500 });
     }
 
-    const templateRows = (rows ?? []) as TemplateRowWithJoins[];
-    const tplList = templateRows.map((t) => {
-      const deptJoin = t.departments ?? null;
-      const fileJoin = t.template_file ?? null;
-      const placeholders = Array.isArray(t.placeholders) ? t.placeholders : [];
-      const bundle = parseTemplateBundle(t.content ?? '', {
-        name: t.name,
-        description: t.description,
-        placeholders,
-      });
-      return {
-        id: t.id,
-        name: t.name,
-        description: t.description,
-        content: bundle.outline,
-        department: deptJoin?.name ?? '전사',
-        departmentId: t.department_id,
-        scope: t.scope === 'company' ? '전사 공용' : '부서 전용',
-        placeholders,
-        templateMode: bundle.mode,
-        templateHtml: bundle.layoutHtml,
-        templateFields: bundle.fields,
-        templateSections: bundle.sections,
-        lastUpdated: t.updated_at?.split('T')[0] ?? '',
-        usageCount: 0,
-        templateFile: fileJoin ? {
-          id: fileJoin.id,
-          name: fileJoin.name,
-          type: mimeToType(fileJoin.type, fileJoin.name),
-          size: formatSize(fileJoin.size),
-        } : null,
-      };
-    });
+    const tplList = ((rows ?? []) as TemplateRowWithJoins[]).map(toTemplateResponse);
 
     appendBuiltinTemplates(tplList);
 
@@ -112,62 +68,18 @@ export async function POST(request: NextRequest) {
     if (guard) return guard;
     const admin = createAdminSupabaseClient();
 
-    const contentType = request.headers.get('content-type') ?? '';
-    let name = '';
-    let description = '';
-    let content = '';
-    let departmentId: string | null = null;
-    let scope = '전사 공용';
-    let templateFileId: string | null = null;
-    let placeholdersData: unknown = null;
-    let templateBundle: TemplateBundle | null = null;
-
-    if (contentType.includes('multipart/form-data')) {
-      const formData = await request.formData();
-      name = (formData.get('name') as string) ?? '';
-      description = (formData.get('description') as string) ?? '';
-      content = (formData.get('content') as string) ?? '';
-      departmentId = (formData.get('departmentId') as string) || null;
-      scope = (formData.get('scope') as string) ?? '전사 공용';
-      const templateHtml = (formData.get('templateHtml') as string) ?? '';
-      const templateFields = parseJsonArrayField<TemplateFieldDefinition>(formData.get('templateFields'));
-      const templateSections = parseJsonArrayField<TemplateSectionDefinition>(formData.get('templateSections'));
-      if (templateHtml || templateFields.length > 0 || templateSections.length > 0) {
-        templateBundle = {
-          version: 1,
-          mode: 'html-template',
-          layoutHtml: templateHtml,
-          outline: content,
-          fields: templateFields,
-          sections: templateSections,
-        };
-      }
-      const file = formData.get('file') as File | null;
-      if (file && file.size > 0) {
-        const uploadResult = await uploadTemplateFile(supabase, file, authUserId, request.nextUrl.origin);
-        if (uploadResult.error) return NextResponse.json({ error: uploadResult.error }, { status: 400 });
-        templateFileId = uploadResult.id;
-      }
-    } else {
-      const body = await request.json();
-      name = body.name ?? '';
-      description = body.description ?? '';
-      content = body.content ?? '';
-      departmentId = body.departmentId || null;
-      scope = body.scope ?? '전사 공용';
-      if (body.templateFileId) templateFileId = body.templateFileId;
-      if (body.placeholders) placeholdersData = body.placeholders;
-      if (body.templateHtml || body.templateFields || body.templateSections) {
-        templateBundle = {
-          version: 1,
-          mode: 'html-template',
-          layoutHtml: body.templateHtml ?? '',
-          outline: content,
-          fields: Array.isArray(body.templateFields) ? body.templateFields as TemplateFieldDefinition[] : [],
-          sections: Array.isArray(body.templateSections) ? body.templateSections as TemplateSectionDefinition[] : [],
-        };
-      }
-    }
+    const parsed = await readTemplateRequest(request, supabase, authUserId);
+    if ('error' in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
+    const { input } = parsed;
+    // 생성: 미전달 값은 빈 값·전사 공용으로 채운다
+    const name = input.name ?? '';
+    const description = input.description ?? '';
+    const content = input.content ?? '';
+    const departmentId = input.departmentId || null;
+    const scope = input.scope ?? '전사 공용';
+    const templateFileId = input.uploadedFileId ?? input.bodyTemplateFileId ?? null;
+    const placeholdersData = input.bodyPlaceholders ?? null;
+    let templateBundle: TemplateBundle | null = input.templateBundle;
 
     if (!name) {
       return NextResponse.json({ error: '이름을 입력해주세요.' }, { status: 400 });
@@ -214,39 +126,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `템플릿 생성 실패: ${detail}` }, { status: 500 });
     }
 
-    const createdTemplate = newTmpl as TemplateRowWithJoins;
-    const deptJoin = createdTemplate.departments ?? null;
-    const fileJoin = createdTemplate.template_file ?? null;
-    const bundle = parseTemplateBundle(createdTemplate.content ?? '', {
-      name: createdTemplate.name,
-      description: createdTemplate.description,
-      placeholders: createdTemplate.placeholders,
-    });
-
-    return NextResponse.json({
-      template: {
-        id: createdTemplate.id,
-        name: createdTemplate.name,
-        description: createdTemplate.description,
-        content: bundle.outline,
-        department: deptJoin?.name ?? '전사',
-        departmentId: createdTemplate.department_id,
-        scope: scope ?? '전사 공용',
-        placeholders: Array.isArray(createdTemplate.placeholders) ? createdTemplate.placeholders : [],
-        templateMode: bundle.mode,
-        templateHtml: bundle.layoutHtml,
-        templateFields: bundle.fields,
-        templateSections: bundle.sections,
-        lastUpdated: createdTemplate.updated_at.split('T')[0],
-        usageCount: 0,
-        templateFile: fileJoin ? {
-          id: fileJoin.id,
-          name: fileJoin.name,
-          type: mimeToType(fileJoin.type, fileJoin.name),
-          size: formatSize(fileJoin.size),
-        } : null,
-      },
-    }, { status: 201 });
+    return NextResponse.json({ template: toTemplateResponse(newTmpl as TemplateRowWithJoins) }, { status: 201 });
   } catch (error) {
     return NextResponse.json({
       error: `템플릿 생성 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
@@ -269,65 +149,21 @@ export async function PUT(request: NextRequest) {
     if (guard) return guard;
     const admin = createAdminSupabaseClient();
 
-    const contentType = request.headers.get('content-type') ?? '';
-    let id = '';
-    let name: string | undefined;
-    let description: string | undefined;
-    let content: string | undefined;
-    let departmentId: string | undefined;
-    let scope: string | undefined;
-    let templateFileId: string | null | undefined;
-    let removeFile = false;
-    let templateBundlePatch: TemplateBundle | null = null;
-
-    if (contentType.includes('multipart/form-data')) {
-      const formData = await request.formData();
-      id = (formData.get('id') as string) ?? '';
-      name = (formData.get('name') as string) || undefined;
-      description = (formData.get('description') as string) ?? undefined;
-      content = (formData.get('content') as string) ?? undefined;
-      departmentId = (formData.get('departmentId') as string) || undefined;
-      scope = (formData.get('scope') as string) || undefined;
-      const templateHtml = (formData.get('templateHtml') as string) ?? '';
-      const templateFields = parseJsonArrayField<TemplateFieldDefinition>(formData.get('templateFields'));
-      const templateSections = parseJsonArrayField<TemplateSectionDefinition>(formData.get('templateSections'));
-      if (templateHtml || templateFields.length > 0 || templateSections.length > 0) {
-        templateBundlePatch = {
-          version: 1,
-          mode: 'html-template',
-          layoutHtml: templateHtml,
-          outline: content ?? '',
-          fields: templateFields,
-          sections: templateSections,
-        };
-      }
-      removeFile = (formData.get('removeFile') as string) === 'true';
-      const file = formData.get('file') as File | null;
-      if (file && file.size > 0) {
-        const uploadResult = await uploadTemplateFile(supabase, file, authUserId, request.nextUrl.origin);
-        if (uploadResult.error) return NextResponse.json({ error: uploadResult.error }, { status: 400 });
-        templateFileId = uploadResult.id;
-      }
-    } else {
-      const body = await request.json();
-      id = body.id ?? '';
-      name = body.name;
-      description = body.description;
-      content = body.content;
-      departmentId = body.departmentId;
-      scope = body.scope;
-      removeFile = body.removeFile === true;
-      if (body.templateHtml || body.templateFields || body.templateSections) {
-        templateBundlePatch = {
-          version: 1,
-          mode: 'html-template',
-          layoutHtml: body.templateHtml ?? '',
-          outline: body.content ?? '',
-          fields: Array.isArray(body.templateFields) ? body.templateFields as TemplateFieldDefinition[] : [],
-          sections: Array.isArray(body.templateSections) ? body.templateSections as TemplateSectionDefinition[] : [],
-        };
-      }
-    }
+    const parsed = await readTemplateRequest(request, supabase, authUserId);
+    if ('error' in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
+    const { input } = parsed;
+    // 수정: 미전달(undefined)은 변경하지 않음. 폼은 빈 칸이 항상 전송되므로 이름·부서·범위의 빈 값도 미변경으로 본다.
+    // JSON 본문의 templateFileId 는 받지 않는다(업로드로만 연결).
+    const id = input.id ?? '';
+    const blankAsUnset = (value: string | undefined) => (input.source === 'form' ? value || undefined : value);
+    const name = blankAsUnset(input.name);
+    const description = input.description;
+    const content = input.content;
+    const departmentId = blankAsUnset(input.departmentId);
+    const scope = blankAsUnset(input.scope);
+    const templateFileId = input.uploadedFileId;
+    const removeFile = input.removeFile;
+    const templateBundlePatch = input.templateBundle;
 
     if (!id) {
       return NextResponse.json({ error: 'ID가 필요합니다.' }, { status: 400 });
@@ -385,40 +221,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: `템플릿 수정 실패: ${detail}` }, { status: 500 });
     }
 
-    const updatedTemplate = data as TemplateRowWithJoins;
-    const deptJoin = updatedTemplate.departments ?? null;
-    const fileJoin = updatedTemplate.template_file ?? null;
-    const placeholders = Array.isArray(updatedTemplate.placeholders) ? updatedTemplate.placeholders : [];
-    const bundle = parseTemplateBundle(updatedTemplate.content ?? '', {
-      name: updatedTemplate.name,
-      description: updatedTemplate.description,
-      placeholders,
-    });
-
-    return NextResponse.json({
-      template: {
-        id: updatedTemplate.id,
-        name: updatedTemplate.name,
-        description: updatedTemplate.description,
-        content: bundle.outline,
-        department: deptJoin?.name ?? '전사',
-        departmentId: updatedTemplate.department_id,
-        scope: updatedTemplate.scope === 'company' ? '전사 공용' : '부서 전용',
-        placeholders,
-        templateMode: bundle.mode,
-        templateHtml: bundle.layoutHtml,
-        templateFields: bundle.fields,
-        templateSections: bundle.sections,
-        lastUpdated: updatedTemplate.updated_at.split('T')[0],
-        usageCount: 0,
-        templateFile: fileJoin ? {
-          id: fileJoin.id,
-          name: fileJoin.name,
-          type: mimeToType(fileJoin.type, fileJoin.name),
-          size: formatSize(fileJoin.size),
-        } : null,
-      },
-    });
+    return NextResponse.json({ template: toTemplateResponse(data as TemplateRowWithJoins) });
   } catch (error) {
     return NextResponse.json({
       error: `템플릿 수정 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
