@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
-import { csrfFetch } from '@/hooks/csrf-client';
 import type { FileItem, ScrapeResult } from './types';
+import { useFileBulkActions } from './use-file-bulk-actions';
+import { useFileReprocess } from './use-file-reprocess';
+import { useFileUpload } from './use-file-upload';
 
 const PAGE_SIZE = 10;
-const ALLOWED_EXTS = new Set(['pdf', 'docx', 'dotx', 'pptx', 'xlsx', 'hwp', 'hwpx', 'md', 'txt', 'csv']);
-const MAX_SIZE = 50 * 1024 * 1024;
 
 export function useFilesPage() {
   const searchParams = useSearchParams();
@@ -20,26 +20,17 @@ export function useFilesPage() {
   const [search, setSearch] = useState('');
   const [resourceFilter, setResourceFilter] = useState<'전체' | 'file' | 'document' | 'linked'>('전체');
   const [page, setPage] = useState(1);
-  const [showUpload, setShowUpload] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; percent: number } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [dragOver, setDragOver] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [detailFile, setDetailFile] = useState<FileItem | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<FileItem | null>(null);
-  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
   const [downloadToast, setDownloadToast] = useState<string | null>(null);
-  const [uploadScope, setUploadScope] = useState<'company' | 'department'>('department');
   const [showScrape, setShowScrape] = useState(false);
   const [autofillFile, setAutofillFile] = useState<File | null>(null);
   const [showAutofill, setShowAutofill] = useState(false);
   const [scrapeUrl, setScrapeUrl] = useState('');
   const [scrapeLoading, setScrapeLoading] = useState(false);
   const [scrapeResult, setScrapeResult] = useState<ScrapeResult | null>(null);
-  const [bulkProgress, setBulkProgress] = useState<{ total: number; done: number; failed: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const initializedFromQueryRef = useRef(false);
-  const bulkIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadAssets = useCallback(async () => {
     const [filesRes, docsRes] = await Promise.all([
@@ -99,6 +90,39 @@ export function useFilesPage() {
     return nextAssets;
   }, []);
 
+  const {
+    showUpload,
+    uploadProgress,
+    dragOver,
+    selectedFiles,
+    uploadScope,
+    setShowUpload,
+    setDragOver,
+    setSelectedFiles,
+    setUploadScope,
+    handleFileInputChange,
+    handleDrop,
+    handleUpload,
+    closeUploadModal,
+  } = useFileUpload({ loadAssets, toast, setPage, fileInputRef });
+  const {
+    deleteConfirm,
+    bulkConfirmOpen,
+    setDeleteConfirm,
+    setBulkConfirmOpen,
+    confirmDelete,
+    doBulkDelete,
+    bulkChangeScope,
+  } = useFileBulkActions({ files, loadAssets, selectedIds, setSelectedIds, toast });
+  const {
+    bulkProgress,
+    handleReprocess,
+    handleBulkReprocess,
+    handleReprocessAllErrors,
+    handleReprocessAllUnprocessed,
+    handleReprocessIndexedNoChunks,
+  } = useFileReprocess({ files, setFiles, selectedIds, toast });
+
   useEffect(() => {
     if (searchParams.get('upload') === 'true') {
       setShowUpload(true);
@@ -108,7 +132,7 @@ export function useFilesPage() {
       setSearch(query);
       initializedFromQueryRef.current = true;
     }
-  }, [searchParams]);
+  }, [searchParams, setShowUpload]);
 
   useEffect(() => {
     async function load() {
@@ -158,188 +182,6 @@ export function useFilesPage() {
     }
   };
 
-  const addFiles = (incoming: File[]) => {
-    const valid = incoming.filter((file) => {
-      const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-      return ALLOWED_EXTS.has(ext) && file.size <= MAX_SIZE;
-    });
-    if (valid.length === 0) return;
-    setSelectedFiles((prev) => {
-      const names = new Set(prev.map((file) => file.name));
-      return [...prev, ...valid.filter((file) => !names.has(file.name))];
-    });
-  };
-
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const nextFiles = e.target.files;
-    if (nextFiles?.length) addFiles(Array.from(nextFiles));
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const droppedFiles = e.dataTransfer.files;
-    if (droppedFiles?.length) addFiles(Array.from(droppedFiles));
-  };
-
-  const deleteAsset = useCallback(async (file: FileItem) => {
-    if (file.sourceType === 'document') {
-      return csrfFetch(`/api/documents?id=${file.id}`, { method: 'DELETE' });
-    }
-
-    return fetch(`/api/files/${file.id}`, { method: 'DELETE' });
-  }, []);
-
-  const handleUpload = async () => {
-    if (selectedFiles.length === 0) return;
-    const total = selectedFiles.length;
-    const failed: string[] = [];
-    let uploadedCount = 0;
-
-    for (let i = 0; i < total; i++) {
-      setUploadProgress({ current: i + 1, total, percent: Math.round((i / total) * 100) });
-      try {
-        const formData = new FormData();
-        formData.append('file', selectedFiles[i]);
-        formData.append('scope', uploadScope);
-        const res = await fetch('/api/files', { method: 'POST', body: formData });
-        if (!res.ok) {
-          const text = await res.text();
-          let msg = `(${res.status})`;
-          try { msg = JSON.parse(text)?.error || msg; } catch {}
-          failed.push(`${selectedFiles[i].name}: ${msg}`);
-        } else {
-          await res.json().catch(() => null);
-          uploadedCount += 1;
-        }
-      } catch {
-        failed.push(`${selectedFiles[i].name}: 네트워크 오류`);
-      }
-      setUploadProgress({ current: i + 1, total, percent: Math.round(((i + 1) / total) * 100) });
-    }
-
-    await loadAssets();
-    if (failed.length > 0) {
-      toast.error(`${total - failed.length}/${total}개 업로드 완료 (실패: ${failed.join(', ')})`);
-    } else if (uploadedCount > 0) {
-      toast.success(`${uploadedCount}개 파일 업로드 완료`);
-    }
-
-    setTimeout(() => {
-      setUploadProgress(null);
-      setShowUpload(false);
-      setSelectedFiles([]);
-      setUploadScope('department');
-      setPage(1);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }, failed.length > 0 ? 0 : 600);
-  };
-
-  const confirmDelete = async () => {
-    if (!deleteConfirm) return;
-    try {
-      const res = await deleteAsset(deleteConfirm);
-      if (res.ok) {
-        await loadAssets();
-        setSelectedIds((prev) => {
-          const next = new Set(prev);
-          next.delete(deleteConfirm.id);
-          return next;
-        });
-      } else {
-        toast.error('파일 삭제에 실패했습니다.');
-      }
-    } catch {
-      toast.error('파일 삭제 중 오류가 발생했습니다.');
-    }
-    setDeleteConfirm(null);
-  };
-
-  const doBulkDelete = async () => {
-    const targets = files.filter((file) => selectedIds.has(file.id));
-    const results = await Promise.allSettled(
-      targets.map(async (file) => ({ file, res: await deleteAsset(file) }))
-    );
-
-    const deletedIds = new Set<string>();
-    let failedCount = 0;
-
-    results.forEach((result) => {
-      if (result.status === 'fulfilled' && result.value.res.ok) {
-        deletedIds.add(result.value.file.id);
-      } else {
-        failedCount += 1;
-      }
-    });
-
-    await loadAssets();
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      deletedIds.forEach((id) => next.delete(id));
-      return next;
-    });
-    setBulkConfirmOpen(false);
-
-    if (failedCount > 0) {
-      toast.error(`${deletedIds.size}개 삭제, ${failedCount}개 실패`);
-      return;
-    }
-
-    toast.success(`${deletedIds.size}개 삭제 완료`);
-  };
-
-  const bulkChangeScope = async (newScope: 'company' | 'department') => {
-    const selected = files.filter((file) => selectedIds.has(file.id));
-    const ids = selected
-      .filter((file) => file.sourceType !== 'document' && file.isOwner)
-      .map((file) => file.id);
-
-    if (ids.length === 0) {
-      const docCount = selected.filter((f) => f.sourceType === 'document').length;
-      const notOwnerCount = selected.filter((f) => f.sourceType !== 'document' && !f.isOwner).length;
-      if (docCount > 0 && notOwnerCount === 0) {
-        toast.error('AI 생성 문서는 범위 변경이 불가합니다. 원본 파일을 선택해주세요.');
-      } else if (notOwnerCount > 0) {
-        toast.error('본인이 업로드한 파일만 범위 변경이 가능합니다.');
-      } else {
-        toast.error('범위를 변경할 수 있는 선택 파일이 없습니다.');
-      }
-      return;
-    }
-
-    const results = await Promise.allSettled(
-      ids.map((id) =>
-        fetch(`/api/files/${id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ scope: newScope }),
-        }).then(async (r) => {
-          if (!r.ok) {
-            const body = await r.json().catch(() => ({}));
-            return { id, ok: false, error: body.error ?? `${r.status}` };
-          }
-          return { id, ok: true, error: '' };
-        })
-      )
-    );
-    const succeeded = results
-      .filter((result) => result.status === 'fulfilled' && result.value.ok)
-      .map((result) => (result as PromiseFulfilledResult<{ id: string; ok: boolean; error: string }>).value.id);
-    const failed = ids.length - succeeded.length;
-
-    // 부서 정보도 변경될 수 있으므로 목록 재로드
-    await loadAssets();
-    setSelectedIds(new Set());
-
-    if (failed > 0) {
-      const firstError = results.find((r) => r.status === 'fulfilled' && !r.value.ok);
-      const errorMsg = firstError?.status === 'fulfilled' ? firstError.value.error : '';
-      toast.error(`${succeeded.length}개 변경, ${failed}개 실패${errorMsg ? ` (${errorMsg})` : ''}`);
-    } else {
-      toast.success(`${succeeded.length}개 파일을 ${newScope === 'company' ? '전사' : '부서'}로 변경했습니다.`);
-    }
-  };
-
   const handleAutofill = async (file: FileItem) => {
     try {
       const res = await fetch(`/api/files/${file.id}/download`);
@@ -355,193 +197,6 @@ export function useFilesPage() {
     }
     setShowAutofill(true);
     setDetailFile(null);
-  };
-
-  const handleReprocess = async (file: FileItem) => {
-    try {
-      const res = await fetch(`/api/files/${file.id}/reprocess`, { method: 'POST' });
-      if (!res.ok) {
-        toast.error('재처리 요청에 실패했습니다.');
-        return;
-      }
-      toast.success(`"${file.name}" 재처리 시작`);
-      setFiles((prev) => prev.map((item) => item.id === file.id ? { ...item, status: '처리중' } : item));
-
-      // 2초마다 상태 폴링 (최대 60초)
-      let attempts = 0;
-      const maxAttempts = 30;
-      const poll = setInterval(async () => {
-        attempts += 1;
-        try {
-          const statusRes = await fetch(`/api/files/${file.id}`);
-          if (!statusRes.ok) return;
-          const data = await statusRes.json();
-          const rawStatus: string = data.status ?? '';
-
-          if (rawStatus === 'indexed' || rawStatus === 'completed') {
-            clearInterval(poll);
-            setFiles((prev) => prev.map((item) => item.id === file.id ? { ...item, status: '완료' } : item));
-            toast.success(`"${file.name}" 처리 완료`);
-          } else if (rawStatus === 'error') {
-            clearInterval(poll);
-            setFiles((prev) => prev.map((item) => item.id === file.id ? { ...item, status: '오류' } : item));
-            toast.error(`"${file.name}" 처리 실패 — 파일 관리에서 재처리 해주세요.`);
-          } else if (attempts >= maxAttempts) {
-            clearInterval(poll);
-            toast.error(`"${file.name}" 처리 시간 초과 — 나중에 다시 확인해주세요.`);
-          }
-        } catch {
-          if (attempts >= maxAttempts) clearInterval(poll);
-        }
-      }, 2000);
-    } catch {
-      toast.error('재처리 중 오류가 발생했습니다.');
-    }
-  };
-
-  const handleBulkReprocess = async () => {
-    const targetIds = files
-      .filter((file) => selectedIds.has(file.id) && file.sourceType !== 'document' && file.isOwner)
-      .map((file) => file.id);
-
-    if (targetIds.length === 0) {
-      toast.error('재처리 가능한 선택 파일이 없습니다.');
-      return;
-    }
-
-    try {
-      const res = await fetch('/api/files/bulk-reprocess', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'selected', fileIds: targetIds }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast.error(data.error ?? '선택 재처리에 실패했습니다.');
-        return;
-      }
-      setFiles((prev) => prev.map((file) => targetIds.includes(file.id) ? { ...file, status: '처리중' } : file));
-      toast.success(`${data.reprocessed ?? targetIds.length}개 파일 재처리 시작`);
-    } catch {
-      toast.error('선택 재처리 중 오류가 발생했습니다.');
-    }
-  };
-
-  const startBulkPolling = (fileIds: string[]) => {
-    if (bulkIntervalRef.current) clearInterval(bulkIntervalRef.current);
-    const allIds = new Set(fileIds);
-    const pending = new Set(fileIds);
-    let done = 0;
-    let failed = 0;
-    setBulkProgress({ total: fileIds.length, done: 0, failed: 0 });
-
-    bulkIntervalRef.current = setInterval(async () => {
-      try {
-        const res = await fetch('/api/files?limit=500');
-        if (!res.ok) return;
-        const data = await res.json();
-        const rows: FileItem[] = data.files ?? [];
-        const rowMap = new Map(rows.map((r: FileItem) => [r.id, r]));
-
-        // 파일 목록 상태 갱신
-        setFiles((prev) => prev.map((f) => {
-          if (!allIds.has(f.id)) return f;
-          const fresh = rowMap.get(f.id);
-          return fresh ? { ...f, status: fresh.status } : f;
-        }));
-
-        // 완료/오류 집계
-        for (const id of [...pending]) {
-          const fresh = rowMap.get(id);
-          if (!fresh) continue;
-          if (fresh.status === '완료') { done++; pending.delete(id); }
-          else if (fresh.status === '오류') { failed++; pending.delete(id); }
-        }
-
-        setBulkProgress({ total: fileIds.length, done, failed });
-
-        if (pending.size === 0) {
-          clearInterval(bulkIntervalRef.current!);
-          bulkIntervalRef.current = null;
-          setTimeout(() => setBulkProgress(null), 5000);
-        }
-      } catch { /* ignore */ }
-    }, 3000);
-  };
-
-  const handleReprocessAllErrors = async () => {
-    try {
-      const res = await fetch('/api/files/bulk-reprocess', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'all-errors' }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast.error(data.error ?? '오류 파일 재처리에 실패했습니다.');
-        return;
-      }
-      if (!data.reprocessed) {
-        toast.success('재처리할 오류 파일이 없습니다.');
-        return;
-      }
-      const ids = new Set<string>(data.fileIds ?? []);
-      setFiles((prev) => prev.map((file) => ids.has(file.id) ? { ...file, status: '처리중' } : file));
-      toast.success(`오류 파일 ${data.reprocessed}개 재처리 시작`);
-      startBulkPolling(data.fileIds ?? []);
-    } catch {
-      toast.error('오류 파일 재처리 중 오류가 발생했습니다.');
-    }
-  };
-
-  const handleReprocessAllUnprocessed = async () => {
-    try {
-      const res = await fetch('/api/files/bulk-reprocess', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'all-unprocessed' }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast.error(data.error ?? '미처리 파일 재처리에 실패했습니다.');
-        return;
-      }
-      if (!data.reprocessed) {
-        toast.success('미처리 파일이 없습니다.');
-        return;
-      }
-      const ids = new Set<string>(data.fileIds ?? []);
-      setFiles((prev) => prev.map((file) => ids.has(file.id) ? { ...file, status: '처리중' } : file));
-      toast.success(`미처리 파일 ${data.reprocessed}개 재처리 시작`);
-      startBulkPolling(data.fileIds ?? []);
-    } catch {
-      toast.error('미처리 파일 재처리 중 오류가 발생했습니다.');
-    }
-  };
-
-  const handleReprocessIndexedNoChunks = async () => {
-    try {
-      const res = await fetch('/api/files/bulk-reprocess', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'indexed-no-chunks' }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast.error(data.error ?? 'OCR 재처리에 실패했습니다.');
-        return;
-      }
-      if (!data.reprocessed) {
-        toast.success('OCR 재처리할 파일이 없습니다.');
-        return;
-      }
-      const ids = new Set<string>(data.fileIds ?? []);
-      setFiles((prev) => prev.map((file) => ids.has(file.id) ? { ...file, status: '처리중' } : file));
-      toast.success(`스캔 PDF ${data.reprocessed}개 OCR 재처리 시작`);
-      startBulkPolling(data.fileIds ?? []);
-    } catch {
-      toast.error('OCR 재처리 중 오류가 발생했습니다.');
-    }
   };
 
   const handleDownload = async (file: FileItem) => {
@@ -625,12 +280,6 @@ export function useFilesPage() {
     } finally {
       setScrapeLoading(false);
     }
-  };
-
-  const closeUploadModal = () => {
-    setShowUpload(false);
-    setUploadProgress(null);
-    setSelectedFiles([]);
   };
 
   const handleOpenFile = (file: FileItem) => {

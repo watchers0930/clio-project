@@ -1,12 +1,12 @@
 {
   "name": "clio-project",
-  "version": "7.92.3",
+  "version": "7.93.0",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
     "check:env": "node scripts/check-required-env.mjs",
-    "prebuild": "node scripts/check-required-env.mjs",
+    "prebuild": "node scripts/check-required-env.mjs && node scripts/check-file-length.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

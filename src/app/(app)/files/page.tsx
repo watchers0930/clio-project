@@ -11,8 +11,8 @@ import {
   FilesListView,
   FilesPagination,
 } from '@/components/files/files-sections';
+import { FileDetailModal } from '@/components/files/file-detail-modal';
 import {
-  FileDetailModal,
   FilesPageDialogs,
   FilesUploadModal,
   ScrapeModal,

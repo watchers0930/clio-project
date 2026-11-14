@@ -15,8 +15,8 @@ import { withMutation } from '@/lib/http/mutation-guard';
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { generateForFormat } from '@/lib/ai/generate-document';
-import { applyFormDataRuntimeOverrides } from '@/lib/ai/generate-document-helpers';
+import { generateForFormat } from '@/lib/ai/generate-for-format';
+import { applyFormDataRuntimeOverrides } from '@/lib/ai/docx-form-mapping';
 import { renderDocument } from '@/lib/renderers';
 import { collapseWorklogNextPlanRows } from '@/lib/renderers/docx-renderer';
 import type { OutputFormat } from '@/lib/renderers/types';

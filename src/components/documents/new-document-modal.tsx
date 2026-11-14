@@ -1,5 +1,3 @@
-import { Spinner } from '@/components/ui';
-import { HtmlPreviewFrame } from '@/components/documents/html-preview-frame';
 import { getContractSchema } from '@/lib/contract-fields';
 import type { DocumentItem, SourceFile, TemplateItem } from '@/components/documents/page-types';
 import { isWorklogTemplateName, WORKLOG_FIELDS } from '@/lib/templates/worklog';
@@ -7,7 +5,10 @@ import { NewDocumentGeneralStep } from '@/components/documents/new-document-gene
 import { TEMPLATE_ICONS } from '@/components/documents/document-page-constants';
 import { originContextLabel } from '@/lib/documents/origin-context';
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
-import { ReferenceDocumentPicker } from '@/components/documents/reference-document-picker';
+import { NewDocumentSourceStep } from '@/components/documents/new-document-source-step';
+import { NewDocumentContractStep } from '@/components/documents/new-document-contract-step';
+import { NewDocumentConfirmStep } from '@/components/documents/new-document-confirm-step';
+import { NewDocumentResultStep } from '@/components/documents/new-document-result-step';
 
 function getAllowedOutputFormats(templateFile: TemplateItem['templateFile'] | null, isContract: boolean, templateMode?: string, templateName?: string) {
   if (isContract) return ['hwpx'] as const;
@@ -246,167 +247,37 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
           )}
 
           {step === 2 && (
-            <div className="space-y-5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-foreground-secondary">참조할 소스 파일을 선택하세요 (선택사항)</p>
-                <span className="text-xs font-medium text-primary">{selectedFiles.size}개 선택됨</span>
-              </div>
-              <div className="rounded-xl border border-border bg-surface-secondary px-4 py-3">
-                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">로컬 파일 추가</p>
-                    <p className="text-xs text-foreground-secondary">문서허브에 없는 파일은 여기서 바로 업로드하고 참조문서로 선택합니다.</p>
-                  </div>
-                  <label className={`inline-flex cursor-pointer items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${uploadingLocalFiles ? 'bg-border text-foreground-secondary' : 'bg-foreground text-white hover:bg-primary'}`}>
-                    <input
-                      type="file"
-                      multiple
-                      className="hidden"
-                      disabled={uploadingLocalFiles}
-                      onChange={(e) => {
-                        void onUploadLocalFiles(e.target.files);
-                        e.currentTarget.value = '';
-                      }}
-                    />
-                    {uploadingLocalFiles ? '업로드 중...' : '로컬 파일 선택'}
-                  </label>
-                </div>
-              </div>
-              {selectedFiles.size === 0 && (
-                <p className="text-xs text-warning bg-warning/5 px-3.5 py-2.5 rounded-lg">파일 없이도 템플릿 양식 기반으로 문서를 생성할 수 있습니다.</p>
-              )}
-              <div className="relative" style={{ marginTop: 10, marginBottom: 15 }}>
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-secondary pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-                </svg>
-                <input
-                  value={fileSearch}
-                  onChange={(e) => onSetFileSearch(e.target.value)}
-                  placeholder="파일명 검색..."
-                  style={{ paddingLeft: '2.5rem' }}
-                  className="w-full pr-4 py-2.5 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-              <div className="mb-3 flex flex-wrap gap-2.5">
-                <select value={fileDeptFilter} onChange={(e) => onSetFileDeptFilter(e.target.value)} className="px-3.5 py-2 rounded-lg border border-border text-xs text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary">
-                  <option value="전체">전체 부서</option>
-                  {departments.map((department) => <option key={department} value={department}>{department}</option>)}
-                </select>
-                <select value={fileTypeFilter} onChange={(e) => onSetFileTypeFilter(e.target.value)} className="px-3.5 py-2 rounded-lg border border-border text-xs text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary">
-                  <option value="전체">전체 타입</option>
-                  {types.map((type) => <option key={type} value={type}>{type}</option>)}
-                </select>
-                {selectedFiles.size > 0 && (
-                  <button onClick={onClearSelectedFiles} className="px-3.5 py-2 rounded-lg text-xs text-danger hover:bg-red-50 transition-colors">
-                    선택 해제
-                  </button>
-                )}
-              </div>
-              {sourceFiles.length === 0 ? (
-                <div className="text-center py-10">
-                  <p className="text-sm font-medium text-foreground">등록된 파일이 없습니다</p>
-                  <p className="text-xs text-foreground-secondary mt-1">파일 관리에서 먼저 파일을 업로드해 주세요</p>
-                </div>
-              ) : filteredFiles.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-sm text-foreground-secondary">검색 결과가 없습니다</p>
-                </div>
-              ) : (
-                <div className="max-h-80 overflow-y-auto flex flex-col gap-2">
-                  {filteredFiles.map((file) => (
-                    <label
-                      key={file.id}
-                      className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${selectedFiles.has(file.id) ? 'border-primary bg-primary-tint' : 'border-border hover:bg-surface-secondary'}`}
-                    >
-                      <input type="checkbox" checked={selectedFiles.has(file.id)} onChange={() => onToggleFile(file.id)} className="rounded border-border text-primary focus:ring-primary shrink-0" />
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 bg-gray-50 text-gray-600">{file.type}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-foreground truncate">{file.name}</p>
-                        <p className="text-[11px] text-foreground-secondary mt-0.5">{file.department} · {file.size} · {file.uploadDate}</p>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              )}
-              {isProposalTemplate && (
-                <ReferenceDocumentPicker
-                  referenceDocId={referenceDocId}
-                  referenceDocuments={referenceDocuments}
-                  onSetReferenceDocId={onSetReferenceDocId}
-                />
-              )}
-            </div>
+            <NewDocumentSourceStep
+              selectedFiles={selectedFiles}
+              uploadingLocalFiles={uploadingLocalFiles}
+              fileSearch={fileSearch}
+              fileDeptFilter={fileDeptFilter}
+              fileTypeFilter={fileTypeFilter}
+              departments={departments}
+              types={types}
+              sourceFiles={sourceFiles}
+              filteredFiles={filteredFiles}
+              isProposalTemplate={isProposalTemplate}
+              referenceDocId={referenceDocId}
+              referenceDocuments={referenceDocuments}
+              onUploadLocalFiles={onUploadLocalFiles}
+              onSetFileSearch={onSetFileSearch}
+              onSetFileDeptFilter={onSetFileDeptFilter}
+              onSetFileTypeFilter={onSetFileTypeFilter}
+              onClearSelectedFiles={onClearSelectedFiles}
+              onToggleFile={onToggleFile}
+              onSetReferenceDocId={onSetReferenceDocId}
+            />
           )}
 
           {step === 3 && contractSchema && (
-            <div className="flex flex-col gap-[20px]">
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-primary-tint border border-primary/30">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">계약서 자동 작성</p>
-                  <p className="text-xs text-foreground-secondary">아래 항목을 입력하면 표준계약서 양식에 자동으로 반영됩니다. AI 토큰을 사용하지 않습니다.</p>
-                </div>
-              </div>
-              {[...new Set(contractSchema.fields.map((field) => field.group))].map((group) => {
-                const fields = contractSchema.fields.filter((field) => field.group === group);
-                return (
-                  <div key={group}>
-                    <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2" style={{ marginTop: 10 }}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      {group}
-                    </h4>
-                    <div className="mb-[10px] grid grid-cols-1 gap-x-4 md:grid-cols-2">
-                      {fields.map((field) => (
-                        <div key={field.key} className={field.half ? '' : 'md:col-span-2'} style={{ paddingTop: 5, paddingBottom: 15 }}>
-                          <label className="block text-xs text-foreground-secondary" style={{ marginBottom: 8 }}>
-                            {field.label} {field.required && <span className="text-danger">*</span>}
-                          </label>
-                          {field.type === 'select' ? (
-                            <select value={contractFormData[field.key] ?? ''} onChange={(e) => onSetContractFormData((prev) => ({ ...prev, [field.key]: e.target.value }))} className="w-full px-4 py-2.5 rounded-xl border border-border bg-white text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-shadow cursor-pointer">
-                              <option value="">선택하세요</option>
-                              {field.options?.map((option) => <option key={option} value={option}>{option}</option>)}
-                            </select>
-                          ) : field.placeholder === 'yyyy/mm/dd' ? (
-                            <>
-                              <input
-                                type="text"
-                                inputMode="numeric"
-                                value={contractFormData[field.key] ?? ''}
-                                onChange={(e) => onHandleDateInput(field.key, e.target.value)}
-                                placeholder="yyyy/mm/dd"
-                                maxLength={10}
-                                className={`w-full px-4 py-2.5 rounded-xl border text-sm text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 transition-shadow ${dateErrors[field.key] ? 'border-danger focus:ring-danger/30 bg-danger/5' : 'border-border focus:ring-primary bg-white'}`}
-                              />
-                              {dateErrors[field.key] && <p className="text-[11px] text-danger mt-0.5">{dateErrors[field.key]}</p>}
-                            </>
-                          ) : (
-                            <input
-                              type="text"
-                              inputMode={field.type === 'number' ? 'numeric' : undefined}
-                              value={field.type === 'number' && contractFormData[field.key] ? Number(contractFormData[field.key]).toLocaleString('ko-KR') : (contractFormData[field.key] ?? '')}
-                              onChange={(e) => {
-                                let value = e.target.value;
-                                if (field.type === 'number') value = value.replace(/[^0-9]/g, '');
-                                onSetContractFormData((prev) => {
-                                  const next = { ...prev, [field.key]: value };
-                                  if (field.key === 'totalAmount' && value) {
-                                    const total = Number(value);
-                                    next.supplyAmount = String(Math.round(total / 1.1));
-                                    next.vatAmount = String(total - Math.round(total / 1.1));
-                                  }
-                                  return next;
-                                });
-                              }}
-                              placeholder={field.placeholder}
-                              className="w-full px-4 py-2.5 rounded-xl border border-border bg-white text-sm text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary transition-shadow"
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <NewDocumentContractStep
+              contractSchema={contractSchema}
+              contractFormData={contractFormData}
+              dateErrors={dateErrors}
+              onSetContractFormData={onSetContractFormData}
+              onHandleDateInput={onHandleDateInput}
+            />
           )}
 
           {step === 3 && !contractSchema && (
@@ -433,127 +304,34 @@ export function NewDocumentModal(props: NewDocumentModalProps) {
           )}
 
           {step === 4 && (
-            <div className="flex flex-col gap-[20px]">
-              <div className="flex flex-col gap-[10px] rounded-xl bg-surface-secondary p-4 text-sm sm:p-6">
-                <div className="flex justify-between">
-                  <span className="text-foreground-secondary">템플릿</span>
-                  <span className="text-foreground font-medium">{selectedTemplate === '__none__' ? '직접 작성' : selectedTemplateItem?.name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-foreground-secondary">소스 파일</span>
-                  <span className="text-foreground font-medium">{selectedFiles.size}개</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-foreground-secondary">출력 포맷</span>
-                  <span className="text-foreground font-medium">{outputFormat.toUpperCase()}</span>
-                </div>
-                {referenceDocId && (
-                  <div className="flex justify-between">
-                    <span className="text-foreground-secondary">참조 제안서</span>
-                    <span className="text-foreground font-medium truncate ml-4 max-w-[240px]">
-                      {referenceDocuments.find((d) => d.id === referenceDocId)?.title ?? '선택됨'}
-                    </span>
-                  </div>
-                )}
-                {Object.entries(documentInputs).filter(([, value]) => value).length > 0 && (
-                  <div>
-                    <span className="text-foreground-secondary">기본 정보</span>
-                    <div className="mt-1 text-foreground space-y-1">
-                      {templateFields.filter((field) => documentInputs[field.key]).map((field) => (
-                        <p key={field.key}>{field.label}: {documentInputs[field.key]}</p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {instructions && (
-                  <div>
-                    <span className="text-foreground-secondary">추가 지시사항</span>
-                    <p className="text-foreground mt-1">{instructions}</p>
-                  </div>
-                )}
-                {aiAssistEnabled && (
-                  <div>
-                    <span className="text-foreground-secondary">AI 보강</span>
-                    <p className="text-foreground mt-1">{aiAssistPrompt || '기본 보강 규칙 사용'}</p>
-                  </div>
-                )}
-              </div>
-              {generating ? (
-                <div className="flex flex-col items-center py-6 gap-3">
-                  <Spinner size="lg" />
-                  <p className="text-sm text-foreground-secondary">AI가 문서를 생성하고 있습니다...</p>
-                </div>
-              ) : (
-                <p className="text-xs text-foreground-secondary text-center">생성 버튼을 누르면 AI가 문서를 생성합니다.</p>
-              )}
-            </div>
+            <NewDocumentConfirmStep
+              selectedTemplate={selectedTemplate}
+              selectedTemplateItem={selectedTemplateItem}
+              selectedFiles={selectedFiles}
+              outputFormat={outputFormat}
+              referenceDocId={referenceDocId}
+              referenceDocuments={referenceDocuments}
+              documentInputs={documentInputs}
+              templateFields={templateFields}
+              instructions={instructions}
+              aiAssistEnabled={aiAssistEnabled}
+              aiAssistPrompt={aiAssistPrompt}
+              generating={generating}
+            />
           )}
 
           {step === 5 && generatedDoc && (
-            <div className="flex flex-col gap-[20px]">
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-surface-secondary border border-border">
-                <div>
-                  <h4 className="font-semibold text-foreground">{outputFormat.toUpperCase()} 문서가 생성되었습니다!</h4>
-                  <p className="text-sm text-foreground-secondary">{generatedDoc.title}</p>
-                </div>
-              </div>
-              {(outputFormat === 'docx' || outputFormat === 'pdf' || outputFormat === 'hwpx') && (
-                <div className={`bg-surface-secondary rounded-xl p-4 ${selectedTemplateItem?.name === '제안서' ? '' : 'max-h-60 overflow-y-auto'}`}>
-                  {selectedTemplateItem?.name === '제안서' ? (
-                    <HtmlPreviewFrame
-                      title="generated-proposal-preview"
-                      html={generatedProposalHtml}
-                      className="h-[480px] w-full rounded-lg border border-border bg-white"
-                    />
-                  ) : (
-                    <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                      {generatedDoc.content ?? '내용 없음'}
-                    </div>
-                  )}
-                </div>
-              )}
-              {outputFormat === 'xlsx' && generatedOutline && (generatedOutline as { sheets?: { sheetName: string; headers: string[]; rows: unknown[][] }[] }).sheets && (
-                <div className="bg-surface-secondary rounded-xl p-4 max-h-60 overflow-y-auto space-y-3">
-                  {((generatedOutline as { sheets: { sheetName: string; headers: string[]; rows: unknown[][] }[] }).sheets).map((sheet, index) => (
-                    <div key={index} className="bg-white rounded-lg p-3 border border-border">
-                      <p className="text-sm font-medium text-foreground">{sheet.sheetName} ({sheet.rows?.length ?? 0}행)</p>
-                      <p className="text-xs text-foreground-secondary mt-1">컬럼: {sheet.headers?.join(', ')}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {outputFormat === 'pptx' && generatedOutline && (generatedOutline as { slides?: { title: string; bullets?: string[] }[] }).slides && (
-                <div className="bg-surface-secondary rounded-xl p-4 max-h-60 overflow-y-auto space-y-2">
-                  {((generatedOutline as { slides: { title: string; bullets?: string[] }[] }).slides).map((slide, index) => (
-                    <div key={index} className="bg-white rounded-lg p-3 border border-border">
-                      <p className="text-sm font-medium text-foreground">{index + 1}. {slide.title}</p>
-                      {slide.bullets && (
-                        <ul className="text-xs text-foreground-secondary mt-1 ml-4 list-disc">
-                          {slide.bullets.map((bullet, bulletIndex) => <li key={bulletIndex}>{bullet}</li>)}
-                        </ul>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {(generatedDownloadUrl || generatedDoc.id) && (
-                <button onClick={onDownloadGeneratedFile} className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-dark transition-colors">
-                  {generatedUsesPrintWindow ? 'PDF 저장창 열기' : `${outputFormat.toUpperCase()} 파일 다운로드`}
-                </button>
-              )}
-              {selectedTemplateItem?.name === '제안서' && generatedDoc.id && (
-                <div className="mt-4 p-4 rounded-xl bg-success/5 border border-success/30">
-                  <div className="flex gap-2">
-                    <button onClick={() => onDownloadAiContext(generatedDoc.id, 'ko')} className="px-3 py-1.5 rounded-lg text-xs font-medium border border-success text-success hover:bg-white transition-colors">
-                      국문
-                    </button>
-                    <button onClick={() => onDownloadAiContext(generatedDoc.id, 'en')} className="px-3 py-1.5 rounded-lg text-xs font-medium border border-success text-success hover:bg-white transition-colors">
-                      English
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+            <NewDocumentResultStep
+              generatedDoc={generatedDoc}
+              outputFormat={outputFormat}
+              selectedTemplateItem={selectedTemplateItem}
+              generatedProposalHtml={generatedProposalHtml}
+              generatedOutline={generatedOutline}
+              generatedDownloadUrl={generatedDownloadUrl}
+              generatedUsesPrintWindow={generatedUsesPrintWindow}
+              onDownloadGeneratedFile={onDownloadGeneratedFile}
+              onDownloadAiContext={onDownloadAiContext}
+            />
           )}
         </div>
         </div>
