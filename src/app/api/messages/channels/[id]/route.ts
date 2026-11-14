@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { isChannelMember, notChannelMember } from '@/lib/messages/channel-access';
 
 export async function GET(
   request: NextRequest,
@@ -20,6 +21,8 @@ export async function GET(
     if (!authUserId) return NextResponse.json({ success: false, error: '인증 필요' }, { status: 401 });
 
     const admin = createAdminSupabaseClient();
+    // 가입한 채널만 조회 — service role 조회라 RLS 가 막아주지 않는다
+    if (!(await isChannelMember(admin, channelId, authUserId))) return notChannelMember();
 
     let query = admin
       .from('messages')

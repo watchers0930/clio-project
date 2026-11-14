@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { createNotifications } from '@/lib/notifications/create-notification';
+import { isChannelMember, notChannelMember } from '@/lib/messages/channel-access';
 
 /**
  * GET /api/messages/channels — 내가 속한 채널 목록
@@ -139,6 +140,14 @@ export async function DELETE(request: NextRequest) {
     if (!id) return NextResponse.json({ success: false, error: '채널 ID 필수' }, { status: 400 });
 
     const admin = createAdminSupabaseClient();
+
+    // 가입한 DM·그룹 채널만 삭제 — 부서 채널은 부서 API(departments DELETE)에서만 정리한다
+    if (!(await isChannelMember(admin, id, authUserId))) return notChannelMember();
+    const { data: channel } = await admin.from('channels').select('type').eq('id', id).maybeSingle();
+    if (!channel) return NextResponse.json({ success: false, error: '채널을 찾을 수 없습니다.' }, { status: 404 });
+    if (channel.type === 'department') {
+      return NextResponse.json({ success: false, error: '부서 채널은 삭제할 수 없습니다.' }, { status: 403 });
+    }
 
     // 메시지 삭제 → 멤버십 삭제 → 채널 삭제
     try { await admin.from('messages').delete().eq('channel_id', id); } catch (e) { console.warn('[cleanup]', e); }

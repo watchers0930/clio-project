@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useToast } from '@/components/ui/toast';
 import type { UserItem } from '@/components/settings/types';
+import { csrfFetch } from '@/hooks/csrf-client';
 
 type ConfirmOptions = { confirmLabel?: string; variant?: 'danger' | 'primary' };
 type PendingChanges = Record<string, { department_id?: string | null; role?: string }>;
@@ -54,7 +55,7 @@ export function useUserManagement(
       if (!userName.trim()) return;
       setUserSaving(true);
       try {
-        const res = await fetch('/api/users', {
+        const res = await csrfFetch('/api/users', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -87,7 +88,7 @@ export function useUserManagement(
       if (!userName.trim() || !userEmail.trim() || !userPassword.trim()) return;
       setUserSaving(true);
       try {
-        const res = await fetch('/api/users', {
+        const res = await csrfFetch('/api/users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -125,7 +126,7 @@ export function useUserManagement(
     const detail = activate ? '재활성화하면 다시 로그인할 수 있습니다.' : '비활성화된 사용자는 로그인할 수 없습니다. 결재·근태 기록은 그대로 보존됩니다.';
     openConfirm(`"${user.name}" 사용자를 ${action}하시겠습니까?`, detail, async () => {
       try {
-        const res = await fetch('/api/users', {
+        const res = await csrfFetch('/api/users', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: user.id, isActive: activate }),
@@ -166,7 +167,7 @@ export function useUserManagement(
       const body: Record<string, unknown> = { id: userId };
       if (changes.department_id !== undefined) body.departmentId = changes.department_id;
       if (changes.role !== undefined) body.role = changes.role;
-      const res = await fetch('/api/users', {
+      const res = await csrfFetch('/api/users', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

@@ -8,6 +8,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 
 type FileAccessRow = {
   id: string;
@@ -109,35 +110,46 @@ export async function canDeleteFile(
  * - 본인 업로드 파일
  * - 본인 부서 파일
  * - file_permissions를 통해 권한 부여된 파일
+ * - 메신저로 공유받은 파일(file_shares, 만료 전)
  * - admin은 모든 파일
+ * 판단은 service role 로 한다 — 사용자 세션 RLS 가 권한 받은 파일 행을 가려 목록(service role 기준)과
+ * 다운로드·미리보기 판단이 어긋나지 않게 하기 위함. file_permissions·file_shares 는 서버만 쓴다(055).
  */
 export async function canAccessFile(
-  supabase: SupabaseClient,
+  _supabase: SupabaseClient,
   userId: string,
   userRole: string,
   userDeptId: string | null,
   fileId: string,
 ): Promise<boolean> {
   if (userRole === 'admin') return true;
+  const admin = createAdminSupabaseClient();
 
-  const { data: file } = await supabase
+  const { data: file } = await admin
     .from('files')
     .select('uploaded_by, department_id')
     .eq('id', fileId)
-    .single();
+    .maybeSingle();
 
   if (!file) return false;
   if (file.uploaded_by === userId) return true;
   if (userDeptId && file.department_id === userDeptId) return true;
 
-  // file_permissions 확인
-  const { count } = await supabase
-    .from('file_permissions')
-    .select('id', { count: 'exact', head: true })
-    .eq('file_id', fileId)
-    .or(`granted_to_user.eq.${userId}${userDeptId ? `,granted_to_dept.eq.${userDeptId}` : ''}`);
+  const [permissions, shares] = await Promise.all([
+    admin
+      .from('file_permissions')
+      .select('id', { count: 'exact', head: true })
+      .eq('file_id', fileId)
+      .or(`granted_to_user.eq.${userId}${userDeptId ? `,granted_to_dept.eq.${userDeptId}` : ''}`),
+    admin
+      .from('file_shares')
+      .select('id', { count: 'exact', head: true })
+      .eq('file_id', fileId)
+      .eq('shared_with', userId)
+      .gt('expires_at', new Date().toISOString()),
+  ]);
 
-  return (count ?? 0) > 0;
+  return (permissions.count ?? 0) > 0 || (shares.count ?? 0) > 0;
 }
 
 export async function getAccessibleFileIds(

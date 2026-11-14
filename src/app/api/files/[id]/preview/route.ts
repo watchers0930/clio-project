@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { filesBucket, isAllowedStoragePath } from '@/lib/storage/files-bucket';
+import { checkRowStoragePath, filesBucket } from '@/lib/storage/files-bucket';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { canAccessFile, getUserRoleInfo } from '@/lib/permissions';
 import { extractText } from '@/lib/ai/extract-text';
 
 /**
@@ -24,8 +26,8 @@ export async function GET(
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
     }
 
-    // 파일 메타데이터 조회
-    const { data: file, error: fileErr } = await supabase
+    // 파일 메타데이터 조회 — 다운로드 API 와 같은 규칙(service role 행 조회 + canAccessFile)
+    const { data: file, error: fileErr } = await createAdminSupabaseClient()
       .from('files')
       .select('id, name, type, storage_path')
       .eq('id', id)
@@ -35,11 +37,15 @@ export async function GET(
       return NextResponse.json({ error: '파일을 찾을 수 없습니다.' }, { status: 404 });
     }
 
-    if (!file.storage_path) {
-      return NextResponse.json({ error: '저장된 파일이 없습니다.' }, { status: 404 });
+    // 권한 체크: canAccessFile (admin/소유자/같은부서/file_permissions)
+    const roleInfo = await getUserRoleInfo(supabase, authUserId);
+    const hasAccess = await canAccessFile(supabase, authUserId, roleInfo?.role ?? 'user', roleInfo?.department_id ?? null, id);
+    if (!hasAccess) {
+      return NextResponse.json({ error: '접근 권한이 없습니다.' }, { status: 403 });
     }
-    if (!isAllowedStoragePath(file.storage_path, 'file')) {
-      console.warn('[preview] 허용되지 않은 저장 경로 — 파일 id:', id);
+
+    // 비었거나 위조된 storage_path 는 없는 파일로 처리
+    if (!checkRowStoragePath(file.storage_path, 'file', 'preview', id)) {
       return NextResponse.json({ error: '저장된 파일이 없습니다.' }, { status: 404 });
     }
 

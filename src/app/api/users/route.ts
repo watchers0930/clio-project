@@ -8,6 +8,7 @@ import { maskResidentNo } from '@/lib/format/personal';
 import { isLockedDocumentError } from '@/lib/documents/locked-references';
 import { countUserRetainedRecords, deactivationBlocker, syncAuthBanOrRevert } from '@/lib/users/user-activation';
 import { requireAdmin } from '@/lib/http/admin-guard';
+import { withMutation } from '@/lib/http/mutation-guard';
 
 /**
  * GET /api/users — 사용자 목록
@@ -71,12 +72,12 @@ export async function GET(request: NextRequest) {
  * body: { email, password, name, departmentId?, role? }
  */
 export async function POST(request: NextRequest) {
+  // 변이 요청: 인증 + 출처 + CSRF 토큰 + 활성 사용자 확인
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   try {
-    const supabase = await createServerSupabaseClient();
-    if (!supabase) return NextResponse.json({ success: false, error: 'DB 미설정' }, { status: 503 });
-
-    const authUserId = await getAuthUserId(supabase);
-    if (!authUserId) return NextResponse.json({ success: false, error: '인증 필요' }, { status: 401 });
+    const supabase = mutation.supabase;
+    const authUserId = mutation.userId;
 
     const roleInfo = await getUserRoleInfo(supabase, authUserId);
     if (!roleInfo || !isAdmin(roleInfo.role)) {
@@ -178,12 +179,12 @@ export async function POST(request: NextRequest) {
  * admin: 모든 사용자, manager: 자기 부서 내에서만
  */
 export async function PUT(request: NextRequest) {
+  // 변이 요청: 인증 + 출처 + CSRF 토큰 + 활성 사용자 확인
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   try {
-    const supabase = await createServerSupabaseClient();
-    if (!supabase) return NextResponse.json({ success: false, error: 'DB 미설정' }, { status: 503 });
-
-    const authUserId = await getAuthUserId(supabase);
-    if (!authUserId) return NextResponse.json({ success: false, error: '인증 필요' }, { status: 401 });
+    const supabase = mutation.supabase;
+    const authUserId = mutation.userId;
 
     const myRole = await getUserRoleInfo(supabase, authUserId);
     if (!myRole || !isManagerOrAbove(myRole.role)) {
@@ -210,6 +211,13 @@ export async function PUT(request: NextRequest) {
       if (role !== undefined) {
         return NextResponse.json({ success: false, error: '역할 변경은 관리자만 가능합니다.' }, { status: 403 });
       }
+      // 부서 이동은 관리자만 — 매니저가 자기·직원을 다른 부서(파일·채널)로 옮기는 우회 차단
+      if (departmentId !== undefined && departmentId !== target.department_id) {
+        return NextResponse.json({ success: false, error: '부서 변경은 관리자만 가능합니다.' }, { status: 403 });
+      }
+    } else if (id === authUserId && role !== undefined && role !== target.role) {
+      // 관리자도 자기 역할은 바꿀 수 없다(service role 업데이트라 050 트리거 대신 여기서 막는다)
+      return NextResponse.json({ success: false, error: '자기 자신의 역할은 변경할 수 없습니다.' }, { status: 400 });
     }
 
     // 활성 상태 변경: 활성 관리자만(requireAdmin), 자기 자신 비활성화 금지, 결재가 멈추는 비활성화 금지
@@ -241,8 +249,9 @@ export async function PUT(request: NextRequest) {
     const oldDeptId = target.department_id;
     if (departmentId !== undefined) updateData.department_id = departmentId;
 
-    // admin이 다른 사용자를 수정할 때 RLS bypass 필요
-    const dbClient = (isAdmin(myRole.role) && id !== authUserId) ? createAdminSupabaseClient() : supabase;
+    // admin 수정은 service role(본인 포함) — 사용자 세션의 department_id 변경은 055 트리거가 거부하므로
+    // 관리자의 부서 지정이 막히지 않게 한다. 비관리자(매니저 본인 수정 등)는 사용자 세션 + RLS·트리거를 그대로 따른다.
+    const dbClient = isAdmin(myRole.role) ? createAdminSupabaseClient() : supabase;
     let { data, error } = await dbClient
       .from('users')
       .update(updateData)
@@ -340,12 +349,12 @@ export async function PUT(request: NextRequest) {
  * admin만 가능. query: ?id=xxx
  */
 export async function DELETE(request: NextRequest) {
+  // 변이 요청: 인증 + 출처 + CSRF 토큰 + 활성 사용자 확인
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   try {
-    const supabase = await createServerSupabaseClient();
-    if (!supabase) return NextResponse.json({ success: false, error: 'DB 미설정' }, { status: 503 });
-
-    const authUserId = await getAuthUserId(supabase);
-    if (!authUserId) return NextResponse.json({ success: false, error: '인증 필요' }, { status: 401 });
+    const supabase = mutation.supabase;
+    const authUserId = mutation.userId;
 
     const guard = await requireAdmin(supabase, authUserId); // 활성 관리자만(비활성 관리자의 잔여 토큰 차단)
     if (guard) return guard;
@@ -365,7 +374,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     // 채널 멤버십 제거
-    try { await supabase.from("channel_members").delete().eq("user_id", id); } catch (e) { console.warn("[users] channel cleanup failed:", e); }
+    // channel_members 쓰기는 service role 전용(055)
+    try { await adminClient.from("channel_members").delete().eq("user_id", id); } catch (e) { console.warn("[users] channel cleanup failed:", e); }
 
     // users 테이블에서 완전 삭제
     const { error } = await supabase.from('users').delete().eq('id', id);

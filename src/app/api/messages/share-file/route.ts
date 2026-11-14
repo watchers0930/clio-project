@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { isChannelMember, notChannelMember } from '@/lib/messages/channel-access';
 
 /**
  * POST /api/messages/share-file
@@ -29,6 +30,8 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 
     const admin = createAdminSupabaseClient();
+    // 가입한 채널에만 공유 — 아니면 남의 채널 멤버에게 file_shares 가 생긴다
+    if (!(await isChannelMember(admin, channelId, authUserId))) return notChannelMember();
 
     // 파일 소유권 확인
     const { data: file, error: fileErr } = await admin

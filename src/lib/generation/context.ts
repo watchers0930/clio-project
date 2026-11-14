@@ -11,6 +11,7 @@ import { parseTemplateBundle, type TemplateBundle } from '@/lib/templates/templa
 import { loadCompanyLogoContext } from '@/lib/settings/company-logo';
 import { resolveBuiltinTemplate } from '@/lib/templates/builtin';
 import { kstDateStr, kstTimeStr } from '@/lib/utils/date-kst';
+import { filterAccessibleSourceFiles } from '@/lib/generation/source-access';
 
 const FONT_MAP: Record<string, string> = {
   '맑은 고딕': 'Malgun Gothic',
@@ -115,12 +116,15 @@ export async function loadSourceChunks(supabase: SupabaseClient, sourceFileIds?:
   // file_chunks와 Storage는 admin client로 접근 (RLS bypass)
   const admin = createAdminSupabaseClient();
 
-  const { data: srcFiles, error: srcFilesErr } = await admin.from('files').select('id, name, type, storage_path').in('id', sourceFileIds);
+  const { data: fileRows, error: srcFilesErr } = await admin.from('files').select('id, name, type, storage_path, uploaded_by, department_id').in('id', sourceFileIds);
   if (srcFilesErr) console.error('[loadSourceChunks] files query error:', srcFilesErr.message);
+  // 파일 목록 API 와 같은 규칙으로 볼 수 있는 파일만 — 나머지 id 는 조용히 제외
+  const srcFiles = await filterAccessibleSourceFiles(supabase, (fileRows ?? []) as DbFileRecord[]);
+  if (srcFiles.length === 0) return { sourceChunks, sourceFileNames: [], sourceFileSummary: '', sourceFileCount: 0 };
   const { data: chunkRows, error: chunkErr } = await admin
     .from('file_chunks')
     .select('file_id, content, chunk_index')
-    .in('file_id', sourceFileIds)
+    .in('file_id', srcFiles.map((f) => f.id))
     .order('chunk_index', { ascending: true })
     .limit(5000);
   if (chunkErr) console.error('[loadSourceChunks] chunks query error:', chunkErr.message);
@@ -134,7 +138,7 @@ export async function loadSourceChunks(supabase: SupabaseClient, sourceFileIds?:
 
   const sourceFileNames: string[] = [];
 
-  for (const sf of ((srcFiles ?? []) as DbFileRecord[])) {
+  for (const sf of srcFiles) {
     sourceFileNames.push(sf.name);
     const indexedText = chunkMap.get(sf.id)?.join('\n').trim();
     if (indexedText) {
@@ -169,12 +173,7 @@ export async function loadSourceChunks(supabase: SupabaseClient, sourceFileIds?:
   };
 }
 
-export async function loadSourceChunksFromFiles(
-  supabase: SupabaseClient,
-  sourceFileIds?: string[],
-) {
-  return loadSourceChunks(supabase, sourceFileIds);
-}
+export const loadSourceChunksFromFiles = loadSourceChunks;
 
 export async function loadTemplateContext(
   supabase: SupabaseClient,

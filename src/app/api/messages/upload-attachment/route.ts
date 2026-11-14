@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { uuid } from '@/lib/attendance/date';
+import { isChannelMember, notChannelMember } from '@/lib/messages/channel-access';
 
 /** 파일 사이즈 포맷 */
 function formatSize(bytes: number): string {
@@ -35,6 +36,8 @@ export async function POST(request: NextRequest) {
     }
 
     const admin = createAdminSupabaseClient();
+    // 가입한 채널에만 첨부 — 업로드 전에 확인해 고아 파일을 만들지 않는다
+    if (!(await isChannelMember(admin, channelId, authUserId))) return notChannelMember();
     const expiresAt = new Date(Date.now() + DEFAULT_SHARE_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
     // 1. Storage에 파일 업로드 — 경로는 ASCII만 사용 (한글 파일명 호환)
