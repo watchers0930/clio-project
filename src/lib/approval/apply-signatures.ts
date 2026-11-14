@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { injectApprovalSignatures, buildApprovalFills } from './inject-signatures';
+import { checkRowStoragePath } from '@/lib/storage/files-bucket';
 
 /** storage의 서명 이미지 경로를 data URL로 변환 (실패 시 null) */
 async function toDataUrl(admin: SupabaseClient, path: string): Promise<string | null> {
@@ -31,17 +32,20 @@ export async function applyApprovalSignatures(admin: SupabaseClient, documentId:
 
   const { data: steps } = await admin
     .from('approval_steps')
-    .select('step_order, status, signature_path')
+    .select('step_order, status, signature_path, approver_id')
     .eq('request_id', req.id)
     .order('step_order', { ascending: true });
   if (!steps || steps.length === 0) return html;
 
   const filled = await Promise.all(
-    steps.map(async (s: { step_order: number; status: string; signature_path: string | null }) => ({
+    steps.map(async (s: { step_order: number; status: string; signature_path: string | null; approver_id: string | null }) => ({
       step_order: s.step_order,
       status: s.status,
       signatureDataUrl:
-        (s.status === 'approved' || s.status === 'delegated') && s.signature_path
+        // 결재·전결 모두 해당 단계 결재자 본인이 서명한다 — 결재자 본인 서명 폴더 밖 경로는 읽지 않는다
+        // (휴가 결재 RPC(048)는 users.signature_path 를 검사 없이 복사하므로 여기서 소유자를 확인한다)
+        (s.status === 'approved' || s.status === 'delegated') && !!s.approver_id
+        && checkRowStoragePath(s.signature_path, 'signature', 'approval-signatures', req.id, { userId: s.approver_id })
           ? await toDataUrl(admin, s.signature_path)
           : null,
     })),

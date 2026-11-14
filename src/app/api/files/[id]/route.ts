@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { removeUnreferencedBlobs } from '@/lib/storage/blob-cleanup';
 import type { ApiResponse } from '@/lib/supabase/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
@@ -192,17 +193,15 @@ export async function DELETE(
       );
     }
 
-    // Storage에서 파일 삭제
-    if (file.storage_path) {
-      await supabase.storage.from('files').remove([file.storage_path]);
-    }
-
     // DB에서 삭제
     const { error: delErr } = await supabase.from('files').delete().eq('id', id);
     if (delErr) {
       console.error('[files/DELETE]', delErr.message);
       return NextResponse.json<ApiResponse>({ success: false, error: '파일 삭제에 실패했습니다.' }, { status: 500 });
     }
+
+    // 행 삭제 후 저장소 정리 — 정상 업로드 경로이고 다른 문서·파일이 참조하지 않을 때만 지운다(위조 행으로 남의 파일 삭제 차단)
+    await removeUnreferencedBlobs([file.storage_path], 'file');
 
     // audit_logs 기록
     await supabase.from('audit_logs').insert({

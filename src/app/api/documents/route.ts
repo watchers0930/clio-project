@@ -1,10 +1,12 @@
 import { documentStatusLabel } from '@/lib/documents/document-status';
+import { checkRowStoragePath, filesBucket } from '@/lib/storage/files-bucket';
 import { ApiError, errorResponse } from '@/lib/http/api-error';
 import { resolveBuiltinTemplate } from '@/lib/templates/builtin';
 import { embedLeaveInputs, serverLeaveInputs, linkGeneratedLeave, leaveLinkFailure } from '@/lib/leave/leave-document';
 import { isLeaveApplicationTemplateName } from '@/lib/templates/leave-application';
 import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
+import { removeUnreferencedBlobs } from '@/lib/storage/blob-cleanup';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
@@ -195,9 +197,9 @@ export async function POST(request: NextRequest) {
           .eq('id', templateRow.template_file_id)
           .single();
         const templateFileRow = tplFile as DbFileRecord | null;
-        if (templateFileRow?.storage_path) {
+        if (checkRowStoragePath(templateFileRow?.storage_path, 'file', 'documents/POST', templateRow.template_file_id)) {
           try {
-            const { data: blob } = await supabase.storage.from('files').download(templateFileRow.storage_path);
+            const { data: blob } = await filesBucket().download(templateFileRow.storage_path);
             if (blob) {
               const buf = await blob.arrayBuffer();
               templateFileText = await extractText(buf, templateFileRow.type ?? '', templateFileRow.name);
@@ -357,7 +359,7 @@ export async function DELETE(request: NextRequest) {
 
     const { data: chainDocs, error: chainDocsError } = await admin
       .from('documents')
-      .select('id')
+      .select('id, storage_path')
       .or(`id.eq.${rootId},parent_id.eq.${rootId}`);
 
     if (chainDocsError) {
@@ -389,6 +391,7 @@ export async function DELETE(request: NextRequest) {
       console.error('[documents/DELETE]', error.message);
       return NextResponse.json({ error: '문서 삭제에 실패했습니다.' }, { status: 500 });
     }
+    await removeUnreferencedBlobs((chainDocs ?? []).map((doc) => doc.storage_path), 'document');
 
     if (authUserId) {
       await supabase.from('audit_logs').insert({

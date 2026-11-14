@@ -1,4 +1,5 @@
 import { embedLeaveInputs, linkGeneratedLeave, LeaveDocumentLinkError } from '@/lib/leave/leave-document';
+import { checkRowStoragePath, filesBucket } from '@/lib/storage/files-bucket';
 import { isLeaveApplicationTemplateName } from '@/lib/templates/leave-application';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
@@ -87,7 +88,7 @@ export async function loadUserGenerationContext(supabase: SupabaseClient, authUs
   const signaturePath = userRow?.signature_path ?? null;
   let signatureBuffer: Buffer | null = null;
 
-  if (signaturePath) {
+  if (checkRowStoragePath(signaturePath, 'signature', 'generate', authUserId, { userId: authUserId })) {
     try {
       const adminClient = createAdminSupabaseClient();
       const { data: sigBlob } = await adminClient.storage.from('files').download(signaturePath);
@@ -141,10 +142,7 @@ export async function loadSourceChunks(supabase: SupabaseClient, sourceFileIds?:
       continue;
     }
 
-    if (!sf.storage_path) {
-      console.warn(`[loadSourceChunks] ${sf.name}: no storage_path, skipped`);
-      continue;
-    }
+    if (!checkRowStoragePath(sf.storage_path, 'file', 'loadSourceChunks', sf.id)) continue;
     try {
       const { data: blob, error: dlErr } = await admin.storage.from('files').download(sf.storage_path);
       if (dlErr || !blob) {
@@ -225,10 +223,10 @@ export async function loadTemplateContext(
       .single();
     const templateFileRow = tplFile as DbFileRecord | null;
 
-    if (templateFileRow?.storage_path) {
+    if (checkRowStoragePath(templateFileRow?.storage_path, 'file', 'generate/template', tmpl.template_file_id)) {
       try {
         templateFileName = templateFileRow.name;
-        const { data: blob } = await supabase.storage.from('files').download(templateFileRow.storage_path);
+        const { data: blob } = await filesBucket().download(templateFileRow.storage_path);
         if (blob) {
           const buf = await blob.arrayBuffer();
           templateBuffer = Buffer.from(new Uint8Array(buf));
@@ -353,13 +351,13 @@ export async function persistCompletedRender(params: {
 }) {
   const { supabase, authUserId, rendered, title, content, templateId, sourceFileIds, instructions, versionFields, originDocumentId, originContext, auditDetails } = params;
   const storagePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
-  const { error: uploadErr } = await supabase.storage.from('files').upload(storagePath, rendered.buffer, {
+  const { error: uploadErr } = await filesBucket().upload(storagePath, rendered.buffer, {
     contentType: rendered.mimeType,
     upsert: false,
   });
   if (uploadErr) throw new Error(uploadErr.message);
 
-  const { data: urlData } = await supabase.storage.from('files').createSignedUrl(storagePath, 3600);
+  const { data: urlData } = await filesBucket().createSignedUrl(storagePath, 3600);
   const payload = buildDocumentInsertPayload({
     title,
     content: isLeaveApplicationTemplateName(params.templateName) ? embedLeaveInputs(content,params.leaveInputs ?? {}) : content,
@@ -373,7 +371,8 @@ export async function persistCompletedRender(params: {
     originDocumentId,
     originContext,
   });
-  const { data: newDoc, error: insertErr } = await supabase.from('documents').insert(payload).select().single();
+  // storage_path 는 사용자 세션 쓰기가 막혀 있어(054) 인증 확인을 마친 서버가 service role 로 넣는다 — created_by 는 인증 사용자 그대로
+  const { data: newDoc, error: insertErr } = await createAdminSupabaseClient().from('documents').insert(payload).select().single();
   if (insertErr) throw new Error(insertErr.message);
 
   if (newDoc && params.templateName) {

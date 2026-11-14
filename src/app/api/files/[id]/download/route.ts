@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { canAccessFile, getUserRoleInfo } from '@/lib/permissions';
+import { isAllowedStoragePath } from '@/lib/storage/files-bucket';
 
 /**
  * GET /api/files/[id]/download — Signed URL 발급 (60초 유효)
@@ -48,6 +49,12 @@ export async function GET(
 
     // inline=true → 브라우저 뷰어로 열기(다운로드 강제 안 함), 그 외 → 다운로드
     const inline = new URL(request.url).searchParams.get('inline') === 'true';
+
+    // 위조된 storage_path 차단 — 정상 업로드 경로가 아니면 없는 파일로 처리
+    if (!isAllowedStoragePath(file.storage_path, 'file')) {
+      console.warn('[download] 허용되지 않은 저장 경로 — 파일 id:', id);
+      return NextResponse.json({ error: '파일을 찾을 수 없습니다.' }, { status: 404 });
+    }
 
     // Signed URL 발급
     const { data: signed, error: signError } = await admin.storage

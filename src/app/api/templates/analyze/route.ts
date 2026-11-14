@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
+import { departmentFolder } from '@/lib/storage/files-bucket';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { requireAdmin } from '@/lib/http/admin-guard';
 import { analyzeDocumentStructure } from '@/lib/ai/analyze-template';
@@ -77,8 +78,12 @@ export async function POST(request: NextRequest) {
 
     // Storage 업로드
     const { data: userData } = await admin.from('users').select('department_id').eq('id', authUserId).single();
-    const departmentId = (userData as DbUser | null)?.department_id ?? 'default';
-    const storagePath = `uploads/${departmentId}/${randomUUID()}.${ext}`;
+    // 부서 id 는 저장 경로에 들어가므로 UUID 만 허용(없으면 general) — 경로 조작 차단
+    const departmentFolderName = departmentFolder((userData as DbUser | null)?.department_id);
+    if (!departmentFolderName) {
+      return NextResponse.json({ success: false, error: '부서 정보가 올바르지 않습니다.' }, { status: 400 });
+    }
+    const storagePath = `uploads/${departmentFolderName}/${randomUUID()}.${ext}`;
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
@@ -98,7 +103,7 @@ export async function POST(request: NextRequest) {
       name: normalizedName,
       type: file.type,
       size: file.size,
-      department_id: departmentId === 'default' ? null : departmentId,
+      department_id: departmentFolderName === 'general' ? null : departmentFolderName,
       uploaded_by: authUserId,
       status: 'completed',
       storage_path: storagePath,

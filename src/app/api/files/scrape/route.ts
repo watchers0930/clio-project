@@ -8,6 +8,8 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { extractProductLinks, productLinksToCsv } from '@/lib/utils/extract-product-links';
 import { randomUUID } from 'crypto';
+import { departmentFolder, filesBucket } from '@/lib/storage/files-bucket';
+import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 
 export const maxDuration = 60;
 
@@ -25,10 +27,15 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => null);
     const url = body?.url;
-    const departmentId = body?.department_id ?? null;
+    // 부서 id 는 저장 경로에 들어가므로 UUID 만 허용(없으면 general) — 경로 조작 차단
+    const departmentFolderName = departmentFolder(body?.department_id);
+    const departmentId = departmentFolderName === 'general' ? null : departmentFolderName;
 
     if (!url || typeof url !== 'string') {
       return NextResponse.json({ success: false, error: 'URL을 입력해주세요.' }, { status: 400 });
+    }
+    if (!departmentFolderName) {
+      return NextResponse.json({ success: false, error: '부서 정보가 올바르지 않습니다.' }, { status: 400 });
     }
 
     // URL 유효성 검사
@@ -91,9 +98,8 @@ export async function POST(request: NextRequest) {
     const fileName = `${domain}_상품링크_${timestamp}.csv`;
 
     // Supabase Storage 업로드
-    const storagePath = `uploads/${departmentId ?? 'general'}/${randomUUID()}.csv`;
-    const { error: uploadError } = await supabase.storage
-      .from('files')
+    const storagePath = `uploads/${departmentFolderName}/${randomUUID()}.csv`;
+    const { error: uploadError } = await filesBucket()
       .upload(storagePath, buffer, { contentType: 'text/csv', upsert: false });
 
     if (uploadError) {
@@ -101,8 +107,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: '파일 저장에 실패했습니다.' }, { status: 500 });
     }
 
-    // files 테이블 INSERT
-    const { data, error } = await supabase.from('files').insert({
+    // files 테이블 INSERT — storage_path 는 사용자 세션 쓰기가 막혀 있어(054) 인증 확인 후 service role 로 넣는다
+    const { data, error } = await createAdminSupabaseClient().from('files').insert({
       name: fileName,
       type: 'text/csv',
       size: buffer.length,
@@ -114,6 +120,7 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('[scrape] file insert:', error.message);
+      await filesBucket().remove([storagePath]).catch(() => {});
       return NextResponse.json({ success: false, error: '파일 정보 저장에 실패했습니다.' }, { status: 500 });
     }
 

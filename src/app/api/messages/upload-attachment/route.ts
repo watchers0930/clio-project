@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { uuid } from '@/lib/attendance/date';
 
 /** 파일 사이즈 포맷 */
 function formatSize(bytes: number): string {
@@ -27,6 +28,8 @@ export async function POST(request: NextRequest) {
 
     if (!file) return NextResponse.json({ success: false, error: '파일이 필요합니다.' }, { status: 400 });
     if (!channelId) return NextResponse.json({ success: false, error: '채널 ID가 필요합니다.' }, { status: 400 });
+    // 채널 id 는 저장 경로에 들어가므로 UUID 만 허용 — 경로 조작 차단
+    if (!uuid(channelId)) return NextResponse.json({ success: false, error: '채널 ID가 올바르지 않습니다.' }, { status: 400 });
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json({ success: false, error: '파일 크기는 50MB 이하여야 합니다.' }, { status: 400 });
     }

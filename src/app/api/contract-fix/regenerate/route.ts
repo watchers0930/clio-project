@@ -12,6 +12,7 @@ import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import OpenAI from 'openai';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } from 'docx';
+import { safeFileNameSegment } from '@/lib/storage/files-bucket';
 
 export const maxDuration = 60;
 
@@ -225,7 +226,8 @@ export async function POST(request: NextRequest) {
   }
 
   // Storage 업로드
-  const baseName = analysis.file_name.replace(/\.[^.]+$/, '');
+  // file_name 은 사용자 세션이 수정할 수 있는 컬럼 — 경로 구분자·상위 경로를 제거해 본인 폴더 밖으로 못 나가게 한다
+  const baseName = safeFileNameSegment(analysis.file_name).replace(/\.[^.]+$/, '');
   const outputPath = `contract-fix/${userId}/${analysisId}/${baseName}_수정본.docx`;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

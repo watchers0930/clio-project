@@ -5,6 +5,7 @@ import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createNotifications } from '@/lib/notifications/create-notification';
 import { canDelegate } from '@/lib/approval/build-line';
+import { checkRowStoragePath } from '@/lib/storage/files-bucket';
 
 export const maxDuration = 30;
 
@@ -69,7 +70,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .select('name, signature_path, rank_level')
     .eq('id', authUserId)
     .maybeSingle();
-  const mySig = me?.signature_path ?? null;
+  // 결재 단계에는 결재자 본인 서명 폴더 경로만 복사한다(위조된 users.signature_path 로 남의 서명 주입 차단)
+  const mySig = checkRowStoragePath(me?.signature_path, 'signature', 'approvals/decide', authUserId, { userId: authUserId }) ? me.signature_path : null;
   const nowIso = new Date().toISOString();
 
   const maxOrder = stepList.reduce((m, s) => Math.max(m, s.step_order), 0);

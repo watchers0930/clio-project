@@ -1,5 +1,6 @@
 // 문서 다운로드 라우트 전용 — 문서 조회·접근 판정, 서명/직인·템플릿 컨텍스트 준비
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
+import { checkRowStoragePath } from '@/lib/storage/files-bucket';
 import { canViewAllWeeklyReports } from '@/lib/permissions';
 import { loadCompanySealBuffer } from '@/lib/settings/company-seal';
 import { parseTemplateBundle, type TemplateBundle } from '@/lib/templates/template-schema';
@@ -99,7 +100,7 @@ export async function loadDownloadDocument(
         .select('storage_path')
         .eq('id', doc.parent_id)
         .single();
-      if (parentDoc?.storage_path) {
+      if (checkRowStoragePath(parentDoc?.storage_path, 'document', 'download/parent', doc.parent_id)) {
         doc = { ...doc, storage_path: parentDoc.storage_path };
       }
     }
@@ -127,7 +128,7 @@ export async function loadDownloadContext(
       .from('users').select('name, signature_path').eq('id', signatureOwnerId).maybeSingle();
     signerName = nameData?.name ?? '';
     // 미리보기(inline)에도 담당란 작성자 서명을 표시하기 위해 서명 버퍼를 로드한다.
-    if (nameData?.signature_path) {
+    if (checkRowStoragePath(nameData?.signature_path, 'signature', 'download/signature', signatureOwnerId, { userId: signatureOwnerId })) {
       const { data: sigBlob } = await adminClient.storage.from('files').download(nameData.signature_path);
       if (sigBlob) signatureBuffer = Buffer.from(await sigBlob.arrayBuffer());
     }

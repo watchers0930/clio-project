@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
+import { checkRowStoragePath } from '@/lib/storage/files-bucket';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { transcribeAudio } from '@/lib/ai/transcribe';
 import { summarizeTranscript } from '@/lib/ai/summarize';
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
         .select('name, type, storage_path')
         .eq('id', meetingTemplate.template_file_id)
         .single();
-      if (tplFile?.storage_path) {
+      if (checkRowStoragePath(tplFile?.storage_path, 'file', 'transcribe', meetingTemplate.template_file_id)) {
         try {
           const { data: blob } = await admin.storage.from('files').download(tplFile.storage_path);
           if (blob) {

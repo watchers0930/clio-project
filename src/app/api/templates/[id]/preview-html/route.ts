@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { checkRowStoragePath, filesBucket } from '@/lib/storage/files-bucket';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { parseTemplateBundle } from '@/lib/templates/template-schema';
@@ -52,8 +53,8 @@ export async function GET(
         .eq('id', templateRow.template_file_id)
         .single();
 
-      if (fileRow?.storage_path) {
-        const { data: blob } = await supabase.storage.from('files').download(fileRow.storage_path);
+      if (checkRowStoragePath(fileRow?.storage_path, 'file', 'templates/preview-html', templateRow.template_file_id)) {
+        const { data: blob } = await filesBucket().download(fileRow.storage_path);
         if (blob) {
           const html = await renderTemplateFilePreviewHtml({
             buffer: Buffer.from(await blob.arrayBuffer()),

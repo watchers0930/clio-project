@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { filesBucket, isAllowedStoragePath } from '@/lib/storage/files-bucket';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { extractText } from '@/lib/ai/extract-text';
@@ -37,10 +38,13 @@ export async function GET(
     if (!file.storage_path) {
       return NextResponse.json({ error: '저장된 파일이 없습니다.' }, { status: 404 });
     }
+    if (!isAllowedStoragePath(file.storage_path, 'file')) {
+      console.warn('[preview] 허용되지 않은 저장 경로 — 파일 id:', id);
+      return NextResponse.json({ error: '저장된 파일이 없습니다.' }, { status: 404 });
+    }
 
     // Storage에서 다운로드
-    const { data: blob, error: dlErr } = await supabase.storage
-      .from('files')
+    const { data: blob, error: dlErr } = await filesBucket()
       .download(file.storage_path);
 
     if (dlErr || !blob) {

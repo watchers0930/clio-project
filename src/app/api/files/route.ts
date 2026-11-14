@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse, after } from 'next/server';
+import { departmentFolder, filesBucket } from '@/lib/storage/files-bucket';
 import { randomUUID } from 'crypto';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
@@ -157,7 +158,12 @@ export async function POST(request: NextRequest) {
     if (reqContentType.includes('multipart/form-data')) {
       const formData = await request.formData();
       const file = formData.get('file') as File | null;
-      const departmentId = formData.get('department_id') as string | null;
+      // 부서 id 는 저장 경로에 들어가므로 UUID 만 허용(없으면 general) — 경로 조작 차단
+      const departmentFolderName = departmentFolder(formData.get('department_id'));
+      if (!departmentFolderName) {
+        return NextResponse.json({ success: false, error: '부서 정보가 올바르지 않습니다.' }, { status: 400 });
+      }
+      const departmentId = departmentFolderName === 'general' ? null : departmentFolderName;
       const scopeValue = (formData.get('scope') as string | null) ?? 'department';
       const scope = scopeValue === 'company' ? 'company' : 'department';
 
@@ -177,24 +183,23 @@ export async function POST(request: NextRequest) {
 
       // Storage에 파일 업로드 (UUID 경로로 특수문자/한글 문제 회피)
       const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-      const storagePath = `uploads/${departmentId ?? 'general'}/${randomUUID()}.${ext}`;
+      const storagePath = `uploads/${departmentFolderName}/${randomUUID()}.${ext.replace(/[^a-z0-9]/g, '')}`;
       const fileContentType = file.type || EXTENSION_MIME_MAP[ext] || 'application/octet-stream';
       const buffer = Buffer.from(await file.arrayBuffer());
       console.log('[files/POST] uploading to:', storagePath, 'contentType:', fileContentType, 'bufferSize:', buffer.length);
-      const { error: uploadError } = await supabase.storage
-        .from('files')
+      const { error: uploadError } = await filesBucket()
         .upload(storagePath, buffer, { contentType: fileContentType, upsert: false });
       if (uploadError) {
         console.error('[files/POST] storage upload:', uploadError.message);
         return NextResponse.json({ success: false, error: `스토리지 업로드 실패: ${uploadError.message}` }, { status: 500 });
       }
 
-      // files 테이블에 메타데이터 INSERT
-      const { data, error } = await supabase.from('files').insert({
+      // files 테이블에 메타데이터 INSERT — storage_path 는 사용자 세션 쓰기가 막혀 있어(054) 인증 확인 후 service role 로 넣는다
+      const { data, error } = await createAdminSupabaseClient().from('files').insert({
         name: normalizedName,
         type: fileContentType,
         size: file.size,
-        department_id: departmentId ?? null,
+        department_id: departmentId,
         uploaded_by: authUserId,
         status: 'processing',
         storage_path: storagePath,
@@ -203,6 +208,7 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         console.error('[files/POST] insert:', error.message);
+        await filesBucket().remove([storagePath]).catch(() => {});
         return NextResponse.json({ success: false, error: '파일 정보 저장에 실패했습니다.' }, { status: 500 });
       }
 

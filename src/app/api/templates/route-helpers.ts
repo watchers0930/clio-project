@@ -1,5 +1,6 @@
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { isAllowedStoragePath } from '@/lib/storage/files-bucket';
 import { sanitizeFileName, validateFile } from '@/lib/utils/sanitize';
 import {
   createTemplateBundle,
@@ -50,6 +51,11 @@ export async function loadTemplateFileSource(admin: ReturnType<typeof createAdmi
 
   if (error || !fileRow?.storage_path) {
     throw new Error(`템플릿 파일 조회 실패: ${formatErrorDetail(error)}`);
+  }
+  // 위조된 storage_path 차단 — 정상 업로드 경로가 아니면 없는 파일로 처리
+  if (!isAllowedStoragePath(fileRow.storage_path, 'file')) {
+    console.warn('[templates] 허용되지 않은 저장 경로 — 파일 id:', templateFileId);
+    throw new Error('템플릿 파일 조회 실패: 파일을 찾을 수 없습니다.');
   }
 
   const { data: blob, error: downloadError } = await admin.storage.from('files').download(fileRow.storage_path);

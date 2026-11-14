@@ -5,6 +5,7 @@ import { countLockedDocumentReferences, isLockedDocumentError } from '@/lib/docu
 const LOCKED_ORIGIN_MESSAGE = '이 문서를 원본으로 하는 결재 중이거나 승인된 문서가 있어 삭제할 수 없습니다.';
 import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
+import { removeUnreferencedBlobs } from '@/lib/storage/blob-cleanup';
 import type { ApiResponse } from '@/lib/supabase/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
@@ -180,6 +181,7 @@ export async function DELETE(
       return NextResponse.json<ApiResponse>({ success: false, error: LOCKED_ORIGIN_MESSAGE }, { status: 409 });
     }
 
+    const { data: target } = await createAdminSupabaseClient().from('documents').select('storage_path').eq('id', id).maybeSingle();
     const { error } = await supabase.from('documents').delete().eq('id', id);
     if (error) {
       if (isLockedDocumentError(error)) {
@@ -188,6 +190,7 @@ export async function DELETE(
       console.error('[documents/[id]/DELETE]', error.message);
       return NextResponse.json<ApiResponse>({ success: false, error: '문서 삭제에 실패했습니다.' }, { status: 500 });
     }
+    await removeUnreferencedBlobs([target?.storage_path], 'document');
 
     if (authUserId) {
       await supabase.from('audit_logs').insert({

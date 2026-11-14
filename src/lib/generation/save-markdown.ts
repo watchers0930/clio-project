@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { filesBucket } from "@/lib/storage/files-bucket";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import type {
@@ -143,8 +145,7 @@ export async function saveMarkdown(input: SaveMarkdownInput) {
       };
     }
     const filePath = `generated/${authUserId}/${crypto.randomUUID()}.${rendered.extension}`;
-    const { error: upErr } = await supabase.storage
-      .from("files")
+    const { error: upErr } = await filesBucket()
       .upload(filePath, rendered.buffer, {
         contentType: rendered.mimeType,
         upsert: false,
@@ -155,17 +156,18 @@ export async function saveMarkdown(input: SaveMarkdownInput) {
         upErr.message,
       );
     } else {
-      await supabase
+      // storage_path 는 사용자 세션 쓰기가 막혀 있어(054) 방금 만든 본인 문서에 한해 service role 로 갱신한다
+      await createAdminSupabaseClient()
         .from("documents")
         .update({ storage_path: filePath })
         .eq("id", newDoc.id)
+        .eq("created_by", authUserId)
         .then(
           () => {},
           () => {},
         );
     }
-    const { data: fileUrl } = await supabase.storage
-      .from("files")
+    const { data: fileUrl } = await filesBucket()
       .createSignedUrl(filePath, 3600);
 
     return NextResponse.json(

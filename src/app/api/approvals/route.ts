@@ -6,6 +6,7 @@ import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createNotifications } from '@/lib/notifications/create-notification';
 import { buildApprovalLine, type OrgMember } from '@/lib/approval/build-line';
+import { checkRowStoragePath } from '@/lib/storage/files-bucket';
 
 export const maxDuration = 30;
 
@@ -78,7 +79,9 @@ export async function POST(request: NextRequest) {
     .select('id, name, email, manager_user_id, rank_level, rank_title, signature_path')
     .eq('is_active', true); // 비활성(퇴사)자는 결재선 제외 — 휴가 결재(leave-approval)와 동일
   const byId = new Map<string, OrgMember>((members ?? []).map((m: OrgMember) => [m.id, m]));
-  const requesterSig = (members ?? []).find((m: { id: string; signature_path?: string | null }) => m.id === authUserId)?.signature_path ?? null;
+  const requesterSigPath = (members ?? []).find((m: { id: string; signature_path?: string | null }) => m.id === authUserId)?.signature_path;
+  // 결재 단계에는 신청자 본인 서명 폴더 경로만 복사한다(위조된 users.signature_path 로 남의 서명 주입 차단)
+  const requesterSig = checkRowStoragePath(requesterSigPath, 'signature', 'approvals', authUserId, { userId: authUserId }) ? requesterSigPath : null;
 
   const line = buildApprovalLine(authUserId, byId, depth);
   if (line.length < 2) {

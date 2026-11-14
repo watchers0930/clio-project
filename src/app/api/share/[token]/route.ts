@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
+import { checkRowStoragePath } from '@/lib/storage/files-bucket';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { createHash } from 'crypto';
 
@@ -79,7 +80,7 @@ export async function GET(
         .single();
 
       if (!file) return NextResponse.json({ error: '파일을 찾을 수 없습니다.' }, { status: 404 });
-      if (!file.storage_path) {
+      if (!checkRowStoragePath(file.storage_path, 'file', 'share', file.id)) {
         return NextResponse.json({ error: '파일 경로 정보가 없습니다.' }, { status: 404 });
       }
 

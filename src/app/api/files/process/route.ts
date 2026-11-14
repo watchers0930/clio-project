@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
+import { isAllowedStoragePath } from '@/lib/storage/files-bucket';
 import { extractText, isAudioFile } from '@/lib/ai/extract-text';
 import { chunkText } from '@/lib/ai/chunk-text';
 import { generateAndStoreChunks } from '@/lib/ai/embeddings';
@@ -73,6 +74,13 @@ export async function POST(request: NextRequest) {
       // storage_path 없는 파일 (메타데이터만 등록된 경우) → indexed로 표시
       await supabase.from('files').update({ status: 'indexed' }).eq('id', fileId);
       return NextResponse.json({ success: true, message: 'storage_path 없음, 건너뜀' });
+    }
+
+    // 위조된 storage_path 차단 — 남의 파일 내용이 이 행의 검색 청크로 색인되지 않게 다운로드 실패로 처리
+    if (!isAllowedStoragePath(file.storage_path, 'file')) {
+      console.warn('[process] 허용되지 않은 저장 경로 — 파일 id:', fileId);
+      await supabase.from('files').update({ status: 'error' }).eq('id', fileId);
+      return NextResponse.json({ success: false, error: '파일 다운로드 실패' }, { status: 500 });
     }
 
     const { data: fileData, error: dlErr } = await supabase.storage

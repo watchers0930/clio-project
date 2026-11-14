@@ -2,6 +2,7 @@
 import { renderStoredFilePreview, renderLatestInputForm } from '@/lib/documents/inline-render';
 import { NextResponse } from 'next/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
+import { checkRowStoragePath } from '@/lib/storage/files-bucket';
 import { applyApprovalSignatures } from '@/lib/approval/apply-signatures';
 import { renderDocx } from '@/lib/renderers/docx-renderer';
 import { renderHwpx } from '@/lib/renderers/hwpx-renderer';
@@ -56,7 +57,8 @@ export async function serveStoredFile(ctx: DownloadRenderContext): Promise<NextR
   } = ctx;
   // storage_path가 있고 inline(미리보기) 요청이면 실제 파일을 PDF로 서빙
   // storage_path가 있고 다운로드 요청이면 실제 파일을 원본 포맷으로 서빙
-  if (doc.storage_path) {
+  // 생성 파일 경로(generated/)만 저장 파일로 서빙 — 위조 경로는 저장 파일 없음으로 보고 content 렌더로 진행
+  if (checkRowStoragePath(doc.storage_path, 'document', 'download', doc.id)) {
     if (isProposalDocument && (inline || format === 'pdf')) {
       const proposalBuffer = Buffer.from(proposalPreviewHtml, 'utf-8');
       return new NextResponse(new Uint8Array(proposalBuffer), {

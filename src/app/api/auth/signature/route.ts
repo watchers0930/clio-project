@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { checkRowStoragePath } from '@/lib/storage/files-bucket';
 
 /**
  * GET /api/auth/signature
@@ -21,7 +22,8 @@ export async function GET() {
       .eq('id', authUserId)
       .single();
 
-    if (!user?.signature_path) {
+    // 본인 서명 폴더(signatures/<본인id>/) 경로만 서명URL 발급 — 위조 경로는 서명 없음으로 처리
+    if (!checkRowStoragePath(user?.signature_path, 'signature', 'signature/GET', authUserId, { userId: authUserId })) {
       return NextResponse.json({ success: true, data: null });
     }
 
@@ -112,7 +114,8 @@ export async function DELETE() {
     const { data: user } = await supabase.from('users').select('signature_path').eq('id', authUserId).single();
     const admin = createAdminSupabaseClient();
 
-    if (user?.signature_path) {
+    // 본인 서명 폴더 경로만 저장소에서 지운다 — 위조 경로로 남의 파일 삭제 차단(경로 값은 아래에서 비운다)
+    if (checkRowStoragePath(user?.signature_path, 'signature', 'signature/DELETE', authUserId, { userId: authUserId })) {
       await admin.storage.from('files').remove([user.signature_path]);
     }
 

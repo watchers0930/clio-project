@@ -12,6 +12,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import PizZip from 'pizzip';
+import { isOwnedStoragePath, safeFileNameSegment } from '@/lib/storage/files-bucket';
 
 export const maxDuration = 60;
 
@@ -311,6 +312,11 @@ export async function POST(request: NextRequest) {
   if (!session.output_path) {
     return NextResponse.json({ error: '원본 파일 경로가 없습니다. 다시 분석해 주세요.' }, { status: 422 });
   }
+  // output_path·file_name 은 사용자 세션이 수정할 수 있는 컬럼 — 본인 임시 폴더 밖 경로는 읽지 않는다
+  if (!isOwnedStoragePath(session.output_path, `autofill-temp/${userId}/`)) {
+    console.warn(`[autofill/generate] 허용되지 않은 원본 경로 (session: ${sessionId})`);
+    return NextResponse.json({ error: '원본 파일 경로가 없습니다. 다시 분석해 주세요.' }, { status: 422 });
+  }
 
   // 원본 파일 다운로드
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -347,7 +353,7 @@ export async function POST(request: NextRequest) {
   }
 
   // 완성 파일 Storage에 저장
-  const outputFileName = session.file_name.replace(/(\.[^.]+)$/, '_autofilled$1');
+  const outputFileName = safeFileNameSegment(session.file_name).replace(/(\.[^.]+)$/, '_autofilled$1');
   const outputPath = `autofill-output/${userId}/${sessionId}/${outputFileName}`;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
