@@ -1,14 +1,7 @@
 'use client';
 
 import { FileText, Layers3, Maximize2, Network, Radar, Sparkles, ZoomIn, ZoomOut } from 'lucide-react';
-
-interface ClusterLabelPosition {
-  key: string;
-  name: string;
-  x: number;
-  y: number;
-  ids: string[];
-}
+import type { ClusterLabelPosition } from './memo-graph-layout';
 
 interface MemoGraphStageProps {
   selectedCount: number;

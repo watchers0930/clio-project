@@ -1,22 +1,17 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { isContractTemplate } from '@/lib/contract-fields';
-import type {
-  DocumentItem as Document,
-  SourceFile,
-  TemplateItem as Template,
-  TemplateFile,
-} from '@/components/documents/page-types';
+import type { DocumentItem as Document } from '@/components/documents/page-types';
 import type { ExtractedTodo } from '@/lib/ai/extract-todos';
 import { useToast } from '@/components/ui/toast';
 import { formatDateInput, validateDateInput } from '@/components/documents/date-input';
 import { isWorklogTemplateName, WORKLOG_FIELDS } from '@/lib/templates/worklog';
 import type { TemplateFieldDefinition } from '@/lib/templates/template-schema';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { useDocumentViewerActions } from '@/components/documents/use-document-viewer-actions';
-import { csrfFetch } from '@/hooks/csrf-client';
-import { getAllowedOutputFormats, type AllowedOutputFormat } from '@/components/documents/document-output-formats';
+import { useDocumentsData } from '@/components/documents/use-documents-data';
+import { useDocumentGeneration } from '@/components/documents/use-document-generation';
 import { useVersionPanel } from '@/components/documents/use-version-panel';
 import { useDocumentDeletion } from '@/components/documents/use-document-deletion';
 import { useFileUpload } from '@/components/documents/use-file-upload';
@@ -29,19 +24,14 @@ export {
   FONT_OPTIONS,
   DOWNLOAD_FORMAT_OPTIONS,
 } from '@/components/documents/document-page-constants';
-import { TEMPLATE_DISPLAY_ORDER } from '@/components/documents/document-page-constants';
-
-type GeneratedDownloadMeta = {
-  fileName: string | null;
-  extension: string | null;
-  mimeType: string | null;
-};
 
 export function useDocumentsPage() {
   const toast = useToast();
   const router = useRouter();
-  const [docs, setDocs] = useState<Document[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    docs, setDocs, loading, templates, sourceFiles, referenceDocuments, setReferenceDocuments,
+    loadDocs, loadFiles, loadReferenceDocuments,
+  } = useDocumentsData();
   const [showModal, setShowModal] = useState(false);
   const [step, setStep] = useState(1);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
@@ -51,16 +41,7 @@ export function useDocumentsPage() {
   const [documentInputs, setDocumentInputs] = useState<Record<string, string>>({});
   const [aiAssistEnabled, setAiAssistEnabled] = useState(false);
   const [aiAssistPrompt, setAiAssistPrompt] = useState('');
-  const [generating, setGenerating] = useState(false);
-  const [generatedDoc, setGeneratedDoc] = useState<Document | null>(null);
   const [outputFormat, setOutputFormat] = useState<string>('docx');
-  const [generatedDownloadUrl, setGeneratedDownloadUrl] = useState<string | null>(null);
-  const [generatedDownloadMeta, setGeneratedDownloadMeta] = useState<GeneratedDownloadMeta>({
-    fileName: null,
-    extension: null,
-    mimeType: null,
-  });
-  const [generatedOutline, setGeneratedOutline] = useState<Record<string, unknown> | null>(null);
   const [contractFormData, setContractFormData] = useState<Record<string, string>>({});
   const [dateErrors, setDateErrors] = useState<Record<string, string>>({});
   const [fileSearch, setFileSearch] = useState('');
@@ -76,17 +57,12 @@ export function useDocumentsPage() {
   const [originContext, setOriginContext] = useState<string | null>(null);
   const [creationContextTitle, setCreationContextTitle] = useState('');
   const [referenceDocId, setReferenceDocId] = useState<string | null>(null);
-  const [referenceDocuments, setReferenceDocuments] = useState<Document[]>([]);
-  const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; description?: string; onConfirm: () => void }>({ open: false, title: '', onConfirm: () => {} });
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [sourceFiles, setSourceFiles] = useState<SourceFile[]>([]);
   const [selectedFont, setSelectedFont] = useState('맑은 고딕');
   const [downloadFormat, setDownloadFormat] = useState<string>('docx');
   const [initializedFromQuery, setInitializedFromQuery] = useState(false);
   const [leavePrefillDone, setLeavePrefillDone] = useState(false);
 
-  const openConfirm = (title: string, description: string | undefined, onConfirm: () => void) => setConfirmState({ open: true, title, description, onConfirm });
-  const closeConfirm = () => setConfirmState((state) => ({ ...state, open: false }));
+  const { confirmState, openConfirm, closeConfirm } = useConfirmDialog();
   const {
     viewDoc,
     editContent,
@@ -124,82 +100,6 @@ export function useDocumentsPage() {
     validateDateInput(key, formatted, setDateErrors);
   };
 
-  const loadDocs = useCallback(async () => {
-    try {
-      const res = await fetch('/api/documents');
-      if (res.ok) {
-        const data = await res.json();
-        setDocs(data.documents ?? []);
-      }
-    } catch {
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const loadTemplates = useCallback(async () => {
-    try {
-      const res = await fetch('/api/templates');
-      if (res.ok) {
-        const data = await res.json();
-        const templateData = data.data ?? data.templates ?? [];
-        // 새 문서 생성에서 노출할 템플릿 (DB 데이터는 보존)
-        const ALLOWED_TEMPLATES = ['재직증명서', '회의록', '휴가원', '품의서', '표준근로계약서', '주간업무'];
-        const mapped = templateData
-          .filter((template: Record<string, unknown>) => ALLOWED_TEMPLATES.includes(template.name as string))
-          .map((template: Record<string, unknown>) => ({
-            id: template.id as string,
-            name: template.name as string,
-            description: template.description as string,
-            templateMode: (template.templateMode as Template['templateMode']) ?? 'html-template',
-            templateHtml: (template.templateHtml as string | undefined) ?? '',
-            templateFile: (template.templateFile as TemplateFile | null) ?? null,
-            templateFields: (template.templateFields as Template['templateFields']) ?? [],
-            templateSections: (template.templateSections as Template['templateSections']) ?? [],
-          }));
-        mapped.sort((a: { name: string }, b: { name: string }) => {
-          const ai = TEMPLATE_DISPLAY_ORDER.indexOf(a.name);
-          const bi = TEMPLATE_DISPLAY_ORDER.indexOf(b.name);
-          return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
-        });
-        setTemplates(mapped);
-      }
-    } catch {
-    }
-  }, []);
-
-  const loadFiles = useCallback(async () => {
-    try {
-      const res = await fetch('/api/files?limit=500');
-      if (res.ok) {
-        const data = await res.json();
-        const fileData = data.data ?? data.files ?? [];
-        setSourceFiles(fileData.filter((file: Record<string, unknown>) => file.status !== '오류').map((file: Record<string, unknown>) => ({
-          id: file.id as string,
-          name: (file.name as string) ?? '',
-          type: (file.type as string) ?? 'FILE',
-          department: (file.department as string) ?? '미분류',
-          size: (file.size as string) ?? '',
-          uploadDate: (file.uploadDate as string) ?? '',
-          status: (file.status as string) ?? '',
-        })));
-      }
-    } catch {
-    }
-  }, []);
-
-  const loadReferenceDocuments = useCallback(async (templateId: string) => {
-    try {
-      const res = await fetch(`/api/documents?templateId=${templateId}&status=completed&limit=20`);
-      if (res.ok) {
-        const data = await res.json();
-        setReferenceDocuments(data.documents ?? []);
-      }
-    } catch {
-      setReferenceDocuments([]);
-    }
-  }, []);
-
   const { uploadingLocalFiles, uploadLocalFiles, toggleFile } = useFileUpload({
     selectedFiles,
     setSelectedFiles,
@@ -212,11 +112,32 @@ export function useDocumentsPage() {
     openCreateModal: () => openCreateModalRef.current(),
   });
 
-  useEffect(() => {
-    loadDocs();
-    loadTemplates();
-    loadFiles();
-  }, [loadDocs, loadTemplates, loadFiles]);
+  const {
+    generating, setGenerating, generatedDoc, setGeneratedDoc,
+    generatedDownloadUrl, setGeneratedDownloadUrl, generatedDownloadMeta, setGeneratedDownloadMeta,
+    generatedOutline, setGeneratedOutline, handleGenerate,
+  } = useDocumentGeneration({
+    selectedTemplate,
+    customStructure,
+    instructions,
+    templates,
+    outputFormat,
+    setOutputFormat,
+    selectedFiles,
+    selectedFont,
+    documentInputs,
+    aiAssistEnabled,
+    aiAssistPrompt,
+    contractFormData,
+    newVersionDocId,
+    setNewVersionDocId,
+    originDocumentId,
+    originContext,
+    referenceDocId,
+    setDocs,
+    setStep,
+    toast,
+  });
 
   useEffect(() => {
     if (viewDoc?.template === '제안서' && downloadFormat !== 'pdf') {
@@ -369,6 +290,8 @@ export function useDocumentsPage() {
   });
 
   const openCreateModal = () => { resetModal(); setShowModal(true); };
+  // 버전 패널(useVersionPanel)이 이벤트 핸들러에서 최신 openCreateModal을 부르도록 렌더마다 갱신한다(HEAD와 동일 동작).
+  // eslint-disable-next-line react-hooks/refs -- latest-ref 패턴. 렌더 중 읽지 않고 이벤트에서만 호출된다.
   openCreateModalRef.current = openCreateModal;
 
   const canNext = () => {
@@ -391,65 +314,6 @@ export function useDocumentsPage() {
     return true;
   };
 
-  const handleGenerate = async () => {
-    setGenerating(true);
-    setGeneratedDownloadUrl(null);
-    setGeneratedDownloadMeta({ fileName: null, extension: null, mimeType: null });
-    setGeneratedOutline(null);
-    try {
-      const isCustom = selectedTemplate === '__none__';
-      const finalInstructions = isCustom ? `## 문서 구조:\n${customStructure.trim()}\n\n${instructions.trim() ? `## 추가 지시사항:\n${instructions.trim()}` : ''}` : instructions.trim() || undefined;
-      const selectedTemplateItem = templates.find((template) => template.id === selectedTemplate);
-      const isContract = selectedTemplateItem ? isContractTemplate(selectedTemplateItem.name) : false;
-      const allowedFormats = getAllowedOutputFormats(selectedTemplateItem?.templateFile, isContract, selectedTemplateItem?.templateMode, selectedTemplateItem?.name);
-      const actualFormat = allowedFormats.includes(outputFormat as AllowedOutputFormat) ? outputFormat : allowedFormats[0];
-      if (actualFormat !== outputFormat) setOutputFormat(actualFormat);
-      const res = await csrfFetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          templateId: isCustom ? undefined : selectedTemplate,
-          sourceFileIds: Array.from(selectedFiles),
-          instructions: finalInstructions,
-          outputFormat: actualFormat,
-          font: selectedFont,
-          customStructure: isCustom ? customStructure.trim() : undefined,
-          documentInputs,
-          aiAssist: aiAssistEnabled,
-          aiAssistPrompt: aiAssistPrompt.trim() || undefined,
-          ...(isContract && Object.keys(contractFormData).length > 0 ? { contractFormData } : {}),
-          ...(newVersionDocId ? { parentId: newVersionDocId } : {}),
-          ...(originDocumentId ? { originDocumentId } : {}),
-          ...(originContext ? { originContext } : {}),
-          ...(referenceDocId ? { referenceDocId } : {}),
-        }),
-      });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        toast.error(errorData?.error ?? '문서 생성에 실패했습니다. 다시 시도해 주세요.');
-        return;
-      }
-      const data = await res.json();
-      const newDoc = data.document as Document | undefined;
-      if (!newDoc) return;
-      setGeneratedDoc(newDoc);
-      setDocs((prev) => [newDoc, ...prev]);
-      if (data.downloadUrl) setGeneratedDownloadUrl(data.downloadUrl);
-      setGeneratedDownloadMeta({
-        fileName: typeof data.downloadFileName === 'string' ? data.downloadFileName : null,
-        extension: typeof data.downloadExtension === 'string' ? data.downloadExtension : null,
-        mimeType: typeof data.downloadMimeType === 'string' ? data.downloadMimeType : null,
-      });
-      if (data.outline) setGeneratedOutline(data.outline);
-      if (data.format) setOutputFormat(data.format);
-      setNewVersionDocId(null);
-      setStep(5);
-    } catch {
-      toast.error('네트워크 오류가 발생했습니다. 다시 시도해 주세요.');
-    } finally {
-      setGenerating(false);
-    }
-  };
 
   const { handleDelete, handleBulkDelete, handleDeleteAll, toggleDocSelect, toggleSelectAll } = useDocumentDeletion({
     docs,

@@ -1,7 +1,9 @@
 import { ApiError, errorResponse } from '@/lib/http/api-error';
 import { saveMarkdown } from './save-markdown';
-import { consolidateSectionCells, applyWorklogTemplateOverrides, buildDocumentSummary, buildDocumentInputInstructions, VALID_FORMATS } from './form-overrides';
-import { serverLeaveInputs, LeaveDocumentLinkError, leaveLinkFailure } from '@/lib/leave/leave-document';
+import { buildDocumentInputInstructions, VALID_FORMATS } from './form-overrides';
+import { serverLeaveInputs } from '@/lib/leave/leave-document';
+import { respondContractDirect } from './contract-direct';
+import { respondDocxFormData, respondHwpxFormData, respondDocxTemplate, respondStructured, type OutputContext, type PersistContext } from './output-paths';
 import { withMutation } from '@/lib/http/mutation-guard';
 /**
  * POST /api/generate
@@ -16,9 +18,6 @@ import { withMutation } from '@/lib/http/mutation-guard';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { generateForFormat } from '@/lib/ai/generate-for-format';
-import { applyFormDataRuntimeOverrides } from '@/lib/ai/docx-form-mapping';
-import { renderDocument } from '@/lib/renderers';
-import { collapseWorklogNextPlanRows } from '@/lib/renderers/docx-renderer';
 import type { OutputFormat } from '@/lib/renderers/types';
 import {
   buildInstructionMeta,
@@ -28,7 +27,6 @@ import {
   loadSourceChunks,
   loadTemplateContext,
   loadUserGenerationContext,
-  persistCompletedRender,
   resolveVersionFields,
 } from './context';
 import { getWorklogDocumentTitle, isWorklogTemplateName } from '@/lib/templates/worklog';
@@ -125,67 +123,9 @@ export async function generateDocument(request: NextRequest) {
     const { todayStr, timeStr, reportNo, enrichedInstructions } = buildInstructionMeta(userName, userDept, instructions);
 
     // ── 계약서 직접 치환 경로 (AI 미사용) ──
-    if (contractFormData && typeof contractFormData === 'object' && Object.keys(contractFormData).length > 0 && templateBuffer) {
-      const { isContractTemplate } = await import('@/lib/contract-fields');
-      if (isContractTemplate(templateName)) {
-        const { renderSystemContract } = await import('@/lib/renderers/contract-renderer');
-        const dateStr = todayStr;
-        const title = `${templateName} (${dateStr} 생성)`;
-
-        console.log('[generate] 계약서 직접 치환 시작:', templateName, 'buffer:', templateBuffer.length, 'bytes, ZIP magic:', templateBuffer[0] === 0x50 && templateBuffer[1] === 0x4B ? 'OK' : 'FAIL');
-        let rendered;
-        try {
-          rendered = renderSystemContract(templateBuffer, contractFormData as Record<string, string>, title);
-          console.log('[generate] 계약서 렌더링 완료:', rendered.buffer.length, 'bytes, ZIP magic:', rendered.buffer[0] === 0x50 && rendered.buffer[1] === 0x4B ? 'OK' : 'FAIL');
-        } catch (renderErr) {
-          console.error('[generate] 계약서 렌더링 에러:', renderErr instanceof Error ? renderErr.message : renderErr, renderErr instanceof Error ? renderErr.stack : '');
-          return NextResponse.json({ error: '계약서 생성 실패: ' + (renderErr instanceof Error ? renderErr.message : '알 수 없는 오류') }, { status: 500 });
-        }
-        try {
-          const content = `[계약서 자동 작성] ${templateName}`;
-          const { newDoc, signedUrl, downloadFileName, downloadExtension, downloadMimeType } = await persistCompletedRender({
-            supabase,
-            authUserId,
-            rendered,
-            title,
-            content,
-            templateId,
-            sourceFileIds,
-            instructions: JSON.stringify(contractFormData),
-            versionFields,
-            originDocumentId,
-            originContext,
-            auditDetails: { format: 'hwpx', mode: 'contract-direct' },
-          });
-          return NextResponse.json({
-            document: buildDocumentSummary({
-              id: newDoc?.id,
-              title,
-              templateName,
-            createdAt: dateStr,
-            status: '완료',
-            sourceCount: 0,
-            content,
-            versionNumber: (newDoc as { version_number?: number | null } | null)?.version_number ?? 1,
-            parentId: (newDoc as { parent_id?: string | null } | null)?.parent_id ?? null,
-            originDocumentId: (newDoc as { origin_document_id?: string | null } | null)?.origin_document_id ?? null,
-            originContext: (newDoc as { origin_context?: string | null } | null)?.origin_context ?? null,
-            outputFormat: format,
-          }),
-            format: 'hwpx',
-            mode: 'contract-direct',
-            downloadUrl: signedUrl,
-            downloadFileName,
-            downloadExtension,
-            downloadMimeType,
-          }, { status: 201 });
-        } catch (e) {
-          if(e instanceof LeaveDocumentLinkError) return NextResponse.json(leaveLinkFailure(e,e.documentId),{status:e.status});
-          console.error('[generate] Contract upload error:', e);
-          return NextResponse.json({ error: '파일 업로드 실패' }, { status: 500 });
-        }
-      }
-    }
+    const persistContext: PersistContext = { supabase, authUserId, templateId, templateName, sourceFileIds, versionFields, originDocumentId, originContext, format };
+    const contractResponse = await respondContractDirect(persistContext, contractFormData, templateBuffer, todayStr);
+    if (contractResponse) return contractResponse;
     console.log('[generate] 계약서 경로 미진입. contractFormData:', !!contractFormData, 'templateBuffer:', !!templateBuffer, 'templateName:', templateName);
 
     // AI 콘텐츠 생성 (포맷별 분기)
@@ -241,246 +181,19 @@ export async function generateDocument(request: NextRequest) {
       : `${preferredTitle} (${dateStr} 생성)`;
     generationResult.title = title;
 
-    // DOCX 폼 데이터 기반: 빈 셀에 내용 주입 → Storage 업로드
-    if (generationResult.docxFormData && generationResult.templateBuffer && generationResult.tableStructure) {
-      const fd = generationResult.docxFormData;
-      const cells = generationResult.tableStructure.emptyCells;
 
-      // ── 1단계: 섹션 통합 (AI가 행별 분산한 내용을 첫 셀로 합침) ──
-      consolidateSectionCells(fd, cells);
-
-      // ── 2단계: 메타데이터 강제 보정 (통합 결과를 덮어씀) ──
-      applyFormDataRuntimeOverrides(fd, cells, { userName, userPosition, userDept, todayStr, templateName });
-      if (isWorklogTemplateName(templateName)) {
-        applyWorklogTemplateOverrides(fd, generationResult.tableStructure, resolvedDocumentInputs);
-      }
-
-      let rendered;
-      try {
-        rendered = await renderDocument(generationResult, theme);
-        if (isWorklogTemplateName(templateName) && rendered.extension === 'docx') {
-          rendered = { ...rendered, buffer: collapseWorklogNextPlanRows(rendered.buffer) };
-        }
-      } catch (e) {
-          if(e instanceof LeaveDocumentLinkError) return NextResponse.json(leaveLinkFailure(e,e.documentId),{status:e.status});
-        console.error('[generate] DOCX FormData render error:', e);
-        return NextResponse.json({ error: 'DOCX 템플릿 구조에 맞춘 렌더링에 실패했습니다. 템플릿 필드 또는 양식 구조를 확인해주세요.' }, { status: 500 });
-      }
-      {
-        try {
-          const content = generationResult.markdown?.trim() || `[DOCX 양식 채우기] ${templateName}`;
-          const { newDoc, signedUrl, downloadFileName, downloadExtension, downloadMimeType } = await persistCompletedRender({
-            supabase,
-            authUserId,
-            rendered,
-            title,
-            content,
-            templateId,
-            sourceFileIds,
-            instructions: instructions ?? null,
-            versionFields,
-            originDocumentId,
-            originContext,
-            auditDetails: { format },
-        leaveInputs, templateName,
-          });
-          return NextResponse.json({
-            document: buildDocumentSummary({
-              id: newDoc?.id,
-              title,
-              templateName,
-              createdAt: dateStr,
-              status: '완료',
-              sourceCount: (sourceFileIds ?? []).length,
-              content,
-              versionNumber: (newDoc as { version_number?: number | null } | null)?.version_number ?? 1,
-              parentId: (newDoc as { parent_id?: string | null } | null)?.parent_id ?? null,
-              originDocumentId: (newDoc as { origin_document_id?: string | null } | null)?.origin_document_id ?? null,
-              originContext: (newDoc as { origin_context?: string | null } | null)?.origin_context ?? null,
-              outputFormat: format,
-            }),
-            format,
-            downloadUrl: signedUrl,
-            downloadFileName,
-            downloadExtension,
-            downloadMimeType,
-          }, { status: 201 });
-        } catch (e) {
-          if(e instanceof LeaveDocumentLinkError) return NextResponse.json(leaveLinkFailure(e,e.documentId),{status:e.status});
-          console.error('[generate] DOCX FormData Storage upload error:', e);
-          return NextResponse.json({ error: '템플릿 기반 DOCX 파일 업로드에 실패했습니다.' }, { status: 500 });
-        }
-      }
-    }
-
-    // HWPX 폼 데이터 기반: 빈 셀에 내용 주입 → Storage 업로드
-    if (generationResult.hwpxFormData && generationResult.templateBuffer && generationResult.hwpxTableStructure) {
-      const hfd = generationResult.hwpxFormData;
-      const hcells = generationResult.hwpxTableStructure.emptyCells;
-
-      // ── 1단계: 섹션 통합 (AI가 행별 분산한 내용을 첫 셀로 합침) ──
-      consolidateSectionCells(hfd, hcells);
-
-      // ── 2단계: 메타데이터 강제 보정 (통합 결과를 덮어씀) ──
-      applyFormDataRuntimeOverrides(hfd, hcells, { userName, userPosition, userDept, todayStr, templateName });
-      if (isWorklogTemplateName(templateName)) {
-        applyWorklogTemplateOverrides(hfd, generationResult.hwpxTableStructure, resolvedDocumentInputs);
-      }
-
-      const rendered = await renderDocument(generationResult, theme);
-        try {
-          const content = generationResult.markdown?.trim() || `[HWPX 양식 채우기] ${templateName}`;
-          const { newDoc, signedUrl, downloadFileName, downloadExtension, downloadMimeType } = await persistCompletedRender({
-          supabase,
-          authUserId,
-          rendered,
-          title,
-          content,
-          templateId,
-          sourceFileIds,
-          instructions: instructions ?? null,
-          versionFields,
-          originDocumentId,
-          originContext,
-          auditDetails: { format },
-        leaveInputs, templateName,
-        });
-        return NextResponse.json({
-          document: buildDocumentSummary({
-            id: newDoc?.id,
-            title,
-            templateName,
-            createdAt: dateStr,
-            status: '완료',
-            sourceCount: (sourceFileIds ?? []).length,
-            content,
-            versionNumber: (newDoc as { version_number?: number | null } | null)?.version_number ?? 1,
-            parentId: (newDoc as { parent_id?: string | null } | null)?.parent_id ?? null,
-            originDocumentId: (newDoc as { origin_document_id?: string | null } | null)?.origin_document_id ?? null,
-            originContext: (newDoc as { origin_context?: string | null } | null)?.origin_context ?? null,
-            outputFormat: format,
-          }),
-          format,
-          downloadUrl: signedUrl,
-          downloadFileName,
-          downloadExtension,
-          downloadMimeType,
-        }, { status: 201 });
-      } catch (e) {
-          if(e instanceof LeaveDocumentLinkError) return NextResponse.json(leaveLinkFailure(e,e.documentId),{status:e.status});
-        console.error('[generate] HWPX FormData Storage upload error:', e);
-        return NextResponse.json({ error: '파일 업로드 실패' }, { status: 500 });
-      }
-    }
-
-    // DOCX 템플릿 기반: 파일 렌더링 → Storage 업로드 (XLSX/PPTX와 동일 흐름)
-    if (generationResult.docxReplacements && generationResult.templateBuffer) {
-      let rendered;
-      try {
-        rendered = await renderDocument(generationResult, theme);
-      } catch (e) {
-          if(e instanceof LeaveDocumentLinkError) return NextResponse.json(leaveLinkFailure(e,e.documentId),{status:e.status});
-        console.error('[generate] DOCX template render error:', e);
-        return NextResponse.json({ error: 'DOCX 템플릿 구조에 맞춘 렌더링에 실패했습니다. 템플릿 필드 또는 양식 구조를 확인해주세요.' }, { status: 500 });
-      }
-      {
-        try {
-          const content = generationResult.markdown?.trim() || `[DOCX 템플릿 기반] ${templateName}`;
-          const { newDoc, signedUrl, downloadFileName, downloadExtension, downloadMimeType } = await persistCompletedRender({
-            supabase,
-            authUserId,
-            rendered,
-            title,
-            content,
-            templateId,
-            sourceFileIds,
-            instructions: instructions ?? null,
-            versionFields,
-            originDocumentId,
-            originContext,
-            auditDetails: { format },
-        leaveInputs, templateName,
-          });
-          return NextResponse.json({
-            document: buildDocumentSummary({
-              id: newDoc?.id,
-              title,
-              templateName,
-              createdAt: dateStr,
-              status: '완료',
-              sourceCount: (sourceFileIds ?? []).length,
-              content,
-              versionNumber: (newDoc as { version_number?: number | null } | null)?.version_number ?? 1,
-              parentId: (newDoc as { parent_id?: string | null } | null)?.parent_id ?? null,
-              originDocumentId: (newDoc as { origin_document_id?: string | null } | null)?.origin_document_id ?? null,
-              originContext: (newDoc as { origin_context?: string | null } | null)?.origin_context ?? null,
-              outputFormat: format,
-            }),
-            format,
-            downloadUrl: signedUrl,
-            downloadFileName,
-            downloadExtension,
-            downloadMimeType,
-          }, { status: 201 });
-        } catch (e) {
-          if(e instanceof LeaveDocumentLinkError) return NextResponse.json(leaveLinkFailure(e,e.documentId),{status:e.status});
-          console.error('[generate] DOCX Storage upload error:', e);
-          return NextResponse.json({ error: '템플릿 기반 DOCX 파일 업로드에 실패했습니다.' }, { status: 500 });
-        }
-      }
-    }
+    const outputContext: OutputContext = { ...persistContext, instructions, title, dateStr, leaveInputs };
+    const runtimeMeta = { userName, userPosition, userDept, todayStr, templateName };
+    // 양식 채우기(DOCX→HWPX) → DOCX 템플릿 순으로 해당 경로가 있으면 그 응답을 반환 (await 로 예외를 아래 catch 로 전달)
+    const formResponse = await respondDocxFormData(outputContext, generationResult, theme, runtimeMeta, resolvedDocumentInputs)
+      ?? await respondHwpxFormData(outputContext, generationResult, theme, runtimeMeta, resolvedDocumentInputs)
+      ?? await respondDocxTemplate(outputContext, generationResult, theme);
+    if (formResponse) return formResponse;
 
     // 마크다운 기반 포맷(DOCX새로생성/HWPX/PDF)은 기존처럼 documents 테이블에도 저장
     if (generationResult.markdown) return saveMarkdown({supabase, authUserId, generationResult, theme, isProposalTemplate, templateName, resolvedDocumentInputs, title, templateId, sourceFileIds, instructions, versionFields, originDocumentId, originContext, format, leaveInputs, dateStr});
 
-    const rendered = await renderDocument(generationResult, theme);
-    const contentSummary = format === 'xlsx'
-      ? `[Excel] ${generationResult.excelSheets?.map(s => s.sheetName).join(', ')} (${generationResult.excelSheets?.reduce((sum, s) => sum + s.rows.length, 0)}행)`
-      : `[PPT] ${generationResult.pptxSlides?.length}개 슬라이드`;
-
-    try {
-      const { newDoc, signedUrl, downloadFileName, downloadExtension, downloadMimeType } = await persistCompletedRender({
-        supabase,
-        authUserId,
-        rendered,
-        title,
-        content: contentSummary,
-        templateId,
-        sourceFileIds,
-        instructions: instructions ?? null,
-        versionFields,
-        originDocumentId,
-        originContext,
-        auditDetails: { format },
-        leaveInputs, templateName,
-      });
-      return NextResponse.json({
-        document: buildDocumentSummary({
-          id: newDoc?.id,
-          title,
-          templateName,
-          createdAt: dateStr,
-          status: '완료',
-          sourceCount: (sourceFileIds ?? []).length,
-          content: contentSummary,
-          versionNumber: (newDoc as { version_number?: number | null } | null)?.version_number ?? 1,
-          parentId: (newDoc as { parent_id?: string | null } | null)?.parent_id ?? null,
-          originDocumentId: (newDoc as { origin_document_id?: string | null } | null)?.origin_document_id ?? null,
-          originContext: (newDoc as { origin_context?: string | null } | null)?.origin_context ?? null,
-          outputFormat: format,
-        }),
-        format,
-        downloadUrl: signedUrl,
-        downloadFileName,
-        downloadExtension,
-        downloadMimeType,
-        outline: format === 'xlsx' ? { sheets: generationResult.excelSheets } : { slides: generationResult.pptxSlides },
-      }, { status: 201 });
-    } catch (e) {
-          if(e instanceof LeaveDocumentLinkError) return NextResponse.json(leaveLinkFailure(e,e.documentId),{status:e.status});
-      console.error('[generate] Storage upload error:', e);
-      return NextResponse.json({ error: '파일 업로드 실패' }, { status: 500 });
-    }
+    return await respondStructured(outputContext, generationResult, theme);
   } catch (err) {
     if(err instanceof ApiError) return errorResponse(err);
     const errMsg = err instanceof Error ? err.message : '문서 생성 실패';

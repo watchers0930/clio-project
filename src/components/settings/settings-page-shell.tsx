@@ -17,6 +17,7 @@ import { LocalSyncSection } from '@/components/settings/local-sync-section';
 import { OrgChartSection } from '@/components/settings/org-chart-section';
 import type { Department, UserItem } from '@/components/settings/types';
 import { useAuthStore } from '@/store/auth-store';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { cn } from '@/lib/utils';
 
 type SettingsTab = 'departments' | 'users' | 'org-chart' | 'signature' | 'templates' | 'menus' | 'gmail' | 'memo-lock' | 'local-sync';
@@ -45,10 +46,7 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
 
   const toast = useToast();
 
-  type ConfirmOptions = { confirmLabel?: string; variant?: 'danger' | 'primary' };
-  const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; description?: string; onConfirm: () => void } & ConfirmOptions>({ open: false, title: '', onConfirm: () => {} });
-  const openConfirm = (title: string, description: string | undefined, onConfirm: () => void, options: ConfirmOptions = {}) => setConfirmState({ open: true, title, description, onConfirm, ...options });
-  const closeConfirm = () => setConfirmState((s) => ({ ...s, open: false }));
+  const { confirmState, openConfirm, closeConfirm } = useConfirmDialog();
 
   const {
     sigUrl, sigLoading, sigUploading, sigFileRef,
