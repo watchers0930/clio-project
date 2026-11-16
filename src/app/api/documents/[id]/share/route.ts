@@ -5,6 +5,7 @@ import { getAuthUserId } from '@/lib/auth-helper';
 import { recordAuditEvent } from '@/lib/audit';
 import { canAccessDocument, canManageDocument, getUserRoleInfo } from '@/lib/permissions';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
+import { parseShareInput } from '@/lib/documents/share-input';
 import { createNotifications } from '@/lib/notifications/create-notification';
 
 export async function GET(
@@ -68,19 +69,25 @@ export async function POST(
       return NextResponse.json({ success: false, error: '문서 공유 권한이 없습니다.' }, { status: 403 });
     }
 
-    const { userId, departmentId, permission } = await request.json();
-    if (!userId && !departmentId) {
-      return NextResponse.json({ success: false, error: '공유 대상이 필요합니다.' }, { status: 400 });
-    }
+    const parsed = parseShareInput(await request.json().catch(() => null));
+    if (!parsed.ok) return NextResponse.json({ success: false, error: parsed.error }, { status: 400 });
+    const { userId, departmentId, permission } = parsed;
 
-    // 권한 부여는 서버 권한으로만 — 사용자 세션의 직접 INSERT 는 058 에서 차단(자기 자신에게 권한 부여 방지)
-    const { data, error } = await createAdminSupabaseClient()
+    // 권한 부여는 서버 권한으로만 — 사용자 세션의 직접 INSERT 는 058 에서 차단(자기 자신에게 권한 부여 방지).
+    // service role 은 RLS 를 거치지 않으므로 대상이 실제로 있는지(활성 사용자·부서) 여기서 확인한다
+    const admin = createAdminSupabaseClient();
+    const { data: target } = userId
+      ? await admin.from('users').select('id').eq('id', userId).eq('is_active', true).maybeSingle()
+      : await admin.from('departments').select('id').eq('id', departmentId as string).maybeSingle();
+    if (!target) return NextResponse.json({ success: false, error: '공유 대상을 찾을 수 없습니다.' }, { status: 400 });
+
+    const { data, error } = await admin
       .from('document_permissions')
       .insert({
         document_id: documentId,
-        granted_to_user: userId ?? null,
-        granted_to_dept: departmentId ?? null,
-        permission: permission ?? 'read',
+        granted_to_user: userId,
+        granted_to_dept: departmentId,
+        permission,
         granted_by: authUserId,
       })
       .select()
@@ -96,12 +103,11 @@ export async function POST(
       action: 'document.share',
       targetType: 'document',
       targetId: documentId,
-      details: { shared_with_user: userId, shared_with_dept: departmentId, permission: permission ?? 'read' },
+      details: { shared_with_user: userId, shared_with_dept: departmentId, permission },
     });
 
     // 공유 대상(사용자 또는 부서 구성원)에게 알림. best-effort.
     try {
-      const admin = createAdminSupabaseClient();
       let recipientIds: string[] = [];
       if (userId) {
         recipientIds = [userId];

@@ -75,8 +75,9 @@ export const useAuthStore = create<AuthState>()(
 
         if (res.success && res.data) {
           set({ user: res.data, isLoading: false });
-        } else if (res.status === 401) {
-          // Only clear auth on an explicit unauthorized response.
+        } else if (res.status === 401 || res.status === 403) {
+          // 인증 없음(401) 또는 직원 명부에 없는 계정(403) — 세션까지 끊고 상태를 비운다(네트워크 오류 등은 유지)
+          if (res.status === 403) await get().logout();
           set({ user: null, token: null, isLoading: false });
         } else {
           set({ isLoading: false });
