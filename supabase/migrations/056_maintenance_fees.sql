@@ -44,13 +44,11 @@ create table if not exists public.maintenance_fee_entries (
 
 create index if not exists idx_maintenance_fee_entries_month on public.maintenance_fee_entries (month);
 
-drop trigger if exists set_maintenance_fee_items_updated_at on public.maintenance_fee_items;
-create trigger set_maintenance_fee_items_updated_at
+create or replace trigger set_maintenance_fee_items_updated_at
   before update on public.maintenance_fee_items
   for each row execute function public.handle_updated_at();
 
-drop trigger if exists set_maintenance_fee_entries_updated_at on public.maintenance_fee_entries;
-create trigger set_maintenance_fee_entries_updated_at
+create or replace trigger set_maintenance_fee_entries_updated_at
   before update on public.maintenance_fee_entries
   for each row execute function public.handle_updated_at();
 
