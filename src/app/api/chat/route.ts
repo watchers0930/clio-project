@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { generateEmbedding } from '@/lib/ai/embeddings';
 import OpenAI from 'openai';
+import { stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
         if (validDocs.length > 0) {
           relevantChunks = validDocs.map((d) => ({
             file_id: d.id,
-            content: (d.content ?? '').slice(0, 2000),
+            content: stripEmbeddedInputs(d.content ?? '').slice(0, 2000), // 입력값 주석(평균 1천여 자)이 문맥 한도를 먹지 않게
           }));
           for (const d of validDocs) extraNameMap.set(d.id, d.title);
         } else {

@@ -8,6 +8,7 @@ import { summarizeText } from '@/lib/ai/summarize';
 import { filterAccessibleDocumentRows, filterAccessibleFileRows, getUserRoleInfo } from '@/lib/permissions';
 import { keywordFileSearch, getFileType, titleCoverageScore, type SearchResultItem } from '@/lib/search/keyword-file-search';
 import { originContextLabel as formatOriginLabel } from '@/lib/documents/origin-context';
+import { stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
 
 const SEARCH_AI_SUMMARY_ENABLED = process.env.ENABLE_SEARCH_AI_SUMMARY === 'true';
 
@@ -169,7 +170,7 @@ export async function POST(request: NextRequest) {
       docResultsMap.set(d.id, {
         id: d.id,
         name: d.title,
-        excerpt: (d.content ?? '').slice(0, 200),
+        excerpt: stripEmbeddedInputs(d.content ?? '').slice(0, 200), // 내부 입력값 주석은 미리보기에서 제외
         relevance: Math.min(85, Math.max(40, score + 50)),
         fileType: d.templates?.name ?? 'AI문서',
         department: textDocCreatorDeptMap.get(d.created_by ?? '') ?? '미분류',
@@ -309,7 +310,7 @@ export async function POST(request: NextRequest) {
               docResultsMap.set(d.id, {
                 id: d.id,
                 name: d.title,
-                excerpt: (d.content ?? '').slice(0, 200),
+                excerpt: stripEmbeddedInputs(d.content ?? '').slice(0, 200), // 내부 입력값 주석은 미리보기에서 제외
                 relevance: vecRelevance,
                 fileType: d.templates?.name ?? 'AI문서',
                 department: creatorDeptMap.get(d.created_by ?? '') ?? '미분류',
