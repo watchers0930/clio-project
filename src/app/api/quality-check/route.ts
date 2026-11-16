@@ -1,3 +1,4 @@
+import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
@@ -79,6 +80,9 @@ type QCRow  = { id: string; overall_score: number; result_json: QualityCheckResu
 // ────────────────────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   // 1. OpenAI 설정 확인
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json({ error: 'AI 검수 서비스가 설정되지 않았습니다.' }, { status: 503 });

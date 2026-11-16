@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from './csrf-client';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { CONTRACT_RISK_ITEMS } from '@/lib/contract-risk-items';
@@ -151,7 +152,7 @@ export function useContractRiskResult() {
     setSuggestions([]);
 
     try {
-      const res = await fetch(`/api/contract-risk/${id}/suggest`, {
+      const res = await csrfFetch(`/api/contract-risk/${id}/suggest`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ item_keys: Array.from(selectedKeys) }),
@@ -212,7 +213,7 @@ export function useContractRiskResult() {
     setIsApplying(true);
 
     try {
-      const res = await fetch(`/api/contract-risk/${id}/apply`, {
+      const res = await csrfFetch(`/api/contract-risk/${id}/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

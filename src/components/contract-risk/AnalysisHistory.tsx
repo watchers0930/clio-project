@@ -1,5 +1,8 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
+import { requestJsonOk } from '@/lib/http/read-json-ok';
+import { useToast } from '@/components/ui/toast';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -13,6 +16,7 @@ import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 
 export function AnalysisHistory() {
   const { confirmState, openConfirm, closeConfirm } = useConfirmDialog();
+  const toast = useToast();
   const router = useRouter();
   const [items, setItems] = useState<ContractRiskListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,10 +53,12 @@ export function AnalysisHistory() {
     openConfirm('분석 이력 삭제', '이 분석 이력을 삭제합니다.', () => {
       closeConfirm();
       void (async () => {
-        const res = await fetch(`/api/contract-risk/${id}`, { method: 'DELETE' });
-        if (res.ok) {
+        try {
+          await requestJsonOk(() => csrfFetch(`/api/contract-risk/${id}`, { method: 'DELETE' }), '분석 이력을 삭제하지 못했습니다.');
           setItems(prev => prev.filter(i => i.id !== id));
           setCompareIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : '분석 이력을 삭제하지 못했습니다.');
         }
       })();
     }, { confirmLabel: '삭제' });

@@ -23,3 +23,14 @@ export async function readJsonOk<T = unknown>(res: Response, fallback: string): 
   if (!res.ok || body.success === false) throw new Error(messageOf(body, fallback));
   return body as T;
 }
+
+// 요청 보내기부터 응답 확인까지 — 네트워크 끊김처럼 응답 자체가 없을 때도 안내 가능한 오류로 바꾼다
+export async function requestJsonOk<T = unknown>(send: () => Promise<Response>, fallback: string): Promise<T> {
+  let res: Response;
+  try {
+    res = await send();
+  } catch {
+    throw new Error(`${fallback} (네트워크 연결을 확인해 주세요.)`);
+  }
+  return readJsonOk<T>(res, fallback);
+}

@@ -1,3 +1,4 @@
+import { csrfFetch } from '@/hooks/csrf-client';
 import type { QualityCheckResponse } from '@/lib/supabase/types';
 
 /**
@@ -7,7 +8,7 @@ export async function requestQualityCheck(
   documentId: string,
   force = false,
 ): Promise<QualityCheckResponse> {
-  const res = await fetch('/api/quality-check', {
+  const res = await csrfFetch('/api/quality-check', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ document_id: documentId, force }),

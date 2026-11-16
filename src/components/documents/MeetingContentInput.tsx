@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useRef, useState } from 'react';
 
 /**
@@ -32,7 +33,7 @@ export function MeetingContentInput({
       const fd = new FormData();
       fd.append('file', file);
       fd.append('textOnly', 'true');
-      const res = await fetch('/api/transcribe', { method: 'POST', body: fd });
+      const res = await csrfFetch('/api/transcribe', { method: 'POST', body: fd });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.success) {
         setError(data?.error ?? '음성 변환에 실패했습니다.');

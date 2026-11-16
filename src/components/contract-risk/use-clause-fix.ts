@@ -1,3 +1,4 @@
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useCallback } from 'react';
 import { useToast } from '@/components/ui/toast';
 import type { RiskItem } from '@/lib/types/contract-risk';
@@ -85,7 +86,7 @@ export function useClauseFix({ onClose, analysisId, riskItems }: UseClauseFixPar
     setFixState(prev => ({ ...prev, loading: true }));
     const def = getItemDef(item);
     try {
-      const res = await fetch('/api/contract-fix/suggest', {
+      const res = await csrfFetch('/api/contract-fix/suggest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -139,7 +140,7 @@ export function useClauseFix({ onClose, analysisId, riskItems }: UseClauseFixPar
 
     setGenerating(true);
     try {
-      const res = await fetch('/api/contract-fix/regenerate', {
+      const res = await csrfFetch('/api/contract-fix/regenerate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ analysisId, fixes }),

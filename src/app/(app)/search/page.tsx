@@ -104,7 +104,7 @@ function SearchPageInner() {
       setExpandedSummary(null);
       try {
         const [mainRes, localRes] = await Promise.allSettled([
-          fetch('/api/search', {
+          csrfFetch('/api/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ query: q, department, fileType }),

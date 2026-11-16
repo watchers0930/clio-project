@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useRef, useCallback } from 'react';
 import { Mic, MicOff, Loader2 } from 'lucide-react';
 
@@ -157,7 +158,7 @@ export function VoiceInputButton({ onTranscript, className, disabled, multiline 
         const formData = new FormData();
         formData.append('file', blob, `voice.${ext}`);
 
-        const res = await fetch('/api/transcribe', { method: 'POST', body: formData });
+        const res = await csrfFetch('/api/transcribe', { method: 'POST', body: formData });
         const data = await res.json();
 
         if (data.success && data.data?.transcript) {

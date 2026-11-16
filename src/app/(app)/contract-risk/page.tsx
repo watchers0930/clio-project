@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -82,7 +83,7 @@ export default function ContractRiskPage() {
       const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
       const formData = new FormData();
       formData.append('file', blob, `voice.${ext}`);
-      const res = await fetch('/api/transcribe', { method: 'POST', body: formData });
+      const res = await csrfFetch('/api/transcribe', { method: 'POST', body: formData });
       const data = await res.json();
       if (!data.success || !data.data?.transcript) {
         setError('음성 변환에 실패했습니다. 다시 시도해 주세요.');
@@ -97,7 +98,7 @@ export default function ContractRiskPage() {
       analyzeForm.append('file', txtFile);
       analyzeForm.append('contract_type', contractType);
       analyzeForm.append('perspective', perspective);
-      const analyzeRes = await fetch('/api/contract-risk/analyze', {
+      const analyzeRes = await csrfFetch('/api/contract-risk/analyze', {
         method: 'POST',
         body: analyzeForm,
       });
@@ -124,7 +125,7 @@ export default function ContractRiskPage() {
     formData.append('contract_type', contractType);
     formData.append('perspective', perspective);
     try {
-      const res = await fetch('/api/contract-risk/analyze', { method: 'POST', body: formData });
+      const res = await csrfFetch('/api/contract-risk/analyze', { method: 'POST', body: formData });
       const json = await res.json();
       if (!res.ok) {
         setError(json.message ?? json.error ?? '분석 중 오류가 발생했습니다.');

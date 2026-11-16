@@ -1,3 +1,4 @@
+import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
@@ -15,6 +16,9 @@ interface ChatMessage {
  * 벡터 검색 → 컨텍스트 구성 → GPT-4o 답변 생성
  */
 export async function POST(request: NextRequest) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   try {
     const { message, history = [], fileIds } = await request.json();
 

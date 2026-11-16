@@ -6,6 +6,7 @@
  * 3. DB 자동 매핑 (이름/직급/부서/날짜)
  * 4. autofill_sessions 레코드 생성 후 세션 ID 반환
  */
+import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
@@ -64,6 +65,9 @@ function autoMapField(
 }
 
 export async function POST(request: NextRequest) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json({ error: 'AI 서비스가 설정되지 않았습니다.' }, { status: 503 });
   }

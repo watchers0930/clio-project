@@ -3,6 +3,7 @@
  * 소스 파일 텍스트를 분석하여 템플릿 필드값을 추론하는 엔드포인트
  */
 
+import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
@@ -12,6 +13,9 @@ import { loadSourceChunks } from '@/app/api/generate/route-helpers';
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
+  const mutation = await withMutation(req);
+  if (mutation.error) return mutation.error;
   const supabase = await createServerSupabaseClient();
   if (!supabase) {
     return NextResponse.json({ error: '서버 오류' }, { status: 500 });

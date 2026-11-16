@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { csrfFetch } from '@/hooks/csrf-client';
-import { readJsonOk } from '@/lib/http/read-json-ok';
+import { requestJsonOk } from '@/lib/http/read-json-ok';
 import { useToast } from '@/components/ui/toast';
 import type { MemoFormData } from '@/components/memos/memo-form-modal';
 import type { MemoItem } from '@/lib/supabase/types';
@@ -33,34 +33,42 @@ export function useMemos() {
     csrfFetch(`/api/memos/${id}/embed`, { method: 'POST' }).then(() => {}, () => {});
   };
 
-  // 저장 실패는 사유를 안내하고 오류를 다시 던져 입력창이 닫히지 않게 한다(작성 내용 유지)
-  const saveOrThrow = async <T,>(res: Response, fallback: string): Promise<T> => {
+  // 저장 실패(네트워크 포함)는 사유를 안내하고 오류를 다시 던져 입력창이 닫히지 않게 한다(작성 내용 유지)
+  const saveOrThrow = async <T,>(send: () => Promise<Response>, fallback: string): Promise<T> => {
     try {
-      return await readJsonOk<T>(res, fallback);
+      return await requestJsonOk<T>(send, fallback);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : fallback);
       throw e;
     }
   };
 
+  // 실패(네트워크 포함)는 안내만 하고 끝낸다
+  const runOrToast = async (send: () => Promise<Response>, fallback: string) => {
+    try {
+      await requestJsonOk(send, fallback);
+      fetchMemos();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : fallback);
+    }
+  };
+
   const createMemo = async (data: MemoFormData) => {
-    const res = await csrfFetch('/api/memos', {
+    const result = await saveOrThrow<{ success: boolean; data?: MemoItem }>(() => csrfFetch('/api/memos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
-    });
-    const result = await saveOrThrow<{ success: boolean; data?: MemoItem }>(res, '메모를 저장하지 못했습니다.');
+    }), '메모를 저장하지 못했습니다.');
     fetchMemos();
     if (result.data?.id) embed(result.data.id);
   };
 
   const updateMemo = async (id: string, data: MemoFormData) => {
-    const res = await csrfFetch(`/api/memos/${id}`, {
+    await saveOrThrow(() => csrfFetch(`/api/memos/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
-    });
-    await saveOrThrow(res, '메모를 저장하지 못했습니다.');
+    }), '메모를 저장하지 못했습니다.');
     fetchMemos();
     embed(id);
   };
@@ -68,27 +76,15 @@ export function useMemos() {
   const togglePin = async (id: string) => {
     const memo = memos.find((m) => m.id === id);
     if (!memo) return;
-    const res = await csrfFetch(`/api/memos/${id}`, {
+    await runOrToast(() => csrfFetch(`/api/memos/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_pinned: !memo.is_pinned }),
-    });
-    try {
-      await readJsonOk(res, '메모 고정을 바꾸지 못했습니다.');
-      fetchMemos();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : '메모 고정을 바꾸지 못했습니다.');
-    }
+    }), '메모 고정을 바꾸지 못했습니다.');
   };
 
   const deleteMemo = async (id: string) => {
-    try {
-      const res = await csrfFetch(`/api/memos/${id}`, { method: 'DELETE' });
-      await readJsonOk(res, '메모를 삭제하지 못했습니다.');
-      fetchMemos();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : '메모를 삭제하지 못했습니다.');
-    }
+    await runOrToast(() => csrfFetch(`/api/memos/${id}`, { method: 'DELETE' }), '메모를 삭제하지 못했습니다.');
   };
 
   const saveIdeaMemo = useCallback(async (text: string) => {

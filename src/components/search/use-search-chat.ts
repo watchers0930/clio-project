@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useCallback, useRef } from 'react';
 import type { ChatMessage, SearchResult } from './types';
 
@@ -25,7 +26,7 @@ export function useSearchChat(results: SearchResult[]) {
     setChatLoading(true);
     setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
     try {
-      const res = await fetch('/api/chat', {
+      const res = await csrfFetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

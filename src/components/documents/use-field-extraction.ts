@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useCallback, type Dispatch, type SetStateAction } from 'react';
 import { isWorklogTemplateName, WORKLOG_FIELDS } from '@/lib/templates/worklog';
 import type { TemplateFieldDefinition } from '@/lib/templates/template-schema';
@@ -40,7 +41,7 @@ export function useFieldExtraction({
 
     setExtractingFields(true);
     try {
-      const res = await fetch('/api/generate/extract-fields', {
+      const res = await csrfFetch('/api/generate/extract-fields', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

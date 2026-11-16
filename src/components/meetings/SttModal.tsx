@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useRef } from 'react';
 import { X, Upload, Mic, FileAudio } from 'lucide-react';
 import { AudioRecorder } from '@/components/common/AudioRecorder';
@@ -52,7 +53,7 @@ export function SttModal({ isOpen, onClose, onDocumentCreated }: SttModalProps) 
       const formData = new FormData();
       formData.append('file', blob, fileName);
 
-      const res = await fetch('/api/transcribe', { method: 'POST', body: formData });
+      const res = await csrfFetch('/api/transcribe', { method: 'POST', body: formData });
       const data = await res.json();
 
       if (!data.success) {

@@ -7,6 +7,7 @@
  * Step 3: 완성 문서 다운로드
  */
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { X, Upload, CheckCircle, AlertCircle, Wand2, Download, ChevronRight } from 'lucide-react';
 import { Spinner } from '@/components/ui';
@@ -108,7 +109,7 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
       const fd = new FormData();
       fd.append('file', file);
 
-      const res = await fetch('/api/autofill/analyze', { method: 'POST', body: fd });
+      const res = await csrfFetch('/api/autofill/analyze', { method: 'POST', body: fd });
       const data = await res.json();
 
       if (!res.ok) {
@@ -140,7 +141,7 @@ export function AutofillModal({ open, onClose, initialFile }: AutofillModalProps
     setGenerating(true);
 
     try {
-      const res = await fetch('/api/autofill/generate', {
+      const res = await csrfFetch('/api/autofill/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, values }),
