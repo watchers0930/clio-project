@@ -4,6 +4,7 @@ import { getAuthUserId } from '@/lib/auth-helper';
 import { requireAdminOrCeo } from '@/lib/http/admin-guard';
 import { validateFixedExpenseInput } from '@/lib/bulk-transfer/validate';
 import type { FixedExpense } from '@/lib/bulk-transfer/types';
+import { bulkTransferMutationGate } from '@/lib/bulk-transfer/route-guard';
 
 const SELECT = 'id, label, amount, memo, created_at, updated_at';
 
@@ -53,14 +54,10 @@ export async function GET() {
 
 // POST — 월 고정지출 생성
 export async function POST(request: NextRequest) {
-  const supabase = await createServerSupabaseClient();
-  if (!supabase) return NextResponse.json({ error: '서버 오류' }, { status: 500 });
-
-  const userId = await getAuthUserId(supabase);
-  if (!userId) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
-
-  const guard = await requireAdminOrCeo(supabase, userId);
-  if (guard) return guard;
+  // 변이 요청: 인증 + 출처 + CSRF 토큰 + 활성 사용자 + 대표/관리자
+  const gate = await bulkTransferMutationGate(request);
+  if (gate.error) return gate.error;
+  const { supabase, userId } = gate;
 
   let body: unknown;
   try {

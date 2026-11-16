@@ -1,24 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { getAuthUserId } from '@/lib/auth-helper';
-import { requireAdminOrCeo } from '@/lib/http/admin-guard';
 import { validateFile } from '@/lib/utils/sanitize';
 import { extractText } from '@/lib/ai/extract-text';
 import { extractAccountsFromPdf, extractAccountsFromText } from '@/lib/bulk-transfer/extract-accounts';
 import type { AccountExtractResult } from '@/lib/bulk-transfer/extract-accounts';
+import { bulkTransferMutationGate } from '@/lib/bulk-transfer/route-guard';
 
 export const maxDuration = 60;
 
 // POST — PDF 등 문서 업로드 → 텍스트/OCR 추출 → AI 계좌 추출 (등록은 하지 않음, 후보만 반환)
 export async function POST(request: NextRequest) {
-  const supabase = await createServerSupabaseClient();
-  if (!supabase) return NextResponse.json({ error: '서버 오류' }, { status: 500 });
-
-  const userId = await getAuthUserId(supabase);
-  if (!userId) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
-
-  const guard = await requireAdminOrCeo(supabase, userId);
-  if (guard) return guard;
+  // 변이 요청: 인증 + 출처 + CSRF 토큰 + 활성 사용자 + 대표/관리자
+  const gate = await bulkTransferMutationGate(request);
+  if (gate.error) return gate.error;
 
   let file: File | null = null;
   try {

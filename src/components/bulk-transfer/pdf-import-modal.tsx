@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { NumberInput } from '@/components/ui/number-input';
+import { csrfFetch } from '@/hooks/csrf-client';
 import { X, FileUp, Sparkles } from 'lucide-react';
 import type { AccountExtractResult, ExtractedAccount } from '@/lib/bulk-transfer/extract-accounts';
 import type { TransferItemInput, TransferPayee, TransferPayeeInput } from '@/lib/bulk-transfer/types';
@@ -63,7 +64,7 @@ export function PdfImportModal({ open, onClose, createPayee, createItem, onDone 
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch('/api/bulk-transfer/extract', { method: 'POST', body: fd });
+      const res = await csrfFetch('/api/bulk-transfer/extract', { method: 'POST', body: fd });
       const json = (await res.json().catch(() => ({}))) as { data?: AccountExtractResult; error?: string };
       if (!res.ok) {
         setError(json.error ?? '분석에 실패했습니다.');

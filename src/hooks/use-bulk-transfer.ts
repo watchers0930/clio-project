@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { csrfFetch } from './csrf-client';
 import type {
   FixedExpense,
   FixedExpenseInput,
@@ -59,7 +60,7 @@ export function useBulkTransfer() {
 
   // --- 거래처 ---
   const createPayee = useCallback(async (input: TransferPayeeInput) => {
-    const res = await fetch('/api/bulk-transfer/payees', {
+    const res = await csrfFetch('/api/bulk-transfer/payees', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
@@ -70,7 +71,7 @@ export function useBulkTransfer() {
   }, []);
 
   const updatePayee = useCallback(async (id: string, input: TransferPayeeInput) => {
-    const res = await fetch(`/api/bulk-transfer/payees/${id}`, {
+    const res = await csrfFetch(`/api/bulk-transfer/payees/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
@@ -81,7 +82,7 @@ export function useBulkTransfer() {
   }, []);
 
   const deletePayee = useCallback(async (id: string) => {
-    const res = await fetch(`/api/bulk-transfer/payees/${id}`, { method: 'DELETE' });
+    const res = await csrfFetch(`/api/bulk-transfer/payees/${id}`, { method: 'DELETE' });
     if (!res.ok) {
       const json = (await res.json().catch(() => ({}))) as { error?: string };
       throw new Error(json.error ?? '삭제에 실패했습니다.');
@@ -91,7 +92,7 @@ export function useBulkTransfer() {
 
   // --- 이체 건 ---
   const createItem = useCallback(async (input: TransferItemInput) => {
-    const res = await fetch('/api/bulk-transfer/items', {
+    const res = await csrfFetch('/api/bulk-transfer/items', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
@@ -102,7 +103,7 @@ export function useBulkTransfer() {
   }, []);
 
   const updateItem = useCallback(async (id: string, input: TransferItemInput) => {
-    const res = await fetch(`/api/bulk-transfer/items/${id}`, {
+    const res = await csrfFetch(`/api/bulk-transfer/items/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
@@ -113,7 +114,7 @@ export function useBulkTransfer() {
   }, []);
 
   const setItemStatus = useCallback(async (id: string, status: TransferStatus) => {
-    const res = await fetch(`/api/bulk-transfer/items/${id}`, {
+    const res = await csrfFetch(`/api/bulk-transfer/items/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
@@ -124,7 +125,7 @@ export function useBulkTransfer() {
   }, []);
 
   const deleteItem = useCallback(async (id: string) => {
-    const res = await fetch(`/api/bulk-transfer/items/${id}`, { method: 'DELETE' });
+    const res = await csrfFetch(`/api/bulk-transfer/items/${id}`, { method: 'DELETE' });
     if (!res.ok) {
       const json = (await res.json().catch(() => ({}))) as { error?: string };
       throw new Error(json.error ?? '삭제에 실패했습니다.');
@@ -134,7 +135,7 @@ export function useBulkTransfer() {
 
   // --- 월 고정지출 ---
   const createExpense = useCallback(async (input: FixedExpenseInput) => {
-    const res = await fetch('/api/bulk-transfer/fixed-expenses', {
+    const res = await csrfFetch('/api/bulk-transfer/fixed-expenses', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
@@ -145,7 +146,7 @@ export function useBulkTransfer() {
   }, []);
 
   const updateExpense = useCallback(async (id: string, input: FixedExpenseInput) => {
-    const res = await fetch(`/api/bulk-transfer/fixed-expenses/${id}`, {
+    const res = await csrfFetch(`/api/bulk-transfer/fixed-expenses/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
@@ -156,7 +157,7 @@ export function useBulkTransfer() {
   }, []);
 
   const deleteExpense = useCallback(async (id: string) => {
-    const res = await fetch(`/api/bulk-transfer/fixed-expenses/${id}`, { method: 'DELETE' });
+    const res = await csrfFetch(`/api/bulk-transfer/fixed-expenses/${id}`, { method: 'DELETE' });
     if (!res.ok) {
       const json = (await res.json().catch(() => ({}))) as { error?: string };
       throw new Error(json.error ?? '삭제에 실패했습니다.');
@@ -166,7 +167,7 @@ export function useBulkTransfer() {
 
   // --- 월지출 ---
   const createMonthly = useCallback(async (input: MonthlyExpenseInput) => {
-    const res = await fetch('/api/bulk-transfer/monthly-expenses', {
+    const res = await csrfFetch('/api/bulk-transfer/monthly-expenses', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
@@ -177,7 +178,7 @@ export function useBulkTransfer() {
   }, []);
 
   const updateMonthly = useCallback(async (id: string, input: MonthlyExpenseInput) => {
-    const res = await fetch(`/api/bulk-transfer/monthly-expenses/${id}`, {
+    const res = await csrfFetch(`/api/bulk-transfer/monthly-expenses/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
@@ -188,7 +189,7 @@ export function useBulkTransfer() {
   }, []);
 
   const deleteMonthly = useCallback(async (id: string) => {
-    const res = await fetch(`/api/bulk-transfer/monthly-expenses/${id}`, { method: 'DELETE' });
+    const res = await csrfFetch(`/api/bulk-transfer/monthly-expenses/${id}`, { method: 'DELETE' });
     if (!res.ok) {
       const json = (await res.json().catch(() => ({}))) as { error?: string };
       throw new Error(json.error ?? '삭제에 실패했습니다.');
@@ -197,7 +198,7 @@ export function useBulkTransfer() {
   }, []);
 
   const saveBalance = useCallback(async (value: number) => {
-    const res = await fetch('/api/bulk-transfer/balance', {
+    const res = await csrfFetch('/api/bulk-transfer/balance', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ balance: value }),
@@ -210,7 +211,7 @@ export function useBulkTransfer() {
   /** 선택 건들을 하나은행 .xls로 내려받기. 성공 시 상태 재동기화. */
   const exportItems = useCallback(
     async (ids: string[]) => {
-      const res = await fetch('/api/bulk-transfer/export', {
+      const res = await csrfFetch('/api/bulk-transfer/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ item_ids: ids }),

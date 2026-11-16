@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { getAuthUserId } from '@/lib/auth-helper';
-import { requireAdminOrCeo } from '@/lib/http/admin-guard';
 import { decryptPassword } from '@/lib/crypto/credentials';
 import { validateItemInput } from '@/lib/bulk-transfer/validate';
 import { mapItem, type RawItem } from '@/lib/bulk-transfer/map';
 import type { TransferStatus } from '@/lib/bulk-transfer/types';
+import { bulkTransferMutationGate } from '@/lib/bulk-transfer/route-guard';
 
 const SELECT =
   'id, payee_id, payee_name, amount, deposit_display, withdraw_display, memo, cms_code, notify_phone, status, source_type, source_id, created_at, updated_at, payee:transfer_payees(bank_code, enc_account)';
@@ -20,14 +18,10 @@ export async function PATCH(
   const { id } = await params;
   if (!UUID_RE.test(id)) return NextResponse.json({ error: '잘못된 요청입니다.' }, { status: 400 });
 
-  const supabase = await createServerSupabaseClient();
-  if (!supabase) return NextResponse.json({ error: '서버 오류' }, { status: 500 });
-
-  const userId = await getAuthUserId(supabase);
-  if (!userId) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
-
-  const guard = await requireAdminOrCeo(supabase, userId);
-  if (guard) return guard;
+  // 변이 요청: 인증 + 출처 + CSRF 토큰 + 활성 사용자 + 대표/관리자
+  const gate = await bulkTransferMutationGate(request);
+  if (gate.error) return gate.error;
+  const { supabase, userId } = gate;
 
   let body: unknown;
   try {
@@ -95,20 +89,16 @@ export async function PATCH(
 
 // DELETE — 이체 건 삭제
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
   if (!UUID_RE.test(id)) return NextResponse.json({ error: '잘못된 요청입니다.' }, { status: 400 });
 
-  const supabase = await createServerSupabaseClient();
-  if (!supabase) return NextResponse.json({ error: '서버 오류' }, { status: 500 });
-
-  const userId = await getAuthUserId(supabase);
-  if (!userId) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
-
-  const guard = await requireAdminOrCeo(supabase, userId);
-  if (guard) return guard;
+  // 변이 요청: 인증 + 출처 + CSRF 토큰 + 활성 사용자 + 대표/관리자
+  const gate = await bulkTransferMutationGate(request);
+  if (gate.error) return gate.error;
+  const { supabase, userId } = gate;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any;
