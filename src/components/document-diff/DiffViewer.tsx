@@ -66,7 +66,8 @@ export function DiffViewer({
         });
         const json = await res.json();
         if (!res.ok) {
-          setError(json.error?.message ?? 'diff 계산에 실패했습니다.');
+          // 가드 거절은 { error: '문자열' }, 라우트 자체 오류는 { error: { message } } 형태라 둘 다 읽는다
+          setError((typeof json.error === 'string' ? json.error : json.error?.message) ?? 'diff 계산에 실패했습니다.');
           return;
         }
         setDiffResult(json);
