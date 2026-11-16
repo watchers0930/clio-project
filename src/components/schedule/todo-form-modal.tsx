@@ -44,6 +44,8 @@ export default function TodoFormModal({ open, onClose, onSubmit, todo }: TodoFor
     try {
       await onSubmit({ title: title.trim(), description, due_date: dueDate, priority });
       onClose();
+    } catch {
+      // 실패 안내는 호출부가 띄운다. 창을 닫지 않아 작성 내용을 지킨다.
     } finally {
       setLoading(false);
     }

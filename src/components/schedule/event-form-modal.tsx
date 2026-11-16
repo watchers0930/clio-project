@@ -105,6 +105,8 @@ export default function EventFormModal({
         end_at: new Date(form.end_at).toISOString(),
       });
       onClose();
+    } catch {
+      // 실패 안내는 호출부가 띄운다. 창을 닫지 않아 작성 내용을 지킨다.
     } finally {
       setLoading(false);
     }
@@ -242,7 +244,14 @@ export default function EventFormModal({
           <div>
             {isEdit && onDelete && (
               <button
-                onClick={async () => { await onDelete(); onClose(); }}
+                onClick={async () => {
+                  try {
+                    await onDelete();
+                    onClose();
+                  } catch {
+                    // 실패 안내는 호출부가 띄운다. 삭제되지 않았으므로 창을 유지한다.
+                  }
+                }}
                 className="px-4 py-2 text-[13px] text-foreground hover:bg-foreground/5 rounded-lg transition-colors"
               >
                 삭제

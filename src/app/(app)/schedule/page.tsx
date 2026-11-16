@@ -1,5 +1,7 @@
 'use client';
 
+import { readJsonOk } from '@/lib/http/read-json-ok';
+import { useToast } from '@/components/ui/toast';
 import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -25,6 +27,7 @@ function toLocalDatetime(date: Date): string {
 }
 
 export default function SchedulePage() {
+  const toast = useToast();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
 
@@ -130,44 +133,53 @@ export default function SchedulePage() {
     setEventModalOpen(true);
   };
 
+  // 응답 확인 → 성공이면 다시 불러오기, 실패면 사유 안내. 입력창에서 부른 경우(rethrow)는 오류를 다시 던져 창을 닫지 않는다
+  const settle = async (res: Response, fallback: string, reload: () => void, rethrow: boolean) => {
+    try {
+      await readJsonOk(res, fallback);
+      reload();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : fallback);
+      if (rethrow) throw e;
+    }
+  };
+
   const handleCreateEvent = async (data: EventFormData) => {
     const res = await csrfFetch('/api/events', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-    const json = await res.json();
-    if (json.success) fetchEvents();
+    await settle(res, '일정을 저장하지 못했습니다.', fetchEvents, true);
   };
 
   const handleUpdateEvent = async (data: EventFormData) => {
     if (!selectedEvent) return;
     const res = await csrfFetch(`/api/events/${selectedEvent.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-    const json = await res.json();
-    if (json.success) fetchEvents();
+    await settle(res, '일정을 저장하지 못했습니다.', fetchEvents, true);
   };
 
   const handleDeleteEvent = async () => {
     if (!selectedEvent) return;
     const res = await csrfFetch(`/api/events/${selectedEvent.id}`, { method: 'DELETE' });
-    if ((await res.json()).success) fetchEvents();
+    await settle(res, '일정을 삭제하지 못했습니다.', fetchEvents, true);
   };
 
   const handleCreateTodo = async (data: { title: string; description: string; due_date: string; priority: TodoPriority }) => {
     const res = await csrfFetch('/api/todos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-    if ((await res.json()).success) fetchTodos();
+    await settle(res, '할일을 저장하지 못했습니다.', fetchTodos, true);
   };
   const handleUpdateTodo = async (data: { title: string; description: string; due_date: string; priority: TodoPriority }) => {
     if (!selectedTodo) return;
     const res = await csrfFetch(`/api/todos/${selectedTodo.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-    if ((await res.json()).success) fetchTodos();
+    await settle(res, '할일을 저장하지 못했습니다.', fetchTodos, true);
   };
   const handleToggleTodo = async (id: string) => {
     const todo = todos.find((t) => t.id === id);
     if (!todo) return;
     const newStatus = todo.status === 'active' ? 'completed' : 'active';
     const res = await csrfFetch(`/api/todos/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
-    if ((await res.json()).success) fetchTodos();
+    await settle(res, '할일 상태를 바꾸지 못했습니다.', fetchTodos, false);
   };
   const handleDeleteTodo = async (id: string) => {
     const res = await csrfFetch(`/api/todos/${id}`, { method: 'DELETE' });
-    if ((await res.json()).success) fetchTodos();
+    await settle(res, '할일을 삭제하지 못했습니다.', fetchTodos, false);
   };
 
   const activeTodoCount = todos.filter((t) => t.status === 'active').length;

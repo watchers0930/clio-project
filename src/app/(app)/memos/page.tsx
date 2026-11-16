@@ -1,5 +1,7 @@
 'use client';
 
+import { readJsonOk } from '@/lib/http/read-json-ok';
+import { useToast } from '@/components/ui/toast';
 import { csrfFetch } from '@/hooks/csrf-client';
 import { Suspense, useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -63,6 +65,7 @@ function MemosPageWithLock() {
 }
 
 function MemosPageContent() {
+  const toast = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -123,13 +126,18 @@ function MemosPageContent() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    const result = await res.json() as { success: boolean; data?: MemoItem };
-    if (result.success) {
-      fetchMemos();
-      if (result.data?.id) {
-        csrfFetch(`/api/memos/${result.data.id}/embed`, { method: 'POST' })
-          .then(() => {}, () => {});
-      }
+    // 실패하면 사유를 안내하고 오류를 다시 던져 입력창이 닫히지 않게 한다(작성 내용 유지)
+    let result: { success: boolean; data?: MemoItem };
+    try {
+      result = await readJsonOk(res, '메모를 저장하지 못했습니다.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '메모를 저장하지 못했습니다.');
+      throw e;
+    }
+    fetchMemos();
+    if (result.data?.id) {
+      csrfFetch(`/api/memos/${result.data.id}/embed`, { method: 'POST' })
+        .then(() => {}, () => {});
     }
   };
 
@@ -140,12 +148,15 @@ function MemosPageContent() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    const result = await res.json() as { success: boolean };
-    if (result.success) {
-      fetchMemos();
-      csrfFetch(`/api/memos/${selectedMemo.id}/embed`, { method: 'POST' })
-        .then(() => {}, () => {});
+    try {
+      await readJsonOk(res, '메모를 저장하지 못했습니다.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '메모를 저장하지 못했습니다.');
+      throw e;
     }
+    fetchMemos();
+    csrfFetch(`/api/memos/${selectedMemo.id}/embed`, { method: 'POST' })
+      .then(() => {}, () => {});
   };
 
   const handlePin = async (id: string) => {
@@ -156,7 +167,12 @@ function MemosPageContent() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_pinned: !memo.is_pinned }),
     });
-    if ((await res.json() as { success: boolean }).success) fetchMemos();
+    try {
+      await readJsonOk(res, '메모 고정을 바꾸지 못했습니다.');
+      fetchMemos();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '메모 고정을 바꾸지 못했습니다.');
+    }
   };
 
   const handleDelete = async () => {
@@ -164,7 +180,10 @@ function MemosPageContent() {
     setDeleting(true);
     try {
       const res = await csrfFetch(`/api/memos/${deleteId}`, { method: 'DELETE' });
-      if ((await res.json() as { success: boolean }).success) fetchMemos();
+      await readJsonOk(res, '메모를 삭제하지 못했습니다.');
+      fetchMemos();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '메모를 삭제하지 못했습니다.');
     } finally {
       setDeleting(false);
       setDeleteId(null);
