@@ -1,10 +1,11 @@
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { withAuth, fail } from "@/lib/api-helper";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { csrfSessionId, verifyCsrfToken } from "@/lib/csrf";
 import { errorResponse } from "./api-error";
 import { allowedMutationOrigins, mutationOrigin } from "./mutation-origins";
+import { CSRF_INVALID_CODE } from "./csrf-codes";
 export async function withMutation(request: NextRequest) {
   const denied = (error: ReturnType<typeof fail>) => ({
     error,
@@ -27,7 +28,14 @@ export async function withMutation(request: NextRequest) {
         sessionId: await csrfSessionId(auth.supabase),
       })
     )
-      return denied(fail("보안 토큰이 만료되었거나 유효하지 않습니다.", 403));
+      // code 로 '토큰 거절'임을 알려 클라이언트가 이 경우에만 토큰을 다시 받아 재시도하게 한다
+      // (권한 거부 403 까지 재시도하면 업로드·AI 요청이 두 번 전송됨)
+      return denied(
+        NextResponse.json(
+          { success: false, error: "보안 토큰이 만료되었거나 유효하지 않습니다.", code: CSRF_INVALID_CODE },
+          { status: 403 },
+        ),
+      );
     const { data: user, error } = await auth.supabase
       .from("users")
       .select("is_active")

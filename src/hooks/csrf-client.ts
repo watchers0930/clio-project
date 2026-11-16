@@ -5,8 +5,10 @@
 // → 재사용 프론트 로직이므로 hooks/ 에 모듈로 배치한다.
 //
 // 역할: 변이 요청(POST/PATCH/PUT/DELETE)에 `X-CSRF-Token`과 `credentials:'include'`를
-//       자동 첨부하고, 403(토큰 만료·불일치) 시 토큰을 1회 재발급해 재시도한다.
+//       자동 첨부하고, 서버가 CSRF 토큰 거절(code: csrf_invalid)로 응답한 경우에만 토큰을 1회 재발급해 재시도한다.
 //       GET은 토큰이 불필요하다(설계서 §5).
+
+import { CSRF_INVALID_CODE } from '@/lib/http/csrf-codes';
 
 export interface ApiResult<T> {
   ok: boolean;
@@ -83,6 +85,21 @@ async function parse<T>(res: Response): Promise<ApiResult<T>> {
   };
 }
 
+/**
+ * 재시도 판정: 서버가 'CSRF 토큰 거절'(code: csrf_invalid)이라고 알린 403 일 때만 true.
+ * 권한 거부·비활성 사용자 등 다른 403 까지 재시도하면 업로드·AI 요청이 두 번 전송된다.
+ * 복제본으로 읽으므로 호출부는 원래 응답 본문을 그대로 쓸 수 있다.
+ */
+export async function isCsrfRejection(res: Response): Promise<boolean> {
+  if (res.status !== 403) return false;
+  try {
+    const body = (await res.clone().json()) as { code?: unknown } | null;
+    return body?.code === CSRF_INVALID_CODE;
+  } catch {
+    return false;
+  }
+}
+
 /** 조회(GET): 쿠키 세션 포함, CSRF 토큰 불필요 */
 export async function apiGet<T>(url: string): Promise<ApiResult<T>> {
   try {
@@ -96,7 +113,7 @@ export async function apiGet<T>(url: string): Promise<ApiResult<T>> {
   }
 }
 
-/** 변이(POST/PATCH/PUT/DELETE): X-CSRF-Token 자동 첨부 + 403 시 1회 재발급 재시도.
+/** 변이(POST/PATCH/PUT/DELETE): X-CSRF-Token 자동 첨부 + CSRF 토큰 거절일 때만 1회 재발급 재시도.
  *  signal을 넘기면 cleanup(계정전환·언마운트) 시 진행 중 요청을 취소할 수 있다(F07). */
 export async function apiMutate<T>(
   url: string,
@@ -119,8 +136,8 @@ export async function apiMutate<T>(
 
   try {
     let res = await send(await getCsrfToken());
-    if (res.status === 403 && !signal?.aborted) {
-      // 토큰 만료·불일치 → 강제 재발급 후 1회 재시도
+    if (!signal?.aborted && (await isCsrfRejection(res))) {
+      // 토큰 만료·불일치일 때만 강제 재발급 후 1회 재시도
       res = await send(await getCsrfToken(true));
     }
     return parse<T>(res);
@@ -131,7 +148,7 @@ export async function apiMutate<T>(
 }
 
 /** 기존 fetch 호출부용 얇은 래퍼. 변이 메서드면 X-CSRF-Token을 자동 첨부하고
- *  403(토큰 만료·불일치) 시 1회 재발급 재시도한다. 응답은 원본 Response 그대로 반환하므로
+ *  CSRF 토큰 거절(code: csrf_invalid)일 때만 1회 재발급 재시도한다. 응답은 원본 Response 그대로 반환하므로
  *  기존 `res.ok`/`res.json()` 처리 로직을 바꾸지 않고 CSRF 가드로 이관할 수 있다(F01).
  *  GET/HEAD는 토큰 없이 쿠키 세션만 포함한다. FormData 등 기존 body·헤더를 보존한다. */
 export async function csrfFetch(url: string, init: RequestInit = {}): Promise<Response> {
@@ -139,15 +156,16 @@ export async function csrfFetch(url: string, init: RequestInit = {}): Promise<Re
   const base: RequestInit = { ...init, credentials: init.credentials ?? 'include' };
   if (method === 'GET' || method === 'HEAD') return fetch(url, base);
 
-  const headers = init.headers as Record<string, string> | undefined;
-  const send = (token: string | null): Promise<Response> =>
-    fetch(url, {
-      ...base,
-      headers: { ...headers, ...(token ? { 'X-CSRF-Token': token } : {}) },
-    });
+  // Headers 인스턴스·배열·객체 어떤 형태로 넘겨도 보존(객체 펼치기는 Headers 인스턴스를 비워 버림)
+  const send = (token: string | null): Promise<Response> => {
+    const headers = new Headers(init.headers);
+    if (token) headers.set('X-CSRF-Token', token);
+    return fetch(url, { ...base, headers });
+  };
 
   let res = await send(await getCsrfToken());
-  if (res.status === 403 && !base.signal?.aborted) {
+  if (!base.signal?.aborted && (await isCsrfRejection(res))) {
+    // 토큰 만료·불일치일 때만 강제 재발급 후 1회 재시도
     res = await send(await getCsrfToken(true));
   }
   return res;
