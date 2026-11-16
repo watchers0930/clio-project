@@ -24,6 +24,7 @@ import {
   Stamp,
   CalendarClock,
   ClipboardList,
+  Receipt,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -61,6 +62,11 @@ const OPTIONAL_ITEMS: NavItem[] = [
 // 대표이사/관리자 전용 메뉴 (접근 차단은 API 403이 담당, 여기선 노출만 제어)
 const ADMIN_ITEMS: NavItem[] = [
   { key: 'weekly-reports', label: '직원 주간업무', href: '/weekly-reports', icon: ClipboardList, description: '전사 주간업무 조회' },
+];
+
+// 시스템 관리자(role='admin') 전용 메뉴 — 대표 직급만으로는 안 보인다. 실제 차단은 API 403(requireAdmin)
+const MASTER_ADMIN_ITEMS: NavItem[] = [
+  { key: 'maintenance-fees', label: '관리비', href: '/maintenance-fees', icon: Receipt, description: '관리비 월별 · 연도별' },
 ];
 
 interface SidebarProps {
@@ -217,6 +223,7 @@ function Sidebar({ collapsed = false, onToggle, mobile = false }: SidebarProps) 
 
         {/* 관리자 메뉴 (대표이사/관리자 전용) */}
         {canViewAdminMenu && ADMIN_ITEMS.map(renderItem)}
+        {user?.role === 'admin' && MASTER_ADMIN_ITEMS.map(renderItem)}
 
         {/* 설정 구분선 */}
         <div className={cn('mt-auto pt-2', collapsed && !mobile ? 'mx-2' : 'mx-1')}>

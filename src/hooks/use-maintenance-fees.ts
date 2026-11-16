@@ -37,9 +37,11 @@ export function useMaintenanceFees(year: number) {
   }, [year]);
 
   useEffect(() => {
+    const seqRef = requestSeq;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 연도 변경 시 데이터 재요청(로딩 상태 동기화)
     void reload();
     return () => {
-      requestSeq.current++;
+      seqRef.current++;
     };
   }, [reload]);
 
