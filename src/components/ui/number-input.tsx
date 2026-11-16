@@ -3,7 +3,7 @@
 // 쉼표 숫자 입력칸 — 입력·붙여넣기 정리와 커서 위치 복원(lib/format/number-input).
 // 값을 몰래 바꿔야 하는 입력은 무시하고 이전 값을 유지한다. 붙여넣기는 문구에서 숫자를 뽑아 넣는다.
 // 쉼표에서 Backspace/Delete 는 옆 숫자를 지운다.
-import { useLayoutEffect, useRef, type ClipboardEvent, type InputHTMLAttributes, type KeyboardEvent } from 'react';
+import { useLayoutEffect, useRef, type ClipboardEvent, type FormEvent, type InputHTMLAttributes, type KeyboardEvent } from 'react';
 import { caretAfterFormat, countSignificant, extractPastedNumber, formatNumberInput, type NumberInputOptions } from '@/lib/format/number-input';
 
 type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'inputMode'> &
@@ -48,6 +48,19 @@ export function NumberInput({ value, onValueChange, decimals, allowNegative, max
     onValueChange(next);
   };
 
+  // 입력되기 전에 거른다: 값을 몰래 바꿀 글자는 입력칸에 아예 들어가지 않게 해서
+  // 되돌리기·커서 복원이 필요 없다(빠른 연속 입력에서 다음 글자가 엉뚱한 자리에 들어가던 문제의 근본 해결).
+  // 붙여넣기·지우기·한글 조합은 data 가 없거나 별도 경로라 onChange/onPaste 가 처리한다.
+  const handleBeforeInput = (e: FormEvent<HTMLInputElement>) => {
+    const native = e.nativeEvent as InputEvent;
+    if (native.isComposing || native.inputType !== 'insertText' || !native.data) return;
+    const el = e.currentTarget;
+    const start = el.selectionStart ?? value.length;
+    const end = el.selectionEnd ?? value.length;
+    const candidate = value.slice(0, start) + native.data + value.slice(end);
+    if (formatNumberInput(candidate, { decimals, allowNegative, maxInt }) === null) e.preventDefault();
+  };
+
   const handlePaste = (e: ClipboardEvent<HTMLInputElement>) => {
     onPaste?.(e);
     if (e.defaultPrevented) return;
@@ -79,6 +92,7 @@ export function NumberInput({ value, onValueChange, decimals, allowNegative, max
       onChange={(e) => handleChange(e.target.value, e.target.selectionStart ?? e.target.value.length)}
       onKeyDown={handleKeyDown}
       onPaste={handlePaste}
+      onBeforeInput={handleBeforeInput}
     />
   );
 }
