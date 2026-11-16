@@ -1,9 +1,7 @@
 'use client';
 
-import { readJsonOk } from '@/lib/http/read-json-ok';
-import { useToast } from '@/components/ui/toast';
-import { csrfFetch } from '@/hooks/csrf-client';
-import { Suspense, useState, useEffect, useCallback, useMemo } from 'react';
+import { useMemos } from '@/hooks/use-memos';
+import { Suspense, useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 import { ArrowUpRight } from 'lucide-react';
@@ -15,7 +13,6 @@ import MemoViewModal from '@/components/memos/memo-view-modal';
 import type { MemoFormData } from '@/components/memos/memo-form-modal';
 import { MemoLockModal } from '@/components/memos/memo-lock-modal';
 import type { MemoItem } from '@/lib/supabase/types';
-import type { ExtractedTodo } from '@/components/memos/memo-todo-confirm-modal';
 
 const SESSION_KEY = 'memo_lock_unlocked';
 
@@ -65,12 +62,12 @@ function MemosPageWithLock() {
 }
 
 function MemosPageContent() {
-  const toast = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [loading, setLoading] = useState(true);
-  const [memos, setMemos] = useState<MemoItem[]>([]);
-  const [search, setSearch] = useState('');
+  const {
+    loading, memos, search, setSearch, fetchMemos,
+    createMemo, updateMemo, togglePin, deleteMemo, saveIdeaMemo, extractIdeaTodos,
+  } = useMemos();
 
   const [viewOpen, setViewOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -106,137 +103,21 @@ function MemosPageContent() {
     memos[0]?.title ||
     '문서 메모';
 
-  const fetchMemos = useCallback(() => {
-    const params = new URLSearchParams();
-    if (search) params.set('search', search);
-    fetch(`/api/memos?${params}`)
-      .then((r) => r.json())
-      .then((res: { success: boolean; data?: MemoItem[] }) => {
-        if (res.success) setMemos(res.data ?? []);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [search]);
-
-  useEffect(() => { fetchMemos(); }, [fetchMemos]);
-
-  const handleCreate = async (data: MemoFormData) => {
-    const res = await csrfFetch('/api/memos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    // 실패하면 사유를 안내하고 오류를 다시 던져 입력창이 닫히지 않게 한다(작성 내용 유지)
-    let result: { success: boolean; data?: MemoItem };
-    try {
-      result = await readJsonOk(res, '메모를 저장하지 못했습니다.');
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : '메모를 저장하지 못했습니다.');
-      throw e;
-    }
-    fetchMemos();
-    if (result.data?.id) {
-      csrfFetch(`/api/memos/${result.data.id}/embed`, { method: 'POST' })
-        .then(() => {}, () => {});
-    }
-  };
-
   const handleUpdate = async (data: MemoFormData) => {
     if (!selectedMemo) return;
-    const res = await csrfFetch(`/api/memos/${selectedMemo.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    try {
-      await readJsonOk(res, '메모를 저장하지 못했습니다.');
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : '메모를 저장하지 못했습니다.');
-      throw e;
-    }
-    fetchMemos();
-    csrfFetch(`/api/memos/${selectedMemo.id}/embed`, { method: 'POST' })
-      .then(() => {}, () => {});
-  };
-
-  const handlePin = async (id: string) => {
-    const memo = memos.find((m) => m.id === id);
-    if (!memo) return;
-    const res = await csrfFetch(`/api/memos/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ is_pinned: !memo.is_pinned }),
-    });
-    try {
-      await readJsonOk(res, '메모 고정을 바꾸지 못했습니다.');
-      fetchMemos();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : '메모 고정을 바꾸지 못했습니다.');
-    }
+    await updateMemo(selectedMemo.id, data);
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
     setDeleting(true);
     try {
-      const res = await csrfFetch(`/api/memos/${deleteId}`, { method: 'DELETE' });
-      await readJsonOk(res, '메모를 삭제하지 못했습니다.');
-      fetchMemos();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : '메모를 삭제하지 못했습니다.');
+      await deleteMemo(deleteId);
     } finally {
       setDeleting(false);
       setDeleteId(null);
     }
   };
-
-  const handleSaveIdeaMemo = useCallback(async (text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) {
-      throw new Error('저장할 아이디어가 없습니다');
-    }
-
-    const res = await csrfFetch('/api/memos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: '💡 AI 아이디어', content: trimmed, color: 'blue' }),
-    });
-
-    const result = await res.json() as { success: boolean; data?: { id: string }; error?: string };
-    if (!result.success) {
-      throw new Error(result.error ?? '메모 저장에 실패했습니다');
-    }
-
-    if (result.data?.id) {
-      csrfFetch(`/api/memos/${result.data.id}/embed`, { method: 'POST' }).catch(() => {});
-    }
-
-  }, []);
-
-  const handleExtractIdeaTodos = useCallback(async (text: string): Promise<ExtractedTodo[]> => {
-    const trimmed = text.trim();
-    if (!trimmed) {
-      throw new Error('추출할 아이디어가 없습니다');
-    }
-
-    const res = await csrfFetch('/api/todos/from-idea', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ideaText: trimmed }),
-    });
-
-    const result = await res.json() as {
-      success: boolean;
-      data?: ExtractedTodo[];
-      error?: string;
-    };
-
-    if (!result.success || !result.data) {
-      throw new Error(result.error ?? '할일 추출에 실패했습니다');
-    }
-
-    return result.data;
-  }, []);
 
   return (
     <div className="flex flex-col gap-5 pb-10">
@@ -340,13 +221,13 @@ function MemosPageContent() {
           onSelectedMemoIdsChange={setSelectedMemoIds}
           onIdeaPanelOpenChange={setIdeaPanelOpen}
           onAdd={() => { setSelectedMemo(null); setModalOpen(true); }}
-          onPin={handlePin}
+          onPin={togglePin}
           onView={(memo) => { setSelectedMemo(memo); setViewOpen(true); }}
           onEdit={(memo) => { setSelectedMemo(memo); setModalOpen(true); }}
           onDelete={(id) => setDeleteId(id)}
           onMemoSaved={fetchMemos}
-          onSaveIdeaMemo={handleSaveIdeaMemo}
-          onExtractIdeaTodos={handleExtractIdeaTodos}
+          onSaveIdeaMemo={saveIdeaMemo}
+          onExtractIdeaTodos={extractIdeaTodos}
         />
       )}
 
@@ -371,7 +252,7 @@ function MemosPageContent() {
       <MemoFormModal
         open={modalOpen}
         onClose={() => { setModalOpen(false); setSelectedMemo(null); }}
-        onSubmit={selectedMemo ? handleUpdate : handleCreate}
+        onSubmit={selectedMemo ? handleUpdate : createMemo}
         memo={selectedMemo}
         initialData={selectedMemo ? null : memoDraftFromContext}
       />
