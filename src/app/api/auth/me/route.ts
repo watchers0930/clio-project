@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { ApiResponse, User } from '@/lib/supabase/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createAdminSupabaseClient } from '@/lib/supabase/admin';
+import { NOT_REGISTERED_CODE } from '@/lib/http/auth-codes';
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,17 +34,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // users 테이블에서 프로필 조회
-    const { data: profile } = await supabase
+    // 프로필은 위에서 검증한 사용자 id 로 서버 권한 조회 — 쿠키 세션과 Bearer 토큰이 달라도 같은 사람을 본다
+    const { data: profile, error: profileError } = await createAdminSupabaseClient()
       .from('users')
       .select('*')
       .eq('id', authUser.id)
-      .single();
+      .maybeSingle();
 
-    // 직원 명부(users)에 없는 계정은 사용자로 인정하지 않는다(user_metadata 폴백 없음)
-    if (!profile) {
+    // 조회 오류(일시 장애)는 500 — 클라이언트가 로그아웃하지 않는다
+    if (profileError) {
+      console.error('[auth/me] profile', profileError.message);
       return NextResponse.json<ApiResponse>(
-        { success: false, error: '등록되지 않은 계정입니다. 관리자에게 문의해주세요.' },
+        { success: false, error: '사용자 정보를 불러오지 못했습니다.' },
+        { status: 500 },
+      );
+    }
+
+    // 직원 명부(users)에 정말 없는 계정만 403 + code — 클라이언트는 이때만 세션을 끊는다(user_metadata 폴백 없음)
+    if (!profile) {
+      return NextResponse.json(
+        { success: false, error: '등록되지 않은 계정입니다. 관리자에게 문의해주세요.', code: NOT_REGISTERED_CODE },
         { status: 403 },
       );
     }

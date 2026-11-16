@@ -1,3 +1,4 @@
+import { NOT_REGISTERED_CODE } from '@/lib/http/auth-codes';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User } from '@/lib/supabase/types';
@@ -75,10 +76,13 @@ export const useAuthStore = create<AuthState>()(
 
         if (res.success && res.data) {
           set({ user: res.data, isLoading: false });
-        } else if (res.status === 401 || res.status === 403) {
-          // 인증 없음(401) 또는 직원 명부에 없는 계정(403) — 세션까지 끊고 상태를 비운다(네트워크 오류 등은 유지)
-          if (res.status === 403) await get().logout();
+        } else if (res.status === 401) {
+          // Only clear auth on an explicit unauthorized response.
           set({ user: null, token: null, isLoading: false });
+        } else if (res.status === 403 && (res as { code?: string }).code === NOT_REGISTERED_CODE) {
+          // 직원 명부에 정말 없는 계정만 세션까지 끊는다(조회 오류·일시 장애는 아래로 — 상태 유지)
+          await get().logout();
+          set({ isLoading: false });
         } else {
           set({ isLoading: false });
         }
