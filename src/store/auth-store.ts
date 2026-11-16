@@ -12,7 +12,6 @@ interface AuthState {
   hasHydrated: boolean;
 
   login: (email: string, password: string) => Promise<boolean>;
-  signup: (email: string, password: string, name: string, departmentId?: string) => Promise<boolean>;
   logout: () => Promise<void>;
   fetchMe: () => Promise<void>;
   clearError: () => void;
@@ -43,32 +42,6 @@ export const useAuthStore = create<AuthState>()(
 
         set({ isLoading: false, error: res.error ?? '로그인에 실패했습니다.' });
         return false;
-      },
-
-      signup: async (email, password, name, departmentId) => {
-        set({ isLoading: true, error: null });
-
-        try {
-          const res = await fetch('/api/auth/signup', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password, name, department_id: departmentId }),
-          });
-          const data = await res.json();
-
-          if (data.success && data.data) {
-            const { token, user } = data.data;
-            apiClient.setToken(token);
-            set({ user, token, isLoading: false });
-            return true;
-          }
-
-          set({ isLoading: false, error: data.error ?? '회원가입에 실패했습니다.' });
-          return false;
-        } catch {
-          set({ isLoading: false, error: '서버에 연결할 수 없습니다.' });
-          return false;
-        }
       },
 
       logout: async () => {

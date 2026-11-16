@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
@@ -142,12 +141,9 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* Signup Link */}
+          {/* 공개 가입 없음 — 직원 계정은 관리자가 계정관리에서 만든다 */}
           <div className="mt-3 text-center">
-            <span className="text-[14px] text-foreground-secondary">계정이 없으신가요?&nbsp;</span>
-            <Link href="/signup" className="text-[14px] font-medium text-primary hover:underline">
-              회원가입
-            </Link>
+            <span className="text-[14px] text-foreground-secondary">계정이 없으면 관리자에게 요청해 주세요.</span>
           </div>
         </div>
 
