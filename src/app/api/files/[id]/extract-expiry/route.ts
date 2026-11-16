@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withMutationOrInternal } from '@/lib/http/mutation-guard';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
@@ -15,11 +16,12 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  // 서버 내부 호출(files/process 후처리)은 내부 비밀값으로, 사용자 요청은 출처·CSRF·활성 사용자 확인
+  const access = await withMutationOrInternal(request);
+  if (access.error) return access.error;
+  const isInternalRequest = access.internal;
   try {
     const { id: fileId } = await params;
-    const internalSecret = process.env.INTERNAL_API_SECRET?.trim();
-    const providedSecret = request.headers.get('X-Internal-Secret')?.trim();
-    const isInternalRequest = !!internalSecret && providedSecret === internalSecret;
 
     if (!isInternalRequest) {
       const supabase = await createServerSupabaseClient();

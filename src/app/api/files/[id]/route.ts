@@ -1,3 +1,4 @@
+import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { removeUnreferencedBlobs } from '@/lib/storage/blob-cleanup';
 import type { ApiResponse } from '@/lib/supabase/types';
@@ -99,6 +100,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   try {
     const { id } = await params;
 
@@ -156,6 +160,9 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
+  const mutation = await withMutation(_request);
+  if (mutation.error) return mutation.error;
   try {
     const { id } = await params;
 

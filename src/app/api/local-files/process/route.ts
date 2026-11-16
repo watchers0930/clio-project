@@ -1,3 +1,4 @@
+import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
@@ -24,6 +25,9 @@ async function batchEmbeddings(texts: string[]): Promise<number[][]> {
 const sanitize = (s: string) => s.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '');
 
 export async function POST(req: NextRequest) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
+  const mutation = await withMutation(req);
+  if (mutation.error) return mutation.error;
   const supabase = await createServerSupabaseClient();
   if (!supabase) return NextResponse.json({ error: 'DB 미설정' }, { status: 503 });
   const userId = await getAuthUserId(supabase);

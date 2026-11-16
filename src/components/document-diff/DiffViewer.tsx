@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronUp, ChevronDown, AlignLeft, Columns2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -58,7 +59,7 @@ export function DiffViewer({
       setCurrentChangeIdx(0);
 
       try {
-        const res = await fetch(`/api/documents/${baseDocumentId}/diff`, {
+        const res = await csrfFetch(`/api/documents/${baseDocumentId}/diff`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ compareWith: compareDocumentId }),

@@ -1,3 +1,4 @@
+import { withMutation } from '@/lib/http/mutation-guard';
 import { isWorkflowLockedStatus } from '@/lib/documents/document-status';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
@@ -41,6 +42,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
+  const mutation = await withMutation(req);
+  if (mutation.error) return mutation.error;
   try {
     const { id: documentId } = await params;
     if (!process.env.OPENAI_API_KEY) {

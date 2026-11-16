@@ -23,7 +23,7 @@ export function useFileBulkActions({ files, loadAssets, selectedIds, setSelected
       return csrfFetch(`/api/documents?id=${file.id}`, { method: 'DELETE' });
     }
 
-    return fetch(`/api/files/${file.id}`, { method: 'DELETE' });
+    return csrfFetch(`/api/files/${file.id}`, { method: 'DELETE' });
   }, []);
 
   const confirmDelete = async () => {
@@ -100,7 +100,7 @@ export function useFileBulkActions({ files, loadAssets, selectedIds, setSelected
 
     const results = await Promise.allSettled(
       ids.map((id) =>
-        fetch(`/api/files/${id}`, {
+        csrfFetch(`/api/files/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ scope: newScope }),

@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useMemo } from 'react';
 import { Spinner } from '@/components/ui';
 import { parseSections, extractSectionContent } from '@/lib/utils/parse-sections';
@@ -59,7 +60,7 @@ export function CommentReflectModal({
             ? { mode: 'append', selectedCommentIds: commentIds, newSectionTitle }
             : { mode: 'replace', selectedCommentIds: commentIds, findText, replaceText, replaceScope: replaceScope === '__all__' ? undefined : replaceScope };
 
-      const res = await fetch(`/api/documents/${documentId}/apply-comments`, {
+      const res = await csrfFetch(`/api/documents/${documentId}/apply-comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

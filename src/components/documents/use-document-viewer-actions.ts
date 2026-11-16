@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useCallback, useEffect, useRef, type Dispatch, type SetStateAction, useState } from 'react';
 import { patchDocument, type DocumentPatch } from '@/lib/documents/patch-document';
 import type { DocumentItem as Document } from '@/components/documents/page-types';
@@ -216,7 +217,7 @@ export function useDocumentViewerActions({
 
   const handleDownloadAiContext = async (docId: string, lang: 'ko' | 'en') => {
     try {
-      const res = await fetch(`/api/documents/${docId}/ai-context`, {
+      const res = await csrfFetch(`/api/documents/${docId}/ai-context`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lang }),

@@ -3,6 +3,7 @@
  * 쇼핑몰 카테고리 URL에서 상품 링크를 수집하여 CSV 파일로 저장
  */
 
+import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
@@ -14,6 +15,9 @@ import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   try {
     const supabase = await createServerSupabaseClient();
     if (!supabase) {

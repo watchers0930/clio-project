@@ -3,6 +3,7 @@
  * 제안서 문서 → AI 디자인 플랫폼용 프롬프트 생성 (국문/영문)
  */
 
+import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
@@ -16,6 +17,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   const { id } = await params;
 
   const supabase = await createServerSupabaseClient();

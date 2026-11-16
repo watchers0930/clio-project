@@ -1,3 +1,4 @@
+import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
@@ -10,6 +11,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; commentId: string }> }
 ) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
+  const mutation = await withMutation(req);
+  if (mutation.error) return mutation.error;
   try {
     const { id: documentId, commentId } = await params;
     const supabase = await createServerSupabaseClient();
@@ -70,6 +74,9 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string; commentId: string }> }
 ) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
+  const mutation = await withMutation(_req);
+  if (mutation.error) return mutation.error;
   try {
     const { id: documentId, commentId } = await params;
     const supabase = await createServerSupabaseClient();

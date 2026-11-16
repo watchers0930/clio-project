@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useCallback, type Dispatch, type SetStateAction } from 'react';
 import type { useToast } from '@/components/ui/toast';
 
@@ -29,7 +30,7 @@ export function useFileUpload({
         formData.append('file', file);
         formData.append('scope', 'company');
 
-        const res = await fetch('/api/files', { method: 'POST', body: formData });
+        const res = await csrfFetch('/api/files', { method: 'POST', body: formData });
         const data = await res.json().catch(() => null);
         if (!res.ok || !data?.data?.id) {
           throw new Error(data?.error ?? `${file.name} 업로드 실패`);

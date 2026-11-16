@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { Suspense, useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
@@ -108,7 +109,7 @@ function SearchPageInner() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ query: q, department, fileType }),
           }),
-          fetch('/api/local-files/search', {
+          csrfFetch('/api/local-files/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ query: q }),

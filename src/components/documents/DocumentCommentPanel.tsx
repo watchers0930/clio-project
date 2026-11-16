@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/components/ui/toast';
@@ -63,7 +64,7 @@ export function DocumentCommentPanel({ documentId, onClose, onReflected, inline 
     if (!content || submitting) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/documents/${documentId}/comments`, {
+      const res = await csrfFetch(`/api/documents/${documentId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),
@@ -84,7 +85,7 @@ export function DocumentCommentPanel({ documentId, onClose, onReflected, inline 
 
   const handleDelete = async (commentId: string) => {
     try {
-      const res = await fetch(`/api/documents/${documentId}/comments/${commentId}`, { method: 'DELETE' });
+      const res = await csrfFetch(`/api/documents/${documentId}/comments/${commentId}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         setComments((prev) => prev.filter((c) => c.id !== commentId));
@@ -99,7 +100,7 @@ export function DocumentCommentPanel({ documentId, onClose, onReflected, inline 
 
   const handleStatusChange = async (commentId: string, status: 'pending' | 'held') => {
     try {
-      const res = await fetch(`/api/documents/${documentId}/comments/${commentId}`, {
+      const res = await csrfFetch(`/api/documents/${documentId}/comments/${commentId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),

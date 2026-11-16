@@ -1,3 +1,4 @@
+import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
@@ -47,6 +48,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   try {
     const { id: documentId } = await params;
     const supabase = await createServerSupabaseClient();
@@ -129,6 +133,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   try {
     const { id: documentId } = await params;
     const supabase = await createServerSupabaseClient();

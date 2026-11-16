@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
@@ -255,7 +256,7 @@ export function useFilesPage() {
     setScrapeLoading(true);
     setScrapeResult(null);
     try {
-      const res = await fetch('/api/files/scrape', {
+      const res = await csrfFetch('/api/files/scrape', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: scrapeUrl }),
@@ -292,7 +293,7 @@ export function useFilesPage() {
 
   const handleDetailScopeToggle = async (file: FileItem) => {
     const newScope = file.scope === 'company' ? 'department' : 'company';
-    const res = await fetch(`/api/files/${file.id}`, {
+    const res = await csrfFetch(`/api/files/${file.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ scope: newScope }),

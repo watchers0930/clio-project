@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useEffect, useState } from 'react';
 import {
   ExternalShareSection,
@@ -126,7 +127,7 @@ export function ShareLinkModal({
 
     setCreating(true);
     try {
-      const res = await fetch('/api/share', {
+      const res = await csrfFetch('/api/share', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -174,7 +175,7 @@ export function ShareLinkModal({
 
     setSubmittingInternalShare(true);
     try {
-      const res = await fetch(resourceType === 'file' ? `/api/files/${resourceId}/share` : `/api/documents/${resourceId}/share`, {
+      const res = await csrfFetch(resourceType === 'file' ? `/api/files/${resourceId}/share` : `/api/documents/${resourceId}/share`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...payload, permission: 'read' }),
@@ -206,7 +207,7 @@ export function ShareLinkModal({
 
     setRemovingShareId(permissionId);
     try {
-      const res = await fetch(
+      const res = await csrfFetch(
         `${resourceType === 'file' ? `/api/files/${resourceId}/share` : `/api/documents/${resourceId}/share`}?permissionId=${permissionId}`,
         { method: 'DELETE' }
       );

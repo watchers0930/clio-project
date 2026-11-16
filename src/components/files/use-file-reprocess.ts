@@ -1,6 +1,7 @@
 'use client';
 
 // 파일 재처리(단건·선택·일괄 모드) 요청과 진행 상태 폴링
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useRef, useState } from 'react';
 import type { useToast } from '@/components/ui/toast';
 import type { FileItem } from './types';
@@ -47,7 +48,7 @@ export function useFileReprocess({ files, setFiles, selectedIds, toast }: UseFil
 
   const handleReprocess = async (file: FileItem) => {
     try {
-      const res = await fetch(`/api/files/${file.id}/reprocess`, { method: 'POST' });
+      const res = await csrfFetch(`/api/files/${file.id}/reprocess`, { method: 'POST' });
       if (!res.ok) {
         toast.error('재처리 요청에 실패했습니다.');
         return;
@@ -98,7 +99,7 @@ export function useFileReprocess({ files, setFiles, selectedIds, toast }: UseFil
     }
 
     try {
-      const res = await fetch('/api/files/bulk-reprocess', {
+      const res = await csrfFetch('/api/files/bulk-reprocess', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: 'selected', fileIds: targetIds }),
@@ -161,7 +162,7 @@ export function useFileReprocess({ files, setFiles, selectedIds, toast }: UseFil
   const requestBulkReprocess = async (mode: BulkReprocessMode) => {
     const messages = BULK_REPROCESS_MESSAGES[mode];
     try {
-      const res = await fetch('/api/files/bulk-reprocess', {
+      const res = await csrfFetch('/api/files/bulk-reprocess', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode }),

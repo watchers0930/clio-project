@@ -16,6 +16,7 @@ const MUTATION = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 // 가드: 결과 객체의 .error 를 확인해야 하는 함수 → 그 함수가 있어야 하는 모듈
 export const GUARD_MODULES = {
   withMutation: "@/lib/http/mutation-guard",
+  withMutationOrInternal: "@/lib/http/mutation-guard", // 내부 비밀값이 맞으면 통과, 아니면 withMutation
   feeMutationGate: "@/lib/maintenance-fees/route-guard",
   bulkTransferMutationGate: "@/lib/bulk-transfer/route-guard",
 };

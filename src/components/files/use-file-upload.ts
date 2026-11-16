@@ -1,6 +1,7 @@
 'use client';
 
 // 파일 업로드 모달 상태·선택·전송 로직
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState } from 'react';
 import type { useToast } from '@/components/ui/toast';
 import type { FileItem } from './types';
@@ -58,7 +59,7 @@ export function useFileUpload({ loadAssets, toast, setPage, fileInputRef }: UseF
         const formData = new FormData();
         formData.append('file', selectedFiles[i]);
         formData.append('scope', uploadScope);
-        const res = await fetch('/api/files', { method: 'POST', body: formData });
+        const res = await csrfFetch('/api/files', { method: 'POST', body: formData });
         if (!res.ok) {
           const text = await res.text();
           let msg = `(${res.status})`;

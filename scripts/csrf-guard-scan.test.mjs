@@ -71,6 +71,13 @@ test("위임 함수 검증: 상대 import 로 withMutation 을 부르는 handleA
   assert.equal(verifyDelegate("handleAttendance", src.replace("./mutation-guard", "./other"), "src/lib/http/attendance-handler.ts"), false);
 });
 
+test("내부 호출 겸용 가드 withMutationOrInternal 도 결과 확인 구조면 보호", () => {
+  const src = `import { withMutationOrInternal } from '@/lib/http/mutation-guard';\nexport async function POST(request, { params }) {\n  const access = await withMutationOrInternal(request);\n  if (access.error) return access.error;\n}`;
+  assert.equal(scanRouteSource(src, verified).map((r) => r.status).join(), "protected");
+  const unchecked = src.replace("  if (access.error) return access.error;\n", "");
+  assert.equal(scanRouteSource(unchecked, verified).map((r) => r.status).join(), "unprotected");
+});
+
 test("route 경로 변환", () => {
   assert.equal(routeFromPath("src/app/api/files/[id]/route.ts"), "/api/files/[id]");
   assert.equal(routeFromPath("src/app/(app)/x/route.tsx"), "/(app)/x");

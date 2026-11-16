@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useEffect, useRef } from 'react';
 import { Sparkles, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -46,7 +47,7 @@ export function DiffAnalysisPanel({
     abortRef.current = new AbortController();
 
     try {
-      const res = await fetch(`/api/documents/${baseDocumentId}/diff/analyze`, {
+      const res = await csrfFetch(`/api/documents/${baseDocumentId}/diff/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ diffResult, contractType: documentType, perspective, title: documentTitle }),

@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from './csrf-client';
 import { useState, useCallback, useEffect } from 'react';
 import {
   saveDirectoryHandle,
@@ -219,7 +220,7 @@ export function useLocalFileSync() {
       form.append('fileHash', hash);
       if (statRes.ok && statRes.lastModified) form.append('lastModified', String(statRes.lastModified));
 
-      const res = await fetch('/api/local-files/process', { method: 'POST', body: form });
+      const res = await csrfFetch('/api/local-files/process', { method: 'POST', body: form });
       if (res.ok) newHashes[fileInfo.path] = hash;
       processed++;
     }
@@ -244,7 +245,7 @@ export function useLocalFileSync() {
       form.append('fileHash', hash);
       form.append('lastModified', String(file.lastModified));
 
-      const res = await fetch('/api/local-files/process', { method: 'POST', body: form });
+      const res = await csrfFetch('/api/local-files/process', { method: 'POST', body: form });
       if (res.ok) newHashes[path] = hash;
       processed++;
     }
