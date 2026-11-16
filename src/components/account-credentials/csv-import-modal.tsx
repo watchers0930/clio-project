@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useRef } from 'react';
 import { X, Upload, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
 
@@ -104,7 +105,7 @@ export function CsvImportModal({ open, onClose, onImported }: Props) {
     setImporting(true);
     setError('');
     try {
-      const res = await fetch('/api/account-credentials/bulk', {
+      const res = await csrfFetch('/api/account-credentials/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: validRows }),

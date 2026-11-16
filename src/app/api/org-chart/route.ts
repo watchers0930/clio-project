@@ -1,3 +1,4 @@
+import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
@@ -53,6 +54,9 @@ function wouldCreateCycle(users: OrgUser[], targetId: string, newManagerId: stri
 // PUT /api/org-chart — 사용자 조직 정보(직속 상위·직위) 수정. admin 전용.
 // body { userId, managerUserId, rankLevel, rankTitle }
 export async function PUT(request: NextRequest) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   const supabase = await createServerSupabaseClient();
   if (!supabase) return NextResponse.json({ success: false, error: 'DB 미설정' }, { status: 503 });
 

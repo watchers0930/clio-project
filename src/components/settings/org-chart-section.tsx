@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useEffect, useMemo, useState } from 'react';
 import { Network, Save } from 'lucide-react';
 import { Spinner } from '@/components/ui';
@@ -76,7 +77,7 @@ export function OrgChartSection() {
   const save = async (u: OrgUser) => {
     setSavingId(u.id);
     try {
-      const res = await fetch('/api/org-chart', {
+      const res = await csrfFetch('/api/org-chart', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

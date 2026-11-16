@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useRef, useEffect } from 'react';
 import { Lock, Eye, EyeOff, X } from 'lucide-react';
 
@@ -24,7 +25,7 @@ export function MemoLockModal({ onUnlock, onClose }: Props) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/settings/memo-lock/verify', {
+      const res = await csrfFetch('/api/settings/memo-lock/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),

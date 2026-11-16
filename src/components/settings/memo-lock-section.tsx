@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useEffect, useState } from 'react';
 import { Lock, LockOpen, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
@@ -30,7 +31,7 @@ export function MemoLockSection() {
       if (!currentPw) { toast.error('현재 비밀번호를 입력해주세요.'); return; }
       setSaving(true);
       // 현재 비밀번호 검증
-      const verifyRes = await fetch('/api/settings/memo-lock/verify', {
+      const verifyRes = await csrfFetch('/api/settings/memo-lock/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: currentPw }),
@@ -41,7 +42,7 @@ export function MemoLockSection() {
         setSaving(false);
         return;
       }
-      const res = await fetch('/api/settings/memo-lock', {
+      const res = await csrfFetch('/api/settings/memo-lock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: null }),
@@ -63,7 +64,7 @@ export function MemoLockSection() {
     if (newPw !== confirmPw) { toast.error('비밀번호가 일치하지 않습니다.'); return; }
 
     setSaving(true);
-    const res = await fetch('/api/settings/memo-lock', {
+    const res = await csrfFetch('/api/settings/memo-lock', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: newPw }),

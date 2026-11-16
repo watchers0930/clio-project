@@ -1,3 +1,4 @@
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
 
@@ -73,7 +74,7 @@ export function useSignatureSettings(
     const fd = new FormData();
     fd.append('file', file);
     try {
-      const res = await fetch('/api/settings/company-seal', { method: 'POST', body: fd });
+      const res = await csrfFetch('/api/settings/company-seal', { method: 'POST', body: fd });
       const data = await res.json();
       if (data.success) {
         setSealUrl(data.data?.url ?? null);
@@ -90,7 +91,7 @@ export function useSignatureSettings(
   const deleteCompanySeal = () => {
     openConfirm('회사 직인을 삭제하시겠습니까?', '삭제하면 재직증명서에 직인이 표시되지 않습니다.', async () => {
       try {
-        await fetch('/api/settings/company-seal', { method: 'DELETE' });
+        await csrfFetch('/api/settings/company-seal', { method: 'DELETE' });
         setSealUrl(null);
         toast.success('회사 직인이 삭제되었습니다.');
       } catch {
@@ -139,7 +140,7 @@ export function useSignatureSettings(
     const fd = new FormData();
     fd.append('file', file);
     try {
-      const res = await fetch('/api/settings/company-logo', { method: 'POST', body: fd });
+      const res = await csrfFetch('/api/settings/company-logo', { method: 'POST', body: fd });
       const data = await res.json();
       if (data.success) {
         setLogoUrl(data.data?.url ?? null);
@@ -156,7 +157,7 @@ export function useSignatureSettings(
   const deleteCompanyLogo = () => {
     openConfirm('회사 로고를 삭제하시겠습니까?', '삭제하면 문서 워터마크가 표시되지 않습니다.', async () => {
       try {
-        await fetch('/api/settings/company-logo', { method: 'DELETE' });
+        await csrfFetch('/api/settings/company-logo', { method: 'DELETE' });
         setLogoUrl(null);
         toast.success('회사 로고가 삭제되었습니다.');
       } catch {
@@ -173,7 +174,7 @@ export function useSignatureSettings(
     setLogoSettingsSaving(true);
 
     try {
-      const res = await fetch('/api/settings/company-logo', {
+      const res = await csrfFetch('/api/settings/company-logo', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ patternDensity }),

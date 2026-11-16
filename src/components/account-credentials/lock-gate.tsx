@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useRef, useEffect } from 'react';
 import { Lock, Eye, EyeOff } from 'lucide-react';
 
@@ -45,7 +46,7 @@ export function LockGate({ onUnlocked }: LockGateProps) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/account-credentials/lock', {
+      const res = await csrfFetch('/api/account-credentials/lock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),
@@ -68,7 +69,7 @@ export function LockGate({ onUnlocked }: LockGateProps) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/account-credentials/verify', {
+      const res = await csrfFetch('/api/account-credentials/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),

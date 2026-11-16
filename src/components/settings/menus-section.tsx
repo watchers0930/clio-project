@@ -1,3 +1,4 @@
+import { csrfFetch } from '@/hooks/csrf-client';
 import { ArrowRightLeft, Banknote, Briefcase, CalendarDays, KeyRound, MessageSquare, ShieldAlert, StickyNote, Users } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { useState } from 'react';
@@ -43,7 +44,7 @@ export function MenusSection() {
     setEnabled(next);
 
     try {
-      await fetch('/api/users/sidebar', {
+      await csrfFetch('/api/users/sidebar', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ menus: next }),

@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useEffect, useCallback } from 'react';
 import { Building2, Users, PenLine, FileText, LayoutGrid, Mail, Lock, HardDrive, Network } from 'lucide-react';
 import { Spinner, Tabs, ConfirmDialog } from '@/components/ui';
@@ -113,7 +114,7 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
     if (!deptName.trim() || !deptCode.trim()) return;
     setSaving(true);
     try {
-      const res = await fetch('/api/departments', {
+      const res = await csrfFetch('/api/departments', {
         method: editDept ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(
@@ -138,7 +139,7 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
 
   const deleteDept = (id: string) => {
     openConfirm('이 부서를 삭제하시겠습니까?', '직원이 있는 부서는 삭제할 수 없습니다.', async () => {
-      await fetch(`/api/departments?id=${id}`, { method: 'DELETE' });
+      await csrfFetch(`/api/departments?id=${id}`, { method: 'DELETE' });
       await loadDepartments();
       closeConfirm();
     });

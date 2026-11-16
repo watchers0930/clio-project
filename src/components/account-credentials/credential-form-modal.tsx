@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useEffect } from 'react';
 import { X, Eye, EyeOff } from 'lucide-react';
 
@@ -53,7 +54,7 @@ export function CredentialFormModal({ open, editing, onClose, onSaved }: Props) 
       const url = isEdit
         ? `/api/account-credentials/${editing!.id}`
         : '/api/account-credentials';
-      const res = await fetch(url, {
+      const res = await csrfFetch(url, {
         method: isEdit ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ site_name: siteName, site_url: siteUrl, username, password }),

@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2, Eye, EyeOff, Upload, Search } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
@@ -68,7 +69,7 @@ export function CredentialsTable() {
     if (!confirm('이 계정을 삭제하시겠습니까?')) return;
     setDeletingId(id);
     try {
-      await fetch(`/api/account-credentials/${id}`, { method: 'DELETE' });
+      await csrfFetch(`/api/account-credentials/${id}`, { method: 'DELETE' });
       setRows((prev) => prev.filter((r) => r.id !== id));
       toast.success('삭제되었습니다.');
     } catch {
