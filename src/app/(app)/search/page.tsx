@@ -4,6 +4,7 @@ import { csrfFetch } from '@/hooks/csrf-client';
 import { Suspense, useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
+import { readJsonOk } from '@/lib/http/read-json-ok';
 import { buildDocumentCreateHref } from '@/lib/documents/navigation';
 import {
   AiSearchTab,
@@ -127,6 +128,12 @@ function SearchPageInner() {
           recentQs = data.recentQueries ?? [];
           ctx = data.searchContext ?? null;
           depts = data.searchContext?.availableDepartments ?? ['전체'];
+        } else {
+          // 실패를 '결과 없음'으로 보이지 않게 사유를 안내한다(보안 토큰·권한·네트워크)
+          const reason = mainRes.status === 'rejected'
+            ? '검색하지 못했습니다. (네트워크 연결을 확인해 주세요.)'
+            : await readJsonOk(mainRes.value, '검색하지 못했습니다.').then(() => null, (e: Error) => e.message);
+          if (reason) toast.error(reason);
         }
 
         let localResults: SearchResult[] = [];

@@ -67,7 +67,7 @@ export default function SchedulePage() {
     const end = endOfMonth(new Date(year, month)).toISOString();
     const params = new URLSearchParams({ start, end });
     if (selectedDept) params.set('department_id', selectedDept);
-    fetch(`/api/events?${params}`, { cache: 'no-store' })
+    return fetch(`/api/events?${params}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((res) => { if (res.success) setEvents(res.data ?? []); })
       .then(() => {}, () => {})
@@ -80,7 +80,7 @@ export default function SchedulePage() {
   }, [fetchEvents]);
 
   const fetchTodos = useCallback(() => {
-    fetch('/api/todos?status=all')
+    return fetch('/api/todos?status=all')
       .then((r) => r.json())
       .then((res) => { if (res.success) setTodos(res.data ?? []); })
       .then(() => {}, () => {});
@@ -135,10 +135,11 @@ export default function SchedulePage() {
 
   // 요청 → 응답 확인 → 성공이면 다시 불러오기, 실패(네트워크 포함)면 사유 안내.
   // 입력창에서 부른 경우(rethrow)는 오류를 다시 던져 창을 닫지 않는다(작성 내용 유지)
-  const settle = async (send: () => Promise<Response>, fallback: string, reload: () => void, rethrow: boolean) => {
+  // 다시 불러오기까지 기다려야 할일 잠금이 '새 목록 반영 뒤'에 풀린다(예전 목록 기준 재요청 방지)
+  const settle = async (send: () => Promise<Response>, fallback: string, reload: () => Promise<void>, rethrow: boolean) => {
     try {
       await requestJsonOk(send, fallback);
-      reload();
+      await reload();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : fallback);
       if (rethrow) throw e;
