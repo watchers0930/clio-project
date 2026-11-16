@@ -32,8 +32,8 @@ export interface FeeItemInput {
   is_active: boolean;
 }
 
-// 월별 기록 수정 입력 (항목·월은 바꾸지 않는다)
-export interface FeeEntryUpdateInput {
+// 월별 기록 입력 칸 (생성·수정 공통)
+export interface FeeEntryFields {
   usage: number | null;
   unit_price: number | null;
   amount: number | null; // null = 서버가 사용량 × 단가로 계산
@@ -41,8 +41,13 @@ export interface FeeEntryUpdateInput {
   memo: string | null;
 }
 
+// 월별 기록 수정 입력 — 항목·월은 바꾸지 않고, updated_at 으로 동시 수정 충돌을 잡는다
+export interface FeeEntryUpdateInput extends FeeEntryFields {
+  updated_at: string; // 불러온 시점의 값
+}
+
 // 월별 기록 생성 입력
-export interface FeeEntryCreateInput extends FeeEntryUpdateInput {
+export interface FeeEntryCreateInput extends FeeEntryFields {
   item_id: string;
   month: string;
 }

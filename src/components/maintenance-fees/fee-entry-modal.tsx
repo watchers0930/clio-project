@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
-import type { FeeEntry, FeeEntryCreateInput, FeeEntryUpdateInput, FeeItem } from '@/lib/maintenance-fees/types';
+import type { FeeEntry, FeeEntryCreateInput, FeeEntryFields, FeeEntryUpdateInput, FeeItem } from '@/lib/maintenance-fees/types';
 import { computeAmount } from '@/lib/maintenance-fees/calc';
-import { formatNumberInput, parseNumberInput, toInput, won } from '@/lib/maintenance-fees/format';
+import { formatNumberInput, parseNumberInput, toInput, unitPriceOnItemChange, won } from '@/lib/maintenance-fees/format';
 import { inputCls, labelCls, primaryBtn, secondaryBtn } from './fee-modal-styles';
 
 // 열릴 때만 렌더된다(부모가 key 로 다시 마운트) — 초기값은 useState 초기화로 잡는다
@@ -42,9 +42,8 @@ export function FeeEntryModal({ month, monthText, items, usedItemIds, editing, o
   const typedAmount = parseNumberInput(amount);
 
   const selectItem = (id: string) => {
+    setUnitPrice(unitPriceOnItemChange(unitPrice, item, items.find((it) => it.id === id) ?? null));
     setItemId(id);
-    const next = items.find((it) => it.id === id);
-    if (next && next.default_unit_price !== null && !unitPrice) setUnitPrice(toInput(next.default_unit_price));
   };
 
   const changeAmount = (v: string) => {
@@ -58,7 +57,7 @@ export function FeeEntryModal({ month, monthText, items, usedItemIds, editing, o
       return;
     }
     const isOverride = overridden && computed !== null;
-    const body: FeeEntryUpdateInput = {
+    const body: FeeEntryFields = {
       usage: parseNumberInput(usage),
       unit_price: parseNumberInput(unitPrice),
       amount: autoMode ? null : typedAmount,
@@ -71,7 +70,9 @@ export function FeeEntryModal({ month, monthText, items, usedItemIds, editing, o
     }
     setSaving(true);
     setError('');
-    const err = editing ? await onSubmit(body, editing.id) : await onSubmit({ ...body, item_id: itemId, month });
+    const err = editing
+      ? await onSubmit({ ...body, updated_at: editing.updated_at }, editing.id)
+      : await onSubmit({ ...body, item_id: itemId, month });
     setSaving(false);
     if (err) setError(err);
     else onClose();
@@ -79,12 +80,12 @@ export function FeeEntryModal({ month, monthText, items, usedItemIds, editing, o
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-white shadow-xl">
+      <div className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <h3 className="text-[15px] font-semibold text-foreground">
             {monthText} 관리비 {editing ? '수정' : '입력'}
           </h3>
-          <button onClick={onClose} className="text-foreground-secondary hover:text-foreground" aria-label="닫기">
+          <button onClick={onClose} className="p-0 text-foreground-secondary hover:text-foreground" aria-label="닫기">
             <X size={18} strokeWidth={1.5} />
           </button>
         </div>
@@ -93,7 +94,7 @@ export function FeeEntryModal({ month, monthText, items, usedItemIds, editing, o
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <span className={labelCls}>항목</span>
-              <button onClick={onManageItems} className="text-[12px] font-medium text-primary hover:underline">
+              <button onClick={onManageItems} className="p-0 text-[12px] font-medium text-primary hover:underline">
                 항목 관리
               </button>
             </div>
@@ -121,7 +122,7 @@ export function FeeEntryModal({ month, monthText, items, usedItemIds, editing, o
               <span className={labelCls}>사용량{item?.unit ? ` (${item.unit})` : ''}</span>
               <input
                 value={usage}
-                onChange={(e) => setUsage(formatNumberInput(e.target.value, { decimals: 3 }))}
+                onChange={(e) => setUsage(formatNumberInput(e.target.value, { decimals: 3, maxInt: 12 }))}
                 inputMode="decimal"
                 placeholder="없으면 비워 두세요"
                 className={`${inputCls} text-right font-mono`}
@@ -131,7 +132,7 @@ export function FeeEntryModal({ month, monthText, items, usedItemIds, editing, o
               <span className={labelCls}>단가 (원)</span>
               <input
                 value={unitPrice}
-                onChange={(e) => setUnitPrice(formatNumberInput(e.target.value, { decimals: 2 }))}
+                onChange={(e) => setUnitPrice(formatNumberInput(e.target.value, { decimals: 2, maxInt: 10 }))}
                 inputMode="decimal"
                 placeholder="0"
                 className={`${inputCls} text-right font-mono`}
@@ -144,7 +145,7 @@ export function FeeEntryModal({ month, monthText, items, usedItemIds, editing, o
               <span className={labelCls}>금액 (원)</span>
               {autoMode && <span className="text-[11px] text-foreground-tertiary">사용량 × 단가 자동 계산</span>}
               {overridden && computed !== null && (
-                <button onClick={() => setOverridden(false)} className="text-[12px] font-medium text-primary hover:underline">
+                <button onClick={() => setOverridden(false)} className="p-0 text-[12px] font-medium text-primary hover:underline">
                   자동 계산으로 되돌리기
                 </button>
               )}

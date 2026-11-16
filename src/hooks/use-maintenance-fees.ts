@@ -12,6 +12,8 @@ export function useMaintenanceFees(year: number) {
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 화면 데이터가 어느 연도 것인지 — 연도를 넘긴 직후 이전 연도 데이터를 새 기간으로 보여주지 않게
+  const [loadedYear, setLoadedYear] = useState<number | null>(null);
   // 연도를 빠르게 넘길 때 늦게 도착한 이전 연도 응답이 화면을 덮지 않게 한다
   const requestSeq = useRef(0);
 
@@ -32,6 +34,7 @@ export function useMaintenanceFees(year: number) {
       setError(null);
       setItems(itemRes.data ?? []);
       setEntries(entryRes.data ?? []);
+      setLoadedYear(year);
     }
     setLoading(false);
   }, [year]);
@@ -76,5 +79,5 @@ export function useMaintenanceFees(year: number) {
 
   const deleteEntry = useCallback((id: string) => mutate(`/api/maintenance-fees/entries/${id}`, 'DELETE'), [mutate]);
 
-  return { items, entries, loading, forbidden, error, reload, saveItem, deleteItem, saveEntry, deleteEntry };
+  return { items, entries, ready: loadedYear === year, loading, forbidden, error, reload, saveItem, deleteItem, saveEntry, deleteEntry };
 }

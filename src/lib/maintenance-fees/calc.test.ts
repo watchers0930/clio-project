@@ -83,3 +83,7 @@ test("buildYearlyView 숨긴 항목 기록 포함·빈 달 null·평균단가", 
   assert.equal(v.monthTotals.length, 12);
   assert.equal(v.grandTotal, 68500);
 });
+
+test("resolveAmount — 계산 금액이 DB 범위(±1e13)를 넘으면 오류", () => {
+  assert.ok("error" in resolveAmount({ usage: 1e9, unit_price: 1e10, amount: null, amount_overridden: false }));
+});

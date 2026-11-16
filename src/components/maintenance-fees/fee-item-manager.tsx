@@ -66,7 +66,7 @@ export function FeeItemManager({ items, onClose, onSave, onDelete }: Props) {
       <div className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl border border-border bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <h3 className="text-[15px] font-semibold text-foreground">관리비 항목 관리</h3>
-          <button onClick={onClose} className="text-foreground-secondary hover:text-foreground" aria-label="닫기">
+          <button onClick={onClose} className="p-0 text-foreground-secondary hover:text-foreground" aria-label="닫기">
             <X size={18} strokeWidth={1.5} />
           </button>
         </div>
@@ -90,7 +90,7 @@ export function FeeItemManager({ items, onClose, onSave, onDelete }: Props) {
               </span>
               <input
                 value={price}
-                onChange={(e) => setPrice(formatNumberInput(e.target.value, { decimals: 2 }))}
+                onChange={(e) => setPrice(formatNumberInput(e.target.value, { decimals: 2, maxInt: 10 }))}
                 inputMode="decimal"
                 className={`${inputCls} text-right font-mono`}
               />
@@ -138,13 +138,13 @@ export function FeeItemManager({ items, onClose, onSave, onDelete }: Props) {
                   </span>
                 </div>
                 <div className="flex flex-shrink-0 items-center gap-4">
-                  <button onClick={() => resetForm(it)} className="text-foreground-secondary hover:text-primary" title="수정">
+                  <button onClick={() => resetForm(it)} className="p-0 text-foreground-secondary hover:text-primary" title="수정">
                     <Pencil size={16} strokeWidth={1.5} />
                   </button>
-                  <button onClick={() => void toggleActive(it)} className="text-foreground-secondary hover:text-primary" title={it.is_active ? '숨기기' : '다시 보이기'}>
+                  <button onClick={() => void toggleActive(it)} className="p-0 text-foreground-secondary hover:text-primary" title={it.is_active ? '숨기기' : '다시 보이기'}>
                     {it.is_active ? <EyeOff size={16} strokeWidth={1.5} /> : <Eye size={16} strokeWidth={1.5} />}
                   </button>
-                  <button onClick={() => onDelete(it)} className="text-foreground-secondary hover:text-red-500" title="삭제">
+                  <button onClick={() => onDelete(it)} className="p-0 text-foreground-secondary hover:text-red-500" title="삭제">
                     <Trash2 size={16} strokeWidth={1.5} />
                   </button>
                 </div>

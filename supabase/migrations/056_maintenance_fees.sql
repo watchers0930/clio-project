@@ -7,7 +7,10 @@
 -- 권한: RLS 켜고 사용자 세션 정책 0개 — 서버(service role) 전용(055 방식).
 --   앱은 서버 API 가 requireAdmin 확인 후 service role 로만 읽고 쓴다(Supabase REST 직접 접근 차단).
 -- 작성자 삭제 시 기록은 남긴다(공용 장부) → created_by/updated_by on delete set null.
+-- 한 트랜잭션으로 실행 — 중간에 실패하면 아무것도 남지 않고, 다시 실행해도 된다.
 -- =============================================================================
+
+begin;
 
 create table if not exists public.maintenance_fee_items (
   id                 uuid primary key default uuid_generate_v4(),
@@ -41,10 +44,12 @@ create table if not exists public.maintenance_fee_entries (
 
 create index if not exists idx_maintenance_fee_entries_month on public.maintenance_fee_entries (month);
 
+drop trigger if exists set_maintenance_fee_items_updated_at on public.maintenance_fee_items;
 create trigger set_maintenance_fee_items_updated_at
   before update on public.maintenance_fee_items
   for each row execute function public.handle_updated_at();
 
+drop trigger if exists set_maintenance_fee_entries_updated_at on public.maintenance_fee_entries;
 create trigger set_maintenance_fee_entries_updated_at
   before update on public.maintenance_fee_entries
   for each row execute function public.handle_updated_at();
@@ -52,3 +57,5 @@ create trigger set_maintenance_fee_entries_updated_at
 -- 사용자 세션 정책은 만들지 않는다(서버 service role 전용).
 alter table public.maintenance_fee_items enable row level security;
 alter table public.maintenance_fee_entries enable row level security;
+
+commit;

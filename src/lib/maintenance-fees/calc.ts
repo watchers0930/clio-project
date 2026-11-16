@@ -18,19 +18,25 @@ export function computeAmount(usage: number | null, unitPrice: number | null): n
  * - 직접 입력(amount_overridden): 넘어온 금액을 그대로 쓴다 — 사용량·단가가 바뀌어도 덮어쓰지 않는다.
  * - 자동: 사용량·단가가 있으면 계산값, 없으면(일반관리비 등) 넘어온 금액.
  */
+/** DB amount numeric(15,0) 에 들어가는 범위 */
+export const MAX_ABS_AMOUNT = 1e13;
+
 export function resolveAmount(i: {
   usage: number | null;
   unit_price: number | null;
   amount: number | null;
   amount_overridden: boolean;
 }): { amount: number; amount_overridden: boolean } | { error: string } {
+  const tooLarge = { error: '금액이 너무 큽니다. 사용량과 단가를 확인해 주세요.' };
   if (i.amount_overridden) {
     if (i.amount === null) return { error: '직접 입력한 금액이 없습니다.' };
+    if (Math.abs(i.amount) > MAX_ABS_AMOUNT) return tooLarge;
     return { amount: i.amount, amount_overridden: true };
   }
   const computed = computeAmount(i.usage, i.unit_price);
-  if (computed !== null) return { amount: computed, amount_overridden: false };
+  if (computed !== null) return Math.abs(computed) > MAX_ABS_AMOUNT ? tooLarge : { amount: computed, amount_overridden: false };
   if (i.amount === null) return { error: '금액을 입력하거나 사용량과 단가를 함께 입력해 주세요.' };
+  if (Math.abs(i.amount) > MAX_ABS_AMOUNT) return tooLarge;
   return { amount: i.amount, amount_overridden: false };
 }
 

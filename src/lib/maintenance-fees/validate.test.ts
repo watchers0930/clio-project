@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { parseYear, validateEntryCreate, validateEntryUpdate, validateItemInput } from "./validate";
 
 const ID = "3f2b8c1e-1234-4abc-9def-0123456789ab";
+const upd = { usage: null, unit_price: null, amount: 1000, amount_overridden: false, memo: null, updated_at: "2026-11-16T03:00:00.123456+00:00" };
 const base = { item_id: ID, month: "2026-01", usage: null, unit_price: null, amount: 1000, amount_overridden: false, memo: null };
 
 test('숫자 필드: "1,234"→1234, ""→null, "abc"·Infinity·1e20 거부', () => {
@@ -48,13 +49,13 @@ test("본문이 객체가 아니면 거부", () => {
 });
 
 test("수정 입력은 item_id·month 를 받지 않는다", () => {
-  const r = validateEntryUpdate({ ...base });
+  const r = validateEntryUpdate({ ...upd, item_id: ID, month: "2026-01" });
   assert.ok(r.ok);
   if (r.ok) assert.equal("item_id" in r.value || "month" in r.value, false);
 });
 
 test("항목 수정은 is_active 를 받는다, 생성은 무시", () => {
-  const u = validateItemInput({ name: "전기", is_active: false }, "update");
+  const u = validateItemInput({ name: "전기", unit: null, default_unit_price: null, sort_order: 0, is_active: false }, "update");
   assert.ok(u.ok);
   if (u.ok) assert.equal(u.value.is_active, false);
   const c = validateItemInput({ name: "전기", is_active: false }, "create");
@@ -67,4 +68,32 @@ test('parseYear: "2026"→2026, "abc"·"1999"·null→null', () => {
   assert.equal(parseYear("abc"), null);
   assert.equal(parseYear("1999"), null);
   assert.equal(parseYear(null), null);
+});
+
+
+test("DB 자릿수: usage 1e12 거부·999999999999.999 통과, 소수 자릿수 초과 거부", () => {
+  assert.equal(validateEntryCreate({ ...base, usage: 1e12 }).ok, false);
+  assert.equal(validateEntryCreate({ ...base, usage: 999999999999.999 }).ok, true);
+  assert.equal(validateEntryCreate({ ...base, usage: "0.0004" }).ok, false);
+  assert.equal(validateEntryCreate({ ...base, unit_price: "1.234" }).ok, false);
+  assert.equal(validateEntryCreate({ ...base, unit_price: "1.23" }).ok, true);
+});
+
+test('숫자 문자열 엄격: "0x10"·"1e5"·"1.2.3" 거부', () => {
+  assert.equal(validateEntryCreate({ ...base, usage: "0x10" }).ok, false);
+  assert.equal(validateEntryCreate({ ...base, usage: "1e5" }).ok, false);
+  assert.equal(validateEntryCreate({ ...base, usage: "1.2.3" }).ok, false);
+});
+
+test("기록 수정은 모든 칸과 updated_at 이 있어야 한다(빠진 칸 덮어쓰기 방지)", () => {
+  assert.equal(validateEntryUpdate({ amount: 5000, memo: "x" }).ok, false);
+  assert.equal(validateEntryUpdate({ ...upd, updated_at: undefined }).ok, false);
+  const r = validateEntryUpdate(upd);
+  assert.ok(r.ok);
+  if (r.ok) assert.equal(r.value.updated_at, upd.updated_at);
+});
+
+test("항목 수정은 모든 칸이 있어야 한다(숨김 해제·순서 초기화 방지)", () => {
+  assert.equal(validateItemInput({ name: "전기" }, "update").ok, false);
+  assert.equal(validateItemInput({ name: "전기", unit: null, default_unit_price: null, sort_order: 0, is_active: false }, "update").ok, true);
 });

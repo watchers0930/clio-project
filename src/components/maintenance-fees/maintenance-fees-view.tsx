@@ -27,7 +27,7 @@ export function MaintenanceFeesView() {
   const [itemManager, setItemManager] = useState(false);
   const toast = useToast();
   const { confirmState, openConfirm, closeConfirm } = useConfirmDialog();
-  const { items, entries, loading, forbidden, error, saveItem, deleteItem, saveEntry, deleteEntry } = useMaintenanceFees(year);
+  const { items, entries, ready, forbidden, error, saveItem, deleteItem, saveEntry, deleteEntry } = useMaintenanceFees(year);
 
   const month = `${year}-${String(monthNo).padStart(2, '0')}`;
   const monthText = `${year}년 ${monthNo}월`;
@@ -106,7 +106,7 @@ export function MaintenanceFeesView() {
               항목 관리
             </button>
             {tab === 'monthly' && (
-              <button onClick={() => openEntry(null)} className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-4 text-[13px] font-medium text-white hover:bg-primary-dark">
+              <button onClick={() => openEntry(null)} disabled={!ready} className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-4 text-[13px] font-medium text-white hover:bg-primary-dark disabled:opacity-50">
                 <Plus size={15} strokeWidth={1.5} />
                 입력
               </button>
@@ -116,10 +116,12 @@ export function MaintenanceFeesView() {
 
         {error && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-600">{error}</p>}
 
-        {loading && entries.length === 0 && items.length === 0 ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="h-7 w-7 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          </div>
+        {!ready ? (
+          error ? null : (
+            <div className="flex items-center justify-center py-20">
+              <div className="h-7 w-7 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            </div>
+          )
         ) : tab === 'monthly' ? (
           <MonthlyFeeTable view={monthlyView} monthText={monthText} onRowClick={(row) => openEntry(row.entry)} />
         ) : (
