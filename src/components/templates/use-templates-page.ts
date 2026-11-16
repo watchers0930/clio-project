@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/toast';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
@@ -184,9 +185,9 @@ export function useTemplatesPage() {
           fd.append('scope', formScope);
           if (formFile) fd.append('file', formFile);
           if (formRemoveFile) fd.append('removeFile', 'true');
-          res = await fetch('/api/templates', { method: 'PUT', body: fd });
+          res = await csrfFetch('/api/templates', { method: 'PUT', body: fd });
         } else {
-          res = await fetch('/api/templates', {
+          res = await csrfFetch('/api/templates', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -242,9 +243,9 @@ export function useTemplatesPage() {
           fd.append('departmentId', formDepartmentId);
           fd.append('scope', formScope);
           if (formFile) fd.append('file', formFile);
-          res = await fetch('/api/templates', { method: 'POST', body: fd });
+          res = await csrfFetch('/api/templates', { method: 'POST', body: fd });
         } else {
-          res = await fetch('/api/templates', {
+          res = await csrfFetch('/api/templates', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: formName, description: formDescription, content: formContent, departmentId: formDepartmentId, scope: formScope, templateHtml, templateFields, templateSections }),
@@ -286,7 +287,7 @@ export function useTemplatesPage() {
   const handleDelete = (id: string) => {
     openConfirm('템플릿을 삭제하시겠습니까?', '삭제된 템플릿은 복구할 수 없습니다.', async () => {
       try {
-        const res = await fetch(`/api/templates?id=${id}`, { method: 'DELETE' });
+        const res = await csrfFetch(`/api/templates?id=${id}`, { method: 'DELETE' });
         if (res.ok) {
           setTemplates((prev) => prev.filter((t) => t.id !== id));
         } else {
@@ -321,7 +322,7 @@ export function useTemplatesPage() {
       try {
         const results = await Promise.all(
           Array.from(selectedIds).map((id) =>
-            fetch(`/api/templates?id=${id}`, { method: 'DELETE' }).then((r) => r.ok)
+            csrfFetch(`/api/templates?id=${id}`, { method: 'DELETE' }).then((r) => r.ok)
           )
         );
         const failCount = results.filter((ok) => !ok).length;
@@ -336,7 +337,7 @@ export function useTemplatesPage() {
 
   const handleDuplicate = async (t: Template) => {
     try {
-      const res = await fetch('/api/templates', {
+      const res = await csrfFetch('/api/templates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

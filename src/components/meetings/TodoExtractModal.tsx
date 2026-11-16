@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useEffect } from 'react';
 import { X, RefreshCw, CheckSquare, Square, AlertCircle, CalendarDays, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -57,7 +58,7 @@ export function TodoExtractModal({
     setIsReExtracting(true);
     setError(null);
     try {
-      const res = await fetch('/api/todos/extract', {
+      const res = await csrfFetch('/api/todos/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documentId, reExtract: true }),
@@ -88,7 +89,7 @@ export function TodoExtractModal({
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/todos/extract', {
+      const res = await csrfFetch('/api/todos/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documentId, selectedTodos: selected }),

@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from './csrf-client';
 import { useCallback, useEffect, useState } from 'react';
 import type {
   DepartmentOption,
@@ -52,7 +53,7 @@ export function useWorkLedger() {
   }, [load]);
 
   const createProject = useCallback(async (input: WorkProjectInput): Promise<WorkProject> => {
-    const res = await fetch('/api/work-projects', {
+    const res = await csrfFetch('/api/work-projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
@@ -64,7 +65,7 @@ export function useWorkLedger() {
   }, []);
 
   const updateProject = useCallback(async (id: string, input: WorkProjectInput): Promise<WorkProject> => {
-    const res = await fetch(`/api/work-projects/${id}`, {
+    const res = await csrfFetch(`/api/work-projects/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
@@ -76,7 +77,7 @@ export function useWorkLedger() {
   }, []);
 
   const deleteProject = useCallback(async (id: string): Promise<void> => {
-    const res = await fetch(`/api/work-projects/${id}`, { method: 'DELETE' });
+    const res = await csrfFetch(`/api/work-projects/${id}`, { method: 'DELETE' });
     if (!res.ok) {
       const json = (await res.json().catch(() => ({}))) as { error?: string };
       throw new Error(json.error ?? '삭제에 실패했습니다.');

@@ -1,3 +1,4 @@
+import { csrfFetch } from '@/hooks/csrf-client';
 import type { AutoPlaceholder } from './types';
 import type { useToast } from '@/components/ui/toast';
 
@@ -55,7 +56,7 @@ export async function analyzeAutoRegFile({
   try {
     const fd = new FormData();
     fd.append('file', autoRegFile);
-    const res = await fetch('/api/templates/analyze', { method: 'POST', body: fd });
+    const res = await csrfFetch('/api/templates/analyze', { method: 'POST', body: fd });
     if (!res.ok) {
       toast.error(await readApiError(res, '분석 실패'));
       return;
@@ -112,7 +113,7 @@ export async function submitAutoRegTemplate({
       .filter((placeholder) => placeholder.selected)
       .map(({ key, label, type, location, context }) => ({ key, label, type, location, context }));
 
-    const res = await fetch('/api/templates', {
+    const res = await csrfFetch('/api/templates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

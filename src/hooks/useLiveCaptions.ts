@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from './csrf-client';
 import { useCallback, useRef, useState } from 'react';
 
 export interface Caption {
@@ -28,7 +29,7 @@ export function useLiveCaptions(targetLang: string) {
     setCaptions((prev) => [...prev, { id, name, original: clean, translated: '' }].slice(-MAX_CAPTIONS));
 
     try {
-      const res = await fetch('/api/meetings/translate', {
+      const res = await csrfFetch('/api/meetings/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: clean, targetLang: targetRef.current }),

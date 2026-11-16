@@ -3,6 +3,7 @@
  * 기존 회의록 document_id 기반 재추출 + 선택된 항목 todos 테이블 일괄 INSERT
  */
 
+import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
@@ -22,6 +23,9 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 type DocRow = { id: string; title: string; content: string | null; created_by: string };
 
 export async function POST(request: NextRequest) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json({ error: 'AI 서비스가 설정되지 않았습니다.' }, { status: 503 });
   }

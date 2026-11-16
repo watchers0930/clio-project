@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from './csrf-client';
 import { useState, useRef, useCallback } from 'react';
 
 export interface UseMemoIdeaReturn {
@@ -37,7 +38,7 @@ export function useMemoIdea(): UseMemoIdeaReturn {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/memos/idea', {
+      const res = await csrfFetch('/api/memos/idea', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ memoIds }),

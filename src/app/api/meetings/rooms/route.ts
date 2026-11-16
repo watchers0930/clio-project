@@ -1,3 +1,4 @@
+import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
@@ -12,6 +13,9 @@ import { ensureRoom, createMeetingToken } from '@/lib/daily/rooms';
  * 반환: { success, data: { roomUrl, token } }
  */
 export async function POST(request: NextRequest) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   try {
     if (!process.env.DAILY_API_KEY) {
       return NextResponse.json(

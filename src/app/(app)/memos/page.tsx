@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { Suspense, useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
@@ -117,7 +118,7 @@ function MemosPageContent() {
   useEffect(() => { fetchMemos(); }, [fetchMemos]);
 
   const handleCreate = async (data: MemoFormData) => {
-    const res = await fetch('/api/memos', {
+    const res = await csrfFetch('/api/memos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -126,7 +127,7 @@ function MemosPageContent() {
     if (result.success) {
       fetchMemos();
       if (result.data?.id) {
-        fetch(`/api/memos/${result.data.id}/embed`, { method: 'POST' })
+        csrfFetch(`/api/memos/${result.data.id}/embed`, { method: 'POST' })
           .then(() => {}, () => {});
       }
     }
@@ -134,7 +135,7 @@ function MemosPageContent() {
 
   const handleUpdate = async (data: MemoFormData) => {
     if (!selectedMemo) return;
-    const res = await fetch(`/api/memos/${selectedMemo.id}`, {
+    const res = await csrfFetch(`/api/memos/${selectedMemo.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -142,7 +143,7 @@ function MemosPageContent() {
     const result = await res.json() as { success: boolean };
     if (result.success) {
       fetchMemos();
-      fetch(`/api/memos/${selectedMemo.id}/embed`, { method: 'POST' })
+      csrfFetch(`/api/memos/${selectedMemo.id}/embed`, { method: 'POST' })
         .then(() => {}, () => {});
     }
   };
@@ -150,7 +151,7 @@ function MemosPageContent() {
   const handlePin = async (id: string) => {
     const memo = memos.find((m) => m.id === id);
     if (!memo) return;
-    const res = await fetch(`/api/memos/${id}`, {
+    const res = await csrfFetch(`/api/memos/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_pinned: !memo.is_pinned }),
@@ -162,7 +163,7 @@ function MemosPageContent() {
     if (!deleteId) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/memos/${deleteId}`, { method: 'DELETE' });
+      const res = await csrfFetch(`/api/memos/${deleteId}`, { method: 'DELETE' });
       if ((await res.json() as { success: boolean }).success) fetchMemos();
     } finally {
       setDeleting(false);
@@ -176,7 +177,7 @@ function MemosPageContent() {
       throw new Error('저장할 아이디어가 없습니다');
     }
 
-    const res = await fetch('/api/memos', {
+    const res = await csrfFetch('/api/memos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: '💡 AI 아이디어', content: trimmed, color: 'blue' }),
@@ -188,7 +189,7 @@ function MemosPageContent() {
     }
 
     if (result.data?.id) {
-      fetch(`/api/memos/${result.data.id}/embed`, { method: 'POST' }).catch(() => {});
+      csrfFetch(`/api/memos/${result.data.id}/embed`, { method: 'POST' }).catch(() => {});
     }
 
   }, []);
@@ -199,7 +200,7 @@ function MemosPageContent() {
       throw new Error('추출할 아이디어가 없습니다');
     }
 
-    const res = await fetch('/api/todos/from-idea', {
+    const res = await csrfFetch('/api/todos/from-idea', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ideaText: trimmed }),

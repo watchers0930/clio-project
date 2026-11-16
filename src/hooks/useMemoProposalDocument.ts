@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from './csrf-client';
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ForceGraphNode } from '@/types/memo-graph';
@@ -26,7 +27,7 @@ export function useMemoProposalDocument({
     setProposalError(null);
 
     try {
-      const response = await fetch('/api/memos/proposal-report', {
+      const response = await csrfFetch('/api/memos/proposal-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ memoIds: selectedNodes.map((node) => node.id) }),

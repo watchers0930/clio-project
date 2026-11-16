@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Spinner } from '@/components/ui';
@@ -130,42 +131,42 @@ export default function SchedulePage() {
   };
 
   const handleCreateEvent = async (data: EventFormData) => {
-    const res = await fetch('/api/events', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    const res = await csrfFetch('/api/events', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     const json = await res.json();
     if (json.success) fetchEvents();
   };
 
   const handleUpdateEvent = async (data: EventFormData) => {
     if (!selectedEvent) return;
-    const res = await fetch(`/api/events/${selectedEvent.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    const res = await csrfFetch(`/api/events/${selectedEvent.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     const json = await res.json();
     if (json.success) fetchEvents();
   };
 
   const handleDeleteEvent = async () => {
     if (!selectedEvent) return;
-    const res = await fetch(`/api/events/${selectedEvent.id}`, { method: 'DELETE' });
+    const res = await csrfFetch(`/api/events/${selectedEvent.id}`, { method: 'DELETE' });
     if ((await res.json()).success) fetchEvents();
   };
 
   const handleCreateTodo = async (data: { title: string; description: string; due_date: string; priority: TodoPriority }) => {
-    const res = await fetch('/api/todos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    const res = await csrfFetch('/api/todos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     if ((await res.json()).success) fetchTodos();
   };
   const handleUpdateTodo = async (data: { title: string; description: string; due_date: string; priority: TodoPriority }) => {
     if (!selectedTodo) return;
-    const res = await fetch(`/api/todos/${selectedTodo.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    const res = await csrfFetch(`/api/todos/${selectedTodo.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     if ((await res.json()).success) fetchTodos();
   };
   const handleToggleTodo = async (id: string) => {
     const todo = todos.find((t) => t.id === id);
     if (!todo) return;
     const newStatus = todo.status === 'active' ? 'completed' : 'active';
-    const res = await fetch(`/api/todos/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
+    const res = await csrfFetch(`/api/todos/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
     if ((await res.json()).success) fetchTodos();
   };
   const handleDeleteTodo = async (id: string) => {
-    const res = await fetch(`/api/todos/${id}`, { method: 'DELETE' });
+    const res = await csrfFetch(`/api/todos/${id}`, { method: 'DELETE' });
     if ((await res.json()).success) fetchTodos();
   };
 

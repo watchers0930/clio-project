@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from './csrf-client';
 import { useCallback, useState } from 'react';
 
 interface VideoRoomState {
@@ -22,7 +23,7 @@ export function useVideoRoom() {
     setJoiningKey(key);
     setError(null);
     try {
-      const res = await fetch('/api/meetings/rooms', {
+      const res = await csrfFetch('/api/meetings/rooms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(eventId ? { eventId } : {}),
@@ -47,7 +48,7 @@ export function useVideoRoom() {
   // 게스트 초대 링크 생성·복사 (방을 보장한 뒤 /meet/<방ID> 링크 복사)
   const copyInvite = useCallback(async (eventId?: string): Promise<string | null> => {
     try {
-      const res = await fetch('/api/meetings/rooms', {
+      const res = await csrfFetch('/api/meetings/rooms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(eventId ? { eventId } : {}),

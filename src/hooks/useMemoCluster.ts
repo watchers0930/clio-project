@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from './csrf-client';
 import { useState, useEffect, useMemo } from 'react';
 import type { ClusterInfo, GraphLink, ForceGraphNode } from '@/types/memo-graph';
 
@@ -74,7 +75,7 @@ async function fetchClusterNames(
   const pending = pendingClusterRequests.get(requestKey);
   if (pending) return pending;
 
-  const request = fetch('/api/memos/graph/clusters', {
+  const request = csrfFetch('/api/memos/graph/clusters', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
