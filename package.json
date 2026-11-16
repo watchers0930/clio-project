@@ -1,16 +1,16 @@
 {
   "name": "clio-project",
-  "version": "7.97.3",
+  "version": "7.97.4",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
     "check:env": "node scripts/check-required-env.mjs",
-    "prebuild": "node scripts/check-required-env.mjs && node scripts/check-file-length.mjs",
+    "prebuild": "node scripts/check-required-env.mjs && node scripts/check-file-length.mjs && node scripts/check-csrf-guard.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test \"src/**/*.test.ts\"",
+    "test": "tsx --test \"src/**/*.test.ts\" \"scripts/**/*.test.mjs\"",
     "electron": "electron .",
     "electron:build": "electron-builder"
   },

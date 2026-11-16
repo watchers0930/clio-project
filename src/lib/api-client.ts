@@ -9,6 +9,10 @@ import type {
   DashboardStats,
   LoginResponse,
 } from './supabase/types';
+import { csrfFetch } from '@/hooks/csrf-client';
+import csrfExemptRoutes from '@/lib/http/csrf-exempt-routes.json';
+
+const SESSIONLESS_PATHS = new Set(csrfExemptRoutes.filter((r) => 'sessionless' in r && r.sessionless).map((r) => r.route));
 
 // =============================================================================
 // CLIO API Client
@@ -40,7 +44,11 @@ class ApiClient {
     }
 
     try {
-      const res = await fetch(`${this.baseUrl}${path}`, {
+      // 변이 요청은 CSRF 토큰을 붙이는 csrfFetch 로 보낸다. 로그인·가입처럼 세션이 없는 경로는 토큰을 받을 수 없어 제외
+      // (예외 목록은 서버 게이트와 같은 src/lib/http/csrf-exempt-routes.json). csrfFetch 는 403 에 1회 재시도하므로
+      // 비활성 계정 로그인(403)이 두 번 시도되지 않게 하는 이유도 있다.
+      const send = SESSIONLESS_PATHS.has(path.split('?')[0]) ? fetch : csrfFetch;
+      const res = await send(`${this.baseUrl}${path}`, {
         ...options,
         headers,
       });
