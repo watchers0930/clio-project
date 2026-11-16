@@ -50,6 +50,18 @@ export async function withMutation(request: NextRequest) {
   }
 }
 
+/**
+ * 출처만 확인하는 가드 — 로그아웃처럼 세션·CSRF 토큰이 없거나 만료돼도 반드시 동작해야 하는 변이용.
+ * 토큰까지 요구하면 토큰 발급이 실패한 상태에서 로그아웃이 안 되는 역효과가 난다.
+ * 다른 사이트가 사용자를 강제로 로그아웃시키는 요청(교차 출처)은 여기서 막는다.
+ */
+export async function withSameOrigin(request: NextRequest) {
+  const origin = mutationOrigin(request.headers);
+  if (!origin) return { error: fail("요청 출처를 확인할 수 없습니다.", 403) };
+  if (!allowedMutationOrigins().has(origin)) return { error: fail("허용되지 않은 요청 출처입니다.", 403) };
+  return { error: null };
+}
+
 /** 내부 비밀값 비교 — 길이 차이·내용 차이 모두 같은 시간으로 비교(타이밍 공격 방지) */
 function internalSecretMatches(provided: string | null): boolean {
   const expected = (process.env.INTERNAL_API_SECRET ?? "").trim();

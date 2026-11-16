@@ -82,3 +82,11 @@ test("route 경로 변환", () => {
   assert.equal(routeFromPath("src/app/api/files/[id]/route.ts"), "/api/files/[id]");
   assert.equal(routeFromPath("src/app/(app)/x/route.tsx"), "/(app)/x");
 });
+
+test("출처만 보는 가드(withSameOrigin)는 로그아웃 라우트에서만 보호로 인정", () => {
+  const src = `import { withSameOrigin } from '@/lib/http/mutation-guard';\nexport async function POST(request) {\n  const origin = await withSameOrigin(request);\n  if (origin.error) return origin.error;\n  return ok();\n}`;
+  const at = (file) => scanRouteSource(src, verified, file).map((r) => `${r.method}:${r.status}`).join(",");
+  assert.equal(at("src/app/api/auth/logout/route.ts"), "POST:protected");
+  assert.equal(at("src/app/api/memos/route.ts"), "POST:unprotected");
+  assert.equal(at(undefined), "POST:unprotected");
+});

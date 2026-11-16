@@ -1,4 +1,5 @@
 import { withMutation } from '@/lib/http/mutation-guard';
+import { readUploadImage } from '@/lib/http/upload-image';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { isAdmin, getUserRoleInfo } from '@/lib/permissions';
@@ -81,23 +82,17 @@ export async function POST(request: NextRequest) {
     if (context.error) return context.error;
 
     const formData = await request.formData();
-    const file = formData.get('file') as File | null;
+    // 형식은 파일 내용으로 판별(브라우저가 보낸 type 은 위조 가능)
+    const image = await readUploadImage(formData.get('file'));
+    if (!image.ok) return NextResponse.json({ success: false, error: image.error }, { status: 400 });
 
-    if (!file) return NextResponse.json({ success: false, error: '파일이 없습니다.' }, { status: 400 });
-    if (file.size > 2 * 1024 * 1024) return NextResponse.json({ success: false, error: '파일 크기는 2MB 이하여야 합니다.' }, { status: 400 });
-    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
-      return NextResponse.json({ success: false, error: 'PNG, JPEG, WebP 형식만 지원합니다.' }, { status: 400 });
-    }
-
-    const ext = file.type === 'image/png' ? 'png' : file.type === 'image/jpeg' ? 'jpg' : 'webp';
-    const storagePath = `settings/company-logo.${ext}`;
-    const arrayBuffer = await file.arrayBuffer();
+    const storagePath = `settings/company-logo.${image.ext}`;
     const admin = createAdminSupabaseClient();
 
     await admin.storage.from('files').remove(COMPANY_LOGO_PATHS.filter((path) => path !== storagePath));
     const { error: uploadErr } = await admin.storage
       .from('files')
-      .upload(storagePath, arrayBuffer, { contentType: file.type, upsert: true });
+      .upload(storagePath, image.buffer, { contentType: image.mime, upsert: true });
 
     if (uploadErr) {
       console.error('[company-logo/POST] upload:', uploadErr.message);

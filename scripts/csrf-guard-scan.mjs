@@ -17,9 +17,12 @@ const MUTATION = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 export const GUARD_MODULES = {
   withMutation: "@/lib/http/mutation-guard",
   withMutationOrInternal: "@/lib/http/mutation-guard", // 내부 비밀값이 맞으면 통과, 아니면 withMutation
+  withSameOrigin: "@/lib/http/mutation-guard", // 출처만 확인 — 로그아웃 전용(토큰 만료여도 동작해야 함)
   feeMutationGate: "@/lib/maintenance-fees/route-guard",
   bulkTransferMutationGate: "@/lib/bulk-transfer/route-guard",
 };
+// 출처만 보는 가드는 토큰 확인이 없으므로 여기 적힌 라우트에서만 인정(다른 라우트에서 토큰 확인을 빼는 우회로 차단)
+export const SAME_ORIGIN_ONLY_ROUTES = new Set(["/api/auth/logout"]);
 // 위임: 결과를 그대로 반환하면 되는 함수(내부에서 가드를 거침) → 모듈
 export const DELEGATE_MODULES = {
   handleAttendance: "@/lib/http/attendance-handler", // 두 번째 인자가 true 일 때만 withMutation
@@ -95,7 +98,7 @@ function returnsFirst(st) {
 }
 
 /** 핸들러 함수 하나 판정 */
-function analyzeFunction(fn, imports, delegates) {
+function analyzeFunction(fn, imports, delegates, route) {
   const p0 = fn.parameters[0];
   if (!p0 || !ts.isIdentifier(p0.name)) return "unprotected"; // 요청 객체를 이름으로 받지 않으면 넘길 수 없음
   const req = p0.name.text;
@@ -131,6 +134,7 @@ function analyzeFunction(fn, imports, delegates) {
         const call = unwrapParens(init.expression);
         const name = calleeName(call, imports, GUARD_MODULES);
         if (name && isReqArg(call, req)) {
+          if (name === "withSameOrigin" && !SAME_ORIGIN_ONLY_ROUTES.has(route)) return "unprotected";
           const next = statements[i + 1];
           const cond = next && ts.isIfStatement(next) ? unwrapParens(next.expression) : null;
           const checksError =
@@ -159,18 +163,19 @@ function analyzeFunction(fn, imports, delegates) {
 export function scanRouteSource(source, delegates, filePath) {
   const sf = ts.createSourceFile("route.ts", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const imports = importsOf(sf, filePath);
+  const route = filePath ? routeFromPath(filePath) : null;
   const results = [];
   const isExported = (n) => ts.canHaveModifiers(n) && (ts.getModifiers(n) ?? []).some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
 
   for (const st of sf.statements) {
     if (ts.isFunctionDeclaration(st) && st.name && MUTATION.has(st.name.text) && isExported(st)) {
-      results.push({ method: st.name.text, status: analyzeFunction(st, imports, delegates) });
+      results.push({ method: st.name.text, status: analyzeFunction(st, imports, delegates, route) });
     } else if (ts.isVariableStatement(st) && isExported(st)) {
       for (const d of st.declarationList.declarations) {
         if (!ts.isIdentifier(d.name) || !MUTATION.has(d.name.text)) continue;
         const init = d.initializer && unwrapParens(d.initializer);
         const fnLike = init && (ts.isArrowFunction(init) || ts.isFunctionExpression(init));
-        results.push({ method: d.name.text, status: fnLike ? analyzeFunction(init, imports, delegates) : "unknown" });
+        results.push({ method: d.name.text, status: fnLike ? analyzeFunction(init, imports, delegates, route) : "unknown" });
       }
     } else if (ts.isExportDeclaration(st)) {
       if (!st.exportClause) {

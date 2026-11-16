@@ -111,7 +111,7 @@ export function useSignatureSettings(
     const fd = new FormData();
     fd.append('file', file);
     try {
-      const res = await fetch('/api/auth/signature', { method: 'POST', body: fd });
+      const res = await csrfFetch('/api/auth/signature', { method: 'POST', body: fd });
       const data = await res.json();
       if (data.success) {
         setSigUrl(data.data?.url ?? null);
@@ -128,11 +128,13 @@ export function useSignatureSettings(
   const deleteSignature = () => {
     openConfirm('서명을 삭제하시겠습니까?', '삭제된 서명은 복구할 수 없습니다.', async () => {
       try {
-        await fetch('/api/auth/signature', { method: 'DELETE' });
+        const res = await csrfFetch('/api/auth/signature', { method: 'DELETE' });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.success) throw new Error(data?.error ?? '서명 삭제에 실패했습니다.');
         setSigUrl(null);
         toast.success('서명이 삭제되었습니다.');
-      } catch {
-        toast.error('삭제 중 오류가 발생했습니다.');
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : '삭제 중 오류가 발생했습니다.');
       }
       closeConfirm();
     });

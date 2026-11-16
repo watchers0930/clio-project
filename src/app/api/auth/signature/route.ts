@@ -3,6 +3,9 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { checkRowStoragePath } from '@/lib/storage/files-bucket';
+import { withMutation } from '@/lib/http/mutation-guard';
+import { readUploadImage } from '@/lib/http/upload-image';
+import { IMAGE_EXTENSION } from '@/lib/utils/signature-data-url';
 
 /**
  * GET /api/auth/signature
@@ -45,6 +48,9 @@ export async function GET() {
  * body: FormData { file: File }
  */
 export async function POST(request: NextRequest) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   try {
     const supabase = await createServerSupabaseClient();
     if (!supabase) return NextResponse.json({ success: false, error: 'DB 미설정' }, { status: 503 });
@@ -53,25 +59,19 @@ export async function POST(request: NextRequest) {
     if (!authUserId) return NextResponse.json({ success: false, error: '인증 필요' }, { status: 401 });
 
     const formData = await request.formData();
-    const file = formData.get('file') as File | null;
+    // 형식은 파일 내용으로 판별(브라우저가 보낸 type 은 위조 가능)
+    const image = await readUploadImage(formData.get('file'));
+    if (!image.ok) return NextResponse.json({ success: false, error: image.error }, { status: 400 });
 
-    if (!file) return NextResponse.json({ success: false, error: '파일이 없습니다.' }, { status: 400 });
-    if (file.size > 2 * 1024 * 1024) return NextResponse.json({ success: false, error: '파일 크기는 2MB 이하여야 합니다.' }, { status: 400 });
-    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
-      return NextResponse.json({ success: false, error: 'PNG, JPEG, WebP 형식만 지원합니다.' }, { status: 400 });
-    }
-
-    const ext = file.type === 'image/png' ? 'png' : file.type === 'image/jpeg' ? 'jpg' : 'webp';
-    const storagePath = `signatures/${authUserId}/signature.${ext}`;
-    const arrayBuffer = await file.arrayBuffer();
+    const storagePath = `signatures/${authUserId}/signature.${image.ext}`;
 
     const admin = createAdminSupabaseClient();
 
     // 기존 서명 덮어쓰기 (upsert)
     const { error: uploadErr } = await admin.storage
       .from('files')
-      .upload(storagePath, arrayBuffer, {
-        contentType: file.type,
+      .upload(storagePath, image.buffer, {
+        contentType: image.mime,
         upsert: true,
       });
 
@@ -91,6 +91,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'DB 업데이트 실패' }, { status: 500 });
     }
 
+    // 확장자가 바뀐 재업로드면 이전 형식 파일이 남지 않게 정리(본인 폴더의 다른 확장자만)
+    const stale = Object.values(IMAGE_EXTENSION)
+      .filter((ext) => ext !== image.ext)
+      .map((ext) => `signatures/${authUserId}/signature.${ext}`);
+    const { error: cleanupErr } = await admin.storage.from('files').remove(stale);
+    if (cleanupErr) console.error('[signature/POST] stale cleanup:', cleanupErr.message);
+
     const { data: signed } = await admin.storage.from('files').createSignedUrl(storagePath, 3600);
     return NextResponse.json({ success: true, data: { path: storagePath, url: signed?.signedUrl ?? null } });
   } catch (err) {
@@ -103,7 +110,10 @@ export async function POST(request: NextRequest) {
  * DELETE /api/auth/signature
  * 서명 이미지 삭제
  */
-export async function DELETE() {
+export async function DELETE(request: NextRequest) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   try {
     const supabase = await createServerSupabaseClient();
     if (!supabase) return NextResponse.json({ success: false, error: 'DB 미설정' }, { status: 503 });
@@ -119,7 +129,11 @@ export async function DELETE() {
       await admin.storage.from('files').remove([user.signature_path]);
     }
 
-    await admin.from('users').update({ signature_path: null }).eq('id', authUserId);
+    const { error: dbErr } = await admin.from('users').update({ signature_path: null }).eq('id', authUserId);
+    if (dbErr) {
+      console.error('[signature/DELETE] db update:', dbErr.message);
+      return NextResponse.json({ success: false, error: '서명 삭제 실패' }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true });
   } catch (err) {

@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Search, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth-store';
+import { PasswordChangeDialog } from './password-change-dialog';
 
 interface BreadcrumbItem {
   label: string;
@@ -21,6 +22,7 @@ function Header({
   onMenuClick,
 }: HeaderProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const pathname = usePathname();
   const router = useRouter();
@@ -44,6 +46,7 @@ function Header({
   })();
 
   return (
+    <>
     <header className="relative z-40 h-[68px] border-b border-border bg-white/92 backdrop-blur-md flex-shrink-0 lg:h-[72px]">
       <div className="flex h-full items-center px-4 sm:px-6 lg:px-10">
         {/* Left — mobile menu only */}
@@ -117,13 +120,9 @@ function Header({
                   </Link>
                   <button
                     className="block w-full text-left px-5 py-3 text-[14px] text-foreground hover:bg-page-bg transition-colors cursor-pointer"
-                    onClick={async () => {
+                    onClick={() => {
                       setUserMenuOpen(false);
-                      const newPw = prompt('새 비밀번호를 입력하세요 (6자 이상)');
-                      if (!newPw || newPw.length < 6) { if (newPw !== null) alert('비밀번호는 6자 이상이어야 합니다.'); return; }
-                      const res = await fetch('/api/auth/password', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ newPassword: newPw }) });
-                      const json = await res.json();
-                      alert(json.success ? '비밀번호가 변경되었습니다.' : (json.error ?? '비밀번호 변경에 실패했습니다.'));
+                      setPasswordOpen(true);
                     }}
                   >
                     비밀번호 변경
@@ -146,6 +145,9 @@ function Header({
         </div>
       </div>
     </header>
+    {/* 헤더의 backdrop-blur 가 fixed 기준 상자를 만들므로 창은 헤더 밖에 둔다 */}
+    <PasswordChangeDialog open={passwordOpen} onClose={() => setPasswordOpen(false)} />
+    </>
   );
 }
 

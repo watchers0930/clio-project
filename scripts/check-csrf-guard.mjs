@@ -7,7 +7,7 @@
  *
  * 판정: scripts/csrf-guard-scan.mjs (핸들러 본문 단위, 주석 제외, 해석 불가=unknown)
  * 예외: src/lib/http/csrf-exempt-routes.json (사유 필수, 실제 라우트에 없는 예외는 오류)
- * 모드: 기본=보고(목록만 출력, 빌드는 통과) / --strict=미보호·unknown 이 있으면 exit 1
+ * 모드: 기본=보고(목록만 출력) / --strict=미보호·unknown 이 있으면 exit 1 — prebuild 는 --strict(2026-11-17 전 라우트 보호 완료)
  *   단계적 전환 중이라 보고 모드로 시작하고, 마지막 단계에서 prebuild 를 --strict 로 바꾼다.
  */
 import { readdirSync, readFileSync, existsSync } from "node:fs";
