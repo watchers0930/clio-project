@@ -44,11 +44,13 @@ export function MenusSection() {
     setEnabled(next);
 
     try {
-      await csrfFetch('/api/users/sidebar', {
+      const res = await csrfFetch('/api/users/sidebar', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ menus: next }),
       });
+      // 저장 실패(4xx/5xx)도 화면을 되돌린다
+      if (!res.ok) throw new Error('메뉴 설정을 저장하지 못했습니다.');
       await setUser();
     } catch {
       setEnabled(enabled);

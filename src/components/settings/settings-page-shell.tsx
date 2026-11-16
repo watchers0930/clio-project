@@ -139,7 +139,11 @@ export function SettingsPageShell({ initialTab = 'departments', gmailSuccess, gm
 
   const deleteDept = (id: string) => {
     openConfirm('이 부서를 삭제하시겠습니까?', '직원이 있는 부서는 삭제할 수 없습니다.', async () => {
-      await csrfFetch(`/api/departments?id=${id}`, { method: 'DELETE' });
+      const res = await csrfFetch(`/api/departments?id=${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        toast.error(j.error ?? '부서를 삭제하지 못했습니다.');
+      }
       await loadDepartments();
       closeConfirm();
     });

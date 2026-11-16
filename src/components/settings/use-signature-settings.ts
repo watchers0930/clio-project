@@ -91,11 +91,15 @@ export function useSignatureSettings(
   const deleteCompanySeal = () => {
     openConfirm('회사 직인을 삭제하시겠습니까?', '삭제하면 재직증명서에 직인이 표시되지 않습니다.', async () => {
       try {
-        await csrfFetch('/api/settings/company-seal', { method: 'DELETE' });
+        const res = await csrfFetch('/api/settings/company-seal', { method: 'DELETE' });
+        if (!res.ok) {
+          const j = (await res.json().catch(() => ({}))) as { error?: string };
+          throw new Error(j.error ?? '삭제에 실패했습니다.');
+        }
         setSealUrl(null);
         toast.success('회사 직인이 삭제되었습니다.');
-      } catch {
-        toast.error('삭제 중 오류가 발생했습니다.');
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : '삭제 중 오류가 발생했습니다.');
       }
       closeConfirm();
     });
@@ -157,11 +161,15 @@ export function useSignatureSettings(
   const deleteCompanyLogo = () => {
     openConfirm('회사 로고를 삭제하시겠습니까?', '삭제하면 문서 워터마크가 표시되지 않습니다.', async () => {
       try {
-        await csrfFetch('/api/settings/company-logo', { method: 'DELETE' });
+        const res = await csrfFetch('/api/settings/company-logo', { method: 'DELETE' });
+        if (!res.ok) {
+          const j = (await res.json().catch(() => ({}))) as { error?: string };
+          throw new Error(j.error ?? '삭제에 실패했습니다.');
+        }
         setLogoUrl(null);
         toast.success('회사 로고가 삭제되었습니다.');
-      } catch {
-        toast.error('삭제 중 오류가 발생했습니다.');
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : '삭제 중 오류가 발생했습니다.');
       }
       closeConfirm();
     });

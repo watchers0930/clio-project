@@ -69,11 +69,15 @@ export function CredentialsTable() {
     if (!confirm('이 계정을 삭제하시겠습니까?')) return;
     setDeletingId(id);
     try {
-      await csrfFetch(`/api/account-credentials/${id}`, { method: 'DELETE' });
+      const res = await csrfFetch(`/api/account-credentials/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(j.error ?? '삭제에 실패했습니다.');
+      }
       setRows((prev) => prev.filter((r) => r.id !== id));
       toast.success('삭제되었습니다.');
-    } catch {
-      toast.error('삭제에 실패했습니다.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '삭제에 실패했습니다.');
     } finally {
       setDeletingId(null);
     }

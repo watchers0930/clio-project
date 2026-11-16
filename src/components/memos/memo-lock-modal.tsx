@@ -31,6 +31,11 @@ export function MemoLockModal({ onUnlock, onClose }: Props) {
         body: JSON.stringify({ password }),
       });
       const data = await res.json();
+      // 출처·토큰·세션 문제로 거절되면 '비밀번호 틀림'으로 오인하지 않게 실제 사유를 보여준다
+      if (!res.ok) {
+        setError(data.error ?? '요청을 처리하지 못했습니다. 새로고침 후 다시 시도해 주세요.');
+        return;
+      }
       if (data.valid) {
         onUnlock();
       } else {
