@@ -97,3 +97,13 @@ test("항목 수정은 모든 칸이 있어야 한다(숨김 해제·순서 초�
   assert.equal(validateItemInput({ name: "전기" }, "update").ok, false);
   assert.equal(validateItemInput({ name: "전기", unit: null, default_unit_price: null, sort_order: 0, is_active: false }, "update").ok, true);
 });
+
+test("항목명 정리: NFC·보이지 않는 문자 제거·연속 공백 하나로", () => {
+  const r = validateItemInput({ name: " 전기​  요금 ", unit: null, default_unit_price: null, sort_order: 0 }, "create");
+  assert.ok(r.ok);
+  if (r.ok) assert.equal(r.value.name, "전기 요금");
+  const nfd = validateItemInput({ name: "가스", unit: null }, "create");
+  assert.ok(nfd.ok);
+  if (nfd.ok) assert.equal(nfd.value.name, "가스");
+  assert.equal(validateItemInput({ name: "​﻿" }, "create").ok, false);
+});

@@ -37,3 +37,8 @@ export async function readJson(request: NextRequest): Promise<unknown> {
 }
 
 export const UNIQUE_VIOLATION = '23505';
+export const FK_VIOLATION = '23503';
+
+// 항목 상한 — 조회 상한(ENTRY_FETCH_LIMIT)이 항목 × 13개월(전년 12월 포함)을 언제나 담도록 함께 정한다
+export const MAX_ITEMS = 200;
+export const ENTRY_FETCH_LIMIT = MAX_ITEMS * 13;

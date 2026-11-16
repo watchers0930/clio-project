@@ -1,9 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { Eye, EyeOff, Pencil, Trash2, X } from 'lucide-react';
 import type { FeeItem, FeeItemInput } from '@/lib/maintenance-fees/types';
-import { formatNumberInput, parseNumberInput, toInput } from '@/lib/maintenance-fees/format';
+import { toInput } from '@/lib/maintenance-fees/format';
+import { parseNumberInput } from '@/lib/format/number-input';
+import { NumberInput } from '@/components/ui/number-input';
+import { useDialogA11y } from '@/hooks/use-dialog-a11y';
 import { inputCls, labelCls, primaryBtn, secondaryBtn } from './fee-modal-styles';
 
 // 열릴 때만 렌더된다 — 폼은 빈 상태로 시작
@@ -19,6 +22,9 @@ function toItemInput(it: FeeItem, over: Partial<FeeItemInput> = {}): FeeItemInpu
 }
 
 export function FeeItemManager({ items, onClose, onSave, onDelete }: Props) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  useDialogA11y(true, onClose, panelRef);
   const [editing, setEditing] = useState<FeeItem | null>(null);
   const [name, setName] = useState('');
   const [unit, setUnit] = useState('');
@@ -26,6 +32,9 @@ export function FeeItemManager({ items, onClose, onSave, onDelete }: Props) {
   const [order, setOrder] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [listError, setListError] = useState(''); // 숨기기 등 목록 동작 오류(폼 오류와 따로)
+  // 수정 중이던 항목이 삭제되면 새 항목 입력으로 본다(없는 id 로 PATCH → 404 방지)
+  const editingLive = editing ? (items.find((it) => it.id === editing.id) ?? null) : null;
 
   const resetForm = (it: FeeItem | null) => {
     setEditing(it);
@@ -47,25 +56,33 @@ export function FeeItemManager({ items, onClose, onSave, onDelete }: Props) {
       default_unit_price: parseNumberInput(price),
       sort_order: order ? Number(order) : 0,
       // 폼을 연 뒤 숨김을 바꿨을 수 있어 최신 목록의 값을 쓴다
-      is_active: items.find((it) => it.id === editing?.id)?.is_active ?? true,
+      is_active: editingLive?.is_active ?? true,
     };
     setSaving(true);
-    const err = await onSave(input, editing?.id);
+    const err = await onSave(input, editingLive?.id);
     setSaving(false);
     if (err) setError(err);
     else resetForm(null);
   };
 
   const toggleActive = async (it: FeeItem) => {
+    setListError('');
     const err = await onSave(toItemInput(it, { is_active: !it.is_active }), it.id);
-    if (err) setError(err);
+    if (err) setListError(err);
   };
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
-      <div className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl border border-border bg-white shadow-xl">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl border border-border bg-white shadow-xl outline-none"
+      >
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <h3 className="text-[15px] font-semibold text-foreground">관리비 항목 관리</h3>
+          <h3 id={titleId} className="text-[15px] font-semibold text-foreground">관리비 항목 관리</h3>
           <button onClick={onClose} className="p-0 text-foreground-secondary hover:text-foreground" aria-label="닫기">
             <X size={18} strokeWidth={1.5} />
           </button>
@@ -76,22 +93,24 @@ export function FeeItemManager({ items, onClose, onSave, onDelete }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <span className={labelCls}>항목명</span>
-              <input value={name} onChange={(e) => setName(e.target.value)} maxLength={50} placeholder="예: 전기, 수도, 일반관리비" className={inputCls} />
+              <input value={name} onChange={(e) => setName(e.target.value)} aria-label="항목명" maxLength={50} placeholder="예: 전기, 수도, 일반관리비" className={inputCls} />
             </div>
             <div className="flex flex-col gap-1.5">
               <span className={labelCls}>
                 단위 <span className="font-normal text-foreground-quaternary">(선택)</span>
               </span>
-              <input value={unit} onChange={(e) => setUnit(e.target.value)} maxLength={20} placeholder="예: kWh, ㎥" className={inputCls} />
+              <input value={unit} onChange={(e) => setUnit(e.target.value)} aria-label="단위" maxLength={20} placeholder="예: kWh, ㎥" className={inputCls} />
             </div>
             <div className="flex flex-col gap-1.5">
               <span className={labelCls}>
                 기본 단가 (원) <span className="font-normal text-foreground-quaternary">(선택)</span>
               </span>
-              <input
+              <NumberInput
                 value={price}
-                onChange={(e) => setPrice(formatNumberInput(e.target.value, { decimals: 2, maxInt: 10 }))}
-                inputMode="decimal"
+                onValueChange={setPrice}
+                decimals={2}
+                maxInt={10}
+                aria-label="기본 단가 (원)"
                 className={`${inputCls} text-right font-mono`}
               />
             </div>
@@ -101,6 +120,7 @@ export function FeeItemManager({ items, onClose, onSave, onDelete }: Props) {
                 value={order}
                 onChange={(e) => setOrder(e.target.value.replace(/\D/g, '').slice(0, 4))}
                 inputMode="numeric"
+                aria-label="표시 순서"
                 placeholder="0"
                 className={`${inputCls} text-right font-mono`}
               />
@@ -108,19 +128,20 @@ export function FeeItemManager({ items, onClose, onSave, onDelete }: Props) {
           </div>
           {error && <p className="text-[12px] text-red-500">{error}</p>}
           <div className="flex justify-end gap-2">
-            {editing && (
+            {editingLive && (
               <button onClick={() => resetForm(null)} className={secondaryBtn}>
                 새 항목으로
               </button>
             )}
             <button onClick={() => void submit()} disabled={saving} className={primaryBtn}>
-              {saving ? '저장 중...' : editing ? '수정 저장' : '항목 추가'}
+              {saving ? '저장 중...' : editingLive ? '수정 저장' : '항목 추가'}
             </button>
           </div>
         </div>
 
         {/* 항목 목록 */}
         <div className="flex flex-col gap-2 overflow-y-auto px-6 py-4">
+          {listError && <p className="text-[12px] text-red-500">{listError}</p>}
           {items.length === 0 ? (
             <p className="py-6 text-center text-[13px] text-foreground-tertiary">등록된 항목이 없습니다.</p>
           ) : (

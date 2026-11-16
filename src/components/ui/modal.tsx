@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useId, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useDialogA11y } from '@/hooks/use-dialog-a11y';
 
 interface ModalProps {
   open: boolean;
@@ -21,9 +22,6 @@ const sizeStyles = {
   xl: 'max-w-4xl',
 };
 
-const FOCUSABLE =
-  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
 function Modal({
   open,
   onClose,
@@ -34,63 +32,12 @@ function Modal({
   size = 'md',
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const previouslyFocused = useRef<HTMLElement | null>(null);
   const reactId = useId();
   const titleId = `${reactId}-title`;
   const descId = `${reactId}-desc`;
 
-  // 초점 관리(F10): 열릴 때만 초점을 패널 안으로 옮기고, 닫힌 뒤 트리거로 복원한다.
-  // deps는 [open]만 — onClose가 매 렌더 새 함수여도 입력 중 초점을 빼앗지 않는다.
-  useEffect(() => {
-    if (!open) return;
-    previouslyFocused.current = (document.activeElement as HTMLElement | null) ?? null;
-    const panel = panelRef.current;
-    if (panel) {
-      const items = panel.querySelectorAll<HTMLElement>(FOCUSABLE);
-      (items.length > 0 ? items[0] : panel).focus();
-    }
-    return () => {
-      // 닫힌 뒤 열기 직전 초점을 가졌던 요소로 복원(키보드 흐름 유지).
-      previouslyFocused.current?.focus?.();
-    };
-  }, [open]);
-
-  // Escape 닫기 + Tab 초점 가두기. 리스너만 재바인딩하므로 재실행이 초점을 옮기지 않는다.
-  useEffect(() => {
-    if (!open) return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-        return;
-      }
-      if (e.key !== 'Tab') return;
-      const panel = panelRef.current;
-      if (!panel) return;
-      const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
-        (el) => el.offsetParent !== null || el === panel,
-      );
-      if (items.length === 0) {
-        e.preventDefault();
-        panel.focus();
-        return;
-      }
-      const first = items[0];
-      const last = items[items.length - 1];
-      const active = document.activeElement;
-      if (!panel.contains(active)) {
-        e.preventDefault();
-        first.focus();
-      } else if (e.shiftKey && active === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && active === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
-  }, [open, onClose]);
+  // Escape 닫기·Tab 초점 가두기·초점 복원 — 공용 hook(창이 겹치면 맨 위 창만 반응)
+  useDialogA11y(open, onClose, panelRef);
 
   if (!open) return null;
 

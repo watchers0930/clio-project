@@ -1,6 +1,8 @@
 'use client';
 
+import { useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
+import { useDialogA11y } from '@/hooks/use-dialog-a11y';
 import { Spinner } from './spinner';
 
 interface ConfirmDialogProps {
@@ -32,6 +34,13 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  // Escape = 취소(처리 중이면 무시). 창 위에 떠도 맨 위인 확인창만 반응한다.
+  const cancelUnlessLoading = useCallback(() => {
+    if (!loading) onCancel();
+  }, [loading, onCancel]);
+  useDialogA11y(open, cancelUnlessLoading, panelRef);
+
   if (!open) return null;
 
   return (
@@ -39,7 +48,14 @@ export function ConfirmDialog({
       className="fixed inset-0 z-[70] flex items-center justify-center px-4 bg-black/40"
       onClick={(e) => { if (e.target === e.currentTarget && !loading) onCancel(); }}
     >
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-9 text-center sm:p-10">
+      <div
+        ref={panelRef}
+        role="alertdialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
+        className="bg-white rounded-xl shadow-xl w-full max-w-sm p-9 text-center sm:p-10 outline-none"
+      >
         {/* 아이콘 */}
         <div className={cn(
           'w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center',

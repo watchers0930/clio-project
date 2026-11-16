@@ -25,6 +25,7 @@ export function MaintenanceFeesView() {
   const [entryModal, setEntryModal] = useState(false);
   const [editingEntry, setEditingEntry] = useState<FeeEntry | null>(null);
   const [itemManager, setItemManager] = useState(false);
+  const [deletingEntry, setDeletingEntry] = useState(false); // 기록 삭제 처리 중 — 입력창 잠금
   const toast = useToast();
   const { confirmState, openConfirm, closeConfirm } = useConfirmDialog();
   const { items, entries, ready, forbidden, error, saveItem, deleteItem, saveEntry, deleteEntry } = useMaintenanceFees(year);
@@ -51,7 +52,9 @@ export function MaintenanceFeesView() {
   const confirmDeleteEntry = (entry: FeeEntry) =>
     openConfirm('관리비 기록 삭제', `${monthText} 기록을 삭제합니다. 되돌릴 수 없습니다.`, async () => {
       closeConfirm();
+      setDeletingEntry(true);
       const err = await deleteEntry(entry.id);
+      setDeletingEntry(false);
       if (err) return toast.error(err);
       setEntryModal(false);
       toast.success('삭제했습니다.');
@@ -137,6 +140,7 @@ export function MaintenanceFeesView() {
           items={items}
           usedItemIds={usedItemIds}
           editing={editingEntry}
+          locked={deletingEntry}
           onClose={() => setEntryModal(false)}
           onSubmit={async (input, id) => {
             const err = await saveEntry(input, id);

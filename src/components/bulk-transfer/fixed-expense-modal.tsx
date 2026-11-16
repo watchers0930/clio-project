@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { NumberInput } from '@/components/ui/number-input';
 import { X } from 'lucide-react';
 import type { FixedExpense, FixedExpenseInput } from '@/lib/bulk-transfer/types';
 
@@ -16,10 +17,6 @@ const inputCls =
 const labelCls = 'mb-1.5 block text-[12px] font-medium text-foreground-secondary';
 
 /** 숫자 문자열에 천단위 콤마 */
-function withComma(v: string): string {
-  const digits = v.replace(/\D/g, '');
-  return digits ? Number(digits).toLocaleString('ko-KR') : '';
-}
 
 export function FixedExpenseModal({ open, editing, onClose, onSubmit }: Props) {
   const [label, setLabel] = useState('');
@@ -84,10 +81,10 @@ export function FixedExpenseModal({ open, editing, onClose, onSubmit }: Props) {
 
           <div>
             <label className={labelCls}>금액 (원)</label>
-            <input
+            <NumberInput
               value={amount}
-              onChange={(e) => setAmount(withComma(e.target.value))}
-              inputMode="numeric"
+              onValueChange={setAmount}
+              decimals={0}
               placeholder="0"
               className={`${inputCls} text-right font-mono text-[15px]`}
             />

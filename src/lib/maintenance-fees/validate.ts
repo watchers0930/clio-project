@@ -21,6 +21,12 @@ function str(v: unknown): string {
   return typeof v === 'string' ? v.trim() : '';
 }
 
+/** 항목명 정리 — 저장 전 단일 기준: NFC, 보이지 않는 문자 제거, 연속 공백 하나로 (DB 유일 인덱스 btrim 과 어긋나지 않게) */
+export function normalizeItemName(v: unknown): string {
+  if (typeof v !== 'string') return '';
+  return v.normalize('NFC').replace(/[\u200B-\u200D\u2060\uFEFF]/g, '').replace(/\s+/g, ' ').trim();
+}
+
 function optStr(v: unknown, max: number, label: string): Result<string | null> {
   const s = str(v);
   if (!s) return { ok: true, value: null };
@@ -57,7 +63,7 @@ function optNum(
 
 export function validateItemInput(body: unknown, mode: 'create' | 'update'): Result<FeeItemInput> {
   if (!isObject(body)) return { ok: false, error: '요청 형식이 올바르지 않습니다.' };
-  const name = str(body.name);
+  const name = normalizeItemName(body.name);
   if (!name) return { ok: false, error: '항목명을 입력해 주세요.' };
   if (name.length > 50) return { ok: false, error: '항목명이 너무 깁니다. (최대 50자)' };
   const unit = optStr(body.unit, 20, '단위');

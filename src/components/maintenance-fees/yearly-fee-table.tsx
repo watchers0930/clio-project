@@ -9,7 +9,8 @@ interface Props {
 }
 
 // 15열 표라 전역 셀 여백(16px 20px)을 줄여 쓴다
-const cell = { padding: '12px 10px' };
+// (전역 td 글자 14px 도 @layer 밖이라 여기서 직접 12px 지정)
+const cell = { padding: '12px 10px', fontSize: '12px' };
 const MONTHS = Array.from({ length: 12 }, (_, i) => `${i + 1}월`);
 
 export function YearlyFeeTable({ view, year }: Props) {
@@ -38,7 +39,7 @@ export function YearlyFeeTable({ view, year }: Props) {
           <tbody>
             {view.rows.length === 0 ? (
               <tr>
-                <td colSpan={16} className="text-center text-foreground-tertiary" style={{ padding: '48px 20px' }}>
+                <td colSpan={16} className="text-center text-foreground-tertiary" style={{ padding: '48px 20px', fontSize: '13px' }}>
                   {year}년에 입력된 관리비가 없습니다.
                 </td>
               </tr>

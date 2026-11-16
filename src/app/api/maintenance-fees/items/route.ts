@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { ok, fail } from '@/lib/api-helper';
-import { feeMutationGate, feeReadGate, readJson, UNIQUE_VIOLATION } from '@/lib/maintenance-fees/route-guard';
+import { feeMutationGate, feeReadGate, MAX_ITEMS, readJson, UNIQUE_VIOLATION } from '@/lib/maintenance-fees/route-guard';
 import { validateItemInput } from '@/lib/maintenance-fees/validate';
 import { ITEM_SELECT, mapItem } from '@/lib/maintenance-fees/map';
 
@@ -13,7 +13,7 @@ export async function GET() {
     .select(ITEM_SELECT)
     .order('sort_order', { ascending: true })
     .order('name', { ascending: true })
-    .limit(500);
+    .limit(MAX_ITEMS);
   if (error) return fail('항목을 불러오지 못했습니다.', 500);
   return ok((data ?? []).map(mapItem));
 }
@@ -24,6 +24,9 @@ export async function POST(request: NextRequest) {
   if (gate.error) return gate.error;
   const v = validateItemInput(await readJson(request), 'create');
   if (!v.ok) return fail(v.error, 400);
+  const { count, error: countError } = await gate.db.from('maintenance_fee_items').select('id', { count: 'exact', head: true });
+  if (countError) return fail('항목을 저장하지 못했습니다.', 500);
+  if ((count ?? 0) >= MAX_ITEMS) return fail(`항목은 최대 ${MAX_ITEMS}개까지 등록할 수 있습니다. 쓰지 않는 항목을 삭제해 주세요.`, 409);
   const { data, error } = await gate.db
     .from('maintenance_fee_items')
     .insert({ ...v.value, created_by: gate.userId })

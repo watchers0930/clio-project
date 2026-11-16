@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { NumberInput } from '@/components/ui/number-input';
 import { X, FileUp, Sparkles } from 'lucide-react';
 import type { AccountExtractResult, ExtractedAccount } from '@/lib/bulk-transfer/extract-accounts';
 import type { TransferItemInput, TransferPayee, TransferPayeeInput } from '@/lib/bulk-transfer/types';
@@ -17,10 +18,6 @@ const inputCls =
   'w-full rounded-xl border border-border bg-surface-secondary px-4 py-2.5 text-[13px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary';
 const labelCls = 'mb-1.5 block text-[12px] font-medium text-foreground-secondary';
 
-function withComma(v: string): string {
-  const d = v.replace(/\D/g, '');
-  return d ? Number(d).toLocaleString('ko-KR') : '';
-}
 
 export function PdfImportModal({ open, onClose, createPayee, createItem, onDone }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -201,10 +198,10 @@ export function PdfImportModal({ open, onClose, createPayee, createItem, onDone 
                 </div>
                 <div>
                   <label className={labelCls}>금액 (원)</label>
-                  <input
+                  <NumberInput
                     value={amount}
-                    onChange={(e) => setAmount(withComma(e.target.value))}
-                    inputMode="numeric"
+                    onValueChange={setAmount}
+                    decimals={0}
                     className={`${inputCls} text-right font-mono`}
                   />
                 </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { NumberInput } from '@/components/ui/number-input';
 import { X } from 'lucide-react';
 import type { MonthlyExpense, MonthlyExpenseInput } from '@/lib/bulk-transfer/types';
 import { currentMonth, isValidMonth } from '@/lib/bulk-transfer/month-utils';
@@ -17,10 +18,6 @@ const inputCls =
   'w-full rounded-xl border border-border bg-surface-secondary px-4 py-2.5 text-[13px] text-foreground placeholder:text-foreground-quaternary focus:outline-none focus:ring-2 focus:ring-primary';
 const labelCls = 'mb-1.5 block text-[12px] font-medium text-foreground-secondary';
 
-function withComma(v: string): string {
-  const digits = v.replace(/\D/g, '');
-  return digits ? Number(digits).toLocaleString('ko-KR') : '';
-}
 
 export function MonthlyExpenseModal({ open, editing, defaultMonth, onClose, onSubmit }: Props) {
   const [label, setLabel] = useState('');
@@ -87,10 +84,10 @@ export function MonthlyExpenseModal({ open, editing, defaultMonth, onClose, onSu
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>금액 (원)</label>
-              <input
+              <NumberInput
                 value={amount}
-                onChange={(e) => setAmount(withComma(e.target.value))}
-                inputMode="numeric"
+                onValueChange={setAmount}
+                decimals={0}
                 placeholder="0"
                 className={`${inputCls} text-right font-mono text-[15px]`}
               />
