@@ -52,11 +52,7 @@ export async function POST(request: NextRequest) {
   const mutation = await withMutation(request);
   if (mutation.error) return mutation.error;
   try {
-    const supabase = await createServerSupabaseClient();
-    if (!supabase) return NextResponse.json({ success: false, error: 'DB 미설정' }, { status: 503 });
-
-    const authUserId = await getAuthUserId(supabase);
-    if (!authUserId) return NextResponse.json({ success: false, error: '인증 필요' }, { status: 401 });
+    const authUserId = mutation.userId;
 
     const formData = await request.formData();
     // 형식은 파일 내용으로 판별(브라우저가 보낸 type 은 위조 가능)
@@ -115,13 +111,9 @@ export async function DELETE(request: NextRequest) {
   const mutation = await withMutation(request);
   if (mutation.error) return mutation.error;
   try {
-    const supabase = await createServerSupabaseClient();
-    if (!supabase) return NextResponse.json({ success: false, error: 'DB 미설정' }, { status: 503 });
+    const authUserId = mutation.userId;
 
-    const authUserId = await getAuthUserId(supabase);
-    if (!authUserId) return NextResponse.json({ success: false, error: '인증 필요' }, { status: 401 });
-
-    const { data: user } = await supabase.from('users').select('signature_path').eq('id', authUserId).single();
+    const { data: user } = await mutation.supabase.from('users').select('signature_path').eq('id', authUserId).single();
     const admin = createAdminSupabaseClient();
 
     // 본인 서명 폴더 경로만 저장소에서 지운다 — 위조 경로로 남의 파일 삭제 차단(경로 값은 아래에서 비운다)

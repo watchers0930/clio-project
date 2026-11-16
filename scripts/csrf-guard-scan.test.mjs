@@ -89,4 +89,6 @@ test("출처만 보는 가드(withSameOrigin)는 로그아웃 라우트에서만
   assert.equal(at("src/app/api/auth/logout/route.ts"), "POST:protected");
   assert.equal(at("src/app/api/memos/route.ts"), "POST:unprotected");
   assert.equal(at(undefined), "POST:unprotected");
+  // 같은 로그아웃 파일이어도 다른 메서드는 불인정
+  assert.equal(scanRouteSource(src.replace("function POST", "function DELETE"), verified, "src/app/api/auth/logout/route.ts").map((r) => r.status).join(), "unprotected");
 });
