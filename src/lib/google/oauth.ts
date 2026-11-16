@@ -20,9 +20,10 @@ export function createOAuthClient() {
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 }
 
-export function getAuthUrl() {
+export function getAuthUrl(state: string) {
   const oauth2Client = createOAuthClient();
   return oauth2Client.generateAuthUrl({
+    state,
     access_type: 'offline',
     scope: SCOPES,
     prompt: 'consent',

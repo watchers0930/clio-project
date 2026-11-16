@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getAuthUserId } from '@/lib/auth-helper';
+import { OAUTH_STATE_COOKIE, oauthStateMatches } from '@/lib/google/oauth-state';
 import { createOAuthClient } from '@/lib/google/oauth';
 import { google } from 'googleapis';
 
@@ -15,8 +18,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/settings?tab=gmail&error=cancelled`);
   }
 
-  // 임시 쿠키에서 userId 가져오기
-  const userId = request.cookies.get('google_oauth_uid')?.value;
+  // 같은 브라우저에서 시작한 연동인지(state) 확인 — 다른 사람이 시작한 연동을 이 계정에 붙이지 않는다
+  if (!oauthStateMatches(request.cookies.get(OAUTH_STATE_COOKIE)?.value, searchParams.get('state'))) {
+    return NextResponse.redirect(`${origin}/settings?tab=gmail&error=session_expired`);
+  }
+
+  // 연결 대상은 쿠키 값이 아니라 지금 로그인한 사용자(위조 불가)
+  const supabase = await createServerSupabaseClient();
+  const userId = supabase ? await getAuthUserId(supabase) : null;
   if (!userId) {
     return NextResponse.redirect(`${origin}/settings?tab=gmail&error=session_expired`);
   }
@@ -57,7 +66,7 @@ export async function GET(request: NextRequest) {
 
     // 임시 쿠키 삭제 후 성공 리다이렉트
     const response = NextResponse.redirect(`${origin}/settings?tab=gmail&success=connected`);
-    response.cookies.delete('google_oauth_uid');
+    response.cookies.delete(OAUTH_STATE_COOKIE);
     return response;
   } catch (err) {
     console.error('[google/callback]', err);

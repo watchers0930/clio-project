@@ -39,31 +39,28 @@ export async function GET(request: NextRequest) {
       .eq('id', authUser.id)
       .single();
 
-    const user: User = profile
-      ? {
-          id: profile.id,
-          email: profile.email,
-          name: profile.name,
-          position: profile.position ?? '',
-          department_id: profile.department_id,
-          role: profile.role as User['role'],
-          avatar_url: profile.avatar_url,
-          signature_path: profile.signature_path ?? null,
-          sidebar_menus: (profile.sidebar_menus as string[] | null) ?? [],
-          rank_level: (profile as { rank_level?: number | null }).rank_level ?? null,
-          rank_title: (profile as { rank_title?: string | null }).rank_title ?? null,
-          created_at: profile.created_at,
-        }
-      : {
-          id: authUser.id,
-          email: authUser.email!,
-          name: authUser.user_metadata?.name ?? authUser.email!.split('@')[0],
-          position: '',
-          department_id: null,
-          role: 'user',
-          avatar_url: null,
-          created_at: authUser.created_at,
-        };
+    // 직원 명부(users)에 없는 계정은 사용자로 인정하지 않는다(user_metadata 폴백 없음)
+    if (!profile) {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: '등록되지 않은 계정입니다. 관리자에게 문의해주세요.' },
+        { status: 403 },
+      );
+    }
+
+    const user: User = {
+      id: profile.id,
+      email: profile.email,
+      name: profile.name,
+      position: profile.position ?? '',
+      department_id: profile.department_id,
+      role: profile.role as User['role'],
+      avatar_url: profile.avatar_url,
+      signature_path: profile.signature_path ?? null,
+      sidebar_menus: (profile.sidebar_menus as string[] | null) ?? [],
+      rank_level: (profile as { rank_level?: number | null }).rank_level ?? null,
+      rank_title: (profile as { rank_title?: string | null }).rank_title ?? null,
+      created_at: profile.created_at,
+    };
 
     return NextResponse.json<ApiResponse<User>>({ success: true, data: user });
   } catch {

@@ -4,6 +4,7 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 const INACTIVE_ACCOUNT_MESSAGE = '비활성화된 계정입니다. 관리자에게 문의해주세요.';
+const UNREGISTERED_ACCOUNT_MESSAGE = '등록되지 않은 계정입니다. 관리자에게 문의해주세요.';
 
 export async function POST(request: NextRequest) {
   try {
@@ -66,23 +67,19 @@ export async function POST(request: NextRequest) {
       .eq('id', authData.user.id)
       .single();
 
-    // Auth 차단 이전에 비활성화된 계정 — 방금 만든 세션을 지우고 거부
-    if (profile?.is_active === false) {
+    // 직원 명부(users)에 없는 계정(관리자가 만들지 않은 계정)과 비활성 계정은 방금 만든 세션을 지우고 거부.
+    // user_metadata 는 본인이 바꿀 수 있는 값이라 역할·부서의 근거로 쓰지 않는다.
+    if (!profile || profile.is_active === false) {
       await supabase.auth.signOut();
-      const denied = NextResponse.json<ApiResponse>({ success: false, error: INACTIVE_ACCOUNT_MESSAGE }, { status: 403 });
+      const denied = NextResponse.json<ApiResponse>(
+        { success: false, error: profile ? INACTIVE_ACCOUNT_MESSAGE : UNREGISTERED_ACCOUNT_MESSAGE },
+        { status: 403 },
+      );
       for (const cookie of cookiesToSet) denied.cookies.set(cookie.name, cookie.value, cookie.options);
       return denied;
     }
 
-    const user = profile ?? {
-      id: authData.user.id,
-      email: authData.user.email!,
-      name: authData.user.user_metadata?.name ?? email.split('@')[0],
-      department_id: authData.user.user_metadata?.department_id ?? null,
-      role: authData.user.user_metadata?.role ?? 'user',
-      avatar_url: null,
-      created_at: authData.user.created_at,
-    };
+    const user = profile;
 
     // 응답 생성 후 쿠키 설정
     const response = NextResponse.json<ApiResponse<LoginResponse>>({

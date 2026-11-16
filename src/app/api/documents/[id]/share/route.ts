@@ -27,7 +27,8 @@ export async function GET(
       return NextResponse.json({ success: false, error: '문서 접근 권한이 없습니다.' }, { status: 403 });
     }
 
-    const { data, error } = await supabase
+    // 권한 표는 서버 권한으로만 읽고 쓴다(사용자 세션 정책은 058 에서 본인 행으로 좁힘). 접근 확인은 위에서 끝남
+    const { data, error } = await createAdminSupabaseClient()
       .from('document_permissions')
       .select('*, users:granted_to_user(id, name, email), departments:granted_to_dept(id, name), granter:granted_by(name)')
       .eq('document_id', documentId)
@@ -72,7 +73,8 @@ export async function POST(
       return NextResponse.json({ success: false, error: '공유 대상이 필요합니다.' }, { status: 400 });
     }
 
-    const { data, error } = await supabase
+    // 권한 부여는 서버 권한으로만 — 사용자 세션의 직접 INSERT 는 058 에서 차단(자기 자신에게 권한 부여 방지)
+    const { data, error } = await createAdminSupabaseClient()
       .from('document_permissions')
       .insert({
         document_id: documentId,
@@ -156,7 +158,8 @@ export async function DELETE(
     const permissionId = searchParams.get('permissionId');
     if (!permissionId) return NextResponse.json({ success: false, error: 'permissionId 필수' }, { status: 400 });
 
-    const { error } = await supabase
+    // 권한 제거도 서버 권한으로만 — 사용자 세션의 직접 DELETE 는 058 에서 차단
+    const { error } = await createAdminSupabaseClient()
       .from('document_permissions')
       .delete()
       .eq('id', permissionId)
