@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from './csrf-client';
 import { useCallback, useEffect, useState } from 'react';
 import type { GmailDeleteHit } from './useGmailDelete';
 
@@ -54,7 +55,7 @@ export function useGmailAutoDelete() {
     setPreviewing(true);
     setPreviewed(false);
     try {
-      const res = await fetch('/api/gmail/search-messages', {
+      const res = await csrfFetch('/api/gmail/search-messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ keyword: pattern }),
@@ -96,7 +97,7 @@ export function useGmailAutoDelete() {
     try {
       for (const pattern of patterns) {
         try {
-          const res = await fetch('/api/gmail/auto-delete-rules', {
+          const res = await csrfFetch('/api/gmail/auto-delete-rules', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pattern }),
@@ -125,7 +126,7 @@ export function useGmailAutoDelete() {
 
   const removeRule = useCallback(async (id: string): Promise<ActionResult> => {
     try {
-      const res = await fetch(`/api/gmail/auto-delete-rules?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const res = await csrfFetch(`/api/gmail/auto-delete-rules?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok || !data.success) return { ok: false, error: data.error };
       setRules((prev) => prev.filter((r) => r.id !== id));

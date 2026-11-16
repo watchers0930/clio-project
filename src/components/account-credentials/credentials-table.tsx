@@ -4,11 +4,14 @@ import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2, Eye, EyeOff, Upload, Search } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { CredentialFormModal, type CredentialRow } from './credential-form-modal';
 import { CsvImportModal } from './csv-import-modal';
 
 export function CredentialsTable() {
   const toast = useToast();
+  const { confirmState, openConfirm, closeConfirm } = useConfirmDialog();
   const [rows, setRows] = useState<CredentialRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [visibleIds, setVisibleIds] = useState<Set<string>>(new Set());
@@ -65,8 +68,14 @@ export function CredentialsTable() {
     toast.success(editingRow ? '수정되었습니다.' : '추가되었습니다.');
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('이 계정을 삭제하시겠습니까?')) return;
+  // 공용 확인창(Escape=취소) → 확인 시 삭제
+  const handleDelete = (id: string) =>
+    openConfirm('계정 삭제', '이 계정을 삭제합니다.', () => {
+      closeConfirm();
+      void runDelete(id);
+    }, { confirmLabel: '삭제' });
+
+  const runDelete = async (id: string) => {
     setDeletingId(id);
     try {
       const res = await csrfFetch(`/api/account-credentials/${id}`, { method: 'DELETE' });
@@ -270,6 +279,15 @@ export function CredentialsTable() {
           toast.success(`${count}개 계정을 가져왔습니다.`);
           void load();
         }}
+      />
+      <ConfirmDialog
+        open={confirmState.open}
+        title={confirmState.title}
+        description={confirmState.description}
+        confirmLabel={confirmState.confirmLabel ?? '삭제'}
+        variant={confirmState.variant ?? 'danger'}
+        onConfirm={confirmState.onConfirm}
+        onCancel={closeConfirm}
       />
     </>
   );

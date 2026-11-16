@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from './csrf-client';
 import { useCallback, useEffect, useState } from 'react';
 
 // 자주 쓰는 삭제 키워드를 브라우저(localStorage)에 저장. 개인 편의용 즐겨찾기.
@@ -105,7 +106,7 @@ export function useGmailDelete() {
     setSearching(true);
     setSearched(false);
     try {
-      const res = await fetch('/api/gmail/search-messages', {
+      const res = await csrfFetch('/api/gmail/search-messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ keyword }),
@@ -152,7 +153,7 @@ export function useGmailDelete() {
     if (ids.length === 0) return { ok: false, error: '삭제할 메일을 선택해 주세요.' };
     setDeleting(true);
     try {
-      const res = await fetch('/api/gmail/delete-messages', {
+      const res = await csrfFetch('/api/gmail/delete-messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messageIds: ids }),

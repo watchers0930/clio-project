@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import { Mail, RefreshCw, Unlink, CheckCircle, AlertCircle, ShieldCheck, Paperclip, Link2 } from 'lucide-react';
 import { Badge, Spinner } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
+import { csrfFetch } from '@/hooks/csrf-client';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { GmailDeletePanel } from './gmail-delete-panel';
 import { GmailAutoDeletePanel } from './gmail-auto-delete-panel';
 
@@ -30,6 +33,7 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
   const [reindexing, setReindexing] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const toast = useToast();
+  const { confirmState, openConfirm, closeConfirm } = useConfirmDialog();
 
   const loadStatus = async () => {
     try {
@@ -60,7 +64,7 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
     setSyncing(true);
     try {
       // 최근 100개 대상 증분 동기화
-      const res = await fetch('/api/gmail/sync', { method: 'POST' });
+      const res = await csrfFetch('/api/gmail/sync', { method: 'POST' });
       const data = await res.json();
       if (data.success) {
         toast.success(`동기화 완료 — ${data.synced ?? 0}개 이메일이 추가되었습니다.`);
@@ -77,11 +81,17 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
     }
   };
 
-  const handleReindex = async () => {
-    if (!confirm('기존에 동기화된 Gmail 데이터를 모두 지우고, 첨부파일 내용까지 포함해 최근 100개를 다시 인덱싱합니다. 계속하시겠습니까?')) return;
+  // 공용 확인창(Escape=취소) → 확인 시 실행
+  const handleReindex = () =>
+    openConfirm('Gmail 재인덱싱', '기존에 동기화된 Gmail 데이터를 모두 지우고, 첨부파일 내용까지 포함해 최근 100개를 다시 인덱싱합니다.', () => {
+      closeConfirm();
+      void runReindex();
+    }, { confirmLabel: '재인덱싱', variant: 'primary' });
+
+  const runReindex = async () => {
     setReindexing(true);
     try {
-      const res = await fetch('/api/gmail/sync', {
+      const res = await csrfFetch('/api/gmail/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reindex: true }),
@@ -100,15 +110,25 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
     }
   };
 
-  const handleDisconnect = async () => {
-    if (!confirm('Gmail 연결을 해제하면 동기화된 이메일 데이터가 모두 삭제됩니다. 계속하시겠습니까?')) return;
+  const handleDisconnect = () =>
+    openConfirm('Gmail 연결 해제', '연결을 해제하면 동기화된 이메일 데이터가 모두 삭제됩니다.', () => {
+      closeConfirm();
+      void runDisconnect();
+    }, { confirmLabel: '연결 해제' });
+
+  const runDisconnect = async () => {
     setDisconnecting(true);
     try {
-      await fetch('/api/gmail/disconnect', { method: 'DELETE' });
+      const res = await csrfFetch('/api/gmail/disconnect', { method: 'DELETE' });
+      // 실패(거절·오류)를 '해제되었습니다'로 표시하지 않는다
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(j.error ?? '연결 해제 중 오류가 발생했습니다.');
+      }
       toast.success('Gmail 연결이 해제되었습니다.');
       setStatus({ connected: false });
-    } catch {
-      toast.error('연결 해제 중 오류가 발생했습니다.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '연결 해제 중 오류가 발생했습니다.');
     } finally {
       setDisconnecting(false);
     }
@@ -123,6 +143,7 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
   }
 
   return (
+    <>
     <div className="flex flex-col gap-6">
     <div className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden">
       <div className="px-5 py-5 sm:px-8 sm:py-6 border-b border-border">
@@ -300,5 +321,15 @@ export function GmailSection({ successParam, errorParam, msgParam }: GmailSectio
       )
     )}
     </div>
+      <ConfirmDialog
+        open={confirmState.open}
+        title={confirmState.title}
+        description={confirmState.description}
+        confirmLabel={confirmState.confirmLabel ?? '삭제'}
+        variant={confirmState.variant ?? 'danger'}
+        onConfirm={confirmState.onConfirm}
+        onCancel={closeConfirm}
+      />
+    </>
   );
 }

@@ -1,3 +1,4 @@
+import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
@@ -14,6 +15,9 @@ const MAX_KEYWORD_LEN = 200;
 // POST /api/gmail/search-messages — 키워드로 Gmail 메일함 전체를 실시간 검색해 미리보기 목록 반환
 // body { keyword: string } — Gmail 검색 문법(from:, subject: 등) 사용 가능
 export async function POST(request: NextRequest) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   try {
     const supabase = await createServerSupabaseClient();
     if (!supabase) return NextResponse.json({ error: '서버 오류' }, { status: 500 });

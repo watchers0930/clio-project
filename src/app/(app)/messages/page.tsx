@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
@@ -141,7 +142,7 @@ export default function MessagesPage() {
     if (dmCreatingRef.current) return;
     dmCreatingRef.current = true;
     try {
-      const res = await fetch('/api/messages/channels', {
+      const res = await csrfFetch('/api/messages/channels', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'direct', targetUserId }),
       });
@@ -240,7 +241,7 @@ export default function MessagesPage() {
     setMessagesMap(prev => ({ ...prev, [activeChannel]: [...(prev[activeChannel] ?? []), tempMsg] }));
     setChannels(prev => prev.map(c => (c.id === activeChannel ? { ...c, lastMessage: content } : c)));
     try {
-      const res = await fetch('/api/messages/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ channelId: activeChannel, content }) });
+      const res = await csrfFetch('/api/messages/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ channelId: activeChannel, content }) });
       if (!res.ok) toast.error('메시지 전송에 실패했습니다.');
     } catch { toast.error('메시지 전송 중 오류가 발생했습니다.'); }
   };
@@ -272,7 +273,7 @@ export default function MessagesPage() {
     if (!selectedFileId || !activeChannel || sharing) return;
     setSharing(true);
     try {
-      const res = await fetch('/api/messages/share-file', {
+      const res = await csrfFetch('/api/messages/share-file', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ channelId: activeChannel, fileId: selectedFileId, expiresInDays }),
@@ -329,7 +330,7 @@ export default function MessagesPage() {
       formData.append('file', file);
       formData.append('channelId', activeChannel);
 
-      const res = await fetch('/api/messages/upload-attachment', { method: 'POST', body: formData });
+      const res = await csrfFetch('/api/messages/upload-attachment', { method: 'POST', body: formData });
       if (res.ok) {
         // 업로드 성공 → 서버 메시지로 교체
         await fetchMessages(activeChannel);
@@ -437,7 +438,7 @@ export default function MessagesPage() {
         onConfirm={async () => {
           if (!confirmDelete.channelId) return;
           try {
-            const res = await fetch('/api/messages/channels?id=' + confirmDelete.channelId, { method: 'DELETE' });
+            const res = await csrfFetch('/api/messages/channels?id=' + confirmDelete.channelId, { method: 'DELETE' });
             if (res.ok) {
               if (activeChannel === confirmDelete.channelId) setActiveChannel(null);
               await loadData();

@@ -1,3 +1,4 @@
+import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
@@ -5,6 +6,9 @@ import { getAuthUserId } from '@/lib/auth-helper';
 
 // DELETE /api/gmail/disconnect — Gmail 연결 해제
 export async function DELETE(request: NextRequest) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   const supabase = await createServerSupabaseClient();
   if (!supabase) return NextResponse.json({ error: '서버 오류' }, { status: 500 });
 

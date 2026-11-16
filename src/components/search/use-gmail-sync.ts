@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
 
@@ -34,7 +35,7 @@ export function useGmailSync(onSynced?: () => void) {
     if (syncing) return;
     setSyncing(true);
     try {
-      const res = await fetch('/api/gmail/sync', {
+      const res = await csrfFetch('/api/gmail/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ auto }),

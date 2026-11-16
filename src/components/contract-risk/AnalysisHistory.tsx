@@ -8,8 +8,11 @@ import { cn } from '@/lib/utils';
 import { CONTRACT_TYPE_LABELS } from '@/lib/contract-risk-items';
 import { HistorySearchBar, type HistoryFilter } from '@/components/contract-risk/HistorySearchBar';
 import type { ContractRiskListItem } from '@/lib/types/contract-risk';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 
 export function AnalysisHistory() {
+  const { confirmState, openConfirm, closeConfirm } = useConfirmDialog();
   const router = useRouter();
   const [items, setItems] = useState<ContractRiskListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,15 +43,19 @@ export function AnalysisHistory() {
     setFilter(f);
   };
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  const handleDelete = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!confirm('이 분석 이력을 삭제하시겠습니까?')) return;
-    const res = await fetch(`/api/contract-risk/${id}`, { method: 'DELETE' });
-    if (res.ok) {
-      setItems(prev => prev.filter(i => i.id !== id));
-      setCompareIds(prev => { const next = new Set(prev); next.delete(id); return next; });
-    }
+    openConfirm('분석 이력 삭제', '이 분석 이력을 삭제합니다.', () => {
+      closeConfirm();
+      void (async () => {
+        const res = await fetch(`/api/contract-risk/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          setItems(prev => prev.filter(i => i.id !== id));
+          setCompareIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+        }
+      })();
+    }, { confirmLabel: '삭제' });
   };
 
   const toggleCompare = (id: string, e: React.MouseEvent) => {
@@ -70,6 +77,7 @@ export function AnalysisHistory() {
   };
 
   return (
+    <>
     <div className="flex flex-col gap-6">
       <HistorySearchBar filter={filter} onChange={handleFilterChange} />
 
@@ -195,5 +203,15 @@ export function AnalysisHistory() {
         </div>
       )}
     </div>
+      <ConfirmDialog
+        open={confirmState.open}
+        title={confirmState.title}
+        description={confirmState.description}
+        confirmLabel={confirmState.confirmLabel ?? '삭제'}
+        variant={confirmState.variant ?? 'danger'}
+        onConfirm={confirmState.onConfirm}
+        onCancel={closeConfirm}
+      />
+    </>
   );
 }

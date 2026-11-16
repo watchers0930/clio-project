@@ -1,3 +1,4 @@
+import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
@@ -8,6 +9,9 @@ export const maxDuration = 60;
 // POST /api/gmail/translate  body: { text: string, targetLang: string }
 // 이메일 본문 번역. 긴 본문 대응(청크 분할). 서버 인증 + 입력 검증.
 export async function POST(request: NextRequest) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   try {
     const supabase = await createServerSupabaseClient();
     if (!supabase) return NextResponse.json({ error: 'DB 미설정' }, { status: 503 });

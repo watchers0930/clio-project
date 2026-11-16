@@ -1,5 +1,6 @@
 'use client';
 
+import { csrfFetch } from '@/hooks/csrf-client';
 import { useEffect, useState, useCallback } from 'react';
 import { TRANSLATE_LANGS } from '@/lib/ai/translate';
 
@@ -60,7 +61,7 @@ export function GmailEmailModal({ messageId, emailName, onClose }: Props) {
     setTranslating(true);
     setTranslateError(null);
     try {
-      const res = await fetch('/api/gmail/translate', {
+      const res = await csrfFetch('/api/gmail/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: email.body, targetLang }),

@@ -1,3 +1,4 @@
+import { withMutation } from '@/lib/http/mutation-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
@@ -13,6 +14,9 @@ const MAX_DELETE_PER_REQUEST = 1000;
 // POST /api/gmail/delete-messages — 선택한 메일을 Gmail 휴지통으로 이동 + 로컬 동기화분 정리
 // body { messageIds: string[] } — 미리보기(search-messages)에서 사용자가 확인·선택한 id 목록
 export async function POST(request: NextRequest) {
+  // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
+  const mutation = await withMutation(request);
+  if (mutation.error) return mutation.error;
   try {
     const supabase = await createServerSupabaseClient();
     if (!supabase) return NextResponse.json({ error: '서버 오류' }, { status: 500 });

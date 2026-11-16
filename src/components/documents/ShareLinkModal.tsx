@@ -236,7 +236,7 @@ export function ShareLinkModal({
     setSendingReviewRequest(true);
     try {
       const res = isFileShare
-        ? await fetch('/api/messages/share-file', {
+        ? await csrfFetch('/api/messages/share-file', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -246,7 +246,7 @@ export function ShareLinkModal({
               message: reviewMessage,
             }),
           })
-        : await fetch('/api/messages/send', {
+        : await csrfFetch('/api/messages/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
