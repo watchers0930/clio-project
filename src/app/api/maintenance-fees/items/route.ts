@@ -8,13 +8,15 @@ import { ITEM_SELECT, mapItem } from '@/lib/maintenance-fees/map';
 export async function GET() {
   const gate = await feeReadGate();
   if (gate.error) return gate.error;
-  const { data, error } = await gate.db
+  const { data, error, count } = await gate.db
     .from('maintenance_fee_items')
-    .select(ITEM_SELECT)
+    .select(ITEM_SELECT, { count: 'exact' })
     .order('sort_order', { ascending: true })
     .order('name', { ascending: true })
     .limit(MAX_ITEMS);
   if (error) return fail('항목을 불러오지 못했습니다.', 500);
+  // 잘린 항목 목록이면 그 항목의 기록이 표에서 빠져 합계가 틀린다 → 조용히 자르지 않고 알린다
+  if ((count ?? 0) > MAX_ITEMS) return fail(`항목이 ${MAX_ITEMS}개를 넘어 불러올 수 없습니다. 관리자에게 문의해 주세요.`, 500);
   return ok((data ?? []).map(mapItem));
 }
 

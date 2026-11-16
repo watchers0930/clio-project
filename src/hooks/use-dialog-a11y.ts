@@ -6,6 +6,8 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import { dialogStack } from '@/lib/ui/dialog-stack';
 
+// 열릴 때 첫 초점: 지정한 요소 → 첫 입력칸 → 첫 초점 가능 요소(키보드로 연 직후 닫기 버튼이 눌리는 것 방지)
+const AUTOFOCUS = '[data-autofocus], input:not([disabled]), select:not([disabled]), textarea:not([disabled])';
 const FOCUSABLE =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -21,8 +23,8 @@ export function useDialogA11y(open: boolean, onClose: () => void, panelRef: RefO
     previouslyFocused.current = (document.activeElement as HTMLElement | null) ?? null;
     const panel = panelRef.current;
     if (panel) {
-      const items = panel.querySelectorAll<HTMLElement>(FOCUSABLE);
-      (items.length > 0 ? items[0] : panel).focus();
+      const target = panel.querySelector<HTMLElement>(AUTOFOCUS) ?? panel.querySelector<HTMLElement>(FOCUSABLE) ?? panel;
+      target.focus();
     }
     return () => {
       dialogStack.remove(id);
@@ -35,9 +37,12 @@ export function useDialogA11y(open: boolean, onClose: () => void, panelRef: RefO
   useEffect(() => {
     if (!open) return;
     const handleKey = (e: KeyboardEvent) => {
+      // 같은 키를 위쪽 창이 이미 처리했거나(처리 중 순서가 바뀌어도 두 창이 함께 닫히지 않게), 한글 조합 중이면 무시
+      if (e.defaultPrevented || e.isComposing) return;
       const id = stackId.current;
       if (id === null || !dialogStack.isTop(id)) return;
       if (e.key === 'Escape') {
+        e.preventDefault();
         onClose();
         return;
       }

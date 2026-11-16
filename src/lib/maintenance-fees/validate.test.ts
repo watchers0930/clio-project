@@ -107,3 +107,9 @@ test("항목명 정리: NFC·보이지 않는 문자 제거·연속 공백 하�
   if (nfd.ok) assert.equal(nfd.value.name, "가스");
   assert.equal(validateItemInput({ name: "​﻿" }, "create").ok, false);
 });
+
+test("항목명 정리: 소프트하이픈·방향 표시 문자도 제거", () => {
+  const r = validateItemInput({ name: "전\u00AD기\u200E\u202A\u2066", unit: null }, "create");
+  assert.ok(r.ok);
+  if (r.ok) assert.equal(r.value.name, "전기");
+});

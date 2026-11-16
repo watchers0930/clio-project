@@ -67,6 +67,8 @@ export function MonthlyFeeTable({ view, monthText, onRowClick }: Props) {
                   key={row.entry.id}
                   onClick={() => onRowClick(row)}
                   onKeyDown={(e) => {
+                    // 누르고 있을 때의 자동 반복은 무시(연 창이 곧바로 반응하지 않게)
+                    if (e.repeat) return;
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
                       onRowClick(row);

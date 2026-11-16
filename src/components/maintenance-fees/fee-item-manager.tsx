@@ -59,6 +59,7 @@ export function FeeItemManager({ items, onClose, onSave, onDelete }: Props) {
       is_active: editingLive?.is_active ?? true,
     };
     setSaving(true);
+    setListError('');
     const err = await onSave(input, editingLive?.id);
     setSaving(false);
     if (err) setError(err);

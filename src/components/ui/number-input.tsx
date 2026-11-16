@@ -1,9 +1,10 @@
 'use client';
 
 // 쉼표 숫자 입력칸 — 입력·붙여넣기 정리와 커서 위치 복원(lib/format/number-input).
-// 숫자로 읽을 수 없는 입력은 무시하고 이전 값을 유지한다. 쉼표에서 Backspace/Delete 는 옆 숫자를 지운다.
-import { useLayoutEffect, useRef, type InputHTMLAttributes, type KeyboardEvent } from 'react';
-import { caretAfterFormat, countSignificant, formatNumberInput, type NumberInputOptions } from '@/lib/format/number-input';
+// 값을 몰래 바꿔야 하는 입력은 무시하고 이전 값을 유지한다. 붙여넣기는 문구에서 숫자를 뽑아 넣는다.
+// 쉼표에서 Backspace/Delete 는 옆 숫자를 지운다.
+import { useLayoutEffect, useRef, type ClipboardEvent, type InputHTMLAttributes, type KeyboardEvent } from 'react';
+import { caretAfterFormat, countSignificant, extractPastedNumber, formatNumberInput, type NumberInputOptions } from '@/lib/format/number-input';
 
 type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'inputMode'> &
   NumberInputOptions & {
@@ -11,7 +12,7 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 
     onValueChange: (next: string) => void;
   };
 
-export function NumberInput({ value, onValueChange, decimals, allowNegative, maxInt, onKeyDown, ...rest }: Props) {
+export function NumberInput({ value, onValueChange, decimals, allowNegative, maxInt, onKeyDown, onPaste, ...rest }: Props) {
   const ref = useRef<HTMLInputElement>(null);
   const pendingCaret = useRef<number | null>(null);
 
@@ -23,17 +24,40 @@ export function NumberInput({ value, onValueChange, decimals, allowNegative, max
     pendingCaret.current = null;
   }, [value]);
 
+  // 값이 그대로면 다시 그려지지 않으므로, React 가 입력칸을 되돌린 뒤 커서만 제자리로 돌린다
+  const restoreCaretLater = (pos: number) => {
+    pendingCaret.current = null;
+    const el = ref.current;
+    requestAnimationFrame(() => {
+      if (el && document.activeElement === el) el.setSelectionRange(pos, pos);
+    });
+  };
+
   const handleChange = (raw: string, caret: number) => {
     const next = formatNumberInput(raw, { decimals, allowNegative, maxInt });
     if (next === null) {
-      // 숫자가 아닌 입력: 값이 그대로라 다시 그려지지 않으므로, React 가 값을 되돌린 뒤 커서만 원래 자리로
-      const el = ref.current;
-      const back = Math.max(0, caret - (raw.length - value.length));
-      requestAnimationFrame(() => el?.setSelectionRange(back, back));
+      restoreCaretLater(Math.max(0, caret - (raw.length - value.length)));
       return;
     }
-    pendingCaret.current = caretAfterFormat(next, countSignificant(raw, caret));
+    const nextCaret = caretAfterFormat(next, countSignificant(raw, caret));
+    if (next === value) {
+      restoreCaretLater(nextCaret);
+      return;
+    }
+    pendingCaret.current = nextCaret;
     onValueChange(next);
+  };
+
+  const handlePaste = (e: ClipboardEvent<HTMLInputElement>) => {
+    onPaste?.(e);
+    if (e.defaultPrevented) return;
+    e.preventDefault();
+    const pasted = extractPastedNumber(e.clipboardData.getData('text'), { decimals, allowNegative, maxInt });
+    if (pasted === null) return;
+    const el = e.currentTarget;
+    const start = el.selectionStart ?? value.length;
+    const end = el.selectionEnd ?? value.length;
+    handleChange(value.slice(0, start) + pasted + value.slice(end), start + pasted.length);
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -54,6 +78,7 @@ export function NumberInput({ value, onValueChange, decimals, allowNegative, max
       inputMode={decimals > 0 ? 'decimal' : 'numeric'}
       onChange={(e) => handleChange(e.target.value, e.target.selectionStart ?? e.target.value.length)}
       onKeyDown={handleKeyDown}
+      onPaste={handlePaste}
     />
   );
 }

@@ -58,7 +58,9 @@ export function FeeEntryModal({ month, monthText, items, usedItemIds, editing, l
   const busy = saving || locked;
 
   const selectItem = (id: string) => {
-    setUnitPrice(unitPriceOnItemChange(unitPrice, item, items.find((it) => it.id === id) ?? null));
+    // 이전 항목은 선택 원본(itemId)으로 찾는다 — 숨겨져 선택이 무효가 된 항목의 기본 단가도 '자동으로 들어간 값'으로 보고 교체
+    const prev = items.find((it) => it.id === itemId) ?? null;
+    setUnitPrice(unitPriceOnItemChange(unitPrice, prev, items.find((it) => it.id === id) ?? null));
     setItemId(id);
   };
 

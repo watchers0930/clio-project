@@ -45,8 +45,10 @@ export async function POST(request: NextRequest) {
     .select(ENTRY_SELECT)
     .single();
   if (error?.code === UNIQUE_VIOLATION) return fail('이 달에 이미 입력된 항목입니다.', 409);
-  // 활성 확인과 저장 사이에 항목이 삭제된 경우
-  if (error?.code === FK_VIOLATION) return fail('사용할 수 없는 항목입니다.', 400);
+  // 활성 확인과 저장 사이에 항목이 삭제된 경우(작성자 FK 위반과 구분)
+  if (error?.code === FK_VIOLATION && `${error.message} ${error.details ?? ''}`.includes('item_id')) {
+    return fail('사용할 수 없는 항목입니다.', 400);
+  }
   if (error || !data) return fail('관리비 기록을 저장하지 못했습니다.', 500);
   return ok(mapEntry(data), 201);
 }

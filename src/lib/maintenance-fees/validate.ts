@@ -24,7 +24,7 @@ function str(v: unknown): string {
 /** 항목명 정리 — 저장 전 단일 기준: NFC, 보이지 않는 문자 제거, 연속 공백 하나로 (DB 유일 인덱스 btrim 과 어긋나지 않게) */
 export function normalizeItemName(v: unknown): string {
   if (typeof v !== 'string') return '';
-  return v.normalize('NFC').replace(/[\u200B-\u200D\u2060\uFEFF]/g, '').replace(/\s+/g, ' ').trim();
+  return v.normalize('NFC').replace(/[\u00AD\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/g, '').replace(/\s+/g, ' ').trim();
 }
 
 function optStr(v: unknown, max: number, label: string): Result<string | null> {
