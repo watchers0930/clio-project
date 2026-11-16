@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { useAuthStore } from '@/store/auth-store';
 import { useWorkLedger } from '@/hooks/use-work-ledger';
 import { exportWorkLedgerExcel } from '@/lib/work-ledger/excel';
@@ -20,6 +22,7 @@ function nextDue(project: WorkProject): string {
 
 export function WorkLedgerView() {
   const toast = useToast();
+  const { confirmState, openConfirm, closeConfirm } = useConfirmDialog();
   const currentUserId = useAuthStore((s) => s.user?.id ?? null);
   const { projects, departments, managers, loading, createProject, updateProject, deleteProject } = useWorkLedger();
 
@@ -58,15 +61,15 @@ export function WorkLedgerView() {
     }
   };
 
-  const handleDelete = async (p: WorkProject) => {
-    if (!window.confirm(`'${p.name}' 작업을 삭제하시겠습니까?`)) return;
-    try {
-      await deleteProject(p.id);
-      toast.success('삭제되었습니다.');
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : '삭제에 실패했습니다.');
-    }
-  };
+  // 공용 확인창(Escape=취소) → 확인 시 창을 닫고 삭제
+  const handleDelete = (p: WorkProject) =>
+    openConfirm('작업 삭제', `'${p.name}' 작업을 삭제합니다.`, () => {
+      closeConfirm();
+      deleteProject(p.id).then(
+        () => toast.success('삭제되었습니다.'),
+        (e) => toast.error(e instanceof Error ? e.message : '삭제에 실패했습니다.'),
+      );
+    }, { confirmLabel: '삭제' });
 
   const handleExport = async () => {
     try {
@@ -133,6 +136,16 @@ export function WorkLedgerView() {
         project={viewing}
         departments={departments}
         onClose={() => setViewing(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmState.open}
+        title={confirmState.title}
+        description={confirmState.description}
+        confirmLabel={confirmState.confirmLabel ?? '삭제'}
+        variant={confirmState.variant ?? 'danger'}
+        onConfirm={confirmState.onConfirm}
+        onCancel={closeConfirm}
       />
     </>
   );

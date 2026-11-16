@@ -9,6 +9,8 @@ import { Card } from '@/components/ui/card';
 import { Badge, type BadgeVariant } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { fmtDays } from './format';
 import {
   LEAVE_STATUS_LABEL,
@@ -60,6 +62,7 @@ function leaveDocUrl(r: LeaveRequestView): string {
 export function LeaveRequestList({ requests, loading, error, onSubmit, onDelete }: Props) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const { confirmState, openConfirm, closeConfirm } = useConfirmDialog();
 
   const submit = async (id: string) => {
     setBusyId(id);
@@ -70,17 +73,19 @@ export function LeaveRequestList({ requests, loading, error, onSubmit, onDelete 
     }
   };
 
-  const remove = async (id: string) => {
-    if (!window.confirm('이 휴가 신청(초안)을 삭제하시겠습니까?')) return;
-    setBusyId(id);
-    try {
-      await onDelete(id);
-    } finally {
-      setBusyId(null);
-    }
-  };
+  // 공용 확인창(Escape=취소) → 확인 시 창을 닫고 삭제(처리 중 표시 유지)
+  const remove = (id: string) =>
+    openConfirm('휴가 신청 삭제', '이 휴가 신청(초안)을 삭제합니다.', () => {
+      closeConfirm();
+      setBusyId(id);
+      onDelete(id).then(
+        () => setBusyId(null),
+        () => setBusyId(null),
+      );
+    }, { confirmLabel: '삭제' });
 
   return (
+    <>
     <Card className="overflow-hidden">
       <div className="border-b border-border px-5 py-4">
         <h3 className="text-sm font-semibold text-foreground">휴가 신청 현황</h3>
@@ -153,6 +158,16 @@ export function LeaveRequestList({ requests, loading, error, onSubmit, onDelete 
         </ul>
       )}
     </Card>
+      <ConfirmDialog
+        open={confirmState.open}
+        title={confirmState.title}
+        description={confirmState.description}
+        confirmLabel={confirmState.confirmLabel ?? '삭제'}
+        variant={confirmState.variant ?? 'danger'}
+        onConfirm={confirmState.onConfirm}
+        onCancel={closeConfirm}
+      />
+    </>
   );
 }
 

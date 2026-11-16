@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useToast } from '@/components/ui/toast';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { useBulkTransfer } from '@/hooks/use-bulk-transfer';
 import type {
   FixedExpense,
@@ -29,6 +31,21 @@ type Tab = 'items' | 'payees' | 'fixed' | 'monthly' | 'compare';
 
 export function BulkTransferView() {
   const toast = useToast();
+  const { confirmState, openConfirm, closeConfirm } = useConfirmDialog();
+  // 삭제 공용 흐름: 공용 확인창(Escape=취소) → 확인 시 창을 닫고 실행 → 결과 알림
+  const confirmDelete = (title: string, description: string, run: () => Promise<unknown>) =>
+    openConfirm(
+      title,
+      description,
+      () => {
+        closeConfirm();
+        run().then(
+          () => toast.success('삭제되었습니다.'),
+          (err) => toast.error(err instanceof Error ? err.message : '삭제에 실패했습니다.'),
+        );
+      },
+      { confirmLabel: '삭제' },
+    );
   const {
     payees,
     items,
@@ -83,15 +100,8 @@ export function BulkTransferView() {
       toast.success('거래처가 추가되었습니다.');
     }
   };
-  const handleDeletePayee = async (p: TransferPayee) => {
-    if (!window.confirm(`'${p.name}' 거래처를 삭제하시겠습니까?`)) return;
-    try {
-      await deletePayee(p.id);
-      toast.success('삭제되었습니다.');
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : '삭제에 실패했습니다.');
-    }
-  };
+  const handleDeletePayee = (p: TransferPayee) =>
+    confirmDelete('거래처 삭제', `'${p.name}' 거래처를 삭제합니다.`, () => deletePayee(p.id));
 
   // --- 이체 건 핸들러 ---
   const openAddItem = () => {
@@ -111,15 +121,8 @@ export function BulkTransferView() {
       toast.success('이체 건이 추가되었습니다.');
     }
   };
-  const handleDeleteItem = async (it: TransferItem) => {
-    if (!window.confirm(`'${it.payee_name}' 이체 건을 삭제하시겠습니까?`)) return;
-    try {
-      await deleteItem(it.id);
-      toast.success('삭제되었습니다.');
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : '삭제에 실패했습니다.');
-    }
-  };
+  const handleDeleteItem = (it: TransferItem) =>
+    confirmDelete('이체 건 삭제', `'${it.payee_name}' 이체 건을 삭제합니다.`, () => deleteItem(it.id));
   const handleToggleDone = async (it: TransferItem) => {
     try {
       await setItemStatus(it.id, it.status === 'done' ? 'pending' : 'done');
@@ -154,15 +157,8 @@ export function BulkTransferView() {
       toast.success('고정지출이 추가되었습니다.');
     }
   };
-  const handleDeleteExpense = async (e: FixedExpense) => {
-    if (!window.confirm(`'${e.label}' 항목을 삭제하시겠습니까?`)) return;
-    try {
-      await deleteExpense(e.id);
-      toast.success('삭제되었습니다.');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : '삭제에 실패했습니다.');
-    }
-  };
+  const handleDeleteExpense = (e: FixedExpense) =>
+    confirmDelete('고정지출 삭제', `'${e.label}' 항목을 삭제합니다.`, () => deleteExpense(e.id));
   const handleSaveBalance = async (value: number) => {
     try {
       await saveBalance(value);
@@ -192,15 +188,8 @@ export function BulkTransferView() {
       toast.success('월지출이 추가되었습니다.');
     }
   };
-  const handleDeleteMonthly = async (e: MonthlyExpense) => {
-    if (!window.confirm(`'${e.label}' 항목을 삭제하시겠습니까?`)) return;
-    try {
-      await deleteMonthly(e.id);
-      toast.success('삭제되었습니다.');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : '삭제에 실패했습니다.');
-    }
-  };
+  const handleDeleteMonthly = (e: MonthlyExpense) =>
+    confirmDelete('월지출 삭제', `'${e.label}' 항목을 삭제합니다.`, () => deleteMonthly(e.id));
 
   // 아이템 모달에서 "새 거래처" → 거래처 모달로 전환
   const addPayeeFromItem = () => {
@@ -302,6 +291,15 @@ export function BulkTransferView() {
         defaultMonth={monthlyDefaultMonth}
         onClose={() => setMonthlyModal(false)}
         onSubmit={submitMonthly}
+      />
+      <ConfirmDialog
+        open={confirmState.open}
+        title={confirmState.title}
+        description={confirmState.description}
+        confirmLabel={confirmState.confirmLabel ?? '삭제'}
+        variant={confirmState.variant ?? 'danger'}
+        onConfirm={confirmState.onConfirm}
+        onCancel={closeConfirm}
       />
     </>
   );
