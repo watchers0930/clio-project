@@ -1,4 +1,5 @@
 import { withMutation } from '@/lib/http/mutation-guard';
+import { loadSelectedComments, parseSelectedCommentIds } from '@/lib/documents/selected-comments';
 import { isWorkflowLockedStatus } from '@/lib/documents/document-status';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
@@ -73,9 +74,9 @@ export async function POST(
     if (!canManage) return NextResponse.json({ success: false, error: '문서 수정 권한이 없습니다.' }, { status: 403 });
 
     const body = await req.json();
-    const { mode, selectedCommentIds } = body as {
+    const { mode, selectedCommentIds: selectedCommentIdsInput } = body as {
       mode: 'insert' | 'append' | 'replace';
-      selectedCommentIds: string[];
+      selectedCommentIds: unknown;
       targetSection?: string;
       newSectionTitle?: string;
       findText?: string;
@@ -83,9 +84,9 @@ export async function POST(
       replaceScope?: string;
     };
 
-    if (!selectedCommentIds || selectedCommentIds.length === 0) {
-      return NextResponse.json({ success: false, error: '반영할 댓글을 선택해주세요.' }, { status: 400 });
-    }
+    const selection = parseSelectedCommentIds(selectedCommentIdsInput);
+    if (!selection.ok) return NextResponse.json({ success: false, error: selection.error }, { status: 400 });
+    const selectedCommentIds = selection.ids;
 
     const admin = createAdminSupabaseClient();
 
@@ -103,20 +104,16 @@ export async function POST(
     if (!doc.content) return NextResponse.json({ success: false, error: '문서 내용이 없습니다.' }, { status: 400 });
     const versionedDoc = doc as VersionedDocumentRow;
 
+    // 선택된 댓글 조회 — 전부 이 문서의 댓글이어야 한다(스냅샷 저장 전에 거부해 고아 스냅샷을 남기지 않는다)
+    const comments = await loadSelectedComments(admin, documentId, selectedCommentIds);
+    if (!comments) {
+      return NextResponse.json({ success: false, error: '선택된 댓글을 찾을 수 없습니다.' }, { status: 404 });
+    }
+
     // 적용 전 현재 버전 스냅샷 저장
     const snapshotPayload = buildSnapshotInsertPayload(versionedDoc);
     const { error: snapshotError } = await admin.from('documents').insert(snapshotPayload);
     if (snapshotError) throw snapshotError;
-
-    // 선택된 댓글 조회
-    const { data: comments } = await admin
-      .from('document_comments')
-      .select('id, content, user_id')
-      .in('id', selectedCommentIds);
-
-    if (!comments || comments.length === 0) {
-      return NextResponse.json({ success: false, error: '선택된 댓글을 찾을 수 없습니다.' }, { status: 404 });
-    }
     const userNameMap = await loadCommentUserNames(admin, comments);
 
     const feedbackList = comments
@@ -263,6 +260,7 @@ ${feedbackList}
         applied_by: authUserId,
         applied_version_number: nextVersionNumber,
       })
+      .eq('document_id', documentId)
       .in('id', selectedCommentIds);
 
     if (commentUpdateError) throw commentUpdateError;

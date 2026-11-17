@@ -16,7 +16,7 @@ type FileAccessRow = {
   department_id: string | null;
 };
 
-type DocumentAccessRow = {
+export type DocumentAccessRow = {
   id: string;
   created_by: string | null;
 };

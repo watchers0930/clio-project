@@ -32,8 +32,8 @@ interface SaveMarkdownInput {
   sourceFileIds?: string[];
   instructions?: string;
   versionFields: VersionFields;
-  originDocumentId?: string;
-  originContext?: string;
+  originDocumentId?: string | null;
+  originContext?: string | null;
   format: OutputFormat;
   leaveInputs: Record<string, string>;
   dateStr: string;

@@ -2,7 +2,7 @@
 // 인증·접근 권한 확인과 응답 생성은 라우트가 맡고, 여기서는 조회·조립만 한다.
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { createAdminSupabaseClient } from '@/lib/supabase/admin';
-import { canAccessDocument } from '@/lib/permissions';
+import { getAccessibleDocumentIds, type DocumentAccessRow } from '@/lib/permissions';
 import { kstDateFromISO } from '@/lib/utils/date-kst';
 import { originContextLabel } from '@/lib/documents/origin-context';
 
@@ -83,7 +83,7 @@ export async function loadDocumentDetail(
     templateId
       ? admin
           .from('documents')
-          .select('id, title, created_at, status, version_number, template_id')
+          .select('id, title, created_at, status, version_number, template_id, created_by')
           .eq('template_id', templateId)
           .neq('id', id)
           .order('created_at', { ascending: false })
@@ -92,7 +92,7 @@ export async function loadDocumentDetail(
     sourceFileIds.length > 0
       ? admin
           .from('documents')
-          .select('id, title, created_at, status, version_number, source_file_ids')
+          .select('id, title, created_at, status, version_number, source_file_ids, created_by')
           .neq('id', id)
           .contains('source_file_ids', [sourceFileIds[0]])
           .order('created_at', { ascending: false })
@@ -100,20 +100,20 @@ export async function loadDocumentDetail(
       : Promise.resolve({ data: [], error: null }),
     admin
       .from('documents')
-      .select('id, title, created_at, status, version_number')
+      .select('id, title, created_at, status, version_number, created_by')
       .neq('id', id)
       .order('created_at', { ascending: false })
       .limit(30),
     originDocumentId
       ? admin
           .from('documents')
-          .select('id, title, created_at, status, version_number')
+          .select('id, title, created_at, status, version_number, created_by')
           .eq('id', originDocumentId)
           .single()
       : Promise.resolve({ data: null, error: null }),
     admin
       .from('documents')
-      .select('id, title, created_at, status, version_number, origin_context')
+      .select('id, title, created_at, status, version_number, origin_context, created_by')
       .eq('origin_document_id', id)
       .order('created_at', { ascending: false })
       .limit(6),
@@ -139,7 +139,17 @@ export async function loadDocumentDetail(
     score: number;
   }>();
 
-  const addRelatedDocs = async (
+  // 관련·원본·파생 문서는 서버 권한으로 읽으므로 볼 수 있는 것만 — 후보 전체를 한 번에 판정(행마다 조회하던 N+1 제거)
+  const candidateRows = [
+    ...((relatedByTemplateResult.data ?? []) as DocumentAccessRow[]),
+    ...((relatedBySourceResult.data ?? []) as DocumentAccessRow[]),
+    ...((relatedByTitleResult.data ?? []) as DocumentAccessRow[]),
+    ...(originDocumentResult.data ? [originDocumentResult.data as DocumentAccessRow] : []),
+    ...((derivedDocumentsResult.data ?? []) as DocumentAccessRow[]),
+  ];
+  const accessibleIds = await getAccessibleDocumentIds(supabase, authUserId, roleInfo.role, roleInfo.department_id, candidateRows);
+
+  const addRelatedDocs = (
     rows: Array<Record<string, unknown>>,
     relationLabel: string,
     score = 1,
@@ -148,8 +158,7 @@ export async function loadDocumentDetail(
       const relatedId = row.id as string;
       if (!relatedId) continue;
       const resolvedRelationLabel = (row.relationLabel as string | undefined) ?? relationLabel;
-      const allowed = await canAccessDocument(supabase, authUserId, roleInfo.role, roleInfo.department_id, relatedId);
-      if (!allowed) continue;
+      if (!accessibleIds.has(relatedId)) continue;
       const existing = relatedMap.get(relatedId);
       if (existing) {
         const labels = new Set(existing.relationLabel.split(' · ').concat(resolvedRelationLabel));
@@ -172,8 +181,8 @@ export async function loadDocumentDetail(
     }
   };
 
-  await addRelatedDocs((relatedByTemplateResult.data as Array<Record<string, unknown>> | null) ?? [], '같은 템플릿', 3);
-  await addRelatedDocs((relatedBySourceResult.data as Array<Record<string, unknown>> | null) ?? [], '같은 소스', 3);
+  addRelatedDocs((relatedByTemplateResult.data as Array<Record<string, unknown>> | null) ?? [], '같은 템플릿', 3);
+  addRelatedDocs((relatedBySourceResult.data as Array<Record<string, unknown>> | null) ?? [], '같은 소스', 3);
 
   const titleRelatedCandidates = ((relatedByTitleResult.data as Array<Record<string, unknown>> | null) ?? [])
     .map((row) => {
@@ -190,7 +199,7 @@ export async function loadDocumentDetail(
       overlapCount: overlap.length,
     }));
 
-  await addRelatedDocs(titleRelatedCandidates as Array<Record<string, unknown>>, '같은 제목/검색어', 2);
+  addRelatedDocs(titleRelatedCandidates as Array<Record<string, unknown>>, '같은 제목/검색어', 2);
 
   return {
     ...docData,
@@ -240,7 +249,7 @@ export async function loadDocumentDetail(
           versionNumber: doc.versionNumber,
           relationLabel: doc.relationLabel,
         })),
-      originDocument: originDocumentResult.data
+      originDocument: originDocumentResult.data && accessibleIds.has(originDocumentResult.data.id)
         ? {
             id: originDocumentResult.data.id,
             title: originDocumentResult.data.title,
@@ -250,7 +259,7 @@ export async function loadDocumentDetail(
             relationLabel: formatOriginLabel(originContext),
           }
         : null,
-      derivedDocuments: (derivedDocumentsResult.data ?? []).map((row) => ({
+      derivedDocuments: (derivedDocumentsResult.data ?? []).filter((row) => accessibleIds.has(row.id)).map((row) => ({
         id: row.id,
         title: row.title,
         createdAt: kstDateFromISO(row.created_at),

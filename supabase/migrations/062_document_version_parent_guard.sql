@@ -1,7 +1,7 @@
 -- 062: 문서 버전의 부모(parent_id) 연결 검사 — DB 최종 관문
 --
 -- 문제(2026-11-17 운영 확인): documents 의 insert/update RLS 는 created_by = auth.uid() 만 본다.
---   로그인한 직원이 공개 anon 키로 REST(/rest/v1/documents)를 직접 부르면 앱 검사(lib/documents/version-parent.ts)를 건너뛰고
+--   로그인한 직원이 공개 anon 키로 REST(/rest/v1/documents)를 직접 부르면 앱 검사(lib/documents/document-links.ts)를 건너뛰고
 --   볼 수 없는 남의 문서에 parent_id 를 붙여 그 버전 묶음(버전 목록의 제목·작성자·반영 코멘트)에 끼어들 수 있다.
 --
 -- 규칙(앱 canAccessDocument 와 같거나 더 넓게 — 정상 경로를 막지 않도록):

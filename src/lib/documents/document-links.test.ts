@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { resolveVersionParentWith, type VersionParentDeps } from "./version-parent";
+import { resolveVersionParentWith, type VersionParentDeps } from "./document-links";
 
 const ROOT = "0b6c1f0e-3a3b-4c4d-8e8f-9a9b0c0d1e1f";
 const V2 = "1c7d2a1f-4b4c-4d5e-9f90-ab0c1d2e3f40";
@@ -68,4 +68,43 @@ test("부모의 원본이 다시 버전 행이면(깨진 체인) 404 — DB 트�
   const r = await resolveVersionParentWith(d, V3);
   assert.equal(r.ok, false);
   if (!r.ok) assert.equal(r.status, 404);
+});
+
+// ── 원본(origin_document_id) ──
+import { resolveOriginDocumentWith, parseOriginContext } from "./document-links";
+
+function originDeps(canAccess = true) {
+  return {
+    loadDocument: async (id: string) => (id === ROOT || id === V2 ? { id, parent_id: id === V2 ? ROOT : null } : null),
+    canAccess: async () => canAccess,
+  };
+}
+
+test("원본이 없으면 null 로 통과", async () => {
+  for (const v of [undefined, null, ""]) {
+    assert.deepEqual(await resolveOriginDocumentWith(originDeps(), v), { ok: true, originDocumentId: null });
+  }
+});
+
+test("원본 값이 UUID 가 아니면 400", async () => {
+  const r = await resolveOriginDocumentWith(originDeps(), "abc");
+  assert.equal(r.ok ? 0 : r.status, 400);
+});
+
+test("없는 원본·볼 수 없는 원본은 404", async () => {
+  assert.equal((await resolveOriginDocumentWith(originDeps(), OTHER)).ok, false);
+  const r = await resolveOriginDocumentWith(originDeps(false), ROOT);
+  assert.equal(r.ok ? 0 : r.status, 404);
+});
+
+test("볼 수 있는 원본은 그대로(버전 행도 원본으로 쓸 수 있다)", async () => {
+  assert.deepEqual(await resolveOriginDocumentWith(originDeps(), V2), { ok: true, originDocumentId: V2 });
+});
+
+test("출처 구분값은 짧은 영문 식별자만", () => {
+  assert.deepEqual(parseOriginContext(undefined), { ok: true, originContext: null });
+  assert.deepEqual(parseOriginContext("review_followup"), { ok: true, originContext: "review_followup" });
+  assert.equal(parseOriginContext("<script>").ok, false);
+  assert.equal(parseOriginContext("a".repeat(65)).ok, false);
+  assert.equal(parseOriginContext(3).ok, false);
 });

@@ -1,4 +1,5 @@
 import { withMutation } from '@/lib/http/mutation-guard';
+import { loadSelectedComments, parseSelectedCommentIds } from '@/lib/documents/selected-comments';
 import { isWorkflowLockedStatus } from '@/lib/documents/document-status';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
@@ -65,10 +66,9 @@ export async function POST(
     if (!canManage) return NextResponse.json({ success: false, error: '문서 수정 권한이 없습니다.' }, { status: 403 });
 
     const body = await req.json();
-    const selectedCommentIds: string[] = body.selectedCommentIds ?? [];
-    if (selectedCommentIds.length === 0) {
-      return NextResponse.json({ success: false, error: '반영할 댓글을 선택해주세요.' }, { status: 400 });
-    }
+    const selection = parseSelectedCommentIds(body.selectedCommentIds);
+    if (!selection.ok) return NextResponse.json({ success: false, error: selection.error }, { status: 400 });
+    const selectedCommentIds = selection.ids;
 
     const admin = createAdminSupabaseClient();
 
@@ -85,13 +85,9 @@ export async function POST(
     }
     if (!doc.content) return NextResponse.json({ success: false, error: '문서 내용이 없습니다.' }, { status: 400 });
 
-    // 2. 선택된 댓글 조회
-    const { data: comments } = await admin
-      .from('document_comments')
-      .select('content, user_id')
-      .in('id', selectedCommentIds);
-
-    if (!comments || comments.length === 0) {
+    // 2. 선택된 댓글 조회 — 전부 이 문서의 댓글이어야 한다(스냅샷·AI 호출 전에 거부)
+    const comments = await loadSelectedComments(admin, documentId, selectedCommentIds);
+    if (!comments) {
       return NextResponse.json({ success: false, error: '선택된 댓글을 찾을 수 없습니다.' }, { status: 404 });
     }
     const userNameMap = await loadCommentUserNames(admin, comments);
@@ -155,6 +151,7 @@ ${feedbackList}
         applied_by: authUserId,
         applied_version_number: nextVersionNumber,
       })
+      .eq('document_id', documentId)
       .in('id', selectedCommentIds);
 
     if (commentUpdateError) throw commentUpdateError;

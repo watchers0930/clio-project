@@ -16,7 +16,7 @@ import { scheduleDocumentEmbedding } from '@/lib/ai/embed-document';
 import type { DbDocument, DbFileRecord, DbTemplate, DbUser } from '@/lib/supabase/types';
 import { parseTemplateBundle } from '@/lib/templates/template-schema';
 import { canAccessDocument, canManageDocument, filterAccessibleDocumentRows, getUserRoleInfo } from '@/lib/permissions';
-import { resolveVersionParent } from '@/lib/documents/version-parent';
+import { resolveDocumentLinks } from '@/lib/documents/document-links';
 import { buildDocumentInsertPayload, loadSourceChunksFromFiles } from '@/app/api/generate/route-helpers';
 import { kstDateStr, kstDateFromISO } from '@/lib/utils/date-kst';
 import { composeInputsContent } from '@/lib/documents/embedded-inputs';
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
   if (mutation.error) return mutation.error;
   try {
     const body = await request.json();
-    const { templateId, sourceFileIds, instructions, content: providedContent, parentId, originDocumentId, originContext, documentInputs } = body;
+    const { templateId, sourceFileIds, instructions, content: providedContent, parentId, originDocumentId: rawOriginDocumentId, originContext: rawOriginContext, documentInputs } = body;
 
     if (!templateId) {
       return NextResponse.json({ error: '템플릿을 선택해주세요.' }, { status: 400 });
@@ -161,13 +161,12 @@ export async function POST(request: NextRequest) {
     }
     const { data: authorInfo } = await supabase.from('users').select('name').eq('id', authUserId).single();
 
-    // 버전 번호 결정 (parentId가 있으면 원본 접근 권한 확인 후 기존 버전 + 1) — AI 생성 전에 확인해 거부될 요청에 비용을 쓰지 않는다
     const admin = mutation.admin;
-    const versionParent = await resolveVersionParent(admin, parentId, (rootId) =>
-      canAccessDocument(supabase, authUserId, roleInfo.role, roleInfo.department_id, rootId));
-    if (!versionParent.ok) {
-      return NextResponse.json({ error: versionParent.error }, { status: versionParent.status });
-    }
+    // 새 버전의 부모·후속 문서의 원본은 볼 수 있는 문서만(남의 문서 묶음 끼어들기·삭제 불가 만들기 차단) — AI 생성 전에 거부
+    const links = await resolveDocumentLinks(admin, { parentId, originDocumentId: rawOriginDocumentId, originContext: rawOriginContext }, (docId) =>
+      canAccessDocument(supabase, authUserId, roleInfo.role, roleInfo.department_id, docId));
+    if (!links.ok) return NextResponse.json({ error: links.error }, { status: links.status });
+    const { originDocumentId, originContext } = links;
 
     // 템플릿 조회 (양식 파일 포함)
     const builtinTemplate = resolveBuiltinTemplate(templateId);
@@ -254,7 +253,7 @@ export async function POST(request: NextRequest) {
       instructions,
       status: 'draft',
       createdBy: authUserId,
-      versionFields: versionParent.fields,
+      versionFields: links.versionFields,
       originDocumentId,
       originContext,
     });
