@@ -18,4 +18,5 @@ export function isWeeklyReportDocument(doc: { title: string; content: string | n
 }
 
 /** DB 1차 후보 필터(PostgREST or) — 최종 판정은 isWeeklyReportDocument로 한다 */
-export const WEEKLY_REPORT_CANDIDATE_FILTER = 'title.ilike.%주간%업무%,content.ilike.%report_period%';
+// 양식명·옛 문서 고유 키는 입력값 칸 기준(본문에 주석이 남은 옛 문서는 059 트리거·채우기로 칸에 이미 있다)
+export const WEEKLY_REPORT_CANDIDATE_FILTER = 'title.ilike.%주간%업무%,input_values->>__template_name.eq.주간업무,input_values->>report_period.not.is.null';

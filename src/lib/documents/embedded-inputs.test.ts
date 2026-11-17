@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readDocumentInputs, serializeInputsComment, stripEmbeddedInputs } from "./embedded-inputs";
+import { composeInputsContent, readDocumentInputs, serializeInputsComment, splitInputsContent, stripEmbeddedInputs } from "./embedded-inputs";
 
 test("본문 맨 앞의 입력값 주석(DOCUMENT/PROPOSAL)을 걷어내고 본문만 남긴다", () => {
   const inputs = JSON.stringify({ employer_name: "주식회사 예시", memo: "줄\n바꿈" }); // 값의 줄바꿈은 \n 으로 이스케이프돼 한 줄
@@ -36,4 +36,23 @@ test("주석 직렬화는 '-->' 를 이스케이프해 다시 읽으면 같은 �
   const comment = serializeInputsComment({ memo: "a --> b", n: "1" });
   assert.equal(comment.includes("a -->"), false);
   assert.deepEqual(readDocumentInputs({ content: `${comment}\n본문` }), { inputs: { memo: "a --> b", n: "1" }, body: "본문", hasInputs: true });
+});
+
+test("화면 편집용 합성: 칸 값이 있고 본문에 주석이 없을 때만 앞에 붙인다(이미 있으면 그대로)", () => {
+  assert.equal(composeInputsContent("본문", { a: "1" }), '<!--DOCUMENT_INPUTS:{"a":"1"}-->\n본문');
+  const already = '<!--DOCUMENT_INPUTS:{"a":"주석"}-->\n본문';
+  assert.equal(composeInputsContent(already, { a: "칸" }), already);
+  assert.equal(composeInputsContent("본문", null), "본문");
+  assert.equal(composeInputsContent("본문", ["x"]), "본문");
+  assert.equal(composeInputsContent(null, { a: "1" }), '<!--DOCUMENT_INPUTS:{"a":"1"}-->\n');
+});
+
+test("저장용 분리: 주석이 유효하면 본문과 칸으로 나누고, 아니면 본문만(칸은 손대지 않음)", () => {
+  assert.deepEqual(splitInputsContent('<!--DOCUMENT_INPUTS:{"a":"1"}-->\n본문'), { content: "본문", inputValues: { a: "1" } });
+  assert.deepEqual(splitInputsContent("본문만"), { content: "본문만", inputValues: undefined });
+  // 깨진 주석은 걷어내지 않는다 — 사용자가 쓴 내용일 수 있어 지우면 유실
+  assert.deepEqual(splitInputsContent('<!--DOCUMENT_INPUTS:{깨짐-->\n본문'), { content: '<!--DOCUMENT_INPUTS:{깨짐-->\n본문', inputValues: undefined });
+  // 합성 → 분리 왕복
+  const round = splitInputsContent(composeInputsContent("본문", { memo: "a --> b" }));
+  assert.deepEqual(round, { content: "본문", inputValues: { memo: "a --> b" } });
 });

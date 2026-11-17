@@ -13,6 +13,7 @@ import { getAuthUserId } from '@/lib/auth-helper';
 import { embedDocument } from '@/lib/ai/embed-document';
 import { canAccessDocument, canManageDocument, getUserRoleInfo } from '@/lib/permissions';
 import { loadDocumentDetail } from '@/lib/documents/document-detail-ops';
+import { composeInputsContent, splitInputsContent } from '@/lib/documents/embedded-inputs';
 
 export async function GET(
   _request: NextRequest,
@@ -109,9 +110,17 @@ export async function PATCH(
       return NextResponse.json<ApiResponse>({ success: false, error: violation }, { status: 409 });
     }
 
+    // 편집 화면은 '입력값 주석 + 본문'으로 보낸다 → 저장 직전에 본문과 입력값 칸으로 나눈다(본문에는 주석을 남기지 않음)
+    const dbUpdates: Record<string, unknown> = { ...updates };
+    if (updates.content !== undefined) {
+      const split = splitInputsContent(updates.content);
+      dbUpdates.content = split.content;
+      if (split.inputValues) dbUpdates.input_values = split.inputValues;
+    }
+
     const { data, error } = await supabase
       .from('documents')
-      .update(updates)
+      .update(dbUpdates)
       .eq('id', id)
       .select()
       .single();
@@ -140,7 +149,8 @@ export async function PATCH(
       });
     }
 
-    return NextResponse.json<ApiResponse>({ success: true, data });
+    // 응답도 편집 화면 형식('입력값 주석 + 본문')으로 — 저장 후 편집기가 같은 값을 기준으로 이어서 편집한다
+    return NextResponse.json<ApiResponse>({ success: true, data: data ? { ...data, content: composeInputsContent(data.content, data.input_values) } : data });
   } catch {
     return NextResponse.json<ApiResponse>({ success: false, error: '문서 수정에 실패했습니다.' }, { status: 500 });
   }

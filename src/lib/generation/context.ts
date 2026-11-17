@@ -12,7 +12,7 @@ import { loadCompanyLogoContext } from '@/lib/settings/company-logo';
 import { resolveBuiltinTemplate } from '@/lib/templates/builtin';
 import { kstDateStr, kstTimeStr } from '@/lib/utils/date-kst';
 import { filterAccessibleSourceFiles } from '@/lib/generation/source-access';
-import { stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
+import { splitInputsContent, stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
 
 const FONT_MAP: Record<string, string> = {
   '맑은 고딕': 'Malgun Gothic',
@@ -41,6 +41,7 @@ type DocumentInsertPayload = {
   origin_document_id?: string;
   origin_context?: string;
   output_format?: string;
+  input_values?: Record<string, string>;
 };
 
 type FileChunkRow = {
@@ -313,9 +314,12 @@ export function buildDocumentInsertPayload(params: {
   originContext?: string | null;
   outputFormat?: string | null;
 }): DocumentInsertPayload {
+  // 저장 경로가 만든 '입력값 주석 + 본문'을 DB 경계에서 본문과 입력값 칸으로 나눈다(본문에는 주석을 남기지 않음)
+  const split = splitInputsContent(params.content);
   const payload: DocumentInsertPayload = {
     title: params.title,
-    content: params.content,
+    content: split.content,
+    ...(split.inputValues ? { input_values: split.inputValues } : {}),
     source_file_ids: params.sourceFileIds ?? [],
     instructions: params.instructions ?? null,
     status: params.status,

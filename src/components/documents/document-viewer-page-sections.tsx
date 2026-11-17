@@ -10,7 +10,7 @@ import { useServerRenderedPreview, BUILTIN_FORM_TITLE_RE } from '@/components/do
 
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
 import { kstDateFromISO } from '@/lib/utils/date-kst';
-import { readDocumentInputs, stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
+import { composeInputsContent, readDocumentInputs, stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
 
 export interface DocData {
   id: string;
@@ -84,7 +84,7 @@ export function isFileBased(doc: DocData) {
   if (firstLine.startsWith('[') && firstLine.length < 200) return true;
   // 렌더된 HTML 양식 파일(generated/*.html)이 있는 html-template 문서(휴가원·재직증명서 등)는
   // 마크다운(content)이 아니라 양식 파일을 iframe으로 보여준다.
-  if (doc.storage_path?.endsWith('.html') && firstLine.startsWith('<!--DOCUMENT_INPUTS')) return true;
+  if (doc.storage_path?.endsWith('.html') && readDocumentInputs(doc).hasInputs) return true;
   return false;
 }
 
@@ -322,14 +322,15 @@ export function DocumentViewerContent({
   const isBuiltinForm = !isProposal && !isServerTemplate && hasEmbeddedInputs && BUILTIN_FORM_TITLE_RE.test(doc.title);
   const useHtmlPreview = !fileBased && (isServerTemplate || isBuiltinForm);
   const serverPreview = useServerRenderedPreview(
-    { id: doc.id, template: doc.template_name ?? '', templateId: doc.template_id, title: doc.title, content: doc.content ?? '' },
+    // 서버 양식 미리보기 판별은 '입력값 주석 + 본문' 기준 — 칸 값을 합쳐 넘긴다
+    { id: doc.id, template: doc.template_name ?? '', templateId: doc.template_id, title: doc.title, content: composeInputsContent(doc.content, doc.input_values) },
     '맑은 고딕',
   );
 
   if (isProposal) {
     const proposalHtml = renderProposalDocumentHtml({
       title: doc.title,
-      content: doc.content ?? '',
+      content: composeInputsContent(doc.content, doc.input_values),
       createdAt: kstDateFromISO(doc.created_at),
     });
 

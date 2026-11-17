@@ -94,3 +94,27 @@ export function readDocumentInputs(doc: DocumentInputsSource): DocumentInputs {
   }
   return { inputs: {}, body, hasInputs: false };
 }
+
+/**
+ * 화면 편집용 합성 — 편집 화면(입력값 편집·원문 편집)은 '주석 + 본문' 한 덩어리로 다루므로,
+ * 칸(input_values)에만 값이 있는 문서는 열 때 주석을 앞에 붙여 준다. 이미 주석이 있으면 그대로.
+ */
+export function composeInputsContent(content: string | null | undefined, inputValues: unknown): string {
+  const text = content ?? '';
+  if (!isStringRecord(inputValues) || EMBEDDED_INPUTS_RE.test(text)) return text;
+  return `${serializeInputsComment(inputValues)}\n${text}`;
+}
+
+/**
+ * 저장용 분리 — 본문 앞 주석이 유효하면 본문과 칸 값으로 나눈다(서버 PATCH 가 저장 직전에 호출).
+ * 주석이 없거나 깨졌으면 본문을 그대로 두고 칸은 건드리지 않는다(깨진 주석은 사용자 내용일 수 있어 지우지 않음).
+ */
+export function splitInputsContent(content: string): { content: string; inputValues: Record<string, string> | undefined } {
+  const match = content.match(/^<!--(?:PROPOSAL_INPUTS|DOCUMENT_INPUTS):([^\r\n]*)-->(?:\r?\n)?/);
+  if (!match) return { content, inputValues: undefined };
+  try {
+    const parsed: unknown = JSON.parse(match[1]);
+    if (isStringRecord(parsed)) return { content: content.slice(match[0].length), inputValues: parsed };
+  } catch { /* 깨진 주석 — 그대로 둔다 */ }
+  return { content, inputValues: undefined };
+}

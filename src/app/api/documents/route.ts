@@ -18,6 +18,7 @@ import { parseTemplateBundle } from '@/lib/templates/template-schema';
 import { canManageDocument, filterAccessibleDocumentRows, getUserRoleInfo } from '@/lib/permissions';
 import { buildDocumentInsertPayload, loadSourceChunksFromFiles } from '@/app/api/generate/route-helpers';
 import { kstDateStr, kstDateFromISO } from '@/lib/utils/date-kst';
+import { composeInputsContent } from '@/lib/documents/embedded-inputs';
 
 export const maxDuration = 60;
 
@@ -114,7 +115,8 @@ export async function GET(request: NextRequest) {
         status: documentStatusLabel(d.status),
         sourceCount: d.source_file_ids?.length ?? 0,
         sourceFileIds: d.source_file_ids ?? [],
-        content: d.content,
+        // 문서함 편집 화면은 '입력값 주석 + 본문'으로 다룬다 — 칸 값을 주석으로 합쳐 내려준다(저장 시 PATCH 가 다시 나눔)
+        content: composeInputsContent(d.content, d.input_values),
         versionNumber: d.version_number ?? 1,
         parentId: d.parent_id ?? null,
         originDocumentId: d.origin_document_id ?? null,
@@ -302,7 +304,7 @@ export async function POST(request: NextRequest) {
         createdAt: dateStr,
         status: '초안',
         sourceCount: (sourceFileIds ?? []).length,
-        content: newDoc.content,
+        content: composeInputsContent(newDoc.content, newDoc.input_values),
       },
     }, { status: 201 });
   } catch (error) {

@@ -4,6 +4,7 @@ import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { canViewAllWeeklyReports } from '@/lib/permissions';
 import { isWeeklyReportDocument, WEEKLY_REPORT_CANDIDATE_FILTER } from '@/lib/documents/weekly-report-document';
+import { composeInputsContent } from '@/lib/documents/embedded-inputs';
 
 /**
  * CEO/관리자 전용 — 전사 직원 주간업무 조회.
@@ -61,7 +62,8 @@ export async function GET(request: NextRequest) {
       return {
         id: r.id as string,
         title: r.title as string,
-        content: (r.content as string) ?? '',
+        // 주간업무 상세의 서버 양식 미리보기 판별은 '입력값 주석 + 본문' 기준 — 칸 값을 합쳐 내려준다
+        content: composeInputsContent(r.content as string | null, r.input_values),
         status: r.status as string,
         createdAt: r.created_at as string,
         authorId: r.created_by as string,

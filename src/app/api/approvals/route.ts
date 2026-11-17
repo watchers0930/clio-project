@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createNotifications } from '@/lib/notifications/create-notification';
 import { buildApprovalLine, type OrgMember } from '@/lib/approval/build-line';
 import { checkRowStoragePath } from '@/lib/storage/files-bucket';
+import { readDocumentInputs } from '@/lib/documents/embedded-inputs';
 
 export const maxDuration = 30;
 
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
   // 문서 조회 + 본인 문서 검증
   const { data: doc } = await admin
     .from('documents')
-    .select('id, title, template_id, created_by, content, status')
+    .select('id, title, template_id, created_by, content, input_values, status')
     .eq('id', documentId)
     .maybeSingle();
   if (!doc) return NextResponse.json({ success: false, error: '문서를 찾을 수 없습니다.' }, { status: 404 });
@@ -52,7 +53,8 @@ export async function POST(request: NextRequest) {
     }
   } catch(error) { return errorResponse(error); }
 
-  if (/휴가원/.test(doc.title ?? '') || (doc.content ?? '').includes('"__template_name":"휴가원"')) return NextResponse.json({success:false,error:'휴가 신청 연결 후 상신해 주세요.'},{status:409});
+  // 양식명은 입력값 칸(없으면 옛 본문 주석)에서 읽는다 — 본문 문자열 검색은 주석 제거 후 동작하지 않음
+  if (/휴가원/.test(doc.title ?? '') || readDocumentInputs(doc).inputs.__template_name === '휴가원') return NextResponse.json({success:false,error:'휴가 신청 연결 후 상신해 주세요.'},{status:409});
 
   // 진행 중 결재 중복 방지
   const { data: existing } = await admin
