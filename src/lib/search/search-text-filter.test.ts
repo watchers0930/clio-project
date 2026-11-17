@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildDocumentTextFilter, bodyHasAllTokens, MAX_SEARCH_TOKENS } from "./document-text-filter";
+import { buildDocumentTextFilter, bodyHasAllTokens, buildIlikeAny, cleanSearchTokens, containsPattern, MAX_SEARCH_TOKENS, MAX_TOKEN_LENGTH } from "./search-text-filter";
 
 test("제목은 단어 하나라도, 본문은 모든 단어가 있어야 걸리는 조건을 만든다", () => {
   assert.equal(
@@ -29,4 +29,26 @@ test("본문이 모든 단어를 포함하는지(대소문자 무시)", () => {
   assert.equal(bodyHasAllTokens("임금만 있음", ["임금", "지급일"]), false);
   assert.equal(bodyHasAllTokens("ABC", ["abc"]), true);
   assert.equal(bodyHasAllTokens(null, ["a"]), false);
+});
+
+test("검색어 정리: 소문자·NFC, '*' 제거(PostgREST 가 % 로 바꿔 전부 일치), 단어 50자·8개 상한, 중복 제거", () => {
+  assert.deepEqual(cleanSearchTokens("  임금   지급일 임금 "), ["임금", "지급일"]);
+  assert.deepEqual(cleanSearchTokens("*"), []);
+  assert.deepEqual(cleanSearchTokens("a*b **"), ["ab"]);
+  assert.deepEqual(cleanSearchTokens("ABC"), ["abc"]);
+  assert.equal(cleanSearchTokens("x".repeat(80))[0].length, MAX_TOKEN_LENGTH);
+  assert.equal(cleanSearchTokens(Array.from({ length: 20 }, (_, i) => `t${i}`).join(" ")).length, MAX_SEARCH_TOKENS);
+  assert.deepEqual(cleanSearchTokens("한가"), ["한가"]); // NFD → NFC
+});
+
+test("여러 칸 중 하나라도 단어 하나라도(OR) — 파일명·청크·업무일지용, 이스케이프 동일", () => {
+  assert.equal(buildIlikeAny(["name"], ["a", "b"]), 'name.ilike."%a%",name.ilike."%b%"');
+  assert.equal(buildIlikeAny(["done", "plan"], ["50%"]), 'done.ilike."%50\\\\%%",plan.ilike."%50\\\\%%"');
+  assert.equal(buildIlikeAny(["name"], []), null);
+});
+
+test("단일 칸 '포함' 패턴(.ilike 용): '*' 제거, % _ \\ 는 글자로", () => {
+  assert.equal(containsPattern("계약서"), "%계약서%");
+  assert.equal(containsPattern("50%_a\\b"), "%50\\%\\_a\\\\b%");
+  assert.equal(containsPattern("a*b"), "%ab%");
 });

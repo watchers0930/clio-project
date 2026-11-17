@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { buildIlikeAny } from '@/lib/search/search-text-filter';
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,7 +25,9 @@ export async function GET(request: NextRequest) {
       .order('updated_at', { ascending: false });
 
     if (search) {
-      query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`);
+      // 검색어를 조건 문자열에 그대로 넣으면 쉼표·괄호로 조건이 바뀌고 % 가 와일드카드가 된다 — 공용 이스케이프
+      const memoFilter = buildIlikeAny(['title', 'content'], [search]);
+      if (memoFilter) query = query.or(memoFilter);
     }
 
     const { data, error } = await query;

@@ -1,4 +1,5 @@
 import { filterAccessibleFileRows } from '@/lib/permissions';
+import { buildIlikeAny } from './search-text-filter';
 
 // 검색 결과 아이템 (파일·문서 공용). route에서 import.
 export interface SearchResultItem {
@@ -87,7 +88,7 @@ export async function keywordFileSearch(p: KeywordSearchParams): Promise<SearchR
   // ① 본문 청크 부분일치 → file_id별 대표 스니펫
   const { data: kwChunks } = await sb
     .from('file_chunks').select('file_id, content')
-    .or(queryTokens.map((t) => `content.ilike.%${t}%`).join(','))
+    .or(buildIlikeAny(['content'], queryTokens) ?? 'id.is.null') // 검색어 이스케이프(공용) — 단어가 없으면 아무것도 안 걸리게
     .limit(40);
   const snippetByFile = new Map<string, string>();
   for (const c of ((kwChunks ?? []) as Array<{ file_id: string; content: string }>)) {
@@ -96,7 +97,7 @@ export async function keywordFileSearch(p: KeywordSearchParams): Promise<SearchR
 
   // ② 파일명 부분일치
   let fileQuery = sb.from('files').select(FILE_SELECT)
-    .or(queryTokens.map((t) => `name.ilike.%${t}%`).join(','));
+    .or(buildIlikeAny(['name'], queryTokens) ?? 'id.is.null');
   if (department && department !== '전체') {
     const deptId = deptIdByName.get(department);
     if (deptId) fileQuery = fileQuery.eq('department_id', deptId);

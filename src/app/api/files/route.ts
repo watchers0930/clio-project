@@ -8,6 +8,7 @@ import { getAuthUserId } from '@/lib/auth-helper';
 import { filterAccessibleFileRows, getUserRoleInfo } from '@/lib/permissions';
 import { mimeToType, formatSize } from '@/lib/utils/format';
 import { validateFile } from '@/lib/utils/sanitize';
+import { containsPattern } from '@/lib/search/search-text-filter';
 
 /** 확장자 → MIME 타입 폴백 매핑 (브라우저가 MIME을 비워서 보낼 때 대비) */
 const EXTENSION_MIME_MAP: Record<string, string> = {
@@ -84,8 +85,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      const escaped = search.replace(/[%_\\]/g, '\\$&');
-      query = query.ilike('name', `%${escaped}%`);
+      query = query.ilike('name', containsPattern(search)); // 공용 이스케이프(* 포함)
     }
 
     query = query.order('created_at', { ascending: false }).limit(500);

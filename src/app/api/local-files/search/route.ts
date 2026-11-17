@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { generateEmbedding } from '@/lib/ai/embeddings';
+import { containsPattern } from '@/lib/search/search-text-filter';
 
 const MATCH_THRESHOLD = 0.15;
 const MATCH_COUNT = 5;
@@ -44,14 +45,14 @@ export async function POST(req: NextRequest) {
       .from('local_file_index')
       .select('id, file_name, file_path, file_type')
       .eq('user_id', userId)
-      .ilike('file_name', `%${query}%`)
+      .ilike('file_name', containsPattern(query))
       .limit(MATCH_COUNT),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase as any)
       .from('local_file_chunks')
       .select('local_file_id, content, local_file_index!inner(file_name, file_path, file_type, user_id)')
       .eq('local_file_index.user_id', userId)
-      .ilike('content', `%${query}%`)
+      .ilike('content', containsPattern(query))
       .limit(MATCH_COUNT),
   ]);
 

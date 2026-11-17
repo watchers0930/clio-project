@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
+import { containsPattern } from '@/lib/search/search-text-filter';
 
 export async function GET(request: NextRequest) {
   const supabase = await createServerSupabaseClient();
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
 
   // 파일명 검색 (ilike)
   if (q) {
-    query = query.ilike('file_name', `%${q}%`);
+    query = query.ilike('file_name', containsPattern(q)); // % _ * 를 글자로
   }
 
   // 계약 유형 필터

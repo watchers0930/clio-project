@@ -9,7 +9,11 @@ import { filterAccessibleDocumentRows, filterAccessibleFileRows, getUserRoleInfo
 import { keywordFileSearch, getFileType, titleCoverageScore, type SearchResultItem } from '@/lib/search/keyword-file-search';
 import { originContextLabel as formatOriginLabel } from '@/lib/documents/origin-context';
 import { stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
-import { buildDocumentTextFilter, bodyHasAllTokens } from '@/lib/search/document-text-filter';
+import { buildDocumentTextFilter, bodyHasAllTokens, buildIlikeAny, cleanSearchTokens, MAX_QUERY_LENGTH } from '@/lib/search/search-text-filter';
+import { loadAccessibleOriginTitles } from '@/lib/search/search-origin-titles';
+
+// 문서 텍스트 검색 후보 수 — 권한 필터 뒤 15건을 채우기 위해 넉넉히(권한 없는 문서가 자리를 다 차지하지 않게)
+const TEXT_DOC_CANDIDATES = 60;
 
 const SEARCH_AI_SUMMARY_ENABLED = process.env.ENABLE_SEARCH_AI_SUMMARY === 'true';
 
@@ -72,9 +76,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ results: [], total: 0 });
     }
 
-    // macOS NFD → NFC 정규화 (한글 검색 호환)
-    const normalizedQuery = query.normalize('NFC');
-    const queryTokens = normalizedQuery.toLowerCase().split(/\s+/).filter(Boolean);
+    // macOS NFD → NFC 정규화 (한글 검색 호환), 길이 상한(임베딩·점수 계산 부담)
+    const normalizedQuery = query.normalize('NFC').slice(0, MAX_QUERY_LENGTH);
+    // 단어: '*' 제거·길이·개수 상한·중복 제거(lib/search/search-text-filter) — 모든 검색 조건이 이 단어로 만들어진다
+    const queryTokens = cleanSearchTokens(normalizedQuery);
+    if (queryTokens.length === 0) return NextResponse.json({ results: [], total: 0 });
 
     const supabase = await createServerSupabaseClient();
     if (!supabase) {
@@ -99,7 +105,8 @@ export async function POST(request: NextRequest) {
     try {
       admin = createAdminSupabaseClient();
     } catch {
-      admin = sb; // admin 초기화 실패 시 sb로 폴백
+      // 사용자 세션으로 대신하면 서버 전용 표(document_embeddings 등)가 0건으로 보여 검색이 조용히 망가진다 — 설정 오류로 알린다
+      return NextResponse.json({ results: [], total: 0, error: '검색 서버 설정이 필요합니다.' }, { status: 503 });
     }
 
     // 부서 맵
@@ -120,13 +127,14 @@ export async function POST(request: NextRequest) {
       availableDepartments: ['전체'],
     };
 
+    const searchUser = { id: authUserId, role: roleInfo.role, departmentId: roleInfo.department_id ?? null };
     const fileResults: SearchResultItem[] = [];
     const docResultsMap = new Map<string, SearchResultItem>(); // id → item (중복 방지)
 
     // ── ① 문서·업무일지 텍스트 검색 + 청크 수 확인 병렬 실행 ──
-    // 제목은 단어 하나라도, 본문은 모든 단어가 있어야 — 검색어는 조건 문법·와일드카드가 되지 않게 감싼다(lib/search/document-text-filter)
+    // 제목은 단어 하나라도, 본문은 모든 단어가 있어야 — 검색어는 조건 문법·와일드카드가 되지 않게 감싼다(lib/search/search-text-filter)
     const docTextFilter = buildDocumentTextFilter(queryTokens);
-    const orWorkLog = queryTokens.map((t: string) => `done.ilike.%${t}%,plan.ilike.%${t}%,note.ilike.%${t}%,log_date.ilike.%${t}%`).join(',');
+    const orWorkLog = buildIlikeAny(['done', 'plan', 'note', 'log_date'], queryTokens);
 
     // "업무일지" 타입 자체를 검색하는 경우: done/plan/note에 해당 단어가 없으므로 최근 일지로 폴백
     const isWorkLogTypeSearch = queryTokens.some((t: string) => t === '업무일지' || t === '업무' || t === '일지');
@@ -137,13 +145,16 @@ export async function POST(request: NextRequest) {
           .select('id, title, content, created_at, created_by, origin_document_id, origin_context, templates:template_id(name)')
           .is('parent_id', null)
           .or(docTextFilter)
-          .limit(15)
+          // 권한 필터는 앱 규칙(관리자 전체 등)이라 DB 에서 못 거른다 → 최신순으로 넉넉히 가져와 거른 뒤 15건으로 자른다
+          .order('created_at', { ascending: false })
+          .limit(TEXT_DOC_CANDIDATES)
         : Promise.resolve({ data: [] }),
+      // 업무일지는 사용자 세션으로 — RLS(본인 + 같은 부서 관리자)가 볼 수 있는 범위를 정한다(서버 권한으로 읽어 남의 일지가 보이던 문제)
       isWorkLogTypeSearch
         // 타입 검색: 최근 업무일지 반환 (내용 필터 없이)
-        ? admin.from('work_logs').select('id, log_date, done, plan, note').order('log_date', { ascending: false }).limit(10)
+        ? sb.from('work_logs').select('id, log_date, done, plan, note').order('log_date', { ascending: false }).limit(10)
         // 내용 검색: done/plan/note 텍스트 매칭
-        : admin.from('work_logs').select('id, log_date, done, plan, note').or(orWorkLog).limit(10),
+        : orWorkLog ? sb.from('work_logs').select('id, log_date, done, plan, note').or(orWorkLog).limit(10) : Promise.resolve({ data: [] }),
       sb.from('file_chunks').select('id', { count: 'exact', head: true }),
       admin.from('document_embeddings').select('id', { count: 'exact', head: true }),
     ]);
@@ -155,12 +166,9 @@ export async function POST(request: NextRequest) {
       roleInfo.role,
       roleInfo.department_id,
       (textDocs as DocRow[] ?? []),
-    );
-    const textOriginIds = [...new Set(typedTextDocs.map((doc) => doc.origin_document_id).filter((id): id is string => !!id))];
-    const { data: textOriginDocs } = textOriginIds.length > 0
-      ? await admin.from('documents').select('id, title').in('id', textOriginIds)
-      : { data: [] };
-    const textOriginTitleMap = new Map(((textOriginDocs ?? []) as Array<{ id: string; title: string }>).map((doc) => [doc.id, doc.title]));
+    ).then((rows) => rows.slice(0, 15));
+    // 원본 문서 제목은 사용자가 볼 수 있는 원본만
+    const textOriginTitleMap = await loadAccessibleOriginTitles(admin, supabase, searchUser, typedTextDocs.map((doc) => doc.origin_document_id ?? ''));
     const textDocCreatorDeptMap = await buildCreatorDepartmentMap(
       admin,
       deptMap,
@@ -288,11 +296,7 @@ export async function POST(request: NextRequest) {
             roleInfo.department_id,
             (vecDocs as DocRow[] ?? []),
           );
-          const vecOriginIds = [...new Set(typedVecDocs.map((doc) => doc.origin_document_id).filter((id): id is string => !!id))];
-          const { data: vecOriginDocs } = vecOriginIds.length > 0
-            ? await admin.from('documents').select('id, title').in('id', vecOriginIds)
-            : { data: [] };
-          const vecOriginTitleMap = new Map(((vecOriginDocs ?? []) as Array<{ id: string; title: string }>).map((doc) => [doc.id, doc.title]));
+          const vecOriginTitleMap = await loadAccessibleOriginTitles(admin, supabase, searchUser, typedVecDocs.map((doc) => doc.origin_document_id ?? ''));
           const creatorDeptMap = await buildCreatorDepartmentMap(
             admin,
             deptMap,
