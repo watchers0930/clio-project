@@ -10,7 +10,10 @@
 --      본문에 주석이 없으면(GPT 가 뺀 경우 등) 기존 칸 값을 그대로 둔다 → 입력값 유실 방지.
 -- 2단계(운영 확인 후 별도): 저장 경로가 주석을 더 쓰지 않고 칸에만 쓰게 바꾸고, 기존 본문에서 주석 제거.
 --
--- 되돌리기: drop trigger documents_sync_input_values on public.documents;
+-- 되돌리기(🔴 반드시 코드를 v7.97.x 로 먼저 되돌린 뒤 — 새 코드는 input_values 칸을 조회하므로 칸을 먼저 지우면 다운로드 전체가 404):
+--           alter table public.documents drop constraint documents_input_values_object;
+--           leave_document_lock 은 047 정의로 재생성(input_values 비교 줄 제거);
+--           drop trigger documents_sync_input_values on public.documents;
 --           drop function public.documents_sync_input_values(); drop function public.parse_document_inputs(text);
 --           alter table public.documents drop column input_values;
 begin;
@@ -73,5 +76,32 @@ create trigger documents_sync_input_values
 update public.documents
 set input_values = public.parse_document_inputs(content)
 where input_values is null and public.parse_document_inputs(content) is not null;
+
+-- 칸에는 객체(또는 null)만 — 배열·문자열 같은 값이 직접 들어가지 않게
+alter table public.documents add constraint documents_input_values_object
+  check (input_values is null or jsonb_typeof(input_values) = 'object');
+
+-- 휴가원 잠금(047)에 input_values 추가 — 다운로드·미리보기가 칸을 먼저 읽으므로, 잠긴 휴가원의 칸만 직접 바꾸는 것도 막는다.
+-- (위 채우기 다음에 둬야 한다 — 먼저 두면 잠긴 휴가원 채우기가 이 잠금에 걸린다)
+create or replace function public.leave_document_lock()
+returns trigger
+language plpgsql
+set search_path to 'public'
+as $function$
+begin
+  if exists(select 1 from leave_requests where document_id = old.id and status in ('pending','approved','rejected'))
+     and (new.content is distinct from old.content
+       or new.input_values is distinct from old.input_values
+       or new.template_id is distinct from old.template_id
+       or new.created_by is distinct from old.created_by
+       or new.title is distinct from old.title) then
+    raise exception 'leave document locked';
+  end if;
+  return new;
+end;
+$function$;
+
+-- parse_document_inputs 실행 권한은 그대로 둔다: 동기화 트리거가 저장하는 사용자 권한으로 이 함수를 부르므로
+-- authenticated 에서 회수하면 일반 문서 저장이 권한 오류로 실패한다(데이터를 읽지 않는 순수 함수라 노출 위험 없음).
 
 commit;

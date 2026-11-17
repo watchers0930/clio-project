@@ -112,11 +112,13 @@ export async function POST(
 
     // 4. AI로 댓글 반영 문서 재생성 — AI 에는 본문만 보내고, 입력값 주석은 결과 앞에 그대로 다시 붙인다
     //    (AI 가 주석을 빼거나 바꾸면 다운로드·입력값 편집이 깨지므로 AI 손에 맡기지 않는다)
-    const inputsPrefix = getEmbeddedInputsPrefix(doc.content);
+    const rawPrefix = getEmbeddedInputsPrefix(doc.content);
+    // 접두부가 줄바꿈 없이 끝난 옛 저장분이면 줄바꿈을 보장 — AI 출력 첫 줄이 주석 줄에 붙지 않게
+    const inputsPrefix = rawPrefix && !rawPrefix.endsWith('\n') ? `${rawPrefix}\n` : rawPrefix;
     const prompt = `다음은 현재 문서 내용입니다:
 
 ---
-${doc.content.slice(inputsPrefix.length)}
+${doc.content.slice(rawPrefix.length)}
 ---
 
 아래 피드백을 반영하여 문서를 수정해주세요. 문서의 전체 구조와 형식은 유지하되, 피드백 내용만 정확히 반영해주세요.

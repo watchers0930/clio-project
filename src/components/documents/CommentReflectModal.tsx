@@ -6,6 +6,7 @@ import { Spinner } from '@/components/ui';
 import { parseSections, extractSectionContent } from '@/lib/utils/parse-sections';
 import { useToast } from '@/components/ui/toast';
 import { ArrowLeft, Layers, PlusCircle, Replace } from 'lucide-react';
+import { stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
 
 interface CommentReflectModalProps {
   documentId: string;
@@ -35,7 +36,8 @@ export function CommentReflectModal({
 
   const matchCount = useMemo(() => {
     if (!findText) return 0;
-    const target = replaceScope === '__all__' ? documentContent : extractSectionContent(documentContent, replaceScope);
+    // 서버와 같은 범위로 센다 — 전체 치환은 입력값 주석을 뺀 본문에만 적용된다
+    const target = replaceScope === '__all__' ? stripEmbeddedInputs(documentContent) : extractSectionContent(documentContent, replaceScope);
     return target.split(findText).length - 1;
   }, [documentContent, findText, replaceScope]);
 
