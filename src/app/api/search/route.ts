@@ -8,22 +8,16 @@ import { summarizeText } from '@/lib/ai/summarize';
 import { filterAccessibleDocumentRows, filterAccessibleFileRows, getUserRoleInfo } from '@/lib/permissions';
 import { keywordFileSearch, getFileType, titleCoverageScore, type SearchResultItem } from '@/lib/search/keyword-file-search';
 import { originContextLabel as formatOriginLabel } from '@/lib/documents/origin-context';
-import { stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
 import { buildDocumentTextFilter, bodyHasAllTokens, buildIlikeAny, cleanSearchTokens, MAX_QUERY_LENGTH } from '@/lib/search/search-text-filter';
 import { loadAccessibleOriginTitles } from '@/lib/search/search-origin-titles';
+import { loadGrantedDocumentIds, searchDocumentsByText, vectorAccessArgs } from '@/lib/search/document-search';
+import { buildCreatorDepartmentMap, toDocumentSearchItem, type DocRow } from '@/lib/search/document-results';
+import { buildSearchContext } from '@/lib/search/search-context';
 
 // 문서 텍스트 검색 후보 수 — 권한 필터 뒤 15건을 채우기 위해 넉넉히(권한 없는 문서가 자리를 다 차지하지 않게)
-const TEXT_DOC_CANDIDATES = 60;
+const DOC_SEARCH_COLUMNS = 'id, title, content, created_at, created_by, parent_id, version_number, origin_document_id, origin_context, templates:template_id(name)';
 
 const SEARCH_AI_SUMMARY_ENABLED = process.env.ENABLE_SEARCH_AI_SUMMARY === 'true';
-
-interface SearchContext {
-  role: string;
-  departmentName: string;
-  documentScopeLabel: string;
-  departmentFilterLabel: string;
-  availableDepartments: string[];
-}
 
 interface AuditLogRow {
   details: Record<string, unknown> | null;
@@ -31,38 +25,10 @@ interface AuditLogRow {
 }
 
 interface FileRow { id: string; name: string; type: string | null; department_id: string | null; created_at: string; uploaded_by: string | null; source?: string | null; external_id?: string | null; source_date?: string | null }
-interface DocRow {
-  id: string;
-  title: string;
-  content: string | null;
-  created_at: string;
-  created_by: string | null;
-  origin_document_id?: string | null;
-  origin_context?: string | null;
-  templates: { name: string } | null;
-}
 interface WorkLogRow { id: string; log_date: string; done: string | null; plan: string | null; note: string | null }
 interface DeptRow { id: string; name: string }
-interface UserRow { id: string; department_id: string | null }
 
 
-async function buildCreatorDepartmentMap(
-  admin: ReturnType<typeof createAdminSupabaseClient>,
-  deptMap: Map<string, string>,
-  creatorIds: Array<string | null | undefined>,
-) {
-  const ids = [...new Set(creatorIds.filter((id): id is string => !!id))];
-  const creatorDeptMap = new Map<string, string>();
-
-  if (ids.length === 0) return creatorDeptMap;
-
-  const { data: userRows } = await admin.from('users').select('id, department_id').in('id', ids);
-  for (const user of (userRows as UserRow[] ?? [])) {
-    creatorDeptMap.set(user.id, deptMap.get(user.department_id ?? '') ?? '미분류');
-  }
-
-  return creatorDeptMap;
-}
 
 export async function POST(request: NextRequest) {
   // 변이 요청: 출처 + CSRF 토큰 + 활성 사용자 확인 (기존 권한 확인은 아래 그대로)
@@ -113,21 +79,11 @@ export async function POST(request: NextRequest) {
     const { data: depts } = await sb.from('departments').select('id, name');
     const deptMap = new Map<string, string>((depts ?? []).map((d: DeptRow) => [d.id, d.name] as [string, string]));
     const deptIdByName = new Map<string, string>((depts ?? []).map((d: DeptRow) => [d.name, d.id] as [string, string]));
-    const searchContext: SearchContext = {
-      role: roleInfo.role,
-      departmentName: deptMap.get(roleInfo.department_id ?? '') ?? '미배정',
-      documentScopeLabel: roleInfo.role === 'admin'
-        ? '관리자 권한으로 접근 가능한 전체 문서 범위에서 검색합니다.'
-        : roleInfo.department_id
-          ? `본인 문서와 ${deptMap.get(roleInfo.department_id) ?? '소속 부서'}에 공유된 문서만 검색합니다.`
-          : '본인 문서와 직접 공유된 문서만 검색합니다.',
-      departmentFilterLabel: roleInfo.role === 'admin'
-        ? '전체 부서를 기준으로 결과를 다시 좁힐 수 있습니다.'
-        : '검색 후 접근 가능한 부서만 필터에 남습니다.',
-      availableDepartments: ['전체'],
-    };
+    const searchContext = buildSearchContext(roleInfo, deptMap);
 
     const searchUser = { id: authUserId, role: roleInfo.role, departmentId: roleInfo.department_id ?? null };
+    const grantedIds = await loadGrantedDocumentIds(admin, searchUser);
+    const chainResultIds = new Map<string, string>(); // 버전 묶음(원본 id) → 결과 항목 id — 벡터(원본)와 텍스트(새 판) 중복 방지
     const fileResults: SearchResultItem[] = [];
     const docResultsMap = new Map<string, SearchResultItem>(); // id → item (중복 방지)
 
@@ -141,15 +97,11 @@ export async function POST(request: NextRequest) {
     const isWorkLogTypeSearch = queryTokens.some((t: string) => t === '업무일지' || t === '업무' || t === '일지');
 
     const [{ data: textDocs }, { data: workLogs }, { count: chunkCount }, { count: docEmbedCount }] = await Promise.all([
+      // 권한 조건을 조회 자체에 넣는다(볼 수 있는 문서가 후보 밖으로 밀리지 않게) — 새 버전까지 찾고 묶음마다 최신 판만
       docTextFilter
-        ? admin.from('documents')
-          .select('id, title, content, created_at, created_by, origin_document_id, origin_context, templates:template_id(name)')
-          .is('parent_id', null)
-          .or(docTextFilter)
-          // 권한 필터는 앱 규칙(관리자 전체 등)이라 DB 에서 못 거른다 → 최신순으로 넉넉히 가져와 거른 뒤 15건으로 자른다
-          .order('created_at', { ascending: false })
-          .limit(TEXT_DOC_CANDIDATES)
-        : Promise.resolve({ data: [] }),
+        ? searchDocumentsByText<DocRow>({ admin, user: searchUser, grantedIds, textFilter: docTextFilter, columns: DOC_SEARCH_COLUMNS })
+          .then((data) => ({ data }))
+        : Promise.resolve({ data: [] as Array<DocRow & { chainId: string }> }),
       // 업무일지는 사용자 세션으로 — RLS(본인 + 같은 부서 관리자)가 볼 수 있는 범위를 정한다(서버 권한으로 읽어 남의 일지가 보이던 문제)
       isWorkLogTypeSearch
         // 타입 검색: 최근 업무일지 반환 (내용 필터 없이)
@@ -167,7 +119,7 @@ export async function POST(request: NextRequest) {
       roleInfo.role,
       roleInfo.department_id,
       (textDocs as DocRow[] ?? []),
-    ).then((rows) => rows.slice(0, 15));
+    ); // 조회에서 이미 권한을 걸렀다 — 같은 규칙으로 한 번 더(방어)
     // 원본 문서 제목은 사용자가 볼 수 있는 원본만
     const textOriginTitleMap = await loadAccessibleOriginTitles(admin, supabase, searchUser, typedTextDocs.map((doc) => doc.origin_document_id ?? ''));
     const textDocCreatorDeptMap = await buildCreatorDepartmentMap(
@@ -180,20 +132,8 @@ export async function POST(request: NextRequest) {
       let score = 0;
       for (const token of queryTokens) score += (titleLower.split(token).length - 1) * 30;
       if (bodyHasAllTokens(d.content, queryTokens)) score += 10; // 본문에 모든 단어 — 제목 일치(30점/단어)보다는 낮게
-      docResultsMap.set(d.id, {
-        id: d.id,
-        name: d.title,
-        excerpt: stripEmbeddedInputs(d.content ?? '').slice(0, 200), // 내부 입력값 주석은 미리보기에서 제외
-        relevance: Math.min(85, Math.max(40, score + 50)),
-        fileType: d.templates?.name ?? 'AI문서',
-        department: textDocCreatorDeptMap.get(d.created_by ?? '') ?? '미분류',
-        date: d.created_at.split('T')[0],
-        aiSummary: '',
-        sourceType: 'document',
-        relationLabel: formatOriginLabel(d.origin_context ?? null),
-        originDocumentId: d.origin_document_id ?? null,
-        originDocumentTitle: d.origin_document_id ? (textOriginTitleMap.get(d.origin_document_id) ?? null) : null,
-      });
+      chainResultIds.set(d.chainId ?? d.id, d.id);
+      docResultsMap.set(d.id, toDocumentSearchItem(d, Math.min(85, Math.max(40, score + 50)), textDocCreatorDeptMap, textOriginTitleMap));
     }
 
     // 업무일지(work_logs) 검색 결과 처리
@@ -230,7 +170,7 @@ export async function POST(request: NextRequest) {
             ? sb.rpc('match_file_chunks', { query_embedding: embeddingStr, match_count: 30, match_threshold: 0.35 })
             : Promise.resolve({ data: [], error: null }),
           (docEmbedCount ?? 0) > 0 && !isWorkLogTypeSearch
-            ? admin.rpc('match_document_embeddings', { query_embedding: embeddingStr, match_count: 15, match_threshold: 0.45 })
+            ? admin.rpc('match_document_embeddings', { query_embedding: embeddingStr, match_count: 15, match_threshold: 0.45, ...vectorAccessArgs(searchUser, grantedIds) })
             : Promise.resolve({ data: [], error: null }),
         ]);
 
@@ -286,7 +226,7 @@ export async function POST(request: NextRequest) {
 
           const { data: vecDocs } = await admin
             .from('documents')
-            .select('id, title, content, created_at, created_by, origin_document_id, origin_context, templates:template_id(name)')
+            .select(DOC_SEARCH_COLUMNS)
             .in('id', docIds)
             .is('parent_id', null);
 
@@ -307,7 +247,7 @@ export async function POST(request: NextRequest) {
           for (const d of typedVecDocs) {
             const similarity = docSimMap.get(d.id) ?? 0;
             const vecRelevance = Math.round(similarity * 100);
-            const existing = docResultsMap.get(d.id);
+            const existing = docResultsMap.get(chainResultIds.get(d.id) ?? d.id);
             // 이미 텍스트 검색 결과가 있으면 relevance만 높은 걸로 갱신
             if (existing) {
               existing.relevance = Math.max(existing.relevance, vecRelevance);
@@ -316,20 +256,7 @@ export async function POST(request: NextRequest) {
               existing.originDocumentId = existing.originDocumentId ?? d.origin_document_id ?? null;
               existing.originDocumentTitle = existing.originDocumentTitle ?? (d.origin_document_id ? (vecOriginTitleMap.get(d.origin_document_id) ?? null) : null);
             } else {
-              docResultsMap.set(d.id, {
-                id: d.id,
-                name: d.title,
-                excerpt: stripEmbeddedInputs(d.content ?? '').slice(0, 200), // 내부 입력값 주석은 미리보기에서 제외
-                relevance: vecRelevance,
-                fileType: d.templates?.name ?? 'AI문서',
-                department: creatorDeptMap.get(d.created_by ?? '') ?? '미분류',
-                date: d.created_at.split('T')[0],
-                aiSummary: '',
-                sourceType: 'document',
-                relationLabel: formatOriginLabel(d.origin_context ?? null),
-                originDocumentId: d.origin_document_id ?? null,
-                originDocumentTitle: d.origin_document_id ? (vecOriginTitleMap.get(d.origin_document_id) ?? null) : null,
-              });
+              docResultsMap.set(d.id, toDocumentSearchItem(d, vecRelevance, creatorDeptMap, vecOriginTitleMap));
             }
           }
         }
