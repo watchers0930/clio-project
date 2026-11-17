@@ -9,6 +9,7 @@ import { filterAccessibleDocumentRows, filterAccessibleFileRows, getUserRoleInfo
 import { keywordFileSearch, getFileType, titleCoverageScore, type SearchResultItem } from '@/lib/search/keyword-file-search';
 import { originContextLabel as formatOriginLabel } from '@/lib/documents/origin-context';
 import { stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
+import { buildDocumentTextFilter, bodyHasAllTokens } from '@/lib/search/document-text-filter';
 
 const SEARCH_AI_SUMMARY_ENABLED = process.env.ENABLE_SEARCH_AI_SUMMARY === 'true';
 
@@ -123,19 +124,21 @@ export async function POST(request: NextRequest) {
     const docResultsMap = new Map<string, SearchResultItem>(); // id → item (중복 방지)
 
     // ── ① 문서·업무일지 텍스트 검색 + 청크 수 확인 병렬 실행 ──
-    // title만 검색 (content 포함 시 다른 문서 내용에서 false-positive 발생)
-    const orTitle = queryTokens.map((t: string) => `title.ilike.%${t}%`).join(',');
+    // 제목은 단어 하나라도, 본문은 모든 단어가 있어야 — 검색어는 조건 문법·와일드카드가 되지 않게 감싼다(lib/search/document-text-filter)
+    const docTextFilter = buildDocumentTextFilter(queryTokens);
     const orWorkLog = queryTokens.map((t: string) => `done.ilike.%${t}%,plan.ilike.%${t}%,note.ilike.%${t}%,log_date.ilike.%${t}%`).join(',');
 
     // "업무일지" 타입 자체를 검색하는 경우: done/plan/note에 해당 단어가 없으므로 최근 일지로 폴백
     const isWorkLogTypeSearch = queryTokens.some((t: string) => t === '업무일지' || t === '업무' || t === '일지');
 
     const [{ data: textDocs }, { data: workLogs }, { count: chunkCount }, { count: docEmbedCount }] = await Promise.all([
-      admin.from('documents')
-        .select('id, title, content, created_at, created_by, origin_document_id, origin_context, templates:template_id(name)')
-        .is('parent_id', null)
-        .or(orTitle)
-        .limit(15),
+      docTextFilter
+        ? admin.from('documents')
+          .select('id, title, content, created_at, created_by, origin_document_id, origin_context, templates:template_id(name)')
+          .is('parent_id', null)
+          .or(docTextFilter)
+          .limit(15)
+        : Promise.resolve({ data: [] }),
       isWorkLogTypeSearch
         // 타입 검색: 최근 업무일지 반환 (내용 필터 없이)
         ? admin.from('work_logs').select('id, log_date, done, plan, note').order('log_date', { ascending: false }).limit(10)
@@ -167,6 +170,7 @@ export async function POST(request: NextRequest) {
       const titleLower = d.title.toLowerCase();
       let score = 0;
       for (const token of queryTokens) score += (titleLower.split(token).length - 1) * 30;
+      if (bodyHasAllTokens(d.content, queryTokens)) score += 10; // 본문에 모든 단어 — 제목 일치(30점/단어)보다는 낮게
       docResultsMap.set(d.id, {
         id: d.id,
         name: d.title,
