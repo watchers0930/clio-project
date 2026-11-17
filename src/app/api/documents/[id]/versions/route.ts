@@ -43,6 +43,10 @@ export async function GET(
 
     // root_id: parent_id가 null이면 자신이 root, 아니면 parent_id가 root
     const rootId: string = current.parent_id ?? id;
+    // 묶음 전체를 서버 권한으로 읽으므로 원본에도 접근 권한이 있어야 한다(내 버전 행만으로 남의 묶음을 보지 못하게)
+    if (rootId !== id && !(await canAccessDocument(supabase, authUserId, roleInfo.role, roleInfo.department_id, rootId))) {
+      return NextResponse.json({ error: '문서 접근 권한이 없습니다.' }, { status: 403 });
+    }
 
     // root 문서 + 모든 버전(parent_id = rootId) 조회
     const { data: versions } = await admin

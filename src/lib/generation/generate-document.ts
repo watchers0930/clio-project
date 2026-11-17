@@ -5,6 +5,8 @@ import { serverLeaveInputs } from '@/lib/leave/leave-document';
 import { respondContractDirect } from './contract-direct';
 import { respondDocxFormData, respondHwpxFormData, respondDocxTemplate, respondStructured, type OutputContext, type PersistContext } from './output-paths';
 import { withMutation } from '@/lib/http/mutation-guard';
+import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
+import { resolveVersionParent } from '@/lib/documents/version-parent';
 /**
  * POST /api/generate
  * 멀티포맷 문서 생성 통합 엔드포인트
@@ -27,7 +29,6 @@ import {
   loadSourceChunks,
   loadTemplateContext,
   loadUserGenerationContext,
-  resolveVersionFields,
 } from './context';
 import { getWorklogDocumentTitle, isWorklogTemplateName } from '@/lib/templates/worklog';
 import { isProposalTemplateName } from '@/lib/templates/proposal';
@@ -81,7 +82,17 @@ export async function generateDocument(request: NextRequest) {
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
     }
 
-    const versionFields = await resolveVersionFields(supabase, parentId);
+    // 새 버전이면 원본 접근 권한 확인 후 번호 결정 — 생성(AI·렌더) 전에 거부한다
+    const roleInfo = await getUserRoleInfo(supabase, authUserId);
+    if (!roleInfo) {
+      return NextResponse.json({ error: '사용자 정보가 없습니다.' }, { status: 403 });
+    }
+    const versionParent = await resolveVersionParent(mutation.admin, parentId, (rootId) =>
+      canAccessDocument(supabase, authUserId, roleInfo.role, roleInfo.department_id, rootId));
+    if (!versionParent.ok) {
+      return NextResponse.json({ error: versionParent.error }, { status: versionParent.status });
+    }
+    const versionFields = versionParent.fields;
     const { userName, userPosition, userDept, signatureBuffer } = await loadUserGenerationContext(supabase, authUserId);
     const companyLogoContext = await loadCompanyLogoWatermarkContext();
     // 재직증명서 등 회사 발급 문서의 직인은 회사 공용 직인을 사용

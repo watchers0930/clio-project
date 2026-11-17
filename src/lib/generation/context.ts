@@ -61,22 +61,6 @@ export function buildTheme(font: unknown): CorporateTheme {
   };
 }
 
-export async function resolveVersionFields(supabase: SupabaseClient, parentId?: string): Promise<VersionFields> {
-  if (!parentId) return {};
-  const { data: parentDoc } = await supabase.from('documents').select('parent_id, version_number').eq('id', parentId).single();
-  const rootId: string = parentDoc?.parent_id ?? parentId;
-  const { data: siblings } = await supabase
-    .from('documents')
-    .select('version_number')
-    .or(`id.eq.${rootId},parent_id.eq.${rootId}`)
-    .order('version_number', { ascending: false })
-    .limit(1);
-  return {
-    parent_id: rootId,
-    version_number: (siblings?.[0]?.version_number ?? 1) + 1,
-  };
-}
-
 export async function loadUserGenerationContext(supabase: SupabaseClient, authUserId: string) {
   const { data: userData } = await supabase
     .from('users')

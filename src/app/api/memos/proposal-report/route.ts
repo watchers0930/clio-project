@@ -7,7 +7,6 @@ import { getAuthUserId } from '@/lib/auth-helper';
 import { parseTemplateBundle } from '@/lib/templates/template-schema';
 import { generateDocumentContent } from '@/lib/ai/generate-document';
 import { scheduleDocumentEmbedding } from '@/lib/ai/embed-document';
-import { resolveVersionFields } from '@/app/api/generate/route-helpers';
 import { kstDateStr } from '@/lib/utils/date-kst';
 
 export const maxDuration = 60;
@@ -224,7 +223,8 @@ export async function POST(request: NextRequest) {
       documentInputs,
     });
 
-    const versionFields = await resolveVersionFields(supabase);
+    // 메모에서 만든 제안서는 항상 새 원본(1판)
+    const versionFields = {};
 
     const insertPayload = {
       title: `${proposalPlan.title} (${dateStr} 생성)`,
