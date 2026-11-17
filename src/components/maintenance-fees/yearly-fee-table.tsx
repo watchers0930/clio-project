@@ -1,6 +1,7 @@
 'use client';
 
-import type { YearlyView } from '@/lib/maintenance-fees/types';
+import { SUBTOTAL_LABEL, TAX_TYPE_LABEL } from '@/lib/maintenance-fees/types';
+import type { YearlyLine, YearlyView } from '@/lib/maintenance-fees/types';
 import { won } from '@/lib/maintenance-fees/format';
 
 interface Props {
@@ -12,6 +13,60 @@ interface Props {
 // (전역 td 글자 14px 도 @layer 밖이라 여기서 직접 12px 지정)
 const cell = { padding: '12px 10px', fontSize: '12px' };
 const MONTHS = Array.from({ length: 12 }, (_, i) => `${i + 1}월`);
+
+const dash = <span className="text-foreground-quaternary">—</span>;
+
+/** 고지서 순서의 한 줄: 구분 머리줄 / 항목 / 소계 */
+function renderLine(line: YearlyLine) {
+  if (line.kind === 'header') {
+    return (
+      <tr key={`h-${line.taxType}`}>
+        <td className="sticky left-0 z-10 bg-surface-secondary font-semibold text-foreground-secondary" style={cell}>
+          {TAX_TYPE_LABEL[line.taxType]}
+        </td>
+        <td colSpan={15} className="bg-surface-secondary" style={cell} />
+      </tr>
+    );
+  }
+  if (line.kind === 'subtotal') {
+    return (
+      <tr key={`s-${line.key}`} className="bg-surface-secondary/60">
+        <td className="sticky left-0 z-10 bg-surface-secondary font-semibold text-foreground" style={cell}>{SUBTOTAL_LABEL[line.key]}</td>
+        {line.months.map((v, i) => (
+          <td key={i} className="text-right font-mono font-semibold text-foreground" style={cell}>
+            {v === null ? dash : won(v)}
+          </td>
+        ))}
+        <td style={cell} />
+        <td style={cell} />
+        <td className="text-right font-mono font-semibold text-foreground" style={cell}>{won(line.total)}</td>
+      </tr>
+    );
+  }
+  const { row } = line;
+  return (
+    <tr key={row.item.id}>
+      <td className="sticky left-0 z-10 bg-white font-medium text-foreground" style={cell}>
+        {row.item.name}
+        {!row.item.is_active && <span className="text-[11px] text-foreground-quaternary"> (숨김)</span>}
+      </td>
+      {row.months.map((v, i) => (
+        <td key={i} className="text-right font-mono" style={cell}>
+          {v === null ? dash : won(v)}
+        </td>
+      ))}
+      <td className="text-right font-mono" style={cell}>
+        {row.usageTotal === null
+          ? '—'
+          : `${row.usageTotal.toLocaleString('ko-KR', { maximumFractionDigits: 3 })}${row.item.unit ? ` ${row.item.unit}` : ''}`}
+      </td>
+      <td className="text-right font-mono" style={cell}>
+        {row.avgUnitPrice === null ? '—' : `${row.avgUnitPrice.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}원`}
+      </td>
+      <td className="text-right font-mono font-semibold text-foreground" style={cell}>{won(row.amountTotal)}</td>
+    </tr>
+  );
+}
 
 export function YearlyFeeTable({ view, year }: Props) {
   return (
@@ -44,34 +99,13 @@ export function YearlyFeeTable({ view, year }: Props) {
                 </td>
               </tr>
             ) : (
-              view.rows.map((row) => (
-                <tr key={row.item.id}>
-                  <td className="sticky left-0 z-10 bg-white font-medium text-foreground" style={cell}>
-                    {row.item.name}
-                    {!row.item.is_active && <span className="text-[11px] text-foreground-quaternary"> (숨김)</span>}
-                  </td>
-                  {row.months.map((v, i) => (
-                    <td key={i} className="text-right font-mono" style={cell}>
-                      {v === null ? <span className="text-foreground-quaternary">—</span> : won(v)}
-                    </td>
-                  ))}
-                  <td className="text-right font-mono" style={cell}>
-                    {row.usageTotal === null
-                      ? '—'
-                      : `${row.usageTotal.toLocaleString('ko-KR', { maximumFractionDigits: 3 })}${row.item.unit ? ` ${row.item.unit}` : ''}`}
-                  </td>
-                  <td className="text-right font-mono" style={cell}>
-                    {row.avgUnitPrice === null ? '—' : `${row.avgUnitPrice.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}원`}
-                  </td>
-                  <td className="text-right font-mono font-semibold text-foreground" style={cell}>{won(row.amountTotal)}</td>
-                </tr>
-              ))
+              view.lines.map(renderLine)
             )}
           </tbody>
           {view.rows.length > 0 && (
             <tfoot>
               <tr className="bg-surface-secondary">
-                <td className="sticky left-0 z-10 bg-surface-secondary font-semibold text-foreground" style={cell}>월 총액</td>
+                <td className="sticky left-0 z-10 bg-surface-secondary font-semibold text-foreground" style={cell}>부과액 합계</td>
                 {view.monthTotals.map((v, i) => (
                   <td key={i} className="text-right font-mono font-semibold text-foreground" style={cell}>
                     {view.rows.every((r) => r.months[i] === null) ? <span className="text-foreground-quaternary">—</span> : won(v)}

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseYear, validateEntryCreate, validateEntryUpdate, validateItemInput } from "./validate";
+import { parseYear, validateEntryCreate, validateEntryUpdate, validateItemInput, validateReorder } from "./validate";
 
 const ID = "3f2b8c1e-1234-4abc-9def-0123456789ab";
 const upd = { usage: null, unit_price: null, amount: 1000, amount_overridden: false, memo: null, updated_at: "2026-11-16T03:00:00.123456+00:00" };
@@ -38,7 +38,7 @@ test("item_id UUID 아님 거부, memo 201자 거부, name 공백만 거부", ()
   if (ok.ok) {
     assert.equal(ok.value.name, "전기");
     assert.equal(ok.value.default_unit_price, 120.5);
-    assert.equal(ok.value.sort_order, 0);
+    assert.equal(ok.value.tax_type, "taxable");
   }
 });
 
@@ -55,7 +55,7 @@ test("수정 입력은 item_id·month 를 받지 않는다", () => {
 });
 
 test("항목 수정은 is_active 를 받는다, 생성은 무시", () => {
-  const u = validateItemInput({ name: "전기", unit: null, default_unit_price: null, sort_order: 0, is_active: false }, "update");
+  const u = validateItemInput({ name: "전기", unit: null, default_unit_price: null, tax_type: "taxable", is_active: false }, "update");
   assert.ok(u.ok);
   if (u.ok) assert.equal(u.value.is_active, false);
   const c = validateItemInput({ name: "전기", is_active: false }, "create");
@@ -93,9 +93,9 @@ test("기록 수정은 모든 칸과 updated_at 이 있어야 한다(빠진 칸 
   if (r.ok) assert.equal(r.value.updated_at, upd.updated_at);
 });
 
-test("항목 수정은 모든 칸이 있어야 한다(숨김 해제·순서 초기화 방지)", () => {
+test("항목 수정은 모든 칸이 있어야 한다(숨김 해제·구분 초기화 방지)", () => {
   assert.equal(validateItemInput({ name: "전기" }, "update").ok, false);
-  assert.equal(validateItemInput({ name: "전기", unit: null, default_unit_price: null, sort_order: 0, is_active: false }, "update").ok, true);
+  assert.equal(validateItemInput({ name: "전기", unit: null, default_unit_price: null, tax_type: "taxable", is_active: false }, "update").ok, true);
 });
 
 test("항목명 정리: NFC·보이지 않는 문자 제거·연속 공백 하나로", () => {
@@ -112,4 +112,27 @@ test("항목명 정리: 소프트하이픈·방향 표시 문자도 제거", () 
   const r = validateItemInput({ name: "전\u00AD기\u200E\u202A\u2066", unit: null }, "create");
   assert.ok(r.ok);
   if (r.ok) assert.equal(r.value.name, "전기");
+});
+
+test("과세 구분: 생성 생략은 과세, 잘못된 값 거부, 수정은 필수", () => {
+  const c = validateItemInput({ name: "부가세", tax_type: "vat" }, "create");
+  assert.ok(c.ok);
+  if (c.ok) assert.equal(c.value.tax_type, "vat");
+  assert.equal(validateItemInput({ name: "x", tax_type: "free" }, "create").ok, false);
+  assert.equal(validateItemInput({ name: "x", unit: null, default_unit_price: null, is_active: true }, "update").ok, false);
+  const r = validateItemInput({ name: "x", sort_order: 3, tax_type: "exempt" }, "create");
+  assert.ok(r.ok);
+  if (r.ok) assert.equal("sort_order" in r.value, false); // 순서는 items/order 로만
+});
+
+test("순서 저장 검증: UUID 배열·중복(대소문자 무시)·빈 배열·201개 거부", () => {
+  const A = "3f2b8c1e-1234-4abc-9def-0123456789ab";
+  const B = "4f2b8c1e-1234-4abc-9def-0123456789ab";
+  assert.deepEqual(validateReorder({ ids: [A, B] }), { ok: true, value: [A, B] });
+  assert.equal(validateReorder({ ids: [A, A.toUpperCase()] }).ok, false);
+  assert.equal(validateReorder({ ids: [] }).ok, false);
+  assert.equal(validateReorder({ ids: ["x"] }).ok, false);
+  assert.equal(validateReorder({ ids: "x" }).ok, false);
+  assert.equal(validateReorder(null).ok, false);
+  assert.equal(validateReorder({ ids: Array.from({ length: 201 }, () => A) }).ok, false);
 });

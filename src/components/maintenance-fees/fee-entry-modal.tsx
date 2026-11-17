@@ -3,7 +3,8 @@
 import { useCallback, useId, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import type { FeeEntry, FeeEntryCreateInput, FeeEntryFields, FeeEntryUpdateInput, FeeItem } from '@/lib/maintenance-fees/types';
-import { computeAmount } from '@/lib/maintenance-fees/calc';
+import { computeAmount, sortFeeItems } from '@/lib/maintenance-fees/calc';
+import { TAX_TYPE_LABEL, TAX_TYPES } from '@/lib/maintenance-fees/types';
 import { toInput, unitPriceOnItemChange, won } from '@/lib/maintenance-fees/format';
 import { parseNumberInput } from '@/lib/format/number-input';
 import { NumberInput } from '@/components/ui/number-input';
@@ -16,6 +17,7 @@ interface Props {
   monthText: string;
   items: FeeItem[];
   usedItemIds: Set<string>; // 이 달에 이미 입력된 항목 (신규 입력 선택지에서 제외)
+  supplyAmount: number; // 이 달 공급가액(과세 합) — 부가세 참고값(10%) 표시용
   editing: FeeEntry | null;
   locked: boolean; // 바깥에서 삭제 처리 중 — 저장·삭제 잠금
   onClose: () => void;
@@ -24,7 +26,7 @@ interface Props {
   onManageItems: () => void;
 }
 
-export function FeeEntryModal({ month, monthText, items, usedItemIds, editing, locked, onClose, onSubmit, onDelete, onManageItems }: Props) {
+export function FeeEntryModal({ month, monthText, items, usedItemIds, supplyAmount, editing, locked, onClose, onSubmit, onDelete, onManageItems }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   // 삭제 처리 중에는 Escape 로도 닫히지 않게
@@ -43,7 +45,7 @@ export function FeeEntryModal({ month, monthText, items, usedItemIds, editing, l
   const [error, setError] = useState('');
 
   const selectable = useMemo(
-    () => items.filter((it) => it.is_active && !usedItemIds.has(it.id)),
+    () => sortFeeItems(items).filter((it) => it.is_active && !usedItemIds.has(it.id)),
     [items, usedItemIds],
   );
   // 신규 입력 중 고른 항목이 항목 관리에서 숨겨지거나 삭제되면 선택을 무효로 본다
@@ -138,12 +140,19 @@ export function FeeEntryModal({ month, monthText, items, usedItemIds, editing, l
             ) : (
               <select value={selectedId} onChange={(e) => selectItem(e.target.value)} aria-label="항목" className={inputCls}>
                 <option value="">항목 선택</option>
-                {selectable.map((it) => (
-                  <option key={it.id} value={it.id}>
-                    {it.name}
-                    {it.unit ? ` (${it.unit})` : ''}
-                  </option>
-                ))}
+                {TAX_TYPES.map((t) => {
+                  const group = selectable.filter((it) => it.tax_type === t);
+                  return group.length ? (
+                    <optgroup key={t} label={TAX_TYPE_LABEL[t]}>
+                      {group.map((it) => (
+                        <option key={it.id} value={it.id}>
+                          {it.name}
+                          {it.unit ? ` (${it.unit})` : ''}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null;
+                })}
               </select>
             )}
             {itemGone && <p className="text-[12px] text-amber-600">고른 항목이 숨겨지거나 삭제되었습니다. 다시 선택해 주세요.</p>}
@@ -195,6 +204,11 @@ export function FeeEntryModal({ month, monthText, items, usedItemIds, editing, l
               placeholder="0"
               className={`${inputCls} text-right font-mono text-[15px]`}
             />
+            {item?.tax_type === 'vat' && (
+              <p className="text-[12px] text-foreground-tertiary">
+                참고: 공급가액 {won(supplyAmount)}원의 10% = {(supplyAmount / 10).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}원 · 고지서의 부가세 금액을 입력하세요
+              </p>
+            )}
             {overridden && computed !== null && (
               <p className="text-[12px] text-amber-600">
                 직접 입력 · 계산값 {won(computed)}원

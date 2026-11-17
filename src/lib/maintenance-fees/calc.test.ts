@@ -1,10 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildMonthlyView, buildYearlyView, computeAmount, prevMonth, resolveAmount } from "./calc";
+import { buildMonthlyView, buildYearlyView, computeAmount, moveFeeItem, prevMonth, resolveAmount, sortFeeItems } from "./calc";
 import type { FeeEntry, FeeItem } from "./types";
 
 const item = (id: string, name: string, over: Partial<FeeItem> = {}): FeeItem => ({
-  id, name, unit: null, default_unit_price: null, sort_order: 0, is_active: true, ...over,
+  id, name, unit: null, default_unit_price: null, tax_type: "taxable", sort_order: 0, is_active: true, ...over,
 });
 const entry = (id: string, item_id: string, month: string, amount: number, usage: number | null = null): FeeEntry => ({
   id, item_id, month, usage, unit_price: null, amount, amount_overridden: false, memo: null, updated_at: "2026-11-16T00:00:00Z",
@@ -86,4 +86,83 @@ test("buildYearlyView 숨긴 항목 기록 포함·빈 달 null·평균단가", 
 
 test("resolveAmount — 계산 금액이 DB 범위(±1e13)를 넘으면 오류", () => {
   assert.ok("error" in resolveAmount({ usage: 1e9, unit_price: 1e10, amount: null, amount_overridden: false }));
+});
+
+// 실제 고지서(2026년 10월분 관리비 납입영수증)
+const billItems = [
+  item("t1", "일반관리비(과)", { sort_order: 1 }),
+  item("t2", "관리비공제", { sort_order: 2 }),
+  item("t3", "기본전기료", { sort_order: 3 }),
+  item("t4", "전기사용료", { sort_order: 4, unit: "kWh" }),
+  item("t5", "공동전기료", { sort_order: 5 }),
+  item("v", "부가세", { tax_type: "vat", sort_order: 6 }),
+  item("x1", "일반관리비(비)", { tax_type: "exempt", sort_order: 7 }),
+  item("x2", "전력기금", { tax_type: "exempt", sort_order: 8 }),
+  item("x3", "장기수선충당금", { tax_type: "exempt", sort_order: 9 }),
+  item("x4", "공동수도료", { tax_type: "exempt", sort_order: 10 }),
+];
+const billEntries = [
+  entry("1", "t1", "2026-10", 83360), entry("2", "t2", "2026-10", -13320), entry("3", "t3", "2026-10", 17780),
+  entry("4", "t4", "2026-10", 16360, 135.3), entry("5", "t5", "2026-10", 11630), entry("6", "v", "2026-10", 11580),
+  entry("7", "x1", "2026-10", 2850), entry("8", "x2", "2026-10", 1990), entry("9", "x3", "2026-10", 3470), entry("10", "x4", "2026-10", 4000),
+];
+
+test("고지서 재현: 공급가액 115,810 · 과세합 127,390 · 비과세합 12,310 · 당월 부과액 139,700", () => {
+  const v = buildMonthlyView([...billItems].reverse(), billEntries, "2026-10");
+  const sub = Object.fromEntries(v.lines.filter((l) => l.kind === "subtotal").map((l) => [l.key, l.amount]));
+  assert.deepEqual(sub, { supply: 115810, taxTotal: 127390, exemptTotal: 12310 });
+  assert.equal(v.supply, 115810);
+  assert.equal(v.total, 139700);
+  const shape = v.lines.map((l) => (l.kind === "item" ? l.row.item.name : l.kind === "header" ? `[${l.taxType}]` : `=${l.key}`));
+  assert.deepEqual(shape, [
+    "[taxable]", "일반관리비(과)", "관리비공제", "기본전기료", "전기사용료", "공동전기료", "=supply",
+    "부가세", "=taxTotal",
+    "[exempt]", "일반관리비(비)", "전력기금", "장기수선충당금", "공동수도료", "=exemptTotal",
+  ]);
+});
+
+test("연도별 소계: 기록 없는 달은 null, 연 합계는 묶음 합", () => {
+  const v = buildYearlyView(billItems, billEntries, 2026);
+  const subs = v.lines.filter((l) => l.kind === "subtotal");
+  const tax = subs.find((l) => l.key === "taxTotal");
+  assert.ok(tax && tax.kind === "subtotal");
+  assert.equal(tax.months[9], 127390);
+  assert.equal(tax.months[0], null);
+  assert.equal(tax.total, 127390);
+  assert.equal(v.grandTotal, 139700);
+});
+
+test("묶음이 비면 그 묶음 줄을 만들지 않는다(비과세만 있는 달)", () => {
+  const v = buildMonthlyView(billItems, [entry("7", "x1", "2026-10", 2850)], "2026-10");
+  const shape = v.lines.map((l) => (l.kind === "item" ? l.row.item.name : l.kind === "header" ? `[${l.taxType}]` : `=${l.key}`));
+  assert.deepEqual(shape, ["[exempt]", "일반관리비(비)", "=exemptTotal"]);
+  assert.equal(v.supply, 0);
+});
+
+test("전월 소계: 구분별 전월 기록으로 계산, 없으면 null", () => {
+  const v = buildMonthlyView(billItems, [...billEntries, entry("p1", "t1", "2026-11", 80000)], "2026-11");
+  const supply = v.lines.find((l) => l.kind === "subtotal" && l.key === "supply");
+  assert.ok(supply && supply.kind === "subtotal");
+  assert.equal(supply.amount, 80000);
+  assert.equal(supply.prevAmount, 115810);
+});
+
+test("sortFeeItems: 과세 → 부가세 → 비과세, 그 안에서 sort_order", () => {
+  const items = [item("x", "수도", { tax_type: "exempt", sort_order: 0 }), item("v", "부가세", { tax_type: "vat" }), item("a", "전기", { sort_order: 5 })];
+  assert.deepEqual(sortFeeItems(items).map((i) => i.id), ["a", "v", "x"]);
+});
+
+test("moveFeeItem: 같은 구분 안에서만 옮긴다, 끝이면 null", () => {
+  assert.deepEqual(moveFeeItem(billItems, "t2", -1)?.slice(0, 2), ["t2", "t1"]);
+  assert.equal(moveFeeItem(billItems, "t1", -1), null);
+  assert.equal(moveFeeItem(billItems, "t5", 1), null); // 다음은 부가세 — 구분이 달라 못 넘어간다
+  assert.equal(moveFeeItem(billItems, "x1", -1), null);
+  assert.equal(moveFeeItem(billItems, "nope", 1), null);
+  assert.equal(moveFeeItem(billItems, "x3", 1)?.length, billItems.length);
+});
+
+test("부가세만 있는 달도 과세 머리줄로 시작", () => {
+  const v = buildMonthlyView(billItems, [entry("6", "v", "2026-10", 11580)], "2026-10");
+  const shape = v.lines.map((l) => (l.kind === "item" ? l.row.item.name : l.kind === "header" ? `[${l.taxType}]` : `=${l.key}`));
+  assert.deepEqual(shape, ["[taxable]", "부가세", "=taxTotal"]);
 });

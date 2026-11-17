@@ -28,7 +28,7 @@ export function MaintenanceFeesView() {
   const [deletingEntry, setDeletingEntry] = useState(false); // 기록 삭제 처리 중 — 입력창 잠금
   const toast = useToast();
   const { confirmState, openConfirm, closeConfirm } = useConfirmDialog();
-  const { items, entries, ready, forbidden, error, saveItem, deleteItem, saveEntry, deleteEntry } = useMaintenanceFees(year);
+  const { items, entries, ready, forbidden, error, saveItem, reorderItems, deleteItem, saveEntry, deleteEntry } = useMaintenanceFees(year);
 
   const month = `${year}-${String(monthNo).padStart(2, '0')}`;
   const monthText = `${year}년 ${monthNo}월`;
@@ -78,7 +78,7 @@ export function MaintenanceFeesView() {
         <div className="flex flex-col gap-1.5">
           <h2 className="text-[16px] font-semibold text-foreground">관리비</h2>
           <p className="text-[13px] text-foreground-secondary">
-            관리비 항목별 사용량·단가·금액을 월별로 입력하고 연도별로 확인합니다. 금액은 사용량 × 단가로 자동 계산되며 고지서 금액으로 고칠 수 있습니다.
+            고지서처럼 과세·부가세·비과세로 나눠 월별로 입력하고 연도별로 확인합니다. 월은 고지서에 적힌 달(예: 10월분) 기준입니다. 금액은 사용량 × 단가로 자동 계산되며 고지서 금액으로 고칠 수 있습니다.
           </p>
         </div>
 
@@ -139,6 +139,7 @@ export function MaintenanceFeesView() {
           monthText={monthText}
           items={items}
           usedItemIds={usedItemIds}
+          supplyAmount={monthlyView.supply}
           editing={editingEntry}
           locked={deletingEntry}
           onClose={() => setEntryModal(false)}
@@ -151,7 +152,7 @@ export function MaintenanceFeesView() {
           onManageItems={() => setItemManager(true)}
         />
       )}
-      {itemManager && <FeeItemManager items={items} onClose={() => setItemManager(false)} onSave={saveItem} onDelete={confirmDeleteItem} />}
+      {itemManager && <FeeItemManager items={items} onClose={() => setItemManager(false)} onSave={saveItem} onReorder={reorderItems} onDelete={confirmDeleteItem} />}
       <ConfirmDialog
         open={confirmState.open}
         title={confirmState.title}

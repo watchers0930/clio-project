@@ -1,6 +1,7 @@
 'use client';
 
-import type { MonthlyRow, MonthlyView } from '@/lib/maintenance-fees/types';
+import { SUBTOTAL_LABEL, TAX_TYPE_LABEL } from '@/lib/maintenance-fees/types';
+import type { MonthlyLine, MonthlyRow, MonthlyView } from '@/lib/maintenance-fees/types';
 import { won } from '@/lib/maintenance-fees/format';
 
 interface Props {
@@ -24,6 +25,77 @@ function Diff({ value }: { value: number | null }) {
   );
 }
 
+function lineKey(line: MonthlyLine): string {
+  if (line.kind === 'item') return line.row.entry.id;
+  return line.kind === 'header' ? `h-${line.taxType}` : `s-${line.key}`;
+}
+
+/** 고지서 순서의 한 줄: 구분 머리줄 / 항목 / 소계 */
+function renderLine(line: MonthlyLine, onRowClick: (row: MonthlyRow) => void) {
+  if (line.kind === 'header') {
+    return (
+      <tr key={lineKey(line)}>
+        <td colSpan={6} style={{ ...tdSmall, padding: '10px 20px' }} className="bg-surface-secondary font-semibold text-foreground-secondary">
+          {TAX_TYPE_LABEL[line.taxType]}
+        </td>
+      </tr>
+    );
+  }
+  if (line.kind === 'subtotal') {
+    return (
+      <tr key={lineKey(line)} className="bg-surface-secondary/60">
+        <td style={td} className="font-semibold text-foreground">{SUBTOTAL_LABEL[line.key]}</td>
+        <td style={td} />
+        <td style={td} />
+        <td style={td} className="text-right font-mono font-semibold text-foreground">{won(line.amount)}원</td>
+        <td style={td} className="text-right font-mono">
+          <Diff value={line.prevAmount === null ? null : line.amount - line.prevAmount} />
+        </td>
+        <td style={td} />
+      </tr>
+    );
+  }
+  const { row } = line;
+  return (
+    <tr
+      key={lineKey(line)}
+      onClick={() => onRowClick(row)}
+      onKeyDown={(e) => {
+        // 누르고 있을 때의 자동 반복은 무시(연 창이 곧바로 반응하지 않게)
+        if (e.repeat) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onRowClick(row);
+        }
+      }}
+      tabIndex={0}
+      aria-label={`${row.item.name} 기록 열기`}
+      className="cursor-pointer outline-none focus-visible:bg-surface-secondary"
+    >
+      <td style={td} className="font-medium text-foreground">
+        {row.item.name}
+        {!row.item.is_active && <span className="text-[11px] text-foreground-quaternary"> (숨김)</span>}
+      </td>
+      <td style={td} className="text-right font-mono">
+        {row.entry.usage === null ? '—' : `${row.entry.usage.toLocaleString('ko-KR', { maximumFractionDigits: 3 })}${row.item.unit ? ` ${row.item.unit}` : ''}`}
+      </td>
+      <td style={td} className="text-right font-mono">
+        {row.entry.unit_price === null ? '—' : `${row.entry.unit_price.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}원`}
+      </td>
+      <td style={td} className="text-right font-mono font-medium text-foreground">
+        <div className="flex flex-col items-end gap-0.5">
+          <span>{won(row.entry.amount)}원</span>
+          {row.entry.amount_overridden && <span className="text-[11px] font-normal text-amber-600">직접 입력</span>}
+        </div>
+      </td>
+      <td style={td} className="text-right font-mono">
+        <Diff value={row.diff} />
+      </td>
+      <td style={td} className="text-foreground-secondary">{row.entry.memo ?? ''}</td>
+    </tr>
+  );
+}
+
 export function MonthlyFeeTable({ view, monthText, onRowClick }: Props) {
   const totalDiff = view.prevTotal === null ? null : view.total - view.prevTotal;
 
@@ -32,7 +104,7 @@ export function MonthlyFeeTable({ view, monthText, onRowClick }: Props) {
       {/* 월 합계 카드 */}
       <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-border bg-surface-secondary px-5 py-4">
         <span className="text-[13px] font-medium text-foreground-secondary">
-          {monthText} 관리비 합계 ({view.rows.length}건)
+          {monthText} 당월 부과액 ({view.rows.length}건)
         </span>
         <div className="flex items-end gap-4">
           <span className="text-[12px] text-foreground-secondary">
@@ -62,50 +134,13 @@ export function MonthlyFeeTable({ view, monthText, onRowClick }: Props) {
                 </td>
               </tr>
             ) : (
-              view.rows.map((row) => (
-                <tr
-                  key={row.entry.id}
-                  onClick={() => onRowClick(row)}
-                  onKeyDown={(e) => {
-                    // 누르고 있을 때의 자동 반복은 무시(연 창이 곧바로 반응하지 않게)
-                    if (e.repeat) return;
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      onRowClick(row);
-                    }
-                  }}
-                  tabIndex={0}
-                  aria-label={`${row.item.name} 기록 열기`}
-                  className="cursor-pointer outline-none focus-visible:bg-surface-secondary"
-                >
-                  <td style={td} className="font-medium text-foreground">
-                    {row.item.name}
-                    {!row.item.is_active && <span className="text-[11px] text-foreground-quaternary"> (숨김)</span>}
-                  </td>
-                  <td style={td} className="text-right font-mono">
-                    {row.entry.usage === null ? '—' : `${row.entry.usage.toLocaleString('ko-KR', { maximumFractionDigits: 3 })}${row.item.unit ? ` ${row.item.unit}` : ''}`}
-                  </td>
-                  <td style={td} className="text-right font-mono">
-                    {row.entry.unit_price === null ? '—' : `${row.entry.unit_price.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}원`}
-                  </td>
-                  <td style={td} className="text-right font-mono font-medium text-foreground">
-                    <div className="flex flex-col items-end gap-0.5">
-                      <span>{won(row.entry.amount)}원</span>
-                      {row.entry.amount_overridden && <span className="text-[11px] font-normal text-amber-600">직접 입력</span>}
-                    </div>
-                  </td>
-                  <td style={td} className="text-right font-mono">
-                    <Diff value={row.diff} />
-                  </td>
-                  <td style={td} className="text-foreground-secondary">{row.entry.memo ?? ''}</td>
-                </tr>
-              ))
+              view.lines.map((line) => renderLine(line, onRowClick))
             )}
           </tbody>
           {view.rows.length > 0 && (
             <tfoot>
               <tr className="bg-surface-secondary">
-                <td style={td} className="font-semibold text-foreground">합계</td>
+                <td style={td} className="font-semibold text-foreground">당월 부과액</td>
                 <td style={td} />
                 <td style={td} />
                 <td style={td} className="text-right font-mono font-semibold text-foreground">{won(view.total)}원</td>

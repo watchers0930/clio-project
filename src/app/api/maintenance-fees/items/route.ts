@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { ok, fail } from '@/lib/api-helper';
-import { feeMutationGate, feeReadGate, MAX_ITEMS, readJson, UNIQUE_VIOLATION } from '@/lib/maintenance-fees/route-guard';
+import { feeMutationGate, feeReadGate, itemUniqueMessage, MAX_ITEMS, readJson, UNIQUE_VIOLATION } from '@/lib/maintenance-fees/route-guard';
 import { validateItemInput } from '@/lib/maintenance-fees/validate';
 import { ITEM_SELECT, mapItem } from '@/lib/maintenance-fees/map';
 
@@ -29,12 +29,20 @@ export async function POST(request: NextRequest) {
   const { count, error: countError } = await gate.db.from('maintenance_fee_items').select('id', { count: 'exact', head: true });
   if (countError) return fail('항목을 저장하지 못했습니다.', 500);
   if ((count ?? 0) >= MAX_ITEMS) return fail(`항목은 최대 ${MAX_ITEMS}개까지 등록할 수 있습니다. 쓰지 않는 항목을 삭제해 주세요.`, 409);
+  // 새 항목은 맨 뒤로 — 순서 변경은 items/order 로만
+  const { data: last, error: lastError } = await gate.db
+    .from('maintenance_fee_items')
+    .select('sort_order')
+    .order('sort_order', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (lastError) return fail('항목을 저장하지 못했습니다.', 500);
   const { data, error } = await gate.db
     .from('maintenance_fee_items')
-    .insert({ ...v.value, created_by: gate.userId })
+    .insert({ ...v.value, sort_order: Number(last?.sort_order ?? 0) + 1, created_by: gate.userId })
     .select(ITEM_SELECT)
     .single();
-  if (error?.code === UNIQUE_VIOLATION) return fail('같은 이름의 항목이 있습니다.', 409);
+  if (error?.code === UNIQUE_VIOLATION) return fail(itemUniqueMessage(error), 409);
   if (error || !data) return fail('항목을 저장하지 못했습니다.', 500);
   return ok(mapItem(data), 201);
 }

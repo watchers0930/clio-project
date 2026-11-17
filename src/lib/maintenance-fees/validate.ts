@@ -1,5 +1,6 @@
 // 관리비 - 서버 입력 검증 (순수 함수)
-import type { FeeEntryCreateInput, FeeEntryFields, FeeEntryUpdateInput, FeeItemInput } from './types';
+import { TAX_TYPES } from './types';
+import type { FeeEntryCreateInput, FeeEntryFields, FeeEntryUpdateInput, FeeItemInput, TaxType } from './types';
 
 type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -11,7 +12,8 @@ const NUMBER_RE = /^-?\d+(\.\d+)?$/; // '0x10'·'1e5'·'1.2.3' 거부
 const USAGE_MAX = 999_999_999_999.999;
 const PRICE_MAX = 1e10;
 const ENTRY_KEYS = ['usage', 'unit_price', 'amount', 'amount_overridden', 'memo'] as const;
-const ITEM_UPDATE_KEYS = ['unit', 'default_unit_price', 'sort_order', 'is_active'] as const;
+const ITEM_UPDATE_KEYS = ['unit', 'default_unit_price', 'tax_type', 'is_active'] as const;
+export const MAX_REORDER_IDS = 200; // = route-guard MAX_ITEMS
 
 function isObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -72,8 +74,9 @@ export function validateItemInput(body: unknown, mode: 'create' | 'update'): Res
   if (mode === 'update' && ITEM_UPDATE_KEYS.some((k) => !(k in body))) return { ok: false, error: '수정할 항목 정보가 부족합니다.' };
   const price = optNum(body.default_unit_price, '기본 단가', { min: 0, max: PRICE_MAX, decimals: 2 });
   if (!price.ok) return price;
-  const order = optNum(body.sort_order, '순서', { min: 0, max: 9999, decimals: 0 });
-  if (!order.ok) return order;
+  // 생성 때 빠지면 과세(고지서 대부분), 수정은 위에서 필수로 요구
+  const taxType = body.tax_type === undefined && mode === 'create' ? 'taxable' : body.tax_type;
+  if (!TAX_TYPES.includes(taxType as TaxType)) return { ok: false, error: '과세 구분이 올바르지 않습니다.' };
   let isActive = true;
   if (mode === 'update') {
     if (typeof body.is_active !== 'boolean') return { ok: false, error: '숨김 여부가 올바르지 않습니다.' };
@@ -81,7 +84,7 @@ export function validateItemInput(body: unknown, mode: 'create' | 'update'): Res
   }
   return {
     ok: true,
-    value: { name, unit: unit.value, default_unit_price: price.value, sort_order: order.value ?? 0, is_active: isActive },
+    value: { name, unit: unit.value, default_unit_price: price.value, tax_type: taxType as TaxType, is_active: isActive },
   };
 }
 
@@ -128,6 +131,16 @@ export function validateEntryCreate(body: unknown): Result<FeeEntryCreateInput> 
   const rest = parseEntryFields(body);
   if (!rest.ok) return rest;
   return { ok: true, value: { item_id: body.item_id, month: body.month, ...rest.value } };
+}
+
+/** 순서 저장: 중복 없는 UUID 배열(1~200개) — 전체 항목과 같은지는 라우트가 DB 와 대조한다 */
+export function validateReorder(body: unknown): Result<string[]> {
+  if (!isObject(body) || !Array.isArray(body.ids)) return { ok: false, error: '요청 형식이 올바르지 않습니다.' };
+  const ids = body.ids;
+  if (ids.length === 0 || ids.length > MAX_REORDER_IDS) return { ok: false, error: '순서 목록이 올바르지 않습니다.' };
+  if (!ids.every(isUuid)) return { ok: false, error: '순서 목록이 올바르지 않습니다.' };
+  if (new Set(ids.map((id) => id.toLowerCase())).size !== ids.length) return { ok: false, error: '순서 목록에 같은 항목이 두 번 있습니다.' };
+  return { ok: true, value: ids };
 }
 
 /** 'YYYY' 쿼리 → 2000~2100 정수, 아니면 null. */

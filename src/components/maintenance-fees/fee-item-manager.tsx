@@ -1,8 +1,10 @@
 'use client';
 
 import { useId, useRef, useState } from 'react';
-import { Eye, EyeOff, Pencil, Trash2, X } from 'lucide-react';
-import type { FeeItem, FeeItemInput } from '@/lib/maintenance-fees/types';
+import { ChevronDown, ChevronUp, Eye, EyeOff, Pencil, Trash2, X } from 'lucide-react';
+import { TAX_TYPE_LABEL, TAX_TYPES } from '@/lib/maintenance-fees/types';
+import type { FeeItem, FeeItemInput, TaxType } from '@/lib/maintenance-fees/types';
+import { moveFeeItem, sortFeeItems } from '@/lib/maintenance-fees/calc';
 import { toInput } from '@/lib/maintenance-fees/format';
 import { parseNumberInput } from '@/lib/format/number-input';
 import { NumberInput } from '@/components/ui/number-input';
@@ -14,14 +16,17 @@ interface Props {
   items: FeeItem[];
   onClose: () => void;
   onSave: (input: FeeItemInput, id?: string) => Promise<string | null>;
+  onReorder: (ids: string[]) => Promise<string | null>;
   onDelete: (item: FeeItem) => void;
 }
 
+const arrowBtn = 'p-0 text-foreground-secondary hover:text-primary disabled:opacity-30 disabled:hover:text-foreground-secondary';
+
 function toItemInput(it: FeeItem, over: Partial<FeeItemInput> = {}): FeeItemInput {
-  return { name: it.name, unit: it.unit, default_unit_price: it.default_unit_price, sort_order: it.sort_order, is_active: it.is_active, ...over };
+  return { name: it.name, unit: it.unit, default_unit_price: it.default_unit_price, tax_type: it.tax_type, is_active: it.is_active, ...over };
 }
 
-export function FeeItemManager({ items, onClose, onSave, onDelete }: Props) {
+export function FeeItemManager({ items, onClose, onSave, onReorder, onDelete }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   useDialogA11y(true, onClose, panelRef);
@@ -29,7 +34,8 @@ export function FeeItemManager({ items, onClose, onSave, onDelete }: Props) {
   const [name, setName] = useState('');
   const [unit, setUnit] = useState('');
   const [price, setPrice] = useState('');
-  const [order, setOrder] = useState('');
+  const [taxType, setTaxType] = useState<TaxType>('taxable');
+  const [moving, setMoving] = useState(false); // 순서 저장 중 — 연속 클릭으로 낡은 목록 기준 요청이 겹치지 않게
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [listError, setListError] = useState(''); // 숨기기 등 목록 동작 오류(폼 오류와 따로)
@@ -41,7 +47,7 @@ export function FeeItemManager({ items, onClose, onSave, onDelete }: Props) {
     setName(it?.name ?? '');
     setUnit(it?.unit ?? '');
     setPrice(toInput(it?.default_unit_price ?? null));
-    setOrder(it ? String(it.sort_order) : '');
+    setTaxType(it?.tax_type ?? 'taxable');
     setError('');
   };
 
@@ -54,7 +60,7 @@ export function FeeItemManager({ items, onClose, onSave, onDelete }: Props) {
       name: name.trim(),
       unit: unit.trim() || null,
       default_unit_price: parseNumberInput(price),
-      sort_order: order ? Number(order) : 0,
+      tax_type: taxType,
       // 폼을 연 뒤 숨김을 바꿨을 수 있어 최신 목록의 값을 쓴다
       is_active: editingLive?.is_active ?? true,
     };
@@ -65,6 +71,18 @@ export function FeeItemManager({ items, onClose, onSave, onDelete }: Props) {
     if (err) setError(err);
     else resetForm(null);
   };
+
+  const move = async (it: FeeItem, delta: -1 | 1) => {
+    const ids = moveFeeItem(items, it.id, delta);
+    if (!ids || moving || saving) return;
+    setMoving(true);
+    setListError('');
+    const err = await onReorder(ids);
+    setMoving(false);
+    if (err) setListError(err);
+  };
+
+  const sorted = sortFeeItems(items);
 
   const toggleActive = async (it: FeeItem) => {
     setListError('');
@@ -116,15 +134,14 @@ export function FeeItemManager({ items, onClose, onSave, onDelete }: Props) {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <span className={labelCls}>표시 순서</span>
-              <input
-                value={order}
-                onChange={(e) => setOrder(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                inputMode="numeric"
-                aria-label="표시 순서"
-                placeholder="0"
-                className={`${inputCls} text-right font-mono`}
-              />
+              <span className={labelCls}>구분</span>
+              <select value={taxType} onChange={(e) => setTaxType(e.target.value as TaxType)} aria-label="구분" className={inputCls}>
+                {TAX_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {TAX_TYPE_LABEL[t]}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           {error && <p className="text-[12px] text-red-500">{error}</p>}
@@ -134,7 +151,7 @@ export function FeeItemManager({ items, onClose, onSave, onDelete }: Props) {
                 새 항목으로
               </button>
             )}
-            <button onClick={() => void submit()} disabled={saving} className={primaryBtn}>
+            <button onClick={() => void submit()} disabled={saving || moving} className={primaryBtn}>
               {saving ? '저장 중...' : editingLive ? '수정 저장' : '항목 추가'}
             </button>
           </div>
@@ -146,32 +163,51 @@ export function FeeItemManager({ items, onClose, onSave, onDelete }: Props) {
           {items.length === 0 ? (
             <p className="py-6 text-center text-[13px] text-foreground-tertiary">등록된 항목이 없습니다.</p>
           ) : (
-            items.map((it) => (
-              <div key={it.id} className="flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-3">
-                <div className="flex min-w-0 flex-col gap-0.5">
-                  <span className={`text-[13px] font-medium ${it.is_active ? 'text-foreground' : 'text-foreground-quaternary'}`}>
-                    {it.name}
-                    {!it.is_active && ' (숨김)'}
-                  </span>
-                  <span className="text-[11px] text-foreground-tertiary">
-                    {[it.unit, it.default_unit_price !== null ? `기본 단가 ${toInput(it.default_unit_price)}원` : null, `순서 ${it.sort_order}`]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </span>
+            TAX_TYPES.map((t) => {
+              const group = sorted.filter((it) => it.tax_type === t);
+              if (!group.length) return null;
+              return (
+                <div key={t} className="flex flex-col gap-2">
+                  <span className="pt-1 text-[12px] font-semibold text-foreground-secondary">{TAX_TYPE_LABEL[t]}</span>
+                  {group.map((it, i) => (
+                    <div key={it.id} className="flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex flex-shrink-0 flex-col gap-1">
+                          <button onClick={() => void move(it, -1)} disabled={moving || i === 0} className={arrowBtn} title="위로" aria-label={`${it.name} 위로`}>
+                            <ChevronUp size={16} strokeWidth={1.5} />
+                          </button>
+                          <button onClick={() => void move(it, 1)} disabled={moving || i === group.length - 1} className={arrowBtn} title="아래로" aria-label={`${it.name} 아래로`}>
+                            <ChevronDown size={16} strokeWidth={1.5} />
+                          </button>
+                        </div>
+                        <div className="flex min-w-0 flex-col gap-0.5">
+                          <span className={`text-[13px] font-medium ${it.is_active ? 'text-foreground' : 'text-foreground-quaternary'}`}>
+                            {it.name}
+                            {!it.is_active && ' (숨김)'}
+                          </span>
+                          {(it.unit || it.default_unit_price !== null) && (
+                            <span className="text-[11px] text-foreground-tertiary">
+                              {[it.unit, it.default_unit_price !== null ? `기본 단가 ${toInput(it.default_unit_price)}원` : null].filter(Boolean).join(' · ')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-shrink-0 items-center gap-4">
+                        <button onClick={() => resetForm(it)} disabled={moving} className={arrowBtn} title="수정">
+                          <Pencil size={16} strokeWidth={1.5} />
+                        </button>
+                        <button onClick={() => void toggleActive(it)} disabled={moving} className={arrowBtn} title={it.is_active ? '숨기기' : '다시 보이기'}>
+                          {it.is_active ? <EyeOff size={16} strokeWidth={1.5} /> : <Eye size={16} strokeWidth={1.5} />}
+                        </button>
+                        <button onClick={() => onDelete(it)} disabled={moving} className={`${arrowBtn} hover:text-red-500`} title="삭제">
+                          <Trash2 size={16} strokeWidth={1.5} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex flex-shrink-0 items-center gap-4">
-                  <button onClick={() => resetForm(it)} className="p-0 text-foreground-secondary hover:text-primary" title="수정">
-                    <Pencil size={16} strokeWidth={1.5} />
-                  </button>
-                  <button onClick={() => void toggleActive(it)} className="p-0 text-foreground-secondary hover:text-primary" title={it.is_active ? '숨기기' : '다시 보이기'}>
-                    {it.is_active ? <EyeOff size={16} strokeWidth={1.5} /> : <Eye size={16} strokeWidth={1.5} />}
-                  </button>
-                  <button onClick={() => onDelete(it)} className="p-0 text-foreground-secondary hover:text-red-500" title="삭제">
-                    <Trash2 size={16} strokeWidth={1.5} />
-                  </button>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

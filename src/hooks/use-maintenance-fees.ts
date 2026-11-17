@@ -50,7 +50,7 @@ export function useMaintenanceFees(year: number) {
 
   /** 변이 공통: 성공하면 다시 불러오고 null, 실패하면 오류 문구 */
   const mutate = useCallback(
-    async (url: string, method: 'POST' | 'PATCH' | 'DELETE', body?: unknown): Promise<string | null> => {
+    async (url: string, method: 'POST' | 'PATCH' | 'PUT' | 'DELETE', body?: unknown): Promise<string | null> => {
       const res = await apiMutate<unknown>(url, method, body);
       if (!res.ok) return res.error || '저장하지 못했습니다.';
       await reload();
@@ -67,6 +67,17 @@ export function useMaintenanceFees(year: number) {
     [mutate],
   );
 
+  // 순서는 전체 항목 id 목록으로 한 번에 저장(서버가 한 트랜잭션으로 바꾼다)
+  // 실패(목록이 바뀜 등)해도 최신 목록으로 다시 그려 낡은 순서 기준으로 또 옮기지 않게 한다
+  const reorderItems = useCallback(
+    async (ids: string[]) => {
+      const err = await mutate('/api/maintenance-fees/items/order', 'PUT', { ids });
+      if (err) await reload();
+      return err;
+    },
+    [mutate, reload],
+  );
+
   const deleteItem = useCallback((id: string) => mutate(`/api/maintenance-fees/items/${id}`, 'DELETE'), [mutate]);
 
   const saveEntry = useCallback(
@@ -79,5 +90,5 @@ export function useMaintenanceFees(year: number) {
 
   const deleteEntry = useCallback((id: string) => mutate(`/api/maintenance-fees/entries/${id}`, 'DELETE'), [mutate]);
 
-  return { items, entries, ready: loadedYear === year, loading, forbidden, error, reload, saveItem, deleteItem, saveEntry, deleteEntry };
+  return { items, entries, ready: loadedYear === year, loading, forbidden, error, reload, saveItem, reorderItems, deleteItem, saveEntry, deleteEntry };
 }

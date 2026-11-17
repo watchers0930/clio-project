@@ -42,3 +42,11 @@ export const FK_VIOLATION = '23503';
 // 항목 상한 — 조회 상한(ENTRY_FETCH_LIMIT)이 항목 × 13개월(전년 12월 포함)을 언제나 담도록 함께 정한다
 export const MAX_ITEMS = 200;
 export const ENTRY_FETCH_LIMIT = MAX_ITEMS * 13;
+
+/** 항목 유일 위반 안내 — 부가세 1개 제한(065)과 같은 이름(056)을 구분한다 */
+export function itemUniqueMessage(error: { message?: string; details?: string }): string {
+  const text = `${error.message ?? ''} ${error.details ?? ''}`;
+  return text.includes('uq_maintenance_fee_items_vat')
+    ? '부가세 항목은 하나만 둘 수 있습니다. 기존 부가세 항목을 쓰거나 구분을 바꿔 주세요.'
+    : '같은 이름의 항목이 있습니다.';
+}
