@@ -8,9 +8,9 @@ import { Spinner } from '@/components/ui';
 import { HtmlPreviewFrame } from '@/components/documents/html-preview-frame';
 import { useServerRenderedPreview, BUILTIN_FORM_TITLE_RE } from '@/components/documents/use-server-rendered-preview';
 
-const EMBEDDED_INPUTS_RE = /^<!--(?:PROPOSAL_INPUTS|DOCUMENT_INPUTS):/;
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
 import { kstDateFromISO } from '@/lib/utils/date-kst';
+import { readDocumentInputs, stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
 
 export interface DocData {
   id: string;
@@ -23,6 +23,7 @@ export interface DocData {
   version_number?: number;
   source_file_ids?: string[];
   storage_path?: string | null;
+  input_values?: Record<string, string> | null;
   ops?: {
     rootId: string;
     commentCount: number;
@@ -317,7 +318,7 @@ export function DocumentViewerContent({
   const isProposal = doc.template_name === '제안서';
   // 양식 렌더 대상 판별(훅 규칙상 early return 전에 호출)
   const isServerTemplate = !isProposal && !!doc.template_id;
-  const hasEmbeddedInputs = EMBEDDED_INPUTS_RE.test(doc.content ?? '');
+  const hasEmbeddedInputs = readDocumentInputs(doc).hasInputs;
   const isBuiltinForm = !isProposal && !isServerTemplate && hasEmbeddedInputs && BUILTIN_FORM_TITLE_RE.test(doc.title);
   const useHtmlPreview = !fileBased && (isServerTemplate || isBuiltinForm);
   const serverPreview = useServerRenderedPreview(
@@ -371,7 +372,7 @@ export function DocumentViewerContent({
             <div className="flex h-full items-center justify-center"><Spinner /></div>
           ) : serverPreview.error || !serverPreview.html ? (
             <div ref={contentRef} className="leading-relaxed p-2">
-              {doc.content ? renderContent(doc.content) : <p className="text-[14px] text-foreground-quaternary">문서 내용이 없습니다.</p>}
+              {doc.content ? renderContent(stripEmbeddedInputs(doc.content)) : <p className="text-[14px] text-foreground-quaternary">문서 내용이 없습니다.</p>}
             </div>
           ) : (
             <HtmlPreviewFrame
@@ -397,7 +398,7 @@ export function DocumentViewerContent({
           </div>
         </div>
         <div ref={contentRef} className="leading-relaxed">
-          {doc.content ? renderContent(doc.content) : <p className="text-[14px] text-foreground-quaternary">문서 내용이 없습니다.</p>}
+          {doc.content ? renderContent(stripEmbeddedInputs(doc.content)) : <p className="text-[14px] text-foreground-quaternary">문서 내용이 없습니다.</p>}
         </div>
       </div>
     </div>

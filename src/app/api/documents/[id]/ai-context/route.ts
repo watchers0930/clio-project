@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
+import { stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
 
 export async function POST(
   request: NextRequest,
@@ -66,7 +67,8 @@ export async function POST(
   const body = await request.json().catch(() => ({}));
   const lang = body.lang === 'en' ? 'en' : 'ko';
 
-  const content = doc.content ?? '';
+  // 내부 입력값 주석(JSON)은 사용자가 복사해 외부 AI 에 붙이는 프롬프트에 넣지 않는다
+  const content = stripEmbeddedInputs(doc.content ?? '');
   const title = doc.title ?? '제안서';
   const createdAt = doc.created_at
     ? new Date(doc.created_at).toISOString().split('T')[0]

@@ -12,6 +12,7 @@ import { loadCompanyLogoContext } from '@/lib/settings/company-logo';
 import { resolveBuiltinTemplate } from '@/lib/templates/builtin';
 import { kstDateStr, kstTimeStr } from '@/lib/utils/date-kst';
 import { filterAccessibleSourceFiles } from '@/lib/generation/source-access';
+import { stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
 
 const FONT_MAP: Record<string, string> = {
   '맑은 고딕': 'Malgun Gothic',
@@ -264,7 +265,7 @@ export async function loadReferenceContent(
   if (!data?.content) return null;
 
   // PROPOSAL_INPUTS / DOCUMENT_INPUTS 코멘트 제거
-  const content = (data.content as string).replace(/<!--(?:PROPOSAL_INPUTS|DOCUMENT_INPUTS):.*?-->\n?/, '');
+  const content = stripEmbeddedInputs(data.content as string);
   const sections = new Map<string, string>();
   const lines = content.split('\n');
   let currentTitle = '';

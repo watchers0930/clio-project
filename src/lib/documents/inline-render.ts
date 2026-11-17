@@ -1,6 +1,6 @@
 import type { CorporateTheme, RenderOutput } from '@/lib/renderers/types';
 import { renderPdf } from '@/lib/renderers/pdf-renderer';
-import { parseEmbeddedInputs } from '@/lib/documents/embedded-inputs';
+import { readDocumentInputs } from '@/lib/documents/embedded-inputs';
 import { resolveDocumentInputForm } from '@/lib/documents/resolve-input-form';
 import { resolveBuiltinTemplateBundleByName } from '@/lib/templates/builtin';
 import { isEmploymentCertificateTemplateName } from '@/lib/templates/employment-certificate';
@@ -210,15 +210,15 @@ export async function renderLatestInputForm(options: {
     title: doc.title, templateId: doc.template_id, templateName: options.templateName, content,
   });
   if (!resolved.ok) return null;
-  const parsed = parseEmbeddedInputs(content);
-  if (!parsed.ok) return null;
+  const parsed = readDocumentInputs(doc);
+  if (!parsed.hasInputs) return null;
   const builtin = resolveBuiltinTemplateBundleByName(resolved.form.templateName);
   if (!builtin) return null;
   // 증명서·근로계약서의 signature_image_src는 '회사 직인' 자리이므로 작성자 서명을 넣지 않는다.
   const isSealForm = isEmploymentCertificateTemplateName(resolved.form.templateName)
     || isStandardLaborContractTemplateName(resolved.form.templateName);
   const authorSig = options.authorSignatureSrc ?? '';
-  return renderPdf(content.slice(parsed.prefix.length), doc.title, options.theme, {
+  return renderPdf(parsed.body, doc.title, options.theme, {
     templateBundle: builtin.bundle,
     templateName: builtin.name,
     documentInputs: {

@@ -127,6 +127,8 @@ export type DbDocument = Record<string, unknown> & {
   parent_id: string | null;
   origin_document_id: string | null;
   origin_context: string | null;
+  /** 양식 입력값 — 059 부터 본문 앞 주석 대신 여기가 기준(본문 저장 시 DB 트리거가 동기화) */
+  input_values: Record<string, string> | null;
   created_by: string | null;
   created_at: string;
 };

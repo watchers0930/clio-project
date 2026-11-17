@@ -10,6 +10,7 @@ import { getAuthUserId } from '@/lib/auth-helper';
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
+import { stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
 
 export const maxDuration = 30;
 
@@ -69,7 +70,8 @@ export async function POST(
     return NextResponse.json({ error: '제안서 문서만 디자인 프롬프트를 생성할 수 있습니다.' }, { status: 400 });
   }
 
-  const content = doc.content ?? '';
+  // 내부 입력값 주석(JSON)은 사용자가 복사해 외부 AI 에 붙이는 프롬프트에 넣지 않는다
+  const content = stripEmbeddedInputs(doc.content ?? '');
   const title = doc.title ?? '제안서';
   const body = await request.json().catch(() => ({}));
   const lang = body.lang === 'en' ? 'en' : 'ko';

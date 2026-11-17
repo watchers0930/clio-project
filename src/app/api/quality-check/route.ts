@@ -10,6 +10,7 @@ import type {
   QualityCheckResponse,
 } from '@/lib/supabase/types';
 import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
+import { stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
 
 export const maxDuration = 60;
 
@@ -142,7 +143,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '접근 권한이 없습니다.' }, { status: 403 });
   }
 
-  const content = doc.content?.trim() ?? '';
+  const content = stripEmbeddedInputs(doc.content ?? '').trim(); // 입력값 JSON 은 검수 대상이 아님
   if (!content) {
     return NextResponse.json({ error: '문서 내용이 없어 검수할 수 없습니다.' }, { status: 422 });
   }

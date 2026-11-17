@@ -1,5 +1,6 @@
 import { HtmlPreviewFrame } from '@/components/documents/html-preview-frame';
 import type { DocumentItem, TemplateItem } from '@/components/documents/page-types';
+import { stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
 
 interface NewDocumentResultStepProps {
   generatedDoc: DocumentItem;
@@ -46,7 +47,7 @@ export function NewDocumentResultStep({
             />
           ) : (
             <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-              {generatedDoc.content ?? '내용 없음'}
+              {generatedDoc.content ? stripEmbeddedInputs(generatedDoc.content) : '내용 없음'}
             </div>
           )}
         </div>

@@ -1,4 +1,5 @@
 import { createProposalTemplateBundle } from '@/lib/templates/proposal';
+import { readDocumentInputs } from '@/lib/documents/embedded-inputs';
 
 function escapeHtml(value: string) {
   return value
@@ -132,13 +133,8 @@ type RenderProposalDocumentParams = {
 };
 
 function extractEmbeddedInputs(content: string): { inputs: Record<string, string>; markdown: string } {
-  const match = content.match(/^<!--(?:PROPOSAL_INPUTS|DOCUMENT_INPUTS):(.*?)-->\n?/);
-  if (!match) return { inputs: {}, markdown: content };
-  try {
-    return { inputs: JSON.parse(match[1]), markdown: content.slice(match[0].length) };
-  } catch {
-    return { inputs: {}, markdown: content };
-  }
+  const { inputs, body } = readDocumentInputs({ content });
+  return { inputs, markdown: body };
 }
 
 export function renderProposalDocumentHtml({

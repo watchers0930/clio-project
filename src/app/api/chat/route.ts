@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
           .select('id, title, content')
           .in('id', fileIds);
         const validDocs = ((docRows ?? []) as Array<{ id: string; title: string; content: string | null }>)
-          .filter((d) => !!d.content);
+          .filter((d) => !!d.content && stripEmbeddedInputs(d.content).trim().length > 0);
         if (validDocs.length > 0) {
           relevantChunks = validDocs.map((d) => ({
             file_id: d.id,

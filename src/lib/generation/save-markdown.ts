@@ -12,6 +12,7 @@ import { renderDocument } from "@/lib/renderers";
 import { buildDocumentInsertPayload, type VersionFields } from "./context";
 import { buildDocumentSummary } from "./form-overrides";
 import { isLeaveApplicationTemplateName } from "@/lib/templates/leave-application";
+import { serializeInputsComment } from "@/lib/documents/embedded-inputs";
 import {
   linkGeneratedLeave,
   leaveLinkFailure,
@@ -78,7 +79,7 @@ export async function saveMarkdown(input: SaveMarkdownInput) {
         generationResult.markdown ?? "",
         embeddableDocumentInputs,
       )
-    : `<!--DOCUMENT_INPUTS:${JSON.stringify(embeddableDocumentInputs)}-->\n${generationResult.markdown ?? ""}`;
+    : `${serializeInputsComment(embeddableDocumentInputs)}\n${generationResult.markdown ?? ""}`;
 
   const payload = buildDocumentInsertPayload({
     title,

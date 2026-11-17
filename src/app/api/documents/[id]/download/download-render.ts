@@ -12,6 +12,7 @@ import { DEFAULT_THEME } from '@/lib/renderers/types';
 import { injectSignatureDocx, injectSignatureHwpx } from '@/lib/utils/inject-signature';
 import { signatureBufferToDataUrl } from '@/lib/utils/signature-data-url';
 import type { DownloadContext, DownloadDoc } from './download-source';
+import { readDocumentInputs } from '@/lib/documents/embedded-inputs';
 
 export type DownloadRenderContext = DownloadContext & {
   doc: DownloadDoc;
@@ -101,14 +102,8 @@ export async function serveStoredFile(ctx: DownloadRenderContext): Promise<NextR
           });
         }
         // 미리보기: 마크다운 content가 있으면 PDF 렌더, 없으면 원본 파일 서빙
-        let inlineContent = doc.content ?? '';
-        // 임베드된 documentInputs 추출
-        let inlineInputs: Record<string, string> = {};
-        const inlineInputsMatch = inlineContent.match(/^<!--(?:PROPOSAL_INPUTS|DOCUMENT_INPUTS):(.*?)-->\n?/);
-        if (inlineInputsMatch) {
-          try { inlineInputs = JSON.parse(inlineInputsMatch[1]); } catch { /* ignore */ }
-          inlineContent = inlineContent.slice(inlineInputsMatch[0].length);
-        }
+        // 입력값(DB 칸 우선, 없으면 본문 주석)과 주석을 걷어낸 본문
+        const { inputs: inlineInputs, body: inlineContent } = readDocumentInputs(doc);
         const firstLine = inlineContent.split('\n')[0];
         const isLabel = firstLine.startsWith('[') && firstLine.length < 200;
         // 파일 기반 문서에 추가된 마크다운 섹션 추출
@@ -207,15 +202,8 @@ export async function renderFromContent(ctx: DownloadRenderContext): Promise<Nex
     isCompanyIssuedDocument,
   } = ctx;
   // storage_path 없으면 기존 방식: content를 렌더링
-  const rawContent = doc.content ?? '';
-  // 콘텐츠에 임베드된 documentInputs 추출 (제안서/사업계획서 표지 정보)
-  let embeddedInputs: Record<string, string> = {};
-  let content = rawContent;
-  const inputsMatch = rawContent.match(/^<!--(?:PROPOSAL_INPUTS|DOCUMENT_INPUTS):(.*?)-->\n?/);
-  if (inputsMatch) {
-    try { embeddedInputs = JSON.parse(inputsMatch[1]); } catch { /* ignore */ }
-    content = rawContent.slice(inputsMatch[0].length);
-  }
+  // 입력값(제안서/사업계획서 표지 정보 등 — DB 칸 우선, 없으면 본문 주석)과 주석을 걷어낸 본문
+  const { inputs: embeddedInputs, body: content } = readDocumentInputs(doc);
   const mergedDocumentInputs = {
     ...embeddedInputs,
     author: signerName,

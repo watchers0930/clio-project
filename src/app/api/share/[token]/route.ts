@@ -5,6 +5,7 @@ import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { checkRowStoragePath } from '@/lib/storage/files-bucket';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { createHash } from 'crypto';
+import { stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
 
 function hashPassword(password: string): string {
   return createHash('sha256').update(password + 'clio-salt').digest('hex');
@@ -67,7 +68,7 @@ export async function GET(
       return NextResponse.json({
         type: 'document',
         title: link.title ?? doc.title,
-        content: doc.content,
+        content: doc.content == null ? null : stripEmbeddedInputs(doc.content), // 외부 공개 화면 — 내부 입력값 주석 제외
         createdAt: doc.created_at,
         expiresAt: link.expires_at,
       });

@@ -11,6 +11,7 @@ import { getAuthUserId } from '@/lib/auth-helper';
 import { computeDiff } from '@/lib/utils/myers-diff';
 import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
 import { kstDateFromISO } from '@/lib/utils/date-kst';
+import { stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
 
 type DocRow = {
   id: string;
@@ -101,7 +102,7 @@ export async function POST(
     }
 
     // diff 계산
-    const diffResult = computeDiff(typedFromDoc.content ?? '', typedToDoc.content ?? '');
+    const diffResult = computeDiff(stripEmbeddedInputs(typedFromDoc.content ?? ''), stripEmbeddedInputs(typedToDoc.content ?? ''));
 
     return NextResponse.json({
       ...diffResult,

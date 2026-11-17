@@ -6,6 +6,7 @@ import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import OpenAI from 'openai';
 import { canManageDocument, getUserRoleInfo } from '@/lib/permissions';
+import { getEmbeddedInputsPrefix } from '@/lib/documents/embedded-inputs';
 import {
   buildCurrentDocumentUpdate,
   buildSnapshotInsertPayload,
@@ -109,11 +110,13 @@ export async function POST(
     if (snapshotError) throw snapshotError;
     if (!snapshot) return NextResponse.json({ success: false, error: '버전 저장 실패' }, { status: 500 });
 
-    // 4. AI로 댓글 반영 문서 재생성
+    // 4. AI로 댓글 반영 문서 재생성 — AI 에는 본문만 보내고, 입력값 주석은 결과 앞에 그대로 다시 붙인다
+    //    (AI 가 주석을 빼거나 바꾸면 다운로드·입력값 편집이 깨지므로 AI 손에 맡기지 않는다)
+    const inputsPrefix = getEmbeddedInputsPrefix(doc.content);
     const prompt = `다음은 현재 문서 내용입니다:
 
 ---
-${doc.content}
+${doc.content.slice(inputsPrefix.length)}
 ---
 
 아래 피드백을 반영하여 문서를 수정해주세요. 문서의 전체 구조와 형식은 유지하되, 피드백 내용만 정확히 반영해주세요.
@@ -130,8 +133,9 @@ ${feedbackList}
       max_tokens: 12000,
     });
 
-    const newContent = completion.choices[0]?.message?.content?.trim() ?? '';
-    if (!newContent) return NextResponse.json({ success: false, error: 'AI 생성 실패' }, { status: 500 });
+    const generated = completion.choices[0]?.message?.content?.trim() ?? '';
+    if (!generated) return NextResponse.json({ success: false, error: 'AI 생성 실패' }, { status: 500 });
+    const newContent = inputsPrefix + generated;
 
     // 5. 현재 문서 content + version_number 업데이트
     const { updatePayload, nextVersionNumber } = buildCurrentDocumentUpdate(versionedDoc, newContent);

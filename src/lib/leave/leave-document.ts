@@ -4,6 +4,7 @@ import { ApiError, databaseError } from "@/lib/http/api-error";
 import { leaveInput } from "./leave-validation";
 import { leaveBalance, writeLeave } from "./leave-service";
 import { isLeaveApplicationTemplateName } from "@/lib/templates/leave-application";
+import { serializeInputsComment } from "@/lib/documents/embedded-inputs";
 export class LeaveDocumentLinkError extends ApiError {
   constructor(
     public documentId: string,
@@ -26,7 +27,7 @@ export function embedLeaveInputs(
       ([key]) => !key.includes("signature") && !key.includes("logo"),
     ),
   );
-  return `<!--DOCUMENT_INPUTS:${JSON.stringify(safe).replace(/-->/g, "\\u002d\\u002d>")}-->\n${content.replace(/<!--DOCUMENT_INPUTS:[\s\S]*?-->\s*/g, "")}`;
+  return `${serializeInputsComment(safe)}\n${content.replace(/<!--DOCUMENT_INPUTS:[\s\S]*?-->\s*/g, "")}`;
 }
 export async function serverLeaveInputs(
   userId: string,

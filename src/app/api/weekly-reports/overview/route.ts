@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     let query = admin
       .from('documents')
-      .select('id, title, content, status, created_at, created_by, author:created_by(name, rank_title, department_id, departments:department_id(name))')
+      .select('id, title, content, input_values, status, created_at, created_by, author:created_by(name, rank_title, department_id, departments:department_id(name))')
       .or(WEEKLY_REPORT_CANDIDATE_FILTER)
       .is('template_id', null)
       .order('created_at', { ascending: false });
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     type AuthorJoin = { name?: string; rank_title?: string; department_id?: string | null; departments?: { name?: string } | null } | null;
     // 제목이 바뀐 주간업무도 포함되도록 후보를 넓게 가져온 뒤 양식 기준으로 최종 판별
     let reports = ((rows ?? []) as Array<Record<string, unknown>>)
-      .filter((r) => isWeeklyReportDocument({ title: r.title as string, content: (r.content as string) ?? '' }))
+      .filter((r) => isWeeklyReportDocument({ title: r.title as string, content: (r.content as string) ?? '', input_values: r.input_values }))
       .map((r) => {
       const author = r.author as AuthorJoin;
       return {

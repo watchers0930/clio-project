@@ -15,6 +15,7 @@ import {
   type ExtractedTodo,
 } from '@/lib/ai/extract-todos';
 import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
+import { stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
 
 export const maxDuration = 30;
 
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '접근 권한이 없습니다.' }, { status: 403 });
   }
 
-  const content = doc.content?.trim() ?? '';
+  const content = stripEmbeddedInputs(doc.content ?? '').trim(); // 입력값 JSON 에서 할 일이 중복 추출되지 않게
   if (!content) {
     return NextResponse.json({ error: '문서 내용이 없어 할일을 추출할 수 없습니다.' }, { status: 422 });
   }

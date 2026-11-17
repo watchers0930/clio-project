@@ -9,6 +9,7 @@ import OpenAI from 'openai';
 import { recordAuditEvent } from '@/lib/audit';
 import { canManageDocument, getUserRoleInfo } from '@/lib/permissions';
 import { createNotifications } from '@/lib/notifications/create-notification';
+import { getEmbeddedInputsPrefix } from '@/lib/documents/embedded-inputs';
 import {
   buildCurrentDocumentUpdate,
   buildSnapshotInsertPayload,
@@ -234,10 +235,13 @@ ${feedbackList}
         updatedContent = replaceSectionContent(doc.content, replaceScope, replacedSection);
       } else {
         // 전체 문서 치환
-        if (!doc.content.includes(findText)) {
+        // 찾아 바꾸기는 본문에만 — 앞의 입력값 주석(JSON)은 건드리지 않는다
+        const inputsPrefix = getEmbeddedInputsPrefix(doc.content);
+        const docBody = doc.content.slice(inputsPrefix.length);
+        if (!docBody.includes(findText)) {
           return NextResponse.json({ success: false, error: '일치하는 텍스트가 없습니다.' }, { status: 400 });
         }
-        updatedContent = doc.content.replaceAll(findText, replaceText);
+        updatedContent = inputsPrefix + docBody.replaceAll(findText, replaceText);
       }
     } else {
       return NextResponse.json({ success: false, error: '유효하지 않은 모드입니다.' }, { status: 400 });
