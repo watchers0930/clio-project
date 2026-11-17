@@ -61,7 +61,16 @@ export function bodyHasAllTokens(content: string | null | undefined, tokens: str
   return words.length > 0 && words.every((w) => body.includes(w.toLowerCase()));
 }
 
-/** 단일 칸 '포함' 검색 패턴 — supabase-js .ilike(칸, 패턴) 용. '*' 제거, % _ \ 는 글자로 */
+/**
+ * 단일 칸 '포함' 검색 패턴 — supabase-js .ilike(칸, 패턴) 용. '*' 제거, % _ \ 는 글자로.
+ * 남는 글자가 없으면 '' 를 돌려준다 — ilike '' 는 빈 값만 맞으므로 '전부 일치'가 아니라 '일치 없음'이 된다.
+ */
 export function containsPattern(text: string): string {
-  return `%${escapeLike(text.replace(/\*/g, ''))}%`;
+  const word = text.replace(/\*/g, '').trim();
+  return word ? `%${escapeLike(word)}%` : '';
+}
+
+/** 정확히 같은 값(대소문자 무시) 패턴 — 와일드카드 없이 % _ \ 를 글자로 */
+export function exactLikePattern(text: string): string {
+  return escapeLike(text.trim());
 }

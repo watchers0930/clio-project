@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildDocumentTextFilter, bodyHasAllTokens, buildIlikeAny, cleanSearchTokens, containsPattern, MAX_SEARCH_TOKENS, MAX_TOKEN_LENGTH } from "./search-text-filter";
+import { buildDocumentTextFilter, bodyHasAllTokens, buildIlikeAny, cleanSearchTokens, containsPattern, exactLikePattern, MAX_SEARCH_TOKENS, MAX_TOKEN_LENGTH } from "./search-text-filter";
 
 test("제목은 단어 하나라도, 본문은 모든 단어가 있어야 걸리는 조건을 만든다", () => {
   assert.equal(
@@ -51,4 +51,12 @@ test("단일 칸 '포함' 패턴(.ilike 용): '*' 제거, % _ \\ 는 글자로",
   assert.equal(containsPattern("계약서"), "%계약서%");
   assert.equal(containsPattern("50%_a\\b"), "%50\\%\\_a\\\\b%");
   assert.equal(containsPattern("a*b"), "%ab%");
+  // '*' 뿐이거나 공백뿐이면 '' — ilike '' 는 빈 값만 맞으므로 '전부 일치' 대신 '일치 없음'
+  assert.equal(containsPattern("*"), "");
+  assert.equal(containsPattern("  "), "");
+});
+
+test("정확히 같은 값 패턴(대소문자 무시 비교용): 와일드카드 없음, % _ 는 글자로", () => {
+  assert.equal(exactLikePattern("김_철수"), "김\\_철수");
+  assert.equal(exactLikePattern(" 홍길동 "), "홍길동");
 });

@@ -134,7 +134,8 @@ export async function POST(request: NextRequest) {
     // ── ① 문서·업무일지 텍스트 검색 + 청크 수 확인 병렬 실행 ──
     // 제목은 단어 하나라도, 본문은 모든 단어가 있어야 — 검색어는 조건 문법·와일드카드가 되지 않게 감싼다(lib/search/search-text-filter)
     const docTextFilter = buildDocumentTextFilter(queryTokens);
-    const orWorkLog = buildIlikeAny(['done', 'plan', 'note', 'log_date'], queryTokens);
+    // log_date 는 DATE 칸이라 ilike 가 오류(42883)를 내 업무일지 내용 검색 전체가 조용히 0건이었다(2026-11-17 운영 확인) — 글자 칸만
+    const orWorkLog = buildIlikeAny(['done', 'plan', 'note'], queryTokens);
 
     // "업무일지" 타입 자체를 검색하는 경우: done/plan/note에 해당 단어가 없으므로 최근 일지로 폴백
     const isWorkLogTypeSearch = queryTokens.some((t: string) => t === '업무일지' || t === '업무' || t === '일지');

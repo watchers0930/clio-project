@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { generateEmbedding } from '@/lib/ai/embeddings';
-import { containsPattern } from '@/lib/search/search-text-filter';
+import { containsPattern, MAX_QUERY_LENGTH } from '@/lib/search/search-text-filter';
 
 const MATCH_THRESHOLD = 0.15;
 const MATCH_COUNT = 5;
@@ -34,8 +34,10 @@ export async function POST(req: NextRequest) {
   const userId = await getAuthUserId(supabase);
   if (!userId) return NextResponse.json({ error: '인증 필요' }, { status: 401 });
 
-  const { query } = await req.json() as { query: string };
-  if (!query?.trim()) return NextResponse.json({ results: [] });
+  const body = await req.json().catch(() => null) as { query?: unknown } | null;
+  // 문자열만, 200자 상한(임베딩·조건 비대 방지)
+  const query = typeof body?.query === 'string' ? body.query.trim().slice(0, MAX_QUERY_LENGTH) : '';
+  if (!query) return NextResponse.json({ results: [] });
 
   // 파일명 검색 + 청크 내용 키워드 검색 + 벡터 검색 병행
   const [embeddingResult, nameSearchResult, contentSearchResult] = await Promise.allSettled([

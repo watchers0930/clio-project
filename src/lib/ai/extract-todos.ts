@@ -6,6 +6,7 @@
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
+import { exactLikePattern } from '@/lib/search/search-text-filter';
 
 // ─── 타입 ────────────────────────────────────────────────────────────────────
 
@@ -107,7 +108,7 @@ export async function resolveAssigneeUserId(
   const { data } = await (admin as any)
     .from('users')
     .select('id')
-    .ilike('name', assigneeName.trim())
+    .ilike('name', exactLikePattern(assigneeName)) // AI 가 뽑은 이름의 % _ 가 와일드카드로 다른 사람에게 배정되지 않게
     .eq('is_active', true)
     .limit(1)
     .single() as { data: { id: string } | null };

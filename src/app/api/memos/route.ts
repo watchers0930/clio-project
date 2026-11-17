@@ -27,7 +27,8 @@ export async function GET(request: NextRequest) {
     if (search) {
       // 검색어를 조건 문자열에 그대로 넣으면 쉼표·괄호로 조건이 바뀌고 % 가 와일드카드가 된다 — 공용 이스케이프
       const memoFilter = buildIlikeAny(['title', 'content'], [search]);
-      if (memoFilter) query = query.or(memoFilter);
+      // '*' 뿐인 검색어 등 단어가 남지 않으면 전체가 아니라 '일치 없음'(id 는 null 이 아니다)
+      query = query.or(memoFilter ?? 'id.is.null');
     }
 
     const { data, error } = await query;
