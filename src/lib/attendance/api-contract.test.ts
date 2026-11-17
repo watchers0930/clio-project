@@ -66,6 +66,9 @@ test("HTTP contracts, auth, CSRF, admin scope, validation and service error mapp
     not() {
       return this;
     }
+    is() {
+      return this;
+    }
     in() {
       return this;
     }
@@ -181,7 +184,7 @@ test("HTTP contracts, auth, CSRF, admin scope, validation and service error mapp
     assert.equal(embedded.status, 200);
     const embeddedJson = await embedded.json();
     assert.equal(typeof embeddedJson.before, "string"); // all 모드 이어하기 기준 시각
-    assert.deepEqual({ ...embeddedJson, before: undefined }, { mode: "missing", before: undefined, total: 0, processed: 0, success: 0, failed: 0, remaining: 0 });
+    assert.deepEqual({ ...embeddedJson, before: undefined }, { mode: "missing", before: undefined, total: 0, processed: 0, success: 0, empty: 0, failed: 0, remaining: 0, nextCursor: null });
     const attendance = route("attendance");
     authStatus = 401;
     assert.equal(
