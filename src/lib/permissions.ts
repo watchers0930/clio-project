@@ -208,16 +208,16 @@ export async function filterAccessibleFileRows<T extends FileAccessRow>(
   return fileRows.filter((file) => accessibleIds.has(file.id));
 }
 
-export async function canAccessDocument(
-  _supabase: SupabaseClient,
+// 판정은 서버 권한으로 읽는다(canAccessFile·문서 목록 filterAccessibleDocumentRows 와 같은 기준) —
+// 사용자 세션으로 읽으면 documents RLS(본인 + 같은 부서)에 걸려 다른 부서에서 공유받은 문서를 공유 기록이 있어도 거부했다.
+async function hasDocumentRight(
   userId: string,
   userRole: string,
   userDeptId: string | null,
   documentId: string,
+  editOnly: boolean,
 ): Promise<boolean> {
   if (userRole === 'admin') return true;
-  // 판정은 서버 권한으로 읽는다(canAccessFile·문서 목록 filterAccessibleDocumentRows 와 같은 기준) —
-  // 사용자 세션으로 읽으면 documents RLS(본인 + 같은 부서)에 걸려 다른 부서에서 공유받은 문서를 공유 기록이 있어도 거부했다.
   const admin = createAdminSupabaseClient();
 
   const { data: document } = await admin
@@ -229,13 +229,36 @@ export async function canAccessDocument(
   if (!document) return false;
   if (document.created_by === userId) return true;
 
-  const { count } = await admin
+  let grants = admin
     .from('document_permissions')
     .select('id', { count: 'exact', head: true })
     .eq('document_id', documentId)
     .or(`granted_to_user.eq.${userId}${userDeptId ? `,granted_to_dept.eq.${userDeptId}` : ''}`);
+  if (editOnly) grants = grants.eq('permission', 'edit');
+  const { count } = await grants;
 
   return (count ?? 0) > 0;
+}
+
+/** 열람: 관리자 / 작성자 / 공유(read·edit) 대상. */
+export async function canAccessDocument(
+  _supabase: SupabaseClient,
+  userId: string,
+  userRole: string,
+  userDeptId: string | null,
+  documentId: string,
+): Promise<boolean> {
+  return hasDocumentRight(userId, userRole, userDeptId, documentId, false);
+}
+
+/** 편집(새 버전 추가 등 문서 묶음을 바꾸는 일): 관리자 / 작성자 / 'edit' 공유 대상 — 'read' 공유만으로는 안 된다. */
+export async function canEditDocument(
+  userId: string,
+  userRole: string,
+  userDeptId: string | null,
+  documentId: string,
+): Promise<boolean> {
+  return hasDocumentRight(userId, userRole, userDeptId, documentId, true);
 }
 
 export async function getAccessibleDocumentIds(

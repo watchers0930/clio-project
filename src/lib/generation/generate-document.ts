@@ -5,7 +5,7 @@ import { serverLeaveInputs } from '@/lib/leave/leave-document';
 import { respondContractDirect } from './contract-direct';
 import { respondDocxFormData, respondHwpxFormData, respondDocxTemplate, respondStructured, type OutputContext, type PersistContext } from './output-paths';
 import { withMutation } from '@/lib/http/mutation-guard';
-import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
+import { canAccessDocument, canEditDocument, getUserRoleInfo } from '@/lib/permissions';
 import { resolveDocumentLinks } from '@/lib/documents/document-links';
 /**
  * POST /api/generate
@@ -87,8 +87,10 @@ export async function generateDocument(request: NextRequest) {
       return NextResponse.json({ error: '사용자 정보가 없습니다.' }, { status: 403 });
     }
     // 새 버전의 부모·후속 문서의 원본은 볼 수 있는 문서만(남의 문서 묶음 끼어들기·삭제 불가 만들기 차단) — AI 생성 전에 거부
-    const links = await resolveDocumentLinks(mutation.admin, { parentId, originDocumentId: rawOriginDocumentId, originContext: rawOriginContext }, (docId) =>
-      canAccessDocument(supabase, authUserId, roleInfo.role, roleInfo.department_id, docId));
+    const links = await resolveDocumentLinks(mutation.admin, { parentId, originDocumentId: rawOriginDocumentId, originContext: rawOriginContext }, {
+      canEdit: (docId) => canEditDocument(authUserId, roleInfo.role, roleInfo.department_id, docId),
+      canAccess: (docId) => canAccessDocument(supabase, authUserId, roleInfo.role, roleInfo.department_id, docId),
+    });
     if (!links.ok) return NextResponse.json({ error: links.error }, { status: links.status });
     const { originDocumentId, originContext } = links;
     const versionFields = links.versionFields;

@@ -6,7 +6,8 @@
 --
 -- 규칙(앱 canAccessDocument 와 같거나 더 넓게 — 정상 경로를 막지 않도록):
 --   요청자가 관리자 / 대상 문서 작성자 / 대상 문서를 공유받은 사용자·부서 중 하나여야 한다.
---   parent_id 는 추가로 대상이 원본(parent_id 가 null 인 행)이어야 한다.
+--   parent_id(새 버전)는 추가로 대상이 원본(parent_id 가 null 인 행)이어야 하고, 공유는 'edit' 만 인정한다
+--   ('read' 공유만으로 남의 버전 묶음에 끼어들지 못하게 — 앱 canEditDocument 와 같은 기준).
 --   서버 권한(service_role, auth.uid() 가 null)은 통과, 값이 바뀌지 않는 갱신은 검사하지 않는다.
 --
 -- 되돌리기(062 상태로): drop trigger documents_link_guard on public.documents;
@@ -14,7 +15,7 @@
 --           그 뒤 062 파일을 다시 실행.
 begin;
 
-create or replace function public.document_link_target_allowed(p_target uuid, p_uid uuid, p_root_only boolean)
+create or replace function public.document_link_target_allowed(p_target uuid, p_uid uuid, p_for_version boolean)
 returns boolean
 language sql
 stable
@@ -25,13 +26,14 @@ as $$
     select 1
     from documents t
     where t.id = p_target
-      and (not p_root_only or t.parent_id is null)
+      and (not p_for_version or t.parent_id is null)
       and (
         t.created_by = p_uid
         or exists (select 1 from users u where u.id = p_uid and u.role = 'admin')
         or exists (
           select 1 from document_permissions dp
           where dp.document_id = t.id
+            and (not p_for_version or dp.permission = 'edit')
             and (dp.granted_to_user = p_uid
               or dp.granted_to_dept = (select u.department_id from users u where u.id = p_uid))
         )

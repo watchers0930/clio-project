@@ -119,13 +119,14 @@ export type DocumentLinksResult =
 export async function resolveDocumentLinks(
   admin: SupabaseClient,
   input: { parentId: unknown; originDocumentId: unknown; originContext: unknown },
-  canAccess: (id: string) => Promise<boolean>,
+  // 새 버전은 원본을 편집할 수 있어야(read 공유만으로 남의 묶음에 끼어들지 못하게), 후속 문서의 원본은 볼 수만 있으면 된다
+  rights: { canEdit: (id: string) => Promise<boolean>; canAccess: (id: string) => Promise<boolean> },
 ): Promise<DocumentLinksResult> {
   const context = parseOriginContext(input.originContext);
   if (!context.ok) return { ok: false, status: 400, error: context.error };
-  const version = await resolveVersionParent(admin, input.parentId, canAccess);
+  const version = await resolveVersionParent(admin, input.parentId, rights.canEdit);
   if (!version.ok) return version;
-  const origin = await resolveOriginDocument(admin, input.originDocumentId, canAccess);
+  const origin = await resolveOriginDocument(admin, input.originDocumentId, rights.canAccess);
   if (!origin.ok) return origin;
   return { ok: true, versionFields: version.fields, originDocumentId: origin.originDocumentId, originContext: context.originContext };
 }

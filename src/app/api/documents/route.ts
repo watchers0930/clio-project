@@ -15,7 +15,7 @@ import { extractText } from '@/lib/ai/extract-text';
 import { scheduleDocumentEmbedding } from '@/lib/ai/embed-document';
 import type { DbDocument, DbFileRecord, DbTemplate, DbUser } from '@/lib/supabase/types';
 import { parseTemplateBundle } from '@/lib/templates/template-schema';
-import { canAccessDocument, canManageDocument, filterAccessibleDocumentRows, getUserRoleInfo } from '@/lib/permissions';
+import { canAccessDocument, canEditDocument, canManageDocument, filterAccessibleDocumentRows, getUserRoleInfo } from '@/lib/permissions';
 import { resolveDocumentLinks } from '@/lib/documents/document-links';
 import { buildDocumentInsertPayload, loadSourceChunksFromFiles } from '@/app/api/generate/route-helpers';
 import { kstDateStr, kstDateFromISO } from '@/lib/utils/date-kst';
@@ -163,8 +163,10 @@ export async function POST(request: NextRequest) {
 
     const admin = mutation.admin;
     // 새 버전의 부모·후속 문서의 원본은 볼 수 있는 문서만(남의 문서 묶음 끼어들기·삭제 불가 만들기 차단) — AI 생성 전에 거부
-    const links = await resolveDocumentLinks(admin, { parentId, originDocumentId: rawOriginDocumentId, originContext: rawOriginContext }, (docId) =>
-      canAccessDocument(supabase, authUserId, roleInfo.role, roleInfo.department_id, docId));
+    const links = await resolveDocumentLinks(admin, { parentId, originDocumentId: rawOriginDocumentId, originContext: rawOriginContext }, {
+      canEdit: (docId) => canEditDocument(authUserId, roleInfo.role, roleInfo.department_id, docId),
+      canAccess: (docId) => canAccessDocument(supabase, authUserId, roleInfo.role, roleInfo.department_id, docId),
+    });
     if (!links.ok) return NextResponse.json({ error: links.error }, { status: links.status });
     const { originDocumentId, originContext } = links;
 
