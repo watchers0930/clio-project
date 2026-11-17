@@ -81,7 +81,8 @@ export interface DocData {
 
 export function isFileBased(doc: DocData) {
   const firstLine = (doc.content ?? '').split('\n')[0];
-  if (firstLine.startsWith('[') && firstLine.length < 200) return true;
+  // 입력값이 있는 양식 문서는 첫 줄이 '[…]' 라벨이어도(HWPX 휴가원 등) 파일 문서가 아니다 — 본문 주석이 있던 때와 같은 판정 유지
+  if (firstLine.startsWith('[') && firstLine.length < 200 && !readDocumentInputs(doc).hasInputs) return true;
   // 렌더된 HTML 양식 파일(generated/*.html)이 있는 html-template 문서(휴가원·재직증명서 등)는
   // 마크다운(content)이 아니라 양식 파일을 iframe으로 보여준다.
   if (doc.storage_path?.endsWith('.html') && readDocumentInputs(doc).hasInputs) return true;

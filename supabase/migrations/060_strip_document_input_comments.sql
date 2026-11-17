@@ -7,7 +7,7 @@
 --   - 휴가원 잠금(047/059)은 잠긴 휴가원의 본문 변경을 막으므로, 이 작업 동안만 끄고 같은 트랜잭션 안에서 다시 켠다.
 --     (결재 상태 보호 트리거 052 는 auth.uid() 가 없는 마이그레이션은 통과시킨다)
 -- 되돌리기: 주석은 칸 값에서 그대로 복원된다 —
---   update public.documents set content = '<!--DOCUMENT_INPUTS:' || replace(input_values::text, '-->', '-->') || '-->' || chr(10) || content
+--   update public.documents set content = '<!--DOCUMENT_INPUTS:' || replace(input_values::text, '-->', '--' || chr(92) || 'u003e') || '-->' || chr(10) || content
 --   where input_values is not null and content !~ '^<!--(DOCUMENT_INPUTS|PROPOSAL_INPUTS):';
 --   (잠긴 휴가원 때문에 위와 같이 trg_leave_document_lock 을 잠시 끄고 실행)
 begin;

@@ -19,6 +19,7 @@ import { useToast } from '@/components/ui/toast';
 import { patchDocument } from '@/lib/documents/patch-document';
 import { SubmitApprovalButton } from '@/components/approvals/submit-approval-button';
 import { ApprovalActionBar } from '@/components/approvals/approval-action-bar';
+import { composeInputsContent } from '@/lib/documents/embedded-inputs';
 
 export default function DocumentViewerPage() {
   const params = useParams();
@@ -258,7 +259,7 @@ export default function DocumentViewerPage() {
           <DocumentCommentPanel
             documentId={id}
             inline
-            documentContent={doc?.content ?? ''}
+            documentContent={composeInputsContent(doc?.content, doc?.input_values)}
             onClose={() => router.push('/documents')}
             onReflected={() => fetchDoc()}
           />

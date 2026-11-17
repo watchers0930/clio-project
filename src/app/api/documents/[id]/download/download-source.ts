@@ -92,7 +92,8 @@ export async function loadDownloadDocument(
   // storage_path가 없는 스냅샷 문서: 부모(루트) 문서의 storage_path로 대체
   if (!doc.storage_path && doc.parent_id) {
     const content = doc.content ?? '';
-    const isLabel = content.startsWith('[') && content.length < 200;
+    // 입력값이 있는 양식 문서는 라벨 문서가 아니다(본문 주석이 있던 때와 같은 판정 유지)
+    const isLabel = content.startsWith('[') && content.length < 200 && !readDocumentInputs(doc).hasInputs;
     if (isLabel) {
       const adminFallback = createAdminSupabaseClient();
       const { data: parentDoc } = await adminFallback
