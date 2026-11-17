@@ -35,20 +35,24 @@ export async function PATCH(
     }
 
     const admin = createAdminSupabaseClient();
+    // 이 문서의 댓글만(서버 권한이라 경로의 문서와 묶지 않으면 남의 문서 댓글 상태를 바꿀 수 있었다)
     const { data: comment } = await admin
       .from('document_comments')
-      .select('id')
+      .select('id, status')
       .eq('id', commentId)
-      .single();
+      .eq('document_id', documentId)
+      .maybeSingle();
 
     if (!comment) return NextResponse.json({ success: false, error: '댓글을 찾을 수 없습니다.' }, { status: 404 });
+    // 반영된 댓글은 반영 기록(버전·반영자)을 지우지 않도록 되돌리지 않는다 — 화면도 보류/다시 검토만 제공한다
+    if (comment.status === 'applied') {
+      return NextResponse.json({ success: false, error: '이미 반영된 댓글은 상태를 바꿀 수 없습니다.' }, { status: 409 });
+    }
 
-    const { error } = await admin.from('document_comments').update({
-      status: nextStatus,
-      applied_at: null,
-      applied_by: null,
-      applied_version_number: null,
-    }).eq('id', commentId);
+    const { error } = await admin.from('document_comments').update({ status: nextStatus })
+      .eq('id', commentId)
+      .eq('document_id', documentId)
+      .neq('status', 'applied');
 
     if (error) throw error;
 
@@ -98,12 +102,13 @@ export async function DELETE(
       .from('document_comments')
       .select('user_id')
       .eq('id', commentId)
-      .single();
+      .eq('document_id', documentId)
+      .maybeSingle();
 
     if (!comment) return NextResponse.json({ success: false, error: '댓글을 찾을 수 없습니다.' }, { status: 404 });
     if (comment.user_id !== authUserId) return NextResponse.json({ success: false, error: '본인 댓글만 삭제할 수 있습니다.' }, { status: 403 });
 
-    const { error } = await admin.from('document_comments').delete().eq('id', commentId);
+    const { error } = await admin.from('document_comments').delete().eq('id', commentId).eq('document_id', documentId);
     if (error) throw error;
 
     return NextResponse.json({ success: true });

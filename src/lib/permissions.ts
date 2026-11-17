@@ -209,24 +209,27 @@ export async function filterAccessibleFileRows<T extends FileAccessRow>(
 }
 
 export async function canAccessDocument(
-  supabase: SupabaseClient,
+  _supabase: SupabaseClient,
   userId: string,
   userRole: string,
   userDeptId: string | null,
   documentId: string,
 ): Promise<boolean> {
   if (userRole === 'admin') return true;
+  // 판정은 서버 권한으로 읽는다(canAccessFile·문서 목록 filterAccessibleDocumentRows 와 같은 기준) —
+  // 사용자 세션으로 읽으면 documents RLS(본인 + 같은 부서)에 걸려 다른 부서에서 공유받은 문서를 공유 기록이 있어도 거부했다.
+  const admin = createAdminSupabaseClient();
 
-  const { data: document } = await supabase
+  const { data: document } = await admin
     .from('documents')
     .select('created_by')
     .eq('id', documentId)
-    .single();
+    .maybeSingle();
 
   if (!document) return false;
   if (document.created_by === userId) return true;
 
-  const { count } = await supabase
+  const { count } = await admin
     .from('document_permissions')
     .select('id', { count: 'exact', head: true })
     .eq('document_id', documentId)
