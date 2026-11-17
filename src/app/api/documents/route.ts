@@ -12,7 +12,7 @@ import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { generateDocumentContent } from '@/lib/ai/generate-document';
 import { extractText } from '@/lib/ai/extract-text';
-import { embedDocument } from '@/lib/ai/embed-document';
+import { scheduleDocumentEmbedding } from '@/lib/ai/embed-document';
 import type { DbDocument, DbFileRecord, DbTemplate, DbUser } from '@/lib/supabase/types';
 import { parseTemplateBundle } from '@/lib/templates/template-schema';
 import { canManageDocument, filterAccessibleDocumentRows, getUserRoleInfo } from '@/lib/permissions';
@@ -289,12 +289,8 @@ export async function POST(request: NextRequest) {
       details: { title },
     }).then(() => {}, () => {});
 
-    // 임베딩 생성 (검색 인덱싱) — fire-and-forget
-    if (newDoc.content) {
-      embedDocument(newDoc.id, newDoc.content).then(() => {}, (e) => {
-        console.error('[documents/POST] embed error:', e);
-      });
-    }
+    // 검색 벡터 — 응답 후 생성(저장 성공 뒤에만)
+    scheduleDocumentEmbedding(newDoc.id);
 
     return NextResponse.json({
       document: {

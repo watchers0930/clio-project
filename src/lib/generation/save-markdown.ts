@@ -13,6 +13,7 @@ import { buildDocumentInsertPayload, type VersionFields } from "./context";
 import { buildDocumentSummary } from "./form-overrides";
 import { isLeaveApplicationTemplateName } from "@/lib/templates/leave-application";
 import { serializeInputsComment } from "@/lib/documents/embedded-inputs";
+import { scheduleDocumentEmbedding } from "@/lib/ai/embed-document";
 import {
   linkGeneratedLeave,
   leaveLinkFailure,
@@ -107,6 +108,7 @@ export async function saveMarkdown(input: SaveMarkdownInput) {
       { status: 500 },
     );
   }
+  scheduleDocumentEmbedding(newDoc.id); // 검색 벡터 — 응답 후 생성(이전엔 이 주 경로가 벡터를 만들지 않았다)
 
   try {
     await linkGeneratedLeave(authUserId, newDoc.id, templateName, leaveInputs);

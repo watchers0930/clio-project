@@ -10,6 +10,7 @@ import { extractTodosFromText } from '@/lib/ai/extract-todos';
 import { parseTemplateBundle } from '@/lib/templates/template-schema';
 import { generateDocumentContent } from '@/lib/ai/generate-document';
 import { extractText } from '@/lib/ai/extract-text';
+import { scheduleDocumentEmbedding } from '@/lib/ai/embed-document';
 
 /**
  * POST /api/transcribe
@@ -168,6 +169,7 @@ export async function POST(request: NextRequest) {
       console.error('[transcribe] doc insert error:', docErr.message);
       return NextResponse.json({ success: false, error: '음성 변환 후 회의록 저장에 실패했습니다.' }, { status: 500 });
     }
+    if (newDoc) scheduleDocumentEmbedding(newDoc.id); // 회의록도 검색 대상 — 응답 후 벡터 생성
 
     // 5. 할일 자동 추출 (실패해도 회의록 생성 중단 없음)
     let extractedTodos: import('@/lib/ai/extract-todos').ExtractedTodo[] = [];

@@ -179,7 +179,9 @@ test("HTTP contracts, auth, CSRF, admin scope, validation and service error mapp
     internalRequest.headers.set("x-internal-secret", process.env.INTERNAL_API_SECRET);
     const embedded = await embed.POST(internalRequest);
     assert.equal(embedded.status, 200);
-    assert.deepEqual(await embedded.json(), { total: 0, success: 0, failed: 0 });
+    const embeddedJson = await embedded.json();
+    assert.equal(typeof embeddedJson.before, "string"); // all 모드 이어하기 기준 시각
+    assert.deepEqual({ ...embeddedJson, before: undefined }, { mode: "missing", before: undefined, total: 0, processed: 0, success: 0, failed: 0, remaining: 0 });
     const attendance = route("attendance");
     authStatus = 401;
     assert.equal(

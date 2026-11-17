@@ -1,6 +1,5 @@
 [
   { "route": "/api/auth/login", "methods": ["POST"], "sessionless": true, "reason": "로그인 전 — 세션이 없어 CSRF 토큰을 발급받을 수 없음" },
-  { "route": "/api/documents/embed-all", "methods": ["POST"], "reason": "서버 간 호출 — x-internal-secret 헤더 인증(브라우저 쿠키 미사용)" },
   { "route": "/api/files/process", "methods": ["POST"], "reason": "서버 간 호출 — X-Internal-Secret 헤더 인증(브라우저 쿠키 미사용)" },
   { "route": "/api/laws/seed", "methods": ["POST"], "reason": "서버 간 호출 — service role Bearer 인증(브라우저 쿠키 미사용)" },
   { "route": "/api/meetings/guest-room", "methods": ["POST"], "sessionless": true, "reason": "비로그인 회의 게스트 입장 — 세션 없음" }

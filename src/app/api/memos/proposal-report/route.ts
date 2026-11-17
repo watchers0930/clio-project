@@ -6,7 +6,7 @@ import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { parseTemplateBundle } from '@/lib/templates/template-schema';
 import { generateDocumentContent } from '@/lib/ai/generate-document';
-import { embedDocument } from '@/lib/ai/embed-document';
+import { scheduleDocumentEmbedding } from '@/lib/ai/embed-document';
 import { resolveVersionFields } from '@/app/api/generate/route-helpers';
 import { kstDateStr } from '@/lib/utils/date-kst';
 
@@ -298,9 +298,7 @@ export async function POST(request: NextRequest) {
       },
     }).then(() => {}, () => {});
 
-    if (newDoc.content) {
-      embedDocument(newDoc.id, newDoc.content).then(() => {}, () => {});
-    }
+    scheduleDocumentEmbedding(newDoc.id); // 검색 벡터 — 응답 후 생성
 
     return NextResponse.json({
       success: true,

@@ -10,6 +10,7 @@ import { recordAuditEvent } from '@/lib/audit';
 import { canManageDocument, getUserRoleInfo } from '@/lib/permissions';
 import { createNotifications } from '@/lib/notifications/create-notification';
 import { getEmbeddedInputsPrefix } from '@/lib/documents/embedded-inputs';
+import { scheduleDocumentEmbedding } from '@/lib/ai/embed-document';
 import {
   buildCurrentDocumentUpdate,
   buildSnapshotInsertPayload,
@@ -252,6 +253,7 @@ ${feedbackList}
     const { error: updateError } = await admin.from('documents').update(updatePayload).eq('id', documentId);
 
     if (updateError) throw updateError;
+    scheduleDocumentEmbedding(documentId); // 본문이 바뀌었으니 검색 벡터 재생성 — 응답 후
 
     const { error: commentUpdateError } = await admin
       .from('document_comments')

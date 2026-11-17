@@ -13,6 +13,7 @@ import { resolveBuiltinTemplate } from '@/lib/templates/builtin';
 import { kstDateStr, kstTimeStr } from '@/lib/utils/date-kst';
 import { filterAccessibleSourceFiles } from '@/lib/generation/source-access';
 import { splitInputsContent, stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
+import { scheduleDocumentEmbedding } from '@/lib/ai/embed-document';
 
 const FONT_MAP: Record<string, string> = {
   '맑은 고딕': 'Malgun Gothic',
@@ -378,6 +379,7 @@ export async function persistCompletedRender(params: {
   // storage_path 는 사용자 세션 쓰기가 막혀 있어(054) 인증 확인을 마친 서버가 service role 로 넣는다 — created_by 는 인증 사용자 그대로
   const { data: newDoc, error: insertErr } = await createAdminSupabaseClient().from('documents').insert(payload).select().single();
   if (insertErr) throw new Error(insertErr.message);
+  if (newDoc) scheduleDocumentEmbedding(newDoc.id); // 검색 벡터 — 응답 후 생성
 
   if (newDoc && params.templateName) {
     try { await linkGeneratedLeave(authUserId,newDoc.id,params.templateName,params.leaveInputs ?? {}); }

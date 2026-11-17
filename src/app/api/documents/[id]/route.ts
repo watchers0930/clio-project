@@ -10,7 +10,7 @@ import type { ApiResponse } from '@/lib/supabase/types';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
-import { embedDocument } from '@/lib/ai/embed-document';
+import { scheduleDocumentEmbedding } from '@/lib/ai/embed-document';
 import { canAccessDocument, canManageDocument, getUserRoleInfo } from '@/lib/permissions';
 import { loadDocumentDetail } from '@/lib/documents/document-detail-ops';
 import { composeInputsContent, splitInputsContent } from '@/lib/documents/embedded-inputs';
@@ -142,12 +142,8 @@ export async function PATCH(
       details: { ...updates },
     }).then(() => {}, () => {});
 
-    // content가 변경된 경우 임베딩 재생성 — fire-and-forget
-    if (content !== undefined && data?.content) {
-      embedDocument(id, data.content).then(() => {}, (e) => {
-        console.error('[documents/[id]/PATCH] embed error:', e);
-      });
-    }
+    // 본문이 바뀌면 검색 벡터 재생성 — 응답 후(저장 성공 뒤에만)
+    if (content !== undefined) scheduleDocumentEmbedding(id);
 
     // 응답도 편집 화면 형식('입력값 주석 + 본문')으로 — 저장 후 편집기가 같은 값을 기준으로 이어서 편집한다
     return NextResponse.json<ApiResponse>({ success: true, data: data ? { ...data, content: composeInputsContent(data.content, data.input_values) } : data });
