@@ -1,10 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { useRouter } from 'next/navigation';
 import type { useToast } from '@/components/ui/toast';
 import { isContractTemplate } from '@/lib/contract-fields';
+import { buildDocumentCreateHref, buildDocumentFollowupHref } from '@/lib/documents/navigation';
+import { downloadDocumentFile } from '@/lib/documents/download-document';
+import { stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
 import type { useGmailActions } from './use-gmail-actions';
 import type { SearchResult, SearchTab } from './types';
 
@@ -15,6 +18,37 @@ interface UseSearchResultActionsArgs {
   setActiveTab: Dispatch<SetStateAction<SearchTab>>;
   setPinnedFileIds: Dispatch<SetStateAction<string[] | null>>;
   setChatInput: Dispatch<SetStateAction<string>>;
+}
+
+// 미리보기 최대 글자 수 — 파일 미리보기 API(files/[id]/preview)와 같은 기준
+const PREVIEW_MAX_CHARS = 10000;
+
+type PreviewData = { name: string; text: string; truncated?: boolean; totalLength?: number };
+
+/** 문서(sourceType 'document')는 문서 API, 그 밖은 파일 API — 결과 종류 분기는 이 훅 한 곳에서만 한다 */
+const isDocumentResult = (result: SearchResult) => result.sourceType === 'document';
+
+async function loadPreview(result: SearchResult): Promise<PreviewData> {
+  if (isDocumentResult(result)) {
+    // 문서 상세 API(권한 확인 포함)의 본문 — 내부 입력값 주석은 빼고 보여준다
+    const res = await fetch(`/api/documents/${encodeURIComponent(result.id)}`);
+    const body = await res.json().catch(() => null) as { data?: { title?: string; content?: string | null }; error?: string } | null;
+    if (!res.ok || !body?.data) return { name: '오류', text: body?.error || '미리보기를 불러올 수 없습니다.' };
+    const text = stripEmbeddedInputs(body.data.content ?? '').trim();
+    if (!text) return { name: body.data.title ?? result.name, text: "(본문이 없는 문서입니다. '문서 열기'에서 확인해 주세요.)" };
+    return {
+      name: body.data.title ?? result.name,
+      text: text.slice(0, PREVIEW_MAX_CHARS),
+      truncated: text.length > PREVIEW_MAX_CHARS,
+      totalLength: text.length,
+    };
+  }
+  const res = await fetch(`/api/files/${encodeURIComponent(result.id)}/preview`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => null) as { error?: string } | null;
+    return { name: '오류', text: err?.error || '미리보기를 불러올 수 없습니다.' };
+  }
+  return await res.json() as PreviewData;
 }
 
 /**
@@ -29,27 +63,32 @@ export function useSearchResultActions({
   setPinnedFileIds,
   setChatInput,
 }: UseSearchResultActionsArgs) {
-  const [previewData, setPreviewData] = useState<{ name: string; text: string; truncated?: boolean; totalLength?: number } | null>(null);
+  const [previewData, setPreviewData] = useState<PreviewData | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [shareTarget, setShareTarget] = useState<{ id: string; title: string; type: 'document' | 'file' } | null>(null);
 
-  const openPreview = async (fileId: string) => {
+  // 미리보기를 연달아 열 때 늦게 온 앞 응답이 화면을 덮지 않게
+  const previewSeq = useRef(0);
+  const openPreview = async (result: SearchResult) => {
+    const seq = ++previewSeq.current;
     setPreviewLoading(true);
     setPreviewData(null);
+    let data: PreviewData;
     try {
-      const res = await fetch(`/api/files/${fileId}/preview`);
-      if (!res.ok) {
-        const err = await res.json().catch(() => null);
-        setPreviewData({ name: '오류', text: err?.error || '미리보기를 불러올 수 없습니다.' });
-        return;
-      }
-      const data = await res.json();
-      setPreviewData(data);
+      data = await loadPreview(result);
     } catch {
-      setPreviewData({ name: '오류', text: '네트워크 오류가 발생했습니다.' });
-    } finally {
-      setPreviewLoading(false);
+      data = { name: '오류', text: '네트워크 오류가 발생했습니다.' };
     }
+    if (seq !== previewSeq.current) return;
+    setPreviewData(data);
+    setPreviewLoading(false);
+  };
+
+  // 닫으면 진행 중인 응답도 버린다(불러오는 중 닫았다가 응답이 와서 창이 다시 열리지 않게)
+  const closePreview = () => {
+    previewSeq.current++;
+    setPreviewData(null);
+    setPreviewLoading(false);
   };
 
   const startChatFromResult = (result: SearchResult) => {
@@ -64,7 +103,25 @@ export function useSearchResultActions({
     return isContractTemplate(result.name) || ['DOCX', 'HWPX', 'HWP', 'PDF'].includes(upperType);
   };
 
+  // 같은 결과 다운로드 연타 방지(제안서는 서버 렌더가 길다)
+  const downloadingIds = useRef(new Set<string>());
   const handleDownloadOriginal = async (result: SearchResult) => {
+    if (downloadingIds.current.has(result.id)) return;
+    downloadingIds.current.add(result.id);
+    try {
+      await downloadResult(result);
+    } finally {
+      downloadingIds.current.delete(result.id);
+    }
+  };
+
+  const downloadResult = async (result: SearchResult) => {
+    if (isDocumentResult(result)) {
+      // 문서 결과의 fileType 은 양식 이름(없으면 'AI문서') — 문서 상세와 같은 형식 규칙
+      const err = await downloadDocumentFile(result.id, result.name, result.fileType);
+      if (err) toast.error(err);
+      return;
+    }
     try {
       const res = await fetch(`/api/files/${result.id}/download`);
       if (!res.ok) {
@@ -140,7 +197,7 @@ export function useSearchResultActions({
   };
 
   const openResult = (result: SearchResult) => {
-    if (result.sourceType === 'document') {
+    if (isDocumentResult(result)) {
       router.push(`/documents/${result.id}`);
       return;
     }
@@ -158,24 +215,35 @@ export function useSearchResultActions({
   };
 
   const openComments = (result: SearchResult) => {
-    if (result.sourceType === 'document') {
+    if (isDocumentResult(result)) {
       router.push(`/documents/${result.id}#document-comment-panel`);
       return;
     }
     startChatFromResult(result);
   };
 
+  // 새 문서 활용 — 문서는 문서 목록의 '후속 문서'와 같은 경로(원본 양식·참고 파일 + 기준 문서), 파일은 참고자료(files)로
+  // (문서 id 를 files 로 넘기면 새 문서 창이 파일 목록에 없는 id 라며 조용히 버렸다)
+  const openDocumentsFromResult = (result: SearchResult) => {
+    router.push(isDocumentResult(result)
+      ? buildDocumentFollowupHref({ id: result.id, title: result.name, templateId: result.templateId, sourceFileIds: result.sourceFileIds })
+      : buildDocumentCreateHref({
+          fileIds: [result.id],
+          instructions: `"${result.name}" 문서를 중심으로 문서를 작성해줘.`,
+        }));
+  };
+
   const openShare = (result: SearchResult) => {
     setShareTarget({
       id: result.id,
       title: result.name,
-      type: result.sourceType === 'document' ? 'document' : 'file',
+      type: isDocumentResult(result) ? 'document' : 'file',
     });
   };
 
   return {
     previewData,
-    setPreviewData,
+    closePreview,
     previewLoading,
     shareTarget,
     setShareTarget,
@@ -187,5 +255,6 @@ export function useSearchResultActions({
     openResult,
     openComments,
     openShare,
+    openDocumentsFromResult,
   };
 }

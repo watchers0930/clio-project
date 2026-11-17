@@ -11,7 +11,7 @@ interface SearchResultListProps {
   sortedResults: SearchResult[];
   expandedSummary: string | null;
   isElectron?: boolean;
-  onOpenPreview: (fileId: string) => void;
+  onOpenPreview: (result: SearchResult) => void;
   onOpenResult: (result: SearchResult) => void;
   onOpenComments: (result: SearchResult) => void;
   onOpenShare: (result: SearchResult) => void;
@@ -183,7 +183,7 @@ export function SearchResultList({
 
             <div className="mt-8 flex items-center gap-4 border-t border-surface-secondary pt-5">
               {result.dataSource !== 'gmail' && result.dataSource !== 'local' && (
-                <button onClick={() => onOpenPreview(result.id)} className="flex items-center gap-1.5 text-sm font-medium text-foreground-secondary transition-colors hover:text-foreground">
+                <button onClick={() => onOpenPreview(result)} className="flex items-center gap-1.5 text-sm font-medium text-foreground-secondary transition-colors hover:text-foreground">
                   <EyeIcon />
                   미리보기
                 </button>

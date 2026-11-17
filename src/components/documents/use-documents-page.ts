@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { buildDocumentFollowupHref } from '@/lib/documents/navigation';
 import type { DocumentItem as Document } from '@/components/documents/page-types';
 import type { ExtractedTodo } from '@/lib/ai/extract-todos';
 import { useToast } from '@/components/ui/toast';
@@ -29,7 +30,7 @@ export function useDocumentsPage() {
   const toast = useToast();
   const router = useRouter();
   const {
-    docs, setDocs, loading, templates, sourceFiles, referenceDocuments, setReferenceDocuments,
+    docs, setDocs, loading, templates, sourceFiles, sourceFilesLoaded, referenceDocuments, setReferenceDocuments,
     loadDocs, loadFiles, loadReferenceDocuments,
   } = useDocumentsData();
   const [showModal, setShowModal] = useState(false);
@@ -146,7 +147,8 @@ export function useDocumentsPage() {
   }, [viewDoc?.template, downloadFormat]);
 
   useEffect(() => {
-    if (initializedFromQuery || typeof window === 'undefined' || sourceFiles.length === 0) return;
+    // 파일·문서 목록을 다 불러온 뒤 한 번만 — 파일이 0건인 사용자도 URL 값(create·originDocumentId 등)이 적용되게
+    if (initializedFromQuery || typeof window === 'undefined' || !sourceFilesLoaded || loading) return;
 
     const params = new URLSearchParams(window.location.search);
     // 근태 휴가원 작성 흐름(templateName 기반)은 아래 전용 effect가 처리한다.
@@ -202,7 +204,7 @@ export function useDocumentsPage() {
     }
 
     setInitializedFromQuery(true);
-  }, [initializedFromQuery, sourceFiles, docs, router, openDocModal]);
+  }, [initializedFromQuery, sourceFiles, sourceFilesLoaded, loading, docs, router, openDocModal]);
 
   // 근태 '휴가원 작성' 진입(F02): 템플릿 ID 대신 templateName으로 들어오므로
   // 로드된 템플릿에서 이름으로 실제 ID를 찾아 선택하고, 신청 내용을 문서 입력에
@@ -334,14 +336,7 @@ export function useDocumentsPage() {
   });
 
   const startReuseDocument = (doc: Document) => {
-    const params = new URLSearchParams({ create: 'true' });
-    if (doc.templateId) params.set('template', doc.templateId);
-    if ((doc.sourceFileIds ?? []).length > 0) params.set('files', (doc.sourceFileIds ?? []).join(','));
-    params.set('instructions', `${doc.title} 문서를 참고해서 후속 문서를 작성하세요.`);
-    params.set('originDocumentId', doc.id);
-    params.set('originContext', 'document_followup');
-    params.set('contextTitle', doc.title);
-    router.push(`/documents?${params.toString()}`);
+    router.push(buildDocumentFollowupHref({ id: doc.id, title: doc.title, templateId: doc.templateId, sourceFileIds: doc.sourceFileIds }));
   };
 
   const openSearchFromDocument = (doc: Document) => {

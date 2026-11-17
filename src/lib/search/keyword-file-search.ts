@@ -19,6 +19,8 @@ export interface SearchResultItem {
   relationLabel?: string | null;
   originDocumentId?: string | null;
   originDocumentTitle?: string | null;
+  templateId?: string | null; // 문서 결과만
+  sourceFileIds?: string[]; // 문서 결과만
 }
 
 const FILE_TYPE_MAP: Record<string, string> = {

@@ -67,7 +67,7 @@ function SearchPageInner() {
   const [isElectron, setIsElectron] = useState(false);
   const {
     previewData,
-    setPreviewData,
+    closePreview,
     previewLoading,
     shareTarget,
     setShareTarget,
@@ -79,6 +79,7 @@ function SearchPageInner() {
     openResult,
     openComments,
     openShare,
+    openDocumentsFromResult,
   } = useSearchResultActions({ router, toast, gmail, setActiveTab, setPinnedFileIds, setChatInput });
 
   // 부서 목록 + 검색 제안어
@@ -274,7 +275,7 @@ function SearchPageInner() {
             onSortChange={setSort}
             onSuggestionClick={(value) => { setQuery(value); void doSearch(value); }}
             onVoiceTranscript={(value) => { setQuery(value); void doSearch(value); }}
-            onOpenPreview={(fileId) => { void openPreview(fileId); }}
+            onOpenPreview={(result) => { void openPreview(result); }}
             onOpenResult={openResult}
             onOpenComments={openComments}
             onOpenShare={openShare}
@@ -282,10 +283,7 @@ function SearchPageInner() {
             onDownloadOriginal={(result) => { void handleDownloadOriginal(result); }}
             onOpenGmailAttachments={gmail.openAttachments}
             onStartChat={startChatFromResult}
-            onOpenDocumentsFromResult={(result) => router.push(buildDocumentCreateHref({
-              fileIds: [result.id],
-              instructions: `"${result.name}" 문서를 중심으로 문서를 작성해줘.`,
-            }))}
+            onOpenDocumentsFromResult={openDocumentsFromResult}
             onOpenContractRiskFromResult={(result) => router.push(`/contract-risk?source=${encodeURIComponent(result.name)}`)}
             onOpenFiles={() => router.push('/files')}
             canAnalyzeContract={canAnalyzeContract}
@@ -310,7 +308,7 @@ function SearchPageInner() {
       <SearchPreviewModal
         previewData={previewData}
         previewLoading={previewLoading}
-        onClose={() => setPreviewData(null)}
+        onClose={closePreview}
       />
 
       {shareTarget && (

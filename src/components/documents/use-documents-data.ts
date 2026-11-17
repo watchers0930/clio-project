@@ -16,6 +16,8 @@ export function useDocumentsData() {
   const [referenceDocuments, setReferenceDocuments] = useState<Document[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [sourceFiles, setSourceFiles] = useState<SourceFile[]>([]);
+  // 원본 파일 목록을 (실패 포함) 한 번 불러왔는지 — '0건'과 '아직 안 불러옴'을 구분한다
+  const [sourceFilesLoaded, setSourceFilesLoaded] = useState(false);
 
   const loadDocs = useCallback(async () => {
     try {
@@ -78,6 +80,8 @@ export function useDocumentsData() {
         })));
       }
     } catch {
+    } finally {
+      setSourceFilesLoaded(true);
     }
   }, []);
 
@@ -100,7 +104,7 @@ export function useDocumentsData() {
   }, [loadDocs, loadTemplates, loadFiles]);
 
   return {
-    docs, setDocs, loading, templates, sourceFiles, referenceDocuments, setReferenceDocuments,
+    docs, setDocs, loading, templates, sourceFiles, sourceFilesLoaded, referenceDocuments, setReferenceDocuments,
     loadDocs, loadFiles, loadReferenceDocuments,
   };
 }

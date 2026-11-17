@@ -12,6 +12,8 @@ export interface DocRow {
   created_by: string | null;
   origin_document_id?: string | null;
   origin_context?: string | null;
+  template_id?: string | null;
+  source_file_ids?: string[] | null;
   templates: { name: string } | null;
 }
 
@@ -54,5 +56,8 @@ export function toDocumentSearchItem(
     relationLabel: formatOriginLabel(d.origin_context ?? null),
     originDocumentId: d.origin_document_id ?? null,
     originDocumentTitle: d.origin_document_id ? (originTitleMap.get(d.origin_document_id) ?? null) : null,
+    // 새 문서 활용(후속 문서)이 원본과 같은 양식·참고 파일로 작성하도록
+    templateId: d.template_id ?? null,
+    sourceFileIds: d.source_file_ids ?? [],
   };
 }

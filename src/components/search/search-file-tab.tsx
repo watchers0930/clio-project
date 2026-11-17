@@ -36,7 +36,7 @@ interface FileTabProps {
   onSortChange: (value: string) => void;
   onSuggestionClick: (value: string) => void;
   onVoiceTranscript: (value: string) => void;
-  onOpenPreview: (fileId: string) => void;
+  onOpenPreview: (result: SearchResult) => void;
   onOpenResult: (result: SearchResult) => void;
   onOpenComments: (result: SearchResult) => void;
   onOpenShare: (result: SearchResult) => void;

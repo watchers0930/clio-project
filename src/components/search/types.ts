@@ -14,6 +14,8 @@ export interface SearchResult {
   relationLabel?: string | null;
   originDocumentId?: string | null;
   originDocumentTitle?: string | null;
+  templateId?: string | null; // 문서 결과만 — 새 문서 활용용
+  sourceFileIds?: string[]; // 문서 결과만 — 새 문서 활용용
   duplicateCount?: number; // 같은 제목 접기 시 묶인 총 건수(대표 포함)
   groupItems?: SearchResult[]; // 접힌 나머지 개별 항목(대표 제외, 최신순)
 }

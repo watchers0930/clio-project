@@ -8,14 +8,14 @@ import { summarizeText } from '@/lib/ai/summarize';
 import { filterAccessibleDocumentRows, filterAccessibleFileRows, getUserRoleInfo } from '@/lib/permissions';
 import { keywordFileSearch, getFileType, titleCoverageScore, type SearchResultItem } from '@/lib/search/keyword-file-search';
 import { originContextLabel as formatOriginLabel } from '@/lib/documents/origin-context';
-import { buildDocumentTextFilter, bodyHasAllTokens, buildIlikeAny, cleanSearchTokens, MAX_QUERY_LENGTH } from '@/lib/search/search-text-filter';
+import { buildDocumentTextFilter, bodyHasAllTokens, cleanSearchTokens, MAX_QUERY_LENGTH } from '@/lib/search/search-text-filter';
 import { loadAccessibleOriginTitles } from '@/lib/search/search-origin-titles';
 import { loadGrantedDocumentIds, searchDocumentsByText, vectorAccessArgs } from '@/lib/search/document-search';
 import { buildCreatorDepartmentMap, toDocumentSearchItem, type DocRow } from '@/lib/search/document-results';
 import { buildSearchContext } from '@/lib/search/search-context';
 
 // 문서 텍스트 검색 후보 수 — 권한 필터 뒤 15건을 채우기 위해 넉넉히(권한 없는 문서가 자리를 다 차지하지 않게)
-const DOC_SEARCH_COLUMNS = 'id, title, content, created_at, created_by, origin_document_id, origin_context, templates:template_id(name)';
+const DOC_SEARCH_COLUMNS = 'id, title, content, created_at, created_by, origin_document_id, origin_context, template_id, source_file_ids, templates:template_id(name)';
 
 const SEARCH_AI_SUMMARY_ENABLED = process.env.ENABLE_SEARCH_AI_SUMMARY === 'true';
 
@@ -25,7 +25,6 @@ interface AuditLogRow {
 }
 
 interface FileRow { id: string; name: string; type: string | null; department_id: string | null; created_at: string; uploaded_by: string | null; source?: string | null; external_id?: string | null; source_date?: string | null }
-interface WorkLogRow { id: string; log_date: string; done: string | null; plan: string | null; note: string | null }
 interface DeptRow { id: string; name: string }
 
 
@@ -86,28 +85,18 @@ export async function POST(request: NextRequest) {
     const fileResults: SearchResultItem[] = [];
     const docResultsMap = new Map<string, SearchResultItem>(); // id → item (중복 방지)
 
-    // ── ① 문서·업무일지 텍스트 검색 + 청크 수 확인 병렬 실행 ──
+    // ── ① 문서 텍스트 검색 + 청크 수 확인 병렬 실행 ──
+    // 업무일지(work_logs)는 검색하지 않는다 — 열어 볼 화면이 없어 결과를 누르면 깨졌다(2026-11-18 대장 결정, 데이터는 보존)
     // 제목은 단어 하나라도, 본문은 모든 단어가 있어야 — 검색어는 조건 문법·와일드카드가 되지 않게 감싼다(lib/search/search-text-filter)
     const docTextFilter = buildDocumentTextFilter(queryTokens);
-    // log_date 는 DATE 칸이라 ilike 가 오류(42883)를 내 업무일지 내용 검색 전체가 조용히 0건이었다(2026-11-17 운영 확인) — 글자 칸만
-    const orWorkLog = buildIlikeAny(['done', 'plan', 'note'], queryTokens);
 
-    // "업무일지" 타입 자체를 검색하는 경우: done/plan/note에 해당 단어가 없으므로 최근 일지로 폴백
-    const isWorkLogTypeSearch = queryTokens.some((t: string) => t === '업무일지' || t === '업무' || t === '일지');
-
-    const [{ data: textDocs }, { data: workLogs }, { count: chunkCount }, { count: docEmbedCount }] = await Promise.all([
-      // 권한 조건을 조회 자체에 넣는다(볼 수 있는 문서가 후보 밖으로 밀리지 않게). 실패해도 파일·업무일지 결과는 내보낸다
+    const [{ data: textDocs }, { count: chunkCount }, { count: docEmbedCount }] = await Promise.all([
+      // 권한 조건을 조회 자체에 넣는다(볼 수 있는 문서가 후보 밖으로 밀리지 않게). 실패해도 파일 결과는 내보낸다
       docTextFilter
         ? searchDocumentsByText<DocRow>({ admin, user: searchUser, grantedIds, textFilter: docTextFilter, columns: DOC_SEARCH_COLUMNS })
           .then((data) => ({ data }))
           .catch((err: unknown) => { console.error('[search] document text search error:', err); return { data: [] as DocRow[] }; })
         : Promise.resolve({ data: [] as DocRow[] }),
-      // 업무일지는 사용자 세션으로 — RLS(본인 + 같은 부서 관리자)가 볼 수 있는 범위를 정한다(서버 권한으로 읽어 남의 일지가 보이던 문제)
-      isWorkLogTypeSearch
-        // 타입 검색: 최근 업무일지 반환 (내용 필터 없이)
-        ? sb.from('work_logs').select('id, log_date, done, plan, note').order('log_date', { ascending: false }).limit(10)
-        // 내용 검색: done/plan/note 텍스트 매칭
-        : orWorkLog ? sb.from('work_logs').select('id, log_date, done, plan, note').or(orWorkLog).limit(10) : Promise.resolve({ data: [] }),
       sb.from('file_chunks').select('id', { count: 'exact', head: true }),
       admin.from('document_embeddings').select('id', { count: 'exact', head: true }),
     ]);
@@ -135,28 +124,6 @@ export async function POST(request: NextRequest) {
       docResultsMap.set(d.id, toDocumentSearchItem(d, Math.min(85, Math.max(40, score + 50)), textDocCreatorDeptMap, textOriginTitleMap));
     }
 
-    // 업무일지(work_logs) 검색 결과 처리
-    const typedWorkLogs = workLogs as WorkLogRow[] ?? [];
-    for (const w of typedWorkLogs) {
-      const combined = [w.done, w.plan, w.note].filter(Boolean).join(' ');
-      let score = 0;
-      for (const token of queryTokens) {
-        score += (w.log_date.includes(token) ? 40 : 0);
-        score += (combined.toLowerCase().split(token).length - 1) * 15;
-      }
-      docResultsMap.set(`wl-${w.id}`, {
-        id: `wl-${w.id}`,
-        name: `업무일지 (${w.log_date})`,
-        excerpt: (w.done ?? w.plan ?? '').slice(0, 200),
-        relevance: Math.min(85, Math.max(40, score + 45)),
-        fileType: '업무일지',
-        department: '미분류',
-        date: w.log_date,
-        aiSummary: '',
-        sourceType: 'document',
-      });
-    }
-
     // ── ③ 벡터 검색 (문서/파일 병렬) ──
     const hasVectorData = (chunkCount ?? 0) > 0 || (docEmbedCount ?? 0) > 0;
     if (hasVectorData) {
@@ -168,7 +135,7 @@ export async function POST(request: NextRequest) {
           (chunkCount ?? 0) > 0
             ? sb.rpc('match_file_chunks', { query_embedding: embeddingStr, match_count: 30, match_threshold: 0.35 })
             : Promise.resolve({ data: [], error: null }),
-          (docEmbedCount ?? 0) > 0 && !isWorkLogTypeSearch
+          (docEmbedCount ?? 0) > 0
             ? admin.rpc('match_document_embeddings', { query_embedding: embeddingStr, match_count: 15, match_threshold: 0.45, ...vectorAccessArgs(searchUser, grantedIds) })
             : Promise.resolve({ data: [], error: null }),
         ]);

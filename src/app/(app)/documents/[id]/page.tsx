@@ -20,6 +20,7 @@ import { patchDocument } from '@/lib/documents/patch-document';
 import { SubmitApprovalButton } from '@/components/approvals/submit-approval-button';
 import { ApprovalActionBar } from '@/components/approvals/approval-action-bar';
 import { composeInputsContent } from '@/lib/documents/embedded-inputs';
+import { downloadDocumentFile } from '@/lib/documents/download-document';
 
 export default function DocumentViewerPage() {
   const params = useParams();
@@ -94,23 +95,9 @@ export default function DocumentViewerPage() {
   const handleDownload = async () => {
     if (!doc || downloading) return;
     setDownloading(true);
-    try {
-      const format = doc.template_name === '제안서' ? 'pdf' : 'docx';
-      const extension = doc.template_name === '제안서' ? 'html' : 'docx';
-      const res = await fetch(`/api/documents/${id}/download?format=${format}&font=맑은 고딕`);
-      if (!res.ok) { toast.error('다운로드 실패'); return; }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${doc.title}.${extension}`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      toast.error('다운로드 중 오류');
-    } finally {
-      setDownloading(false);
-    }
+    const err = await downloadDocumentFile(id, doc.title, doc.template_name);
+    setDownloading(false);
+    if (err) toast.error(err);
   };
 
   const handlePrint = () => {
@@ -165,21 +152,8 @@ export default function DocumentViewerPage() {
   };
 
   const handleVersionDownload = async (vId: string, title: string) => {
-    try {
-      const format = doc?.template_name === '제안서' ? 'pdf' : 'docx';
-      const extension = doc?.template_name === '제안서' ? 'html' : 'docx';
-      const res = await fetch(`/api/documents/${vId}/download?format=${format}&font=맑은 고딕`);
-      if (!res.ok) { toast.error('다운로드 실패'); return; }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${title}.${extension}`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      toast.error('다운로드 중 오류');
-    }
+    const err = await downloadDocumentFile(vId, title, doc?.template_name);
+    if (err) toast.error(err);
   };
 
 
