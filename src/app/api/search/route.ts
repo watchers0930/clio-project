@@ -15,7 +15,7 @@ import { buildCreatorDepartmentMap, toDocumentSearchItem, type DocRow } from '@/
 import { buildSearchContext } from '@/lib/search/search-context';
 
 // 문서 텍스트 검색 후보 수 — 권한 필터 뒤 15건을 채우기 위해 넉넉히(권한 없는 문서가 자리를 다 차지하지 않게)
-const DOC_SEARCH_COLUMNS = 'id, title, content, created_at, created_by, parent_id, version_number, origin_document_id, origin_context, templates:template_id(name)';
+const DOC_SEARCH_COLUMNS = 'id, title, content, created_at, created_by, origin_document_id, origin_context, templates:template_id(name)';
 
 const SEARCH_AI_SUMMARY_ENABLED = process.env.ENABLE_SEARCH_AI_SUMMARY === 'true';
 
@@ -83,7 +83,6 @@ export async function POST(request: NextRequest) {
 
     const searchUser = { id: authUserId, role: roleInfo.role, departmentId: roleInfo.department_id ?? null };
     const grantedIds = await loadGrantedDocumentIds(admin, searchUser);
-    const chainResultIds = new Map<string, string>(); // 버전 묶음(원본 id) → 결과 항목 id — 벡터(원본)와 텍스트(새 판) 중복 방지
     const fileResults: SearchResultItem[] = [];
     const docResultsMap = new Map<string, SearchResultItem>(); // id → item (중복 방지)
 
@@ -97,11 +96,12 @@ export async function POST(request: NextRequest) {
     const isWorkLogTypeSearch = queryTokens.some((t: string) => t === '업무일지' || t === '업무' || t === '일지');
 
     const [{ data: textDocs }, { data: workLogs }, { count: chunkCount }, { count: docEmbedCount }] = await Promise.all([
-      // 권한 조건을 조회 자체에 넣는다(볼 수 있는 문서가 후보 밖으로 밀리지 않게) — 새 버전까지 찾고 묶음마다 최신 판만
+      // 권한 조건을 조회 자체에 넣는다(볼 수 있는 문서가 후보 밖으로 밀리지 않게). 실패해도 파일·업무일지 결과는 내보낸다
       docTextFilter
         ? searchDocumentsByText<DocRow>({ admin, user: searchUser, grantedIds, textFilter: docTextFilter, columns: DOC_SEARCH_COLUMNS })
           .then((data) => ({ data }))
-        : Promise.resolve({ data: [] as Array<DocRow & { chainId: string }> }),
+          .catch((err: unknown) => { console.error('[search] document text search error:', err); return { data: [] as DocRow[] }; })
+        : Promise.resolve({ data: [] as DocRow[] }),
       // 업무일지는 사용자 세션으로 — RLS(본인 + 같은 부서 관리자)가 볼 수 있는 범위를 정한다(서버 권한으로 읽어 남의 일지가 보이던 문제)
       isWorkLogTypeSearch
         // 타입 검색: 최근 업무일지 반환 (내용 필터 없이)
@@ -132,7 +132,6 @@ export async function POST(request: NextRequest) {
       let score = 0;
       for (const token of queryTokens) score += (titleLower.split(token).length - 1) * 30;
       if (bodyHasAllTokens(d.content, queryTokens)) score += 10; // 본문에 모든 단어 — 제목 일치(30점/단어)보다는 낮게
-      chainResultIds.set(d.chainId ?? d.id, d.id);
       docResultsMap.set(d.id, toDocumentSearchItem(d, Math.min(85, Math.max(40, score + 50)), textDocCreatorDeptMap, textOriginTitleMap));
     }
 
@@ -219,6 +218,8 @@ export async function POST(request: NextRequest) {
         }
 
         // 문서 벡터 결과 처리 (텍스트 결과 보강 — relevance 갱신)
+        // 함수 오류(064 미적용·인자 불일치 등)를 조용히 0건으로 넘기지 않게 기록
+        if (docMatchResult.error) console.error('[search] document vector search error:', docMatchResult.error.message);
         const docVecMatches: Array<{ document_id: string; similarity: number }> = docMatchResult.data ?? [];
         if (docVecMatches.length > 0) {
           const docIds = docVecMatches.map((m) => m.document_id);
@@ -247,7 +248,7 @@ export async function POST(request: NextRequest) {
           for (const d of typedVecDocs) {
             const similarity = docSimMap.get(d.id) ?? 0;
             const vecRelevance = Math.round(similarity * 100);
-            const existing = docResultsMap.get(chainResultIds.get(d.id) ?? d.id);
+            const existing = docResultsMap.get(d.id);
             // 이미 텍스트 검색 결과가 있으면 relevance만 높은 걸로 갱신
             if (existing) {
               existing.relevance = Math.max(existing.relevance, vecRelevance);

@@ -10,12 +10,9 @@ export interface DocRow {
   content: string | null;
   created_at: string;
   created_by: string | null;
-  parent_id: string | null;
-  version_number: number | null;
   origin_document_id?: string | null;
   origin_context?: string | null;
   templates: { name: string } | null;
-  chainId?: string;
 }
 
 interface UserRow { id: string; department_id: string | null }
