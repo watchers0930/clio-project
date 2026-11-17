@@ -25,6 +25,11 @@ export async function resolveVersionParentWith(deps: VersionParentDeps, parentId
   const parent = await deps.loadDocument(parentId);
   if (!parent) return { ok: false, status: 404, error: NOT_FOUND };
   const rootId = parent.parent_id ?? parent.id;
+  // 원본은 parent_id 가 없는 행이어야 한다(062 트리거와 같은 판정 — 깨진 체인을 앱은 통과시키고 DB 가 500 으로 거부하지 않게)
+  if (parent.parent_id) {
+    const root = await deps.loadDocument(rootId);
+    if (!root || root.parent_id) return { ok: false, status: 404, error: NOT_FOUND };
+  }
   // 권한이 없을 때도 404 — 문서가 있는지조차 알리지 않는다
   if (!(await deps.canAccessRoot(rootId))) return { ok: false, status: 404, error: NOT_FOUND };
   const maxVersion = await deps.loadMaxVersion(rootId);

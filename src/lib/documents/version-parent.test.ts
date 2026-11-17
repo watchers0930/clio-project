@@ -58,3 +58,14 @@ test("원본만 있으면 2판", async () => {
   const r = await resolveVersionParentWith(deps({ loadMaxVersion: async () => null }), ROOT);
   assert.deepEqual(r, { ok: true, fields: { parent_id: ROOT, version_number: 2 } });
 });
+
+test("부모의 원본이 다시 버전 행이면(깨진 체인) 404 — DB 트리거와 같은 판정", async () => {
+  const V3 = "3e9f4c3b-6d6e-4f70-b1b2-cd2e3f405162";
+  const base = deps();
+  const d = deps({
+    loadDocument: async (id) => (id === V3 ? { id: V3, parent_id: V2 } : base.loadDocument(id)),
+  });
+  const r = await resolveVersionParentWith(d, V3);
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.equal(r.status, 404);
+});
