@@ -32,15 +32,16 @@ export async function applyApprovalSignatures(admin: SupabaseClient, documentId:
 
   const { data: steps } = await admin
     .from('approval_steps')
-    .select('step_order, status, signature_path, approver_id')
+    .select('step_order, status, signature_path, approver_id, rank_title')
     .eq('request_id', req.id)
     .order('step_order', { ascending: true });
   if (!steps || steps.length === 0) return html;
 
   const filled = await Promise.all(
-    steps.map(async (s: { step_order: number; status: string; signature_path: string | null; approver_id: string | null }) => ({
+    steps.map(async (s: { step_order: number; status: string; signature_path: string | null; approver_id: string | null; rank_title: string | null }) => ({
       step_order: s.step_order,
       status: s.status,
+      rank_title: s.rank_title,
       signatureDataUrl:
         // 결재·전결 모두 해당 단계 결재자 본인이 서명한다 — 결재자 본인 서명 폴더 밖 경로는 읽지 않는다
         // (휴가 결재 RPC(048)는 users.signature_path 를 검사 없이 복사하므로 여기서 소유자를 확인한다)
