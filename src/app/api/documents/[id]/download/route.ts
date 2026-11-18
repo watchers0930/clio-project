@@ -61,7 +61,7 @@ export async function GET(
     const inline = url.searchParams.get('inline') === 'true';
 
     // 서명·템플릿·로고·직인 컨텍스트 준비 후 단계별 서빙(앞 단계가 응답하면 그대로 반환)
-    const context = await loadDownloadContext(doc, authUserId, inline);
+    const context = await loadDownloadContext(doc, authUserId);
     const ctx = { ...context, doc, inline, format, fontParam, fontFamily };
 
     const latest = await serveLatestInputForm(ctx);

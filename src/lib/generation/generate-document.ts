@@ -32,10 +32,8 @@ import {
 } from './context';
 import { getWorklogDocumentTitle, isWorklogTemplateName } from '@/lib/templates/worklog';
 import { isProposalTemplateName } from '@/lib/templates/proposal';
-import { isEmploymentCertificateTemplateName } from '@/lib/templates/employment-certificate';
-import { isStandardLaborContractTemplateName } from '@/lib/templates/standard-labor-contract';
 import { signatureBufferToDataUrl } from '@/lib/utils/signature-data-url';
-import { loadCompanySeal } from '@/lib/settings/company-seal';
+import { isCompanyIssuedTemplateName, loadCompanySeal, pickSignatureSlotImage } from '@/lib/settings/company-seal';
 
 
 
@@ -151,7 +149,7 @@ export async function generateDocument(request: NextRequest) {
       report_time: timeStr,
       report_no: reportNo,
       signature_image_src: signatureBufferToDataUrl(
-        (isEmploymentCertificateTemplateName(templateName) || isStandardLaborContractTemplateName(templateName)) && companySealBuffer ? companySealBuffer : signatureBuffer,
+        pickSignatureSlotImage(isCompanyIssuedTemplateName(templateName), companySealBuffer, signatureBuffer),
       ),
       employee_signature_src: signatureBufferToDataUrl(signatureBuffer),
       company_logo_src: signatureBufferToDataUrl(companyLogoContext.buffer),

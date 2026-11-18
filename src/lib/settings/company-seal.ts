@@ -1,5 +1,20 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
+import { isEmploymentCertificateTemplateName } from '@/lib/templates/employment-certificate';
+import { isStandardLaborContractTemplateName } from '@/lib/templates/standard-labor-contract';
+
+/** 회사가 발급하는 문서(재직증명서·근로계약서) — signature_image_src 가 '회사 직인' 자리다 */
+export function isCompanyIssuedTemplateName(templateName: string | null | undefined): boolean {
+  return isEmploymentCertificateTemplateName(templateName) || isStandardLaborContractTemplateName(templateName);
+}
+
+/**
+ * signature_image_src 에 넣을 이미지. 회사 발급 문서는 회사 직인만 쓰고, 직인이 없으면 빈칸('(인)' 표시) —
+ * 작성자 개인 서명으로 대신하지 않는다(근로계약서 사업주 칸에 근로자 서명이 찍히던 문제).
+ */
+export function pickSignatureSlotImage<T>(companyIssued: boolean, companySeal: T | null, personalSignature: T | null): T | null {
+  return companyIssued ? companySeal : personalSignature;
+}
 
 /**
  * 회사 공용 직인(도장) 이미지 — 재직증명서 등 회사 발급 문서에 사용.

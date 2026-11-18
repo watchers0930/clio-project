@@ -2,7 +2,7 @@
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { checkRowStoragePath } from '@/lib/storage/files-bucket';
 import { canViewAllWeeklyReports } from '@/lib/permissions';
-import { loadCompanySealBuffer } from '@/lib/settings/company-seal';
+import { isCompanyIssuedTemplateName, loadCompanySealBuffer } from '@/lib/settings/company-seal';
 import { parseTemplateBundle, type TemplateBundle } from '@/lib/templates/template-schema';
 import { resolveBuiltinTemplateBundle, resolveBuiltinTemplateBundleByName } from '@/lib/templates/builtin';
 import { renderProposalDocumentHtml } from '@/lib/templates/proposal-render';
@@ -115,9 +115,8 @@ export async function loadDownloadDocument(
 export async function loadDownloadContext(
   doc: DownloadDoc,
   authUserId: string,
-  inline: boolean,
 ): Promise<DownloadContext> {
-  // 서명 이미지 가져오기 — 다운로드 전용 (inline 미리보기는 서명 제외), 이름은 항상 가져옴
+  // 작성자 서명·이름 — 미리보기와 다운로드 모두 사용
   let signatureBuffer: Buffer | null = null;
   let signerName = '';
   let templateBundle: TemplateBundle | null = null;
@@ -176,8 +175,9 @@ export async function loadDownloadContext(
   const isProposalDocument = isProposalTemplateName(templateName);
   // 재직증명서·표준근로계약서 등 회사 발급 문서는 신청자가 누구든 회사 공용 직인을 쓴다.
   // (개인 문서는 아래에서 신청자 본인 서명 signatureBuffer 사용)
-  const isCompanyIssuedDocument = /재직\s*증명서|근로계약서/.test(templateName);
-  const companySealBuffer = !inline && isCompanyIssuedDocument
+  // 미리보기도 다운로드와 같은 직인을 보여 준다(미리보기만 직인을 빼면 그 자리에 작성자 서명이 들어갔다)
+  const isCompanyIssuedDocument = isCompanyIssuedTemplateName(templateName);
+  const companySealBuffer = isCompanyIssuedDocument
     ? await loadCompanySealBuffer(createAdminSupabaseClient())
     : null;
   const proposalPreviewHtml = isProposalDocument

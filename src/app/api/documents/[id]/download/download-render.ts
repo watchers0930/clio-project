@@ -11,6 +11,7 @@ import type { CorporateTheme } from '@/lib/renderers/types';
 import { DEFAULT_THEME } from '@/lib/renderers/types';
 import { appendSignatureHtml, injectSignatureDocx, injectSignatureHwpx } from '@/lib/utils/inject-signature';
 import { signatureBufferToDataUrl } from '@/lib/utils/signature-data-url';
+import { pickSignatureSlotImage } from '@/lib/settings/company-seal';
 import type { DownloadContext, DownloadDoc } from './download-source';
 import { readDocumentInputs } from '@/lib/documents/embedded-inputs';
 
@@ -24,7 +25,7 @@ export type DownloadRenderContext = DownloadContext & {
 
 // 유효한 대상 양식은 예전 HTML 파일이 있어도 최신 저장 입력값으로 렌더한다. 해당 없으면 null.
 export async function serveLatestInputForm(ctx: DownloadRenderContext): Promise<NextResponse | null> {
-  const { doc, inline, fontParam, fontFamily, storedTemplateName, companyLogoContext, signatureBuffer } = ctx;
+  const { doc, inline, fontParam, fontFamily, storedTemplateName, companyLogoContext, signatureBuffer, companySealBuffer } = ctx;
   // Valid target forms use the latest saved inputs even when an old HTML file exists.
   if (inline) {
     const latest = await renderLatestInputForm({
@@ -34,6 +35,7 @@ export async function serveLatestInputForm(ctx: DownloadRenderContext): Promise<
       companyLogoSrc: signatureBufferToDataUrl(companyLogoContext.buffer),
       companyLogoPatternSize: companyLogoContext.patternSize,
       authorSignatureSrc: signatureBufferToDataUrl(signatureBuffer),
+      companySealSrc: signatureBufferToDataUrl(companySealBuffer),
     });
     if (latest) {
       const html = await applyApprovalSignatures(createAdminSupabaseClient(), doc.id, latest.buffer.toString('utf-8'));
@@ -118,7 +120,7 @@ export async function serveStoredFile(ctx: DownloadRenderContext): Promise<NextR
           const templateDocumentInputs = {
             ...inlineInputs,
             author: signerName,
-            signature_image_src: signatureBufferToDataUrl(companySealBuffer ?? signatureBuffer),
+            signature_image_src: signatureBufferToDataUrl(pickSignatureSlotImage(isCompanyIssuedDocument, companySealBuffer, signatureBuffer)),
             employee_signature_src: signatureBufferToDataUrl(signatureBuffer),
             company_logo_src: signatureBufferToDataUrl(companyLogoContext.buffer),
             company_logo_pattern_size: companyLogoContext.patternSize,
@@ -205,8 +207,8 @@ export async function renderFromContent(ctx: DownloadRenderContext): Promise<Nex
   const mergedDocumentInputs = {
     ...embeddedInputs,
     author: signerName,
-    // 재직증명서·근로계약서는 회사 직인 우선(없으면 개인 서명)
-    signature_image_src: signatureBufferToDataUrl(companySealBuffer ?? signatureBuffer),
+    // 재직증명서·근로계약서는 회사 직인만(없으면 빈칸), 그 밖의 문서는 작성자 서명
+    signature_image_src: signatureBufferToDataUrl(pickSignatureSlotImage(isCompanyIssuedDocument, companySealBuffer, signatureBuffer)),
     // 근로계약서 근로자 서명란: 로그인 이용자 개인 서명
     employee_signature_src: signatureBufferToDataUrl(signatureBuffer),
     company_logo_src: signatureBufferToDataUrl(companyLogoContext.buffer),
