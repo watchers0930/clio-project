@@ -9,7 +9,7 @@ import { renderHwpx } from '@/lib/renderers/hwpx-renderer';
 import { renderPdf } from '@/lib/renderers/pdf-renderer';
 import type { CorporateTheme } from '@/lib/renderers/types';
 import { DEFAULT_THEME } from '@/lib/renderers/types';
-import { injectSignatureDocx, injectSignatureHwpx } from '@/lib/utils/inject-signature';
+import { appendSignatureHtml, injectSignatureDocx, injectSignatureHwpx } from '@/lib/utils/inject-signature';
 import { signatureBufferToDataUrl } from '@/lib/utils/signature-data-url';
 import type { DownloadContext, DownloadDoc } from './download-source';
 import { readDocumentInputs } from '@/lib/documents/embedded-inputs';
@@ -128,14 +128,12 @@ export async function serveStoredFile(ctx: DownloadRenderContext): Promise<NextR
             documentInputs: templateDocumentInputs,
             templateName,
           });
-          if (signatureBuffer && !isCompanyIssuedDocument) {
-            const sigBase64 = signatureBuffer.toString('base64');
-            const sigImg = `<div style="text-align:right;margin-top:32px;padding-right:40px;"><img src="data:image/png;base64,${sigBase64}" style="width:120px;height:60px;object-fit:contain;" alt="서명" /></div>`;
-            const htmlStr = rendered.buffer.toString('utf-8');
-            rendered = { ...rendered, buffer: Buffer.from(htmlStr.replace('</body>', `${sigImg}</body>`), 'utf-8') };
-          }
           // 결재란(품의서·휴가원 등) 서명 주입 — 재렌더 경로에도 적용(결재란 없는 문서는 무변경)
           rendered = { ...rendered, buffer: Buffer.from(await applyApprovalSignatures(adminClient, doc.id, rendered.buffer.toString('utf-8')), 'utf-8') };
+          // 작성자 서명은 결재란 주입 '뒤' 최종 HTML 기준으로 — 결재란에 이미 있으면 붙이지 않고, 결재 기록에 서명이 없어 칸이 비면 붙인다
+          if (signatureBuffer && !isCompanyIssuedDocument) {
+            rendered = { ...rendered, buffer: Buffer.from(appendSignatureHtml(rendered.buffer.toString('utf-8'), signatureBuffer), 'utf-8') };
+          }
           const fileName = encodeURIComponent(rendered.fileName);
           return new NextResponse(new Uint8Array(rendered.buffer), {
             headers: {
@@ -280,14 +278,12 @@ export async function renderFromContent(ctx: DownloadRenderContext): Promise<Nex
         documentInputs: mergedDocumentInputs,
         templateName,
       });
-      if (signatureBuffer && !isCompanyIssuedDocument) {
-        const sigBase64 = signatureBuffer.toString('base64');
-        const sigImg = `<div style="text-align:right;margin-top:32px;padding-right:40px;"><img src="data:image/png;base64,${sigBase64}" style="width:120px;height:60px;object-fit:contain;" alt="서명" /></div>`;
-        const htmlStr = rendered.buffer.toString('utf-8');
-        rendered = { ...rendered, buffer: Buffer.from(htmlStr.replace('</body>', `${sigImg}</body>`), 'utf-8') };
-      }
       // 결재란 서명 주입(결재란 없는 문서는 무변경)
       rendered = { ...rendered, buffer: Buffer.from(await applyApprovalSignatures(createAdminSupabaseClient(), doc.id, rendered.buffer.toString('utf-8')), 'utf-8') };
+      // 작성자 서명은 결재란 주입 뒤 최종 HTML 기준(위 미리보기 경로와 같은 규칙)
+      if (signatureBuffer && !isCompanyIssuedDocument) {
+        rendered = { ...rendered, buffer: Buffer.from(appendSignatureHtml(rendered.buffer.toString('utf-8'), signatureBuffer), 'utf-8') };
+      }
       // HTML → 서버에서 실제 PDF로 변환
       {
         const { htmlToPdf } = await import('@/lib/renderers/html-to-pdf');

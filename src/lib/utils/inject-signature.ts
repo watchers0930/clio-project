@@ -9,10 +9,28 @@ import PizZip from 'pizzip';
 const SIG_WIDTH_EMU = 1080000;  // 3cm
 const SIG_HEIGHT_EMU = 540000;  // 1.5cm
 
-/** DOCX에 서명 이미지 삽입 */
+/**
+ * 렌더된 HTML 끝에 작성자 서명을 붙인다 — 양식(휴가원·품의서·주간업무 결재란 등)이 같은 서명을 이미 넣었으면 그대로 둔다.
+ * (확인 없이 붙여 결재란 서명과 표 밖 서명이 두 번 보였다)
+ */
+export function appendSignatureHtml(html: string, sigBuffer: Buffer): string {
+  const base64 = sigBuffer.toString('base64');
+  if (!base64 || html.includes(base64)) return html;
+  const block = `<div style="text-align:right;margin-top:32px;padding-right:40px;"><img src="data:image/png;base64,${base64}" style="width:120px;height:60px;object-fit:contain;" alt="서명" /></div>`;
+  return html.replace('</body>', `${block}</body>`);
+}
+
+/** DOCX 안에 같은 바이트의 이미지가 이미 있는지 — 양식 렌더러가 결재란·신청인 칸에 서명을 넣은 경우 */
+function docxHasImage(zip: PizZip, sigBuffer: Buffer): boolean {
+  return Object.keys(zip.files).some((name) => name.startsWith('word/media/')
+    && Buffer.from(zip.file(name)?.asUint8Array() ?? []).equals(sigBuffer));
+}
+
+/** DOCX에 서명 이미지 삽입 — 양식이 이미 같은 서명을 넣었으면 원본 그대로 */
 export function injectSignatureDocx(docxBuffer: Buffer, sigBuffer: Buffer): Buffer {
   try {
     const zip = new PizZip(docxBuffer);
+    if (docxHasImage(zip, sigBuffer)) return docxBuffer;
 
     // 1. 서명 이미지를 word/media/signature.png로 추가
     zip.file('word/media/signature.png', sigBuffer);

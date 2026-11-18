@@ -1,6 +1,7 @@
 import type { CorporateTheme, RenderOutput } from '@/lib/renderers/types';
 import { renderPdf } from '@/lib/renderers/pdf-renderer';
-import { readDocumentInputs } from '@/lib/documents/embedded-inputs';
+import { composeInputsContent, readDocumentInputs } from '@/lib/documents/embedded-inputs';
+import { appendSignatureHtml } from '@/lib/utils/inject-signature';
 import { resolveDocumentInputForm } from '@/lib/documents/resolve-input-form';
 import { resolveBuiltinTemplateBundleByName } from '@/lib/templates/builtin';
 import { isEmploymentCertificateTemplateName } from '@/lib/templates/employment-certificate';
@@ -196,7 +197,7 @@ export function parseHwpxSection(xml: string, signerName?: string): string {
 
 /** Resolve and render before any Storage download. null preserves the legacy path. */
 export async function renderLatestInputForm(options: {
-  document: { title: string; content: string | null; template_id?: string | null };
+  document: { title: string; content: string | null; template_id?: string | null; input_values?: unknown };
   templateName?: string;
   theme: CorporateTheme;
   companyLogoSrc: string;
@@ -205,9 +206,11 @@ export async function renderLatestInputForm(options: {
   authorSignatureSrc?: string;
 }): Promise<RenderOutput | null> {
   const { document: doc } = options;
-  const content = doc.content ?? '';
+  // 판별기는 '주석 + 본문' 한 덩어리를 받는다(화면 API 와 같은 합성) — 060 이후 입력값은 칸(input_values)에만 있어
+  // 저장 본문을 그대로 넘기면 '입력값 없음'으로 판정돼 양식 미리보기 대신 서명을 덧붙이는 옛 경로로 떨어졌다
   const resolved = resolveDocumentInputForm({
-    title: doc.title, templateId: doc.template_id, templateName: options.templateName, content,
+    title: doc.title, templateId: doc.template_id, templateName: options.templateName,
+    content: composeInputsContent(doc.content, doc.input_values),
   });
   if (!resolved.ok) return null;
   const parsed = readDocumentInputs(doc);
@@ -273,11 +276,7 @@ export async function renderStoredFilePreview(options: {
     ? extractedHtml
     : `<p style="color:#6e6e73;">이 파일(${ext.toUpperCase()})은 미리보기를 지원하지 않습니다.</p>`;
 
-  const signatureBlock = signatureBuffer
-    ? `<div style="text-align:right;margin-top:32px;padding-right:40px;"><img src="data:image/png;base64,${signatureBuffer.toString('base64')}" style="width:120px;height:60px;object-fit:contain;" alt="서명" /></div>`
-    : '';
-
-  const fileHtml = Buffer.from(`<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><style>body{font-family:'맑은 고딕',sans-serif;max-width:800px;margin:40px auto;padding:0 40px;font-size:13px;line-height:1.8;color:#1d1d1f;}h1{font-size:18px;font-weight:700;margin-bottom:24px;border-bottom:1px solid #e5e5e7;padding-bottom:12px;}p{margin:4px 0;}table{border-collapse:collapse;width:100%;margin:12px 0;}td,th{border:1px solid #ccc;padding:6px 10px;}</style></head><body><h1>${escapeHtml(title)}</h1>${bodyContent}${signatureBlock}</body></html>`, 'utf-8');
-
-  return fileHtml;
+  const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><style>body{font-family:'맑은 고딕',sans-serif;max-width:800px;margin:40px auto;padding:0 40px;font-size:13px;line-height:1.8;color:#1d1d1f;}h1{font-size:18px;font-weight:700;margin-bottom:24px;border-bottom:1px solid #e5e5e7;padding-bottom:12px;}p{margin:4px 0;}table{border-collapse:collapse;width:100%;margin:12px 0;}td,th{border:1px solid #ccc;padding:6px 10px;}</style></head><body><h1>${escapeHtml(title)}</h1>${bodyContent}</body></html>`;
+  // 저장 docx 안에 양식 서명이 이미 들어 있으면(mammoth 가 data URI 로 옮김) 끝에 다시 붙이지 않는다
+  return Buffer.from(signatureBuffer ? appendSignatureHtml(html, signatureBuffer) : html, 'utf-8');
 }

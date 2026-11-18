@@ -19,6 +19,7 @@ export type DownloadDoc = {
   parent_id: string | null;
   template_id?: string | null;
   created_by?: string | null;
+  input_values?: unknown; // 양식 입력값(059) — 미리보기 양식 판별·렌더가 쓴다(select 에서 빠지면 휴가원이 옛 경로로 떨어진다)
 };
 
 export type DownloadContext = {
