@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   // 변이 요청: 인증 + 출처 + CSRF 토큰 + 활성 사용자 + 대표/관리자
   const gate = await bulkTransferMutationGate(request);
   if (gate.error) return gate.error;
-  const { supabase, userId } = gate;
+  const { supabase } = gate;
 
   let body: unknown;
   try {
@@ -95,7 +95,6 @@ export async function POST(request: NextRequest) {
     .from('transfer_items')
     .update({ status: 'exported' })
     .in('id', exportedIds)
-    .eq('created_by', userId)
     .neq('status', 'done');
 
   const dateISO = new Date().toISOString().slice(0, 10);

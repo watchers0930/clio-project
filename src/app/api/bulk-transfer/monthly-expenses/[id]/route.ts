@@ -39,7 +39,7 @@ export async function PATCH(
   // 변이 요청: 인증 + 출처 + CSRF 토큰 + 활성 사용자 + 대표/관리자
   const gate = await bulkTransferMutationGate(request);
   if (gate.error) return gate.error;
-  const { supabase, userId } = gate;
+  const { supabase } = gate;
 
   let body: unknown;
   try {
@@ -58,7 +58,6 @@ export async function PATCH(
     .from('monthly_expenses')
     .update({ label: input.label, amount: input.amount, month: input.month, memo: input.memo })
     .eq('id', id)
-    .eq('created_by', userId)
     .select(SELECT)
     .single();
 
@@ -80,11 +79,11 @@ export async function DELETE(
   // 변이 요청: 인증 + 출처 + CSRF 토큰 + 활성 사용자 + 대표/관리자
   const gate = await bulkTransferMutationGate(request);
   if (gate.error) return gate.error;
-  const { supabase, userId } = gate;
+  const { supabase } = gate;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any;
-  const { error } = await db.from('monthly_expenses').delete().eq('id', id).eq('created_by', userId);
+  const { error } = await db.from('monthly_expenses').delete().eq('id', id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
