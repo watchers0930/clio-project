@@ -173,3 +173,9 @@ export function buildYearlyView(items: FeeItem[], entries: FeeEntry[], year: num
   });
   return { rows, lines, monthTotals, grandTotal: monthTotals.reduce((s, v) => s + v, 0) };
 }
+
+/** 월별 추이 그래프 값 — itemId 가 null 이면 전체 부과액 합계. 그 달 기록이 하나도 없으면 null(빈 막대). */
+export function buildTrendSeries(view: YearlyView, itemId: string | null): (number | null)[] {
+  if (itemId) return view.rows.find((r) => r.item.id === itemId)?.months ?? Array(12).fill(null);
+  return view.monthTotals.map((v, i) => (view.rows.every((r) => r.months[i] === null) ? null : v));
+}

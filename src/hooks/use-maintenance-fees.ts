@@ -1,7 +1,7 @@
 'use client';
 
 // 관리비 데이터 hook — 연 단위로 항목·기록을 한 번씩 불러오고, 변이 후 다시 불러온다.
-// 월별·연도별 화면이 같은 데이터를 쓰므로 탭·월 이동에는 추가 조회가 없다.
+// 당월집계·월별 화면이 같은 데이터를 쓰므로 탭·월 이동에는 추가 조회가 없다.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiGet, apiMutate } from './csrf-client';
 import type { FeeEntry, FeeEntryCreateInput, FeeEntryUpdateInput, FeeItem, FeeItemInput } from '@/lib/maintenance-fees/types';

@@ -66,7 +66,7 @@ const ADMIN_ITEMS: NavItem[] = [
 
 // 시스템 관리자(role='admin') 전용 메뉴 — 대표 직급만으로는 안 보인다. 실제 차단은 API 403(requireAdmin)
 const MASTER_ADMIN_ITEMS: NavItem[] = [
-  { key: 'maintenance-fees', label: '관리비', href: '/maintenance-fees', icon: Receipt, description: '관리비 월별 · 연도별' },
+  { key: 'maintenance-fees', label: '관리비', href: '/maintenance-fees', icon: Receipt, description: '관리비 당월집계 · 월별' },
 ];
 
 interface SidebarProps {

@@ -10,6 +10,7 @@ import { buildMonthlyView, buildYearlyView } from '@/lib/maintenance-fees/calc';
 import type { FeeEntry, FeeItem } from '@/lib/maintenance-fees/types';
 import { MonthlyFeeTable } from './monthly-fee-table';
 import { YearlyFeeTable } from './yearly-fee-table';
+import { FeeTrendChart } from './fee-trend-chart';
 import { FeeEntryModal } from './fee-entry-modal';
 import { FeeItemManager } from './fee-item-manager';
 
@@ -78,7 +79,7 @@ export function MaintenanceFeesView() {
         <div className="flex flex-col gap-1.5">
           <h2 className="text-[16px] font-semibold text-foreground">관리비</h2>
           <p className="text-[13px] text-foreground-secondary">
-            고지서처럼 과세·부가세·비과세로 나눠 월별로 입력하고 연도별로 확인합니다. 월은 고지서에 적힌 달(예: 10월분) 기준입니다. 금액은 사용량 × 단가로 자동 계산되며 고지서 금액으로 고칠 수 있습니다.
+            고지서처럼 과세·부가세·비과세로 나눠 당월집계에서 입력하고 월별 탭에서 1년 추이를 확인합니다. 월은 고지서에 적힌 달(예: 10월분) 기준입니다. 금액은 사용량 × 단가로 자동 계산되며 고지서 금액으로 고칠 수 있습니다.
           </p>
         </div>
 
@@ -92,7 +93,7 @@ export function MaintenanceFeesView() {
                   tab === t ? 'border-primary text-primary' : 'border-transparent text-foreground-secondary hover:text-foreground'
                 }`}
               >
-                {t === 'monthly' ? '월별' : '연도별'}
+                {t === 'monthly' ? '당월집계' : '월별'}
               </button>
             ))}
           </div>
@@ -128,7 +129,10 @@ export function MaintenanceFeesView() {
         ) : tab === 'monthly' ? (
           <MonthlyFeeTable view={monthlyView} monthText={monthText} onRowClick={(row) => openEntry(row.entry)} />
         ) : (
-          <YearlyFeeTable view={yearlyView} year={year} />
+          <div className="flex flex-col gap-4">
+            <FeeTrendChart view={yearlyView} year={year} />
+            <YearlyFeeTable view={yearlyView} year={year} />
+          </div>
         )}
       </div>
 

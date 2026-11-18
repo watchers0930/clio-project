@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildMonthlyView, buildYearlyView, computeAmount, moveFeeItem, prevMonth, resolveAmount, sortFeeItems } from "./calc";
-import type { FeeEntry, FeeItem } from "./types";
+import { buildMonthlyView, buildTrendSeries, buildYearlyView, computeAmount, moveFeeItem, prevMonth, resolveAmount, sortFeeItems } from "./calc";
+import type { FeeEntry, FeeItem, YearlyView } from "./types";
 
 const item = (id: string, name: string, over: Partial<FeeItem> = {}): FeeItem => ({
   id, name, unit: null, default_unit_price: null, tax_type: "taxable", sort_order: 0, is_active: true, ...over,
@@ -165,4 +165,21 @@ test("부가세만 있는 달도 과세 머리줄로 시작", () => {
   const v = buildMonthlyView(billItems, [entry("6", "v", "2026-10", 11580)], "2026-10");
   const shape = v.lines.map((l) => (l.kind === "item" ? l.row.item.name : l.kind === "header" ? `[${l.taxType}]` : `=${l.key}`));
   assert.deepEqual(shape, ["[taxable]", "부가세", "=taxTotal"]);
+});
+
+test("월별 추이: 전체 합계는 기록 없는 달만 null, 항목 선택은 그 항목 값", () => {
+  const months = (m: Record<number, number>) => Array.from({ length: 12 }, (_, i) => (i + 1 in m ? m[i + 1] : null));
+  const view = {
+    rows: [
+      { item: { id: "a", name: "전기" }, months: months({ 10: 100, 11: 0 }), usageTotal: null, avgUnitPrice: null, amountTotal: 100 },
+      { item: { id: "b", name: "수도" }, months: months({ 10: 50 }), usageTotal: null, avgUnitPrice: null, amountTotal: 50 },
+    ],
+    lines: [], monthTotals: Array.from({ length: 12 }, (_, i) => (i === 9 ? 150 : 0)), grandTotal: 150,
+  } as unknown as YearlyView;
+  const total = buildTrendSeries(view, null);
+  assert.equal(total[9], 150);
+  assert.equal(total[10], 0, "0원 기록이 있는 달은 0");
+  assert.equal(total[0], null, "기록 없는 달은 빈 막대");
+  assert.deepEqual(buildTrendSeries(view, "b").filter((v) => v !== null), [50]);
+  assert.equal(buildTrendSeries(view, "없음").every((v) => v === null), true);
 });
