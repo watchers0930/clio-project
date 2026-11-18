@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { SearchInput, Spinner } from '@/components/ui';
 import { VoiceInputButton } from '@/components/common/VoiceInputButton';
 import type { SearchResult } from './types';
+import type { SummaryEntry } from './use-result-summary';
 import { DEFAULT_RESUME_CARD_LAYOUTS, type LayoutStore } from './search-layout-config';
 import { WorkflowResumeCard } from './workflow-resume-card';
 import { SearchResultList } from './search-result-list';
@@ -29,6 +30,7 @@ interface FileTabProps {
   sortedResults: SearchResult[];
   relatedResults: SearchResult[];
   expandedSummary: string | null;
+  expandedSummaryEntry: SummaryEntry | null;
   onQueryChange: (value: string) => void;
   onSearch: () => void;
   onDepartmentChange: (value: string) => void;
@@ -66,6 +68,7 @@ export function FileSearchTab({
   sortedResults,
   relatedResults,
   expandedSummary,
+  expandedSummaryEntry,
   onQueryChange,
   onSearch,
   onDepartmentChange,
@@ -282,6 +285,7 @@ export function FileSearchTab({
           <SearchResultList
             sortedResults={sortedResults}
             expandedSummary={expandedSummary}
+            expandedSummaryEntry={expandedSummaryEntry}
             isElectron={isElectron}
             onOpenPreview={onOpenPreview}
             onOpenResult={onOpenResult}

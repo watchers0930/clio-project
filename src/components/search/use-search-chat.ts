@@ -2,6 +2,7 @@
 
 import { csrfFetch } from '@/hooks/csrf-client';
 import { useState, useCallback, useRef } from 'react';
+import { MAX_RESULT_IDS } from '@/lib/search/result-ids';
 import type { ChatMessage, SearchResult } from './types';
 
 /**
@@ -32,7 +33,7 @@ export function useSearchChat(results: SearchResult[]) {
         body: JSON.stringify({
           message: msg,
           history: chatMessages,
-          fileIds: pinnedFileIds ?? (results.length > 0 ? results.map((r) => r.id) : undefined),
+          fileIds: pinnedFileIds ?? (results.length > 0 ? results.slice(0, MAX_RESULT_IDS).map((r) => r.id) : undefined),
         }),
       });
       const data = await res.json();
@@ -46,7 +47,7 @@ export function useSearchChat(results: SearchResult[]) {
       setChatLoading(false);
       setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
     }
-  }, [chatInput, chatMessages, chatLoading, results]);
+  }, [chatInput, chatMessages, chatLoading, pinnedFileIds, results]);
 
   return {
     chatMessages,

@@ -4,12 +4,14 @@ import { EmptyState } from '@/components/ui';
 import { DocumentActionRow } from '@/components/documents/document-action-row';
 import { ArrowRight } from 'lucide-react';
 import type { SearchResult } from './types';
+import type { SummaryEntry } from './use-result-summary';
 import { DuplicateGroup } from './duplicate-group';
 import { EyeIcon, SparkleIcon, DownloadIcon } from './search-icons';
 
 interface SearchResultListProps {
   sortedResults: SearchResult[];
   expandedSummary: string | null;
+  expandedSummaryEntry: SummaryEntry | null;
   isElectron?: boolean;
   onOpenPreview: (result: SearchResult) => void;
   onOpenResult: (result: SearchResult) => void;
@@ -31,6 +33,7 @@ interface SearchResultListProps {
 export function SearchResultList({
   sortedResults,
   expandedSummary,
+  expandedSummaryEntry,
   isElectron,
   onOpenPreview,
   onOpenResult,
@@ -210,7 +213,15 @@ export function SearchResultList({
             </div>
           </div>
 
-          {expandedSummary === result.id ? <div className="mt-4 rounded-xl bg-surface-secondary p-5 text-sm leading-relaxed text-foreground">{result.aiSummary}</div> : null}
+          {expandedSummary === result.id ? (
+            <div className="mt-4 rounded-xl bg-surface-secondary p-5 text-sm leading-relaxed text-foreground" aria-live="polite">
+              {!expandedSummaryEntry || expandedSummaryEntry.status === 'loading'
+                ? <span className="text-foreground-secondary">AI가 요약하고 있습니다…</span>
+                : expandedSummaryEntry.status === 'error'
+                  ? <span className="text-red-500">{expandedSummaryEntry.text}</span>
+                  : expandedSummaryEntry.text}
+            </div>
+          ) : null}
         </div>
       ))}
     </div>

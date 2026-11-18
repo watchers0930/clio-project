@@ -4,7 +4,6 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { generateEmbedding } from '@/lib/ai/embeddings';
-import { summarizeText } from '@/lib/ai/summarize';
 import { filterAccessibleDocumentRows, filterAccessibleFileRows, getUserRoleInfo } from '@/lib/permissions';
 import { keywordFileSearch, getFileType, titleCoverageScore, type SearchResultItem } from '@/lib/search/keyword-file-search';
 import { originContextLabel as formatOriginLabel } from '@/lib/documents/origin-context';
@@ -17,7 +16,6 @@ import { buildSearchContext } from '@/lib/search/search-context';
 // 문서 텍스트 검색 후보 수 — 권한 필터 뒤 15건을 채우기 위해 넉넉히(권한 없는 문서가 자리를 다 차지하지 않게)
 const DOC_SEARCH_COLUMNS = 'id, title, content, created_at, created_by, origin_document_id, origin_context, template_id, source_file_ids, templates:template_id(name)';
 
-const SEARCH_AI_SUMMARY_ENABLED = process.env.ENABLE_SEARCH_AI_SUMMARY === 'true';
 
 interface AuditLogRow {
   details: Record<string, unknown> | null;
@@ -176,7 +174,6 @@ export async function POST(request: NextRequest) {
               department: deptMap.get(f.department_id ?? '') ?? '미분류',
               // Gmail 등 외부 소스는 실제 원본 날짜(source_date) 우선, 없으면 동기화 시각으로 폴백
               date: (f.source_date ?? f.created_at).split('T')[0],
-              aiSummary: '',
               sourceType: 'file',
               dataSource: f.source === 'gmail' ? 'gmail' : 'upload',
               externalId: f.external_id ?? null,
@@ -294,28 +291,7 @@ export async function POST(request: NextRequest) {
     results = results.filter((r) => r.relevance >= 30);
     results = results.slice(0, 10);
 
-    // 검색 1회당 결과 수만큼 OpenAI를 추가 호출하지 않도록 기본 비활성화.
-    if (SEARCH_AI_SUMMARY_ENABLED) {
-      await Promise.all(
-        results.map(async (r) => {
-          if (r.excerpt && r.excerpt.length > 20) {
-            try {
-              r.aiSummary = await summarizeText(r.excerpt);
-            } catch {
-              r.aiSummary = `${r.name}에 대한 요약입니다.`;
-            }
-          }
-        })
-      );
-    } else {
-      for (const result of results) {
-        if (!result.excerpt || result.excerpt.length <= 20) continue;
-        const compactExcerpt = result.excerpt.replace(/\s+/g, ' ').trim();
-        result.aiSummary = compactExcerpt.length > 160
-          ? `${compactExcerpt.slice(0, 157)}...`
-          : compactExcerpt;
-      }
-    }
+    // AI 요약은 결과 카드에서 누를 때만 만든다(/api/search/summary) — 검색 1회에 결과 수만큼 OpenAI 를 부르지 않게
 
     let recentQueries: string[] = [];
 

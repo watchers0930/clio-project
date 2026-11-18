@@ -21,6 +21,7 @@ import { useGmailSync } from '@/components/search/use-gmail-sync';
 import { useGmailActions } from '@/components/search/use-gmail-actions';
 import { useSearchChat } from '@/components/search/use-search-chat';
 import { useSearchResultActions } from '@/components/search/use-search-result-actions';
+import { useResultSummary } from '@/components/search/use-result-summary';
 import type { SearchResult, SearchTab } from '@/components/search/types';
 
 /* ────────────────────────── page ─────────────────────────── */
@@ -42,7 +43,8 @@ function SearchPageInner() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [fileType, setFileType] = useState('전체');
   const [sort, setSort] = useState('관련도순');
-  const [expandedSummary, setExpandedSummary] = useState<string | null>(null);
+  const summary = useResultSummary();
+  const resetSummary = summary.reset;
   const gmail = useGmailActions();
   const [recentQueries, setRecentQueries] = useState<string[]>([]);
   const [searchContext, setSearchContext] = useState<{
@@ -103,7 +105,7 @@ function SearchPageInner() {
       if (!q.trim()) return;
       setLoading(true);
       setSearched(true);
-      setExpandedSummary(null);
+      resetSummary();
       try {
         const [mainRes, localRes] = await Promise.allSettled([
           csrfFetch('/api/search', {
@@ -148,7 +150,6 @@ function SearchPageInner() {
             fileType: r.fileType ?? '',
             department: '',
             date: '',
-            aiSummary: '',
             sourceType: 'file' as const,
             dataSource: 'local' as const,
             localPath: r.path,
@@ -168,7 +169,7 @@ function SearchPageInner() {
         setLoading(false);
       }
     },
-    [department, fileType],
+    [department, fileType, resetSummary],
   );
 
   const doSearchRef = useRef(doSearch);
@@ -267,7 +268,8 @@ function SearchPageInner() {
             searchContext={searchContext}
             sortedResults={sortedResults}
             relatedResults={relatedResults}
-            expandedSummary={expandedSummary}
+            expandedSummary={summary.expandedId}
+            expandedSummaryEntry={summary.expandedEntry}
             onQueryChange={setQuery}
             onSearch={() => void doSearch(query)}
             onDepartmentChange={setDepartment}
@@ -279,7 +281,7 @@ function SearchPageInner() {
             onOpenResult={openResult}
             onOpenComments={openComments}
             onOpenShare={openShare}
-            onToggleSummary={(id) => setExpandedSummary(expandedSummary === id ? null : id)}
+            onToggleSummary={summary.toggle}
             onDownloadOriginal={(result) => { void handleDownloadOriginal(result); }}
             onOpenGmailAttachments={gmail.openAttachments}
             onStartChat={startChatFromResult}

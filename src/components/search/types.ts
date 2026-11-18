@@ -6,7 +6,6 @@ export interface SearchResult {
   fileType: string;
   department: string;
   date: string;
-  aiSummary: string;
   sourceType?: 'file' | 'document';
   dataSource?: 'gmail' | 'upload' | 'local';
   localPath?: string;

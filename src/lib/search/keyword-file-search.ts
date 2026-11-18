@@ -10,7 +10,6 @@ export interface SearchResultItem {
   fileType: string;
   department: string;
   date: string;
-  aiSummary: string;
   sourceType: 'file' | 'document';
   dataSource?: 'gmail' | 'upload';
   externalId?: string | null;
@@ -136,7 +135,6 @@ export async function keywordFileSearch(p: KeywordSearchParams): Promise<SearchR
       fileType: getFileType(f.type, f.name),
       department: deptMap.get(f.department_id ?? '') ?? '미분류',
       date: (f.source_date ?? f.created_at).split('T')[0],
-      aiSummary: '',
       sourceType: 'file',
       dataSource: f.source === 'gmail' ? 'gmail' : 'upload',
       externalId: f.external_id ?? null,

@@ -51,7 +51,6 @@ export function toDocumentSearchItem(
     fileType: d.templates?.name ?? 'AI문서',
     department: creatorDeptMap.get(d.created_by ?? '') ?? '미분류',
     date: d.created_at.split('T')[0],
-    aiSummary: '',
     sourceType: 'document',
     relationLabel: formatOriginLabel(d.origin_context ?? null),
     originDocumentId: d.origin_document_id ?? null,

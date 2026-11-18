@@ -7,7 +7,6 @@ import type { useToast } from '@/components/ui/toast';
 import { isContractTemplate } from '@/lib/contract-fields';
 import { buildDocumentCreateHref, buildDocumentFollowupHref } from '@/lib/documents/navigation';
 import { downloadDocumentFile } from '@/lib/documents/download-document';
-import { stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
 import type { useGmailActions } from './use-gmail-actions';
 import type { SearchResult, SearchTab } from './types';
 
@@ -20,30 +19,15 @@ interface UseSearchResultActionsArgs {
   setChatInput: Dispatch<SetStateAction<string>>;
 }
 
-// 미리보기 최대 글자 수 — 파일 미리보기 API(files/[id]/preview)와 같은 기준
-const PREVIEW_MAX_CHARS = 10000;
-
 type PreviewData = { name: string; text: string; truncated?: boolean; totalLength?: number };
 
 /** 문서(sourceType 'document')는 문서 API, 그 밖은 파일 API — 결과 종류 분기는 이 훅 한 곳에서만 한다 */
 const isDocumentResult = (result: SearchResult) => result.sourceType === 'document';
 
+// 문서·파일 미리보기 API 는 같은 모양({ name, text, truncated?, totalLength? } / 실패 { error })으로 답한다
 async function loadPreview(result: SearchResult): Promise<PreviewData> {
-  if (isDocumentResult(result)) {
-    // 문서 상세 API(권한 확인 포함)의 본문 — 내부 입력값 주석은 빼고 보여준다
-    const res = await fetch(`/api/documents/${encodeURIComponent(result.id)}`);
-    const body = await res.json().catch(() => null) as { data?: { title?: string; content?: string | null }; error?: string } | null;
-    if (!res.ok || !body?.data) return { name: '오류', text: body?.error || '미리보기를 불러올 수 없습니다.' };
-    const text = stripEmbeddedInputs(body.data.content ?? '').trim();
-    if (!text) return { name: body.data.title ?? result.name, text: "(본문이 없는 문서입니다. '문서 열기'에서 확인해 주세요.)" };
-    return {
-      name: body.data.title ?? result.name,
-      text: text.slice(0, PREVIEW_MAX_CHARS),
-      truncated: text.length > PREVIEW_MAX_CHARS,
-      totalLength: text.length,
-    };
-  }
-  const res = await fetch(`/api/files/${encodeURIComponent(result.id)}/preview`);
+  const base = isDocumentResult(result) ? '/api/documents' : '/api/files';
+  const res = await fetch(`${base}/${encodeURIComponent(result.id)}/preview`);
   if (!res.ok) {
     const err = await res.json().catch(() => null) as { error?: string } | null;
     return { name: '오류', text: err?.error || '미리보기를 불러올 수 없습니다.' };

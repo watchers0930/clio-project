@@ -4,11 +4,28 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { generateEmbedding } from '@/lib/ai/embeddings';
 import OpenAI from 'openai';
-import { stripEmbeddedInputs } from '@/lib/documents/embedded-inputs';
+import { getUserRoleInfo } from '@/lib/permissions';
+import { loadResultTexts } from '@/lib/search/result-content';
+import { parseResultIds } from '@/lib/search/result-ids';
+
+const CONTEXT_CHARS = 20000; // 고정 결과 본문 전체 예산 — 결과 수로 나눈다(한 건이면 한 파일을 깊게, 여러 건이면 고르게)
+const SINGLE_RESULT_CHUNKS = 20; // 한 건만 물을 때 읽는 앞 청크 수(예전 단일 파일 질의와 같은 양)
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+}
+
+const HISTORY_TURNS = 8;
+const HISTORY_CHARS = 4000; // 한 턴 상한 — 이전 답변(최대 800토큰)보다 넉넉히
+
+/** 이전 대화 — 사용자·어시스턴트 턴만(본문에 role 'system' 을 넣어 지시를 바꾸지 못하게), 문자열·길이 상한 */
+function safeHistory(history: unknown): ChatMessage[] {
+  if (!Array.isArray(history)) return [];
+  return history
+    .filter((m): m is ChatMessage => !!m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+    .slice(-HISTORY_TURNS)
+    .map((m) => ({ role: m.role, content: m.content.slice(0, HISTORY_CHARS) }));
 }
 
 /**
@@ -26,12 +43,16 @@ export async function POST(request: NextRequest) {
     if (!message?.trim()) {
       return NextResponse.json({ error: '메시지를 입력해 주세요.' }, { status: 400 });
     }
+    const pinnedIds = fileIds === undefined ? [] : parseResultIds(fileIds);
+    if (!pinnedIds) return NextResponse.json({ error: '조회 대상 형식이 올바르지 않습니다.' }, { status: 400 });
 
     const supabase = await createServerSupabaseClient();
     if (!supabase) return NextResponse.json({ error: 'DB 미설정' }, { status: 503 });
 
     const authUserId = await getAuthUserId(supabase);
     if (!authUserId) return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
+
+    const roleInfo = await getUserRoleInfo(supabase, authUserId);
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) return NextResponse.json({ error: 'OpenAI API 키가 설정되지 않았습니다.' }, { status: 503 });
@@ -46,54 +67,28 @@ export async function POST(request: NextRequest) {
 
     const myFileIds = new Set((userFiles ?? []).map((f: { id: string }) => f.id));
 
-    // 2. 벡터 검색
-    const embedding = await generateEmbedding(message);
+    // 2. 고정 결과 본문 또는 벡터 검색
     let relevantChunks: Array<{ file_id: string; content: string }> = [];
 
     let notProcessedFileIds: string[] = [];
-    const extraNameMap = new Map<string, string>(); // 파일/문서 ID → 이름 (uploader 무관)
+    const extraNameMap = new Map<string, string>(); // 결과 ID → 이름 (uploader 무관)
 
-    // 핀된 파일 ID가 있으면 uploader 무관하게 이름 먼저 확보 (context 라벨용)
-    if (Array.isArray(fileIds) && fileIds.length > 0) {
-      const { data: pinnedFiles } = await supabase
-        .from('files')
-        .select('id, name')
-        .in('id', fileIds);
-      for (const f of (pinnedFiles ?? []) as Array<{ id: string; name: string }>) {
-        extraNameMap.set(f.id, f.name);
-      }
-    }
-
-    if (Array.isArray(fileIds) && fileIds.length > 0) {
-      // Fallback 1: 직접 청크 조회 (file ID 기준)
-      const { data: rawChunks } = await supabase
-        .from('file_chunks')
-        .select('file_id, content')
-        .in('file_id', fileIds)
-        .order('chunk_index', { ascending: true })
-        .limit(20);
-      relevantChunks = (rawChunks ?? []) as Array<{ file_id: string; content: string }>;
-
-      // Fallback 2: file_chunks에서 못 찾으면 documents 테이블에서 document ID로 조회
-      if (relevantChunks.length === 0) {
-        const { data: docRows } = await supabase
-          .from('documents')
-          .select('id, title, content')
-          .in('id', fileIds);
-        const validDocs = ((docRows ?? []) as Array<{ id: string; title: string; content: string | null }>)
-          .filter((d) => !!d.content && stripEmbeddedInputs(d.content).trim().length > 0);
-        if (validDocs.length > 0) {
-          relevantChunks = validDocs.map((d) => ({
-            file_id: d.id,
-            content: stripEmbeddedInputs(d.content ?? '').slice(0, 2000), // 입력값 주석(평균 1천여 자)이 문맥 한도를 먹지 않게
-          }));
-          for (const d of validDocs) extraNameMap.set(d.id, d.title);
-        } else {
-          notProcessedFileIds = fileIds;
-        }
-      }
+    if (pinnedIds.length > 0) {
+      // 검색 결과(문서·파일·로컬 파일)의 본문 — 권한은 검색이 결과를 거를 때와 같은 규칙. 문서와 파일이 섞여 있어도 둘 다 읽는다
+      // (전에는 파일 청크가 하나라도 있으면 문서를 건너뛰고, 사용자 세션으로 읽어 공유받은 문서·파일이 빠졌다)
+      const texts = await loadResultTexts(mutation.admin, supabase, {
+        userId: authUserId, role: roleInfo?.role ?? 'user', departmentId: roleInfo?.department_id ?? null,
+      }, pinnedIds, pinnedIds.length === 1 ? SINGLE_RESULT_CHUNKS : undefined);
+      for (const t of texts) extraNameMap.set(t.id, t.name);
+      const withText = texts.filter((t) => t.text.length > 0);
+      // 예산은 본문이 있는 결과끼리 나눈다(권한 없음·미처리 결과까지 세면 문서 본문이 쓸데없이 줄어든다)
+      const perResultChars = Math.floor(CONTEXT_CHARS / Math.max(1, withText.length));
+      relevantChunks = withText.map((t) => ({ file_id: t.id, content: t.text.slice(0, perResultChars) }));
+      // 본문이 없는 결과 — 전부 없으면 재처리 안내, 일부만 없으면 AI 가 내용을 지어내지 않게 이름을 알린다
+      notProcessedFileIds = texts.filter((t) => t.text.length === 0).map((t) => t.id);
     } else {
       // 파일 미특정: 전체 내 파일 대상 벡터 검색
+      const embedding = await generateEmbedding(message);
       const { data: chunks } = await supabase.rpc('match_file_chunks', {
         query_embedding: embedding,
         match_count: 12,
@@ -144,12 +139,12 @@ export async function POST(request: NextRequest) {
       .join(', ');
 
     // 핀된 파일명 목록 (시스템 프롬프트에 명시)
-    const pinnedFileNames = Array.isArray(fileIds) && fileIds.length > 0
-      ? fileIds.map((id) => fileNameMap2.get(id)).filter(Boolean).join(', ')
+    const pinnedFileNames = pinnedIds.length > 0
+      ? pinnedIds.map((id) => fileNameMap2.get(id)).filter(Boolean).join(', ')
       : '';
 
     const systemPrompt = context
-      ? `당신은 CLIO 문서관리 시스템의 AI 어시스턴트입니다. 아래 제공된 문서 내용을 바탕으로 사용자의 질문에 한국어로 정확하게 답변하세요.${pinnedFileNames ? `\n\n[조회 대상 파일]\n${pinnedFileNames}` : ''}\n\n[참고 문서 내용]\n${context}`
+      ? `당신은 CLIO 문서관리 시스템의 AI 어시스턴트입니다. 아래 제공된 문서 내용을 바탕으로 사용자의 질문에 한국어로 정확하게 답변하세요.${pinnedFileNames ? `\n\n[조회 대상 파일]\n${pinnedFileNames}` : ''}${notProcessedNames ? `\n\n[내용을 읽지 못한 파일 — 이 파일들의 내용은 추측하지 말고 읽지 못했다고 밝히세요]\n${notProcessedNames}` : ''}\n\n[참고 문서 내용]\n${context}`
       : notProcessedFileIds.length > 0
         ? `당신은 CLIO 문서관리 시스템의 AI 어시스턴트입니다. 사용자가 질문한 파일(${notProcessedNames})은 아직 내용이 처리되지 않아 읽을 수 없습니다. 사용자에게 파일 관리 페이지에서 해당 파일을 재처리한 뒤 다시 질문해달라고 안내하세요.`
         : `당신은 CLIO 문서관리 시스템의 AI 어시스턴트입니다. 관련 문서 내용을 찾지 못했지만 아래 파일 목록 정보를 바탕으로 답변할 수 있습니다.\n\n[등록된 파일 목록]\n${fileListContext}`;
@@ -158,7 +153,7 @@ export async function POST(request: NextRequest) {
     const openai = new OpenAI({ apiKey });
     const messages = [
       { role: 'system' as const, content: systemPrompt },
-      ...history.slice(-8).map((m: ChatMessage) => ({ role: m.role, content: m.content })),
+      ...safeHistory(history),
       { role: 'user' as const, content: message },
     ];
 
