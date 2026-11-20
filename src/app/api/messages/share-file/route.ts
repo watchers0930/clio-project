@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     // 파일 소유권 확인
     const { data: file, error: fileErr } = await admin
       .from('files')
-      .select('id, name, type, size, uploaded_by')
+      .select('id, name, type, size, uploaded_by, source')
       .eq('id', fileId)
       .single();
 
@@ -50,6 +50,11 @@ export async function POST(request: NextRequest) {
 
     if (file.uploaded_by !== authUserId) {
       return NextResponse.json({ success: false, error: '본인이 업로드한 파일만 공유할 수 있습니다.' }, { status: 403 });
+    }
+
+    // Gmail 메일은 소유자만 보는 자료(058 규칙) — 공유로 다른 사람 권한이 생기지 않게 막는다
+    if (file.source === 'gmail') {
+      return NextResponse.json({ success: false, error: 'Gmail 메일은 공유할 수 없습니다.' }, { status: 400 });
     }
 
     // 채널 멤버 조회 (나를 제외한 상대방들에게 권한 부여)

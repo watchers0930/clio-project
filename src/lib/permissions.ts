@@ -152,8 +152,14 @@ export async function canAccessFile(
   return (permissions.count ?? 0) > 0 || (shares.count ?? 0) > 0;
 }
 
+const FILE_ACCESS_BATCH = 200;
+
+/**
+ * 목록용 일괄 판정 — canAccessFile 과 같은 규칙(소유자·같은 부서·file_permissions·유효한 file_shares)을 서버 권한으로 판정한다.
+ * (이전엔 file_shares 를 빼먹어 공유받은 파일이 상세에선 열리는데 목록·검색·생성 원본에선 빠졌다)
+ */
 export async function getAccessibleFileIds(
-  supabase: SupabaseClient,
+  _supabase: SupabaseClient,
   userId: string,
   userRole: string,
   userDeptId: string | null,
@@ -175,23 +181,29 @@ export async function getAccessibleFileIds(
 
   if (permissionTargetIds.length === 0) return accessibleIds;
 
-  let permissionQuery = supabase
-    .from('file_permissions')
-    .select('file_id')
-    .in('file_id', permissionTargetIds)
-    .eq('granted_to_user', userId);
-
-  if (userDeptId) {
-    permissionQuery = supabase
-      .from('file_permissions')
-      .select('file_id')
-      .in('file_id', permissionTargetIds)
-      .or(`granted_to_user.eq.${userId},granted_to_dept.eq.${userDeptId}`);
-  }
-
-  const { data: permissionRows } = await permissionQuery;
-  for (const row of ((permissionRows ?? []) as Array<{ file_id: string | null }>)) {
-    if (row.file_id) accessibleIds.add(row.file_id);
+  // id 목록이 길면 URL 이 커지므로 나눠 조회한다. 조회 오류는 '권한 없음'으로 막되 원인을 남긴다.
+  const admin = createAdminSupabaseClient();
+  const now = new Date().toISOString();
+  for (let i = 0; i < permissionTargetIds.length; i += FILE_ACCESS_BATCH) {
+    const batch = permissionTargetIds.slice(i, i + FILE_ACCESS_BATCH);
+    const [permissions, shares] = await Promise.all([
+      admin
+        .from('file_permissions')
+        .select('file_id')
+        .in('file_id', batch)
+        .or(`granted_to_user.eq.${userId}${userDeptId ? `,granted_to_dept.eq.${userDeptId}` : ''}`),
+      admin
+        .from('file_shares')
+        .select('file_id')
+        .in('file_id', batch)
+        .eq('shared_with', userId)
+        .gt('expires_at', now),
+    ]);
+    if (permissions.error) console.warn('[permissions] file_permissions 조회 실패:', permissions.error.message);
+    if (shares.error) console.warn('[permissions] file_shares 조회 실패:', shares.error.message);
+    for (const row of [...(permissions.data ?? []), ...(shares.data ?? [])] as Array<{ file_id: string | null }>) {
+      if (row.file_id) accessibleIds.add(row.file_id);
+    }
   }
 
   return accessibleIds;

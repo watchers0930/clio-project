@@ -1,6 +1,6 @@
 // 문서 생성 참조자료(sourceFileIds) 접근 확인.
 // 참조자료는 service role 로 읽으므로(file_chunks·Storage), 요청한 id 를 파일 목록 API 와 같은 규칙
-// (filterAccessibleFileRows: admin/소유자/같은 부서/file_permissions)으로 걸러 "볼 수 있는 파일만" 쓰게 한다.
+// (filterAccessibleFileRows: admin/소유자/같은 부서/file_permissions/유효한 공유)으로 걸러 "볼 수 있는 파일만" 쓰게 한다.
 import type { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { filterAccessibleFileRows, getUserRoleInfo } from '@/lib/permissions';

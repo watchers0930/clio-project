@@ -5,6 +5,15 @@ import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { getAuthUserId } from '@/lib/auth-helper';
 import { createNotifications } from '@/lib/notifications/create-notification';
 import { isChannelMember, notChannelMember } from '@/lib/messages/channel-access';
+import { normalizeMemberIds, resolveChannelMemberIds } from '@/lib/messages/channel-members';
+
+const MAX_GROUP_NAME_LENGTH = 100;
+
+// 멤버를 못 넣은 새 채널을 지운다 — 실패하면 빈 채널이 남으므로 로그로 남긴다
+async function rollbackChannel(admin: ReturnType<typeof createAdminSupabaseClient>, channelId: string) {
+  const { error } = await admin.from('channels').delete().eq('id', channelId);
+  if (error) console.error('[channels/POST] rollback failed:', channelId, error.message);
+}
 
 /**
  * GET /api/messages/channels — 내가 속한 채널 목록
@@ -65,10 +74,15 @@ export async function POST(request: NextRequest) {
 
     if (type === 'direct') {
       if (!targetUserId) return NextResponse.json({ success: false, error: '대상 사용자가 필요합니다.' }, { status: 400 });
+      // 형식·본인 확인만 먼저 — 활성 여부는 새로 만들 때만 본다(퇴사자와의 기존 DM 은 계속 열 수 있게)
+      const target = normalizeMemberIds([targetUserId], authUserId);
+      if (!target.ok) return NextResponse.json({ success: false, error: target.error }, { status: 400 });
+      if (target.ids.length !== 1) return NextResponse.json({ success: false, error: '본인과는 대화방을 만들 수 없습니다.' }, { status: 400 });
+      const targetId = target.ids[0];
 
       // 이미 DM 채널이 있는지 확인
       const { data: myChannels } = await admin.from('channel_members').select('channel_id').eq('user_id', authUserId);
-      const { data: targetChannels } = await admin.from('channel_members').select('channel_id').eq('user_id', targetUserId);
+      const { data: targetChannels } = await admin.from('channel_members').select('channel_id').eq('user_id', targetId);
 
       const myIds = new Set((myChannels ?? []).map((c) => c.channel_id));
       const commonIds = (targetChannels ?? []).filter((c) => myIds.has(c.channel_id)).map((c) => c.channel_id);
@@ -80,8 +94,12 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // 새 DM 은 실제로 있는 활성 사용자와만
+      const activeTarget = await resolveChannelMemberIds(admin, authUserId, [targetId]);
+      if (!activeTarget.ok) return NextResponse.json({ success: false, error: activeTarget.error }, { status: 400 });
+
       // 이름 조회
-      const { data: targetUser } = await admin.from('users').select('name').eq('id', targetUserId).single();
+      const { data: targetUser } = await admin.from('users').select('name').eq('id', targetId).single();
       const { data: myUser } = await admin.from('users').select('name').eq('id', authUserId).single();
       const channelName = `${myUser?.name ?? '나'}, ${targetUser?.name ?? '상대방'}`;
 
@@ -92,13 +110,18 @@ export async function POST(request: NextRequest) {
       // 멤버 추가
       const { error: memErr } = await admin.from('channel_members').insert([
         { channel_id: channel.id, user_id: authUserId },
-        { channel_id: channel.id, user_id: targetUserId },
+        { channel_id: channel.id, user_id: targetId },
       ]);
-      if (memErr) console.error('[channels/POST] members insert:', memErr.message);
+      if (memErr) {
+        // 멤버 없는 빈 채널이 남지 않게 되돌린다
+        console.error('[channels/POST] members insert:', memErr.message);
+        await rollbackChannel(admin, channel.id);
+        return NextResponse.json({ success: false, error: '채널 생성 실패' }, { status: 500 });
+      }
 
       // 채팅 신청(신규 DM 개설) 시 상대에게 알림. best-effort.
       await createNotifications(admin, {
-        recipientIds: [targetUserId],
+        recipientIds: [targetId],
         actorId: authUserId,
         type: 'chat_request',
         title: `${myUser?.name ?? '누군가'}님이 채팅을 시작했습니다`,
@@ -110,13 +133,24 @@ export async function POST(request: NextRequest) {
     }
 
     if (type === 'group') {
-      if (!name) return NextResponse.json({ success: false, error: '그룹 이름이 필요합니다.' }, { status: 400 });
+      const groupName = typeof name === 'string' ? name.trim() : '';
+      if (!groupName) return NextResponse.json({ success: false, error: '그룹 이름이 필요합니다.' }, { status: 400 });
+      if (groupName.length > MAX_GROUP_NAME_LENGTH) {
+        return NextResponse.json({ success: false, error: `그룹 이름은 ${MAX_GROUP_NAME_LENGTH}자 이내로 입력해 주세요.` }, { status: 400 });
+      }
+      const members = await resolveChannelMemberIds(admin, authUserId, memberIds);
+      if (!members.ok) return NextResponse.json({ success: false, error: members.error }, { status: 400 });
 
-      const { data: channel, error: chErr } = await admin.from('channels').insert({ name, type: 'group' }).select().single();
+      const { data: channel, error: chErr } = await admin.from('channels').insert({ name: groupName, type: 'group' }).select().single();
       if (chErr || !channel) return NextResponse.json({ success: false, error: '채널 생성 실패' }, { status: 500 });
 
-      const allMembers = [authUserId, ...(memberIds ?? [])].map((uid) => ({ channel_id: channel.id, user_id: uid }));
-      await admin.from('channel_members').insert(allMembers);
+      const allMembers = [authUserId, ...members.ids].map((uid) => ({ channel_id: channel.id, user_id: uid }));
+      const { error: memErr } = await admin.from('channel_members').insert(allMembers);
+      if (memErr) {
+        console.error('[channels/POST] group members insert:', memErr.message);
+        await rollbackChannel(admin, channel.id);
+        return NextResponse.json({ success: false, error: '채널 생성 실패' }, { status: 500 });
+      }
 
       return NextResponse.json({ success: true, data: channel }, { status: 201 });
     }

@@ -128,18 +128,26 @@ export async function syncGmailForUser(
 
   const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-  // 재인덱싱: 기존 Gmail 파일과 청크를 모두 삭제하고 처음부터 다시 인덱싱
-  if (reindex) {
-    const { data: oldFiles } = await admin
+  // 최근 100개만 대상 (최신순). 증분: 이미 동기화된 메일은 스킵.
+  // 재인덱싱이 기존 색인을 지우기 전에 먼저 조회한다 — 토큰 만료·연결 해제면 여기서 실패해 기존 색인이 그대로 남는다.
+  const listData: gmail_v1.Schema$ListMessagesResponse = (await gmail.users.messages.list({
+    userId: 'me',
+    maxResults: MAX_SYNC_COUNT,
+    q: GMAIL_QUERY,
+  })).data;
+  const messages = listData.messages ?? [];
+
+  // 재인덱싱: 메일 목록 조회에 성공한 뒤 기존 Gmail 파일을 삭제하고 다시 인덱싱
+  // (예산 안에 못 넣은 메일은 기존 행이 없으니 다음 증분 동기화가 이어서 채운다)
+  // 목록이 비면 다시 넣을 것이 없으니 지우지 않는다. 청크는 files FK on delete cascade 로 함께 지워진다.
+  if (reindex && messages.length > 0) {
+    const { error: deleteErr } = await admin
       .from('files')
-      .select('id')
+      .delete()
       .eq('uploaded_by', userId)
       .eq('source', 'gmail');
-    const oldIds = (oldFiles ?? []).map((f: { id: string }) => f.id);
-    if (oldIds.length > 0) {
-      await admin.from('file_chunks').delete().in('file_id', oldIds);
-      await admin.from('files').delete().in('id', oldIds);
-    }
+    // 삭제 실패를 넘기면 옛 행이 그대로 남아 아래 증분이 전부 건너뛰고 '성공'으로 끝난다
+    if (deleteErr) throw new Error(`기존 Gmail 색인 삭제 실패: ${deleteErr.message}`);
   }
 
   // 이미 동기화된 external_id 목록 (증분) — 재인덱싱 시에는 위에서 삭제되어 비어 있음
@@ -153,14 +161,6 @@ export async function syncGmailForUser(
   let synced = 0;
   let errors = 0;
   const startedAt = Date.now();
-
-  // 최근 100개만 대상 (최신순). 증분: 이미 동기화된 메일은 스킵.
-  const listData: gmail_v1.Schema$ListMessagesResponse = (await gmail.users.messages.list({
-    userId: 'me',
-    maxResults: MAX_SYNC_COUNT,
-    q: GMAIL_QUERY,
-  })).data;
-  const messages = listData.messages ?? [];
 
   for (const msg of messages) {
     if (Date.now() - startedAt > budgetMs) break;

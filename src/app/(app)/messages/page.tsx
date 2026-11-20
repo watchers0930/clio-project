@@ -150,7 +150,7 @@ export default function MessagesPage() {
         const json = await res.json();
         await loadData();
         if (json.data?.id) openChannel(json.data.id);
-      }
+      } else toast.error((await res.json().then((j) => j?.error as string | undefined, () => undefined)) ?? '대화방을 열지 못했습니다.');
     } catch (e) { console.warn("[ui]", e); } finally {
       dmCreatingRef.current = false;
     }
