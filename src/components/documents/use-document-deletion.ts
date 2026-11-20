@@ -40,15 +40,31 @@ export function useDocumentDeletion({
     }
   });
 
+  // 여러 건 삭제: 성공한 문서만 목록에서 빼고, 거부된 문서(결재중·승인 등)는 남겨 사유를 알린다
+  const deleteMany = async (ids: string[]) => {
+    const results = await Promise.all(ids.map(async (id) => {
+      try {
+        const res = await csrfFetch(`/api/documents?id=${id}`, { method: 'DELETE' });
+        if (res.ok) return { id, error: null };
+        const data = await res.json().then((d) => d as { error?: string } | null, () => null);
+        return { id, error: data?.error ?? '문서를 삭제하지 못했습니다.' };
+      } catch {
+        return { id, error: '네트워크 오류로 문서를 삭제하지 못했습니다.' };
+      }
+    }));
+    const deleted = new Set(results.filter((r) => !r.error).map((r) => r.id));
+    setDocs((prev) => prev.filter((doc) => !deleted.has(doc.id)));
+    const failed = results.filter((r) => r.error);
+    setSelectedDocIds(new Set(failed.map((r) => r.id)));
+    if (failed.length > 0) toast.error(`${failed.length}개 문서를 삭제하지 못했습니다. ${failed[0].error}`);
+  };
+
   const handleBulkDelete = () => {
     const count = selectedDocIds.size;
     if (count === 0) return;
     openConfirm(`${count}개 문서 삭제`, '선택된 문서를 모두 삭제합니다. 이 작업은 되돌릴 수 없습니다.', async () => {
       closeConfirm();
-      const ids = Array.from(selectedDocIds);
-      await Promise.all(ids.map((id) => csrfFetch(`/api/documents?id=${id}`, { method: 'DELETE' })));
-      setDocs((prev) => prev.filter((doc) => !selectedDocIds.has(doc.id)));
-      setSelectedDocIds(new Set());
+      await deleteMany(Array.from(selectedDocIds));
     });
   };
 
@@ -56,9 +72,7 @@ export function useDocumentDeletion({
     if (docs.length === 0) return;
     openConfirm(`전체 ${docs.length}개 문서 삭제`, '모든 문서를 삭제합니다. 이 작업은 되돌릴 수 없습니다.', async () => {
       closeConfirm();
-      await Promise.all(docs.map((doc) => csrfFetch(`/api/documents?id=${doc.id}`, { method: 'DELETE' })));
-      setDocs([]);
-      setSelectedDocIds(new Set());
+      await deleteMany(docs.map((doc) => doc.id));
     });
   };
 

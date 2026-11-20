@@ -38,7 +38,8 @@ export function useFileBulkActions({ files, loadAssets, selectedIds, setSelected
           return next;
         });
       } else {
-        toast.error('파일 삭제에 실패했습니다.');
+        const data = await res.json().then((d) => d as { error?: string } | null, () => null);
+        toast.error(data?.error ?? '파일 삭제에 실패했습니다.');
       }
     } catch {
       toast.error('파일 삭제 중 오류가 발생했습니다.');

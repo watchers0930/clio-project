@@ -186,8 +186,14 @@ export async function DELETE(request: NextRequest) {
     if (!(await isChannelMember(admin, id, authUserId))) return notChannelMember();
     const { data: channel } = await admin.from('channels').select('type').eq('id', id).maybeSingle();
     if (!channel) return NextResponse.json({ success: false, error: '채널을 찾을 수 없습니다.' }, { status: 404 });
-    if (channel.type === 'department') {
-      return NextResponse.json({ success: false, error: '부서 채널은 삭제할 수 없습니다.' }, { status: 403 });
+    // 허용 목록: DM 은 참여자, 그룹은 관리자만(다른 멤버의 대화까지 지워진다). 부서·그 밖의 종류는 삭제 불가
+    if (channel.type === 'group') {
+      const { data: me } = await admin.from('users').select('role').eq('id', authUserId).maybeSingle();
+      if (me?.role !== 'admin') {
+        return NextResponse.json({ success: false, error: '그룹 대화방은 관리자만 삭제할 수 있습니다.' }, { status: 403 });
+      }
+    } else if (channel.type !== 'direct') {
+      return NextResponse.json({ success: false, error: channel.type === 'department' ? '부서 채널은 삭제할 수 없습니다.' : '삭제할 수 없는 대화방입니다.' }, { status: 403 });
     }
 
     // 메시지 삭제 → 멤버십 삭제 → 채널 삭제

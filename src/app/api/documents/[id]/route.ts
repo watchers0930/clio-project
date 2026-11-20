@@ -1,6 +1,6 @@
 import { validateDocumentUpdate } from '@/schemas/document-update';
 import { userDocumentUpdateViolation } from '@/lib/documents/document-status';
-import { countLockedDocumentReferences, isLockedDocumentError } from '@/lib/documents/locked-references';
+import { countLockedDocumentReferences, isLockedDocumentError, checkDocumentDeletion } from '@/lib/documents/locked-references';
 
 const LOCKED_ORIGIN_MESSAGE = '이 문서를 원본으로 하는 결재 중이거나 승인된 문서가 있어 삭제할 수 없습니다.';
 import { withMutation } from '@/lib/http/mutation-guard';
@@ -187,9 +187,14 @@ export async function DELETE(
       return NextResponse.json<ApiResponse>({ success: false, error: LOCKED_ORIGIN_MESSAGE }, { status: 409 });
     }
 
-    const { data: target } = await createAdminSupabaseClient().from('documents').select('storage_path').eq('id', id).maybeSingle();
+    const { data: target } = await createAdminSupabaseClient().from('documents').select('storage_path, status').eq('id', id).maybeSingle();
+    // 결재중·승인 문서(결재 건 포함)는 관리자만 삭제 — DB 트리거 069 와 같은 규칙
+    const blocked = await checkDocumentDeletion(createAdminSupabaseClient(), [{ id, status: target?.status ?? null }], roleInfo.role);
+    if (blocked) return NextResponse.json<ApiResponse>({ success: false, error: blocked.error }, { status: blocked.status });
     const { error } = await supabase.from('documents').delete().eq('id', id);
     if (error) {
+      // 069 트리거(동시에 결재가 상신된 경우) — 원본 잠금 문구가 아니라 관리자 전용 사유로 답한다
+      if (error.message?.includes('관리자만')) return NextResponse.json<ApiResponse>({ success: false, error: error.message }, { status: 403 });
       if (isLockedDocumentError(error)) {
         return NextResponse.json<ApiResponse>({ success: false, error: LOCKED_ORIGIN_MESSAGE }, { status: 409 });
       }

@@ -1,3 +1,4 @@
+import { checkDocumentDeletion } from '@/lib/documents/locked-references';
 import { documentStatusLabel } from '@/lib/documents/document-status';
 import { checkRowStoragePath, filesBucket } from '@/lib/storage/files-bucket';
 import { ApiError, errorResponse } from '@/lib/http/api-error';
@@ -346,7 +347,7 @@ export async function DELETE(request: NextRequest) {
 
     const { data: chainDocs, error: chainDocsError } = await admin
       .from('documents')
-      .select('id, storage_path')
+      .select('id, storage_path, status')
       .or(`id.eq.${rootId},parent_id.eq.${rootId}`);
 
     if (chainDocsError) {
@@ -359,6 +360,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: '삭제할 문서를 찾을 수 없습니다.' }, { status: 404 });
     }
 
+    const blocked = await checkDocumentDeletion(admin, chainDocs ?? [], roleInfo.role); // 결재중·승인은 관리자만(DB 069 와 같은 규칙)
+    if (blocked) return NextResponse.json({ error: blocked.error }, { status: blocked.status });
     const linkedLeave = await admin.from('leave_requests').select('id').in('document_id',chainIds).limit(1);
     if (linkedLeave.error) return NextResponse.json({error:'휴가 연결 확인에 실패했습니다.'},{status:503});
     if (linkedLeave.data?.length) return NextResponse.json({error:'휴가 신청에 연결된 문서는 삭제할 수 없습니다.'},{status:409});

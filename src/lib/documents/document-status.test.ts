@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { documentStatusLabel, userDocumentUpdateViolation } from '@/lib/documents/document-status';
+import { documentDeleteViolation, documentStatusLabel, userDocumentUpdateViolation } from '@/lib/documents/document-status';
 import { validateDocumentUpdate } from '@/schemas/document-update';
 import { buildContentWithInputs, parseEmbeddedInputs } from '@/lib/documents/embedded-inputs';
 import { getWeekInfo } from '@/components/weekly-reports/helpers';
@@ -104,4 +104,18 @@ test('weekly report documents are identified by stored template name, not only b
   // 제목이 바뀐 주간업무도 양식명이 저장돼 있으면 입력값 편집 대상
   const r = resolveDocumentInputForm({ title: '토목몰 개선 (2026-11-06 생성)', templateId: null, templateName: '기본', content: stamped('주간업무') });
   assert.equal(r.ok && r.form.kind, 'weekly');
+});
+
+test('결재중·승인 문서 삭제는 관리자만 — 버전 묶음 중 하나라도 잠금이면 거부', () => {
+  assert.equal(documentDeleteViolation(['draft', 'completed', 'rejected'], 'user'), null);
+  assert.notEqual(documentDeleteViolation(['in_approval'], 'user'), null);
+  assert.notEqual(documentDeleteViolation(['submitted'], 'manager'), null);
+  assert.notEqual(documentDeleteViolation(['draft', 'approved'], 'user'), null);
+  assert.equal(documentDeleteViolation(['approved', 'in_approval'], 'admin'), null);
+  assert.equal(documentDeleteViolation([], 'user'), null);
+  // 상신 직후(결재 건은 있고 문서 상태는 아직 completed)도 잠금으로 본다
+  assert.notEqual(documentDeleteViolation(['completed'], 'user', ['pending']), null);
+  assert.notEqual(documentDeleteViolation(['completed'], 'user', ['approved']), null);
+  assert.equal(documentDeleteViolation(['draft'], 'user', ['rejected']), null);
+  assert.equal(documentDeleteViolation(['completed'], 'admin', ['pending']), null);
 });

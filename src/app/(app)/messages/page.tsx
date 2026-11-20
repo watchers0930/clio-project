@@ -442,7 +442,7 @@ export default function MessagesPage() {
             if (res.ok) {
               if (activeChannel === confirmDelete.channelId) setActiveChannel(null);
               await loadData();
-            }
+            } else toast.error((await res.json().then((j) => j?.error as string | undefined, () => undefined)) ?? '대화를 삭제하지 못했습니다.');
           } catch (e) { console.warn('[ui]', e); }
           setConfirmDelete({ open: false, channelId: null });
         }}

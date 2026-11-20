@@ -52,3 +52,23 @@ export function userDocumentUpdateViolation(
   }
   return null;
 }
+
+/** 결재 증적으로 남겨야 하는 결재 건 상태(approval_requests.status) */
+export const ACTIVE_APPROVAL_REQUEST_STATUSES = ['pending', 'approved'] as const;
+
+/**
+ * 문서 삭제 가능 여부(버전 묶음 전체). 위반 시 사유 문자열, 허용 시 null.
+ * 결재 진행·완료 문서는 결재 증적이 함께 지워지므로 관리자(role=admin)만 삭제한다.
+ * 문서 상태뿐 아니라 결재 건(진행·승인)도 본다 — 상신은 결재 건을 먼저 만들고 문서 상태를 나중에 바꾸기 때문.
+ * DB 트리거(069_admin_only_locked_document_delete.sql)와 같은 규칙이므로 함께 바꾼다.
+ */
+export function documentDeleteViolation(
+  statuses: readonly string[],
+  role: string,
+  approvalRequestStatuses: readonly string[] = [],
+): string | null {
+  if (role === 'admin') return null;
+  const locked = statuses.some(isWorkflowLockedStatus)
+    || approvalRequestStatuses.some((s) => (ACTIVE_APPROVAL_REQUEST_STATUSES as readonly string[]).includes(s));
+  return locked ? '결재 중이거나 승인된 문서는 관리자만 삭제할 수 있습니다.' : null;
+}
