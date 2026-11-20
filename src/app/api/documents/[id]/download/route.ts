@@ -4,13 +4,14 @@ import { getAuthUserId } from '@/lib/auth-helper';
 import { canAccessDocument, getUserRoleInfo } from '@/lib/permissions';
 import { loadDownloadContext, loadDownloadDocument } from './download-source';
 import { renderFromContent, serveLatestInputForm, serveStoredFile } from './download-render';
+import { resolveDownloadFormat } from '@/lib/documents/download-format';
 
 // PDF 서버 렌더(puppeteer/chromium 콜드스타트 대비) 실행시간 확보
 export const maxDuration = 60;
 
 /**
  * GET /api/documents/[id]/download?font=맑은고딕&format=docx
- * 문서 내용을 선택된 포맷으로 변환하여 다운로드
+ * 문서 내용을 선택된 포맷으로 변환하여 다운로드 (format 생략 시 문서의 output_format)
  */
 const FONT_MAP: Record<string, string> = {
   '맑은 고딕': 'Malgun Gothic',
@@ -32,7 +33,6 @@ export async function GET(
     const url = new URL(_request.url);
     const requestedFont = url.searchParams.get('font') ?? '맑은 고딕';
     const fontParam = Object.hasOwn(FONT_MAP, requestedFont) ? requestedFont : '맑은 고딕';
-    const format = url.searchParams.get('format') ?? 'docx';
     const fontFamily = FONT_MAP[fontParam] ?? 'Malgun Gothic';
 
     const supabase = await createServerSupabaseClient();
@@ -59,6 +59,8 @@ export async function GET(
     }
 
     const inline = url.searchParams.get('inline') === 'true';
+    // 형식 미지정이면 문서가 만들어진 형식(저장 PDF 문서도 다시 렌더해 최신 폰트·양식 적용)
+    const format = resolveDownloadFormat(url.searchParams.get('format'), doc.output_format);
 
     // 서명·템플릿·로고·직인 컨텍스트 준비 후 단계별 서빙(앞 단계가 응답하면 그대로 반환)
     const context = await loadDownloadContext(doc, authUserId);

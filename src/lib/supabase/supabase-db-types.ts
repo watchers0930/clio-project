@@ -129,6 +129,8 @@ export type DbDocument = Record<string, unknown> & {
   origin_context: string | null;
   /** 양식 입력값 — 059 부터 본문 앞 주석 대신 여기가 기준(본문 저장 시 DB 트리거가 동기화) */
   input_values: Record<string, string> | null;
+  /** 생성 시 고른 출력 형식(pdf·docx·hwpx 등) — 형식 미지정 다운로드의 기본값 */
+  output_format: string | null;
   created_by: string | null;
   created_at: string;
 };

@@ -1,10 +1,11 @@
 // 문서(documents) 파일 내려받기 — 문서 상세·버전 목록·검색 결과가 함께 쓰는 단일 경로.
-// 제안서는 format=pdf 로, 그 밖의 문서는 docx 로 요청한다. 실제 확장자는 받은 응답으로 정한다(저장 원본이 PDF·HWPX 일 수 있음).
+// 제안서는 format=pdf 로, 그 밖의 문서는 형식을 지정하지 않아 서버가 문서가 만들어진 형식(output_format)으로 정한다.
+// 실제 확장자는 받은 응답으로 정한다(저장 원본이 PDF·HWPX 일 수 있음).
 
 const PROPOSAL_TEMPLATE = '제안서';
 
-export function documentDownloadSpec(templateName: string | null | undefined): { format: 'pdf' | 'docx'; extension: 'html' | 'docx' } {
-  return templateName === PROPOSAL_TEMPLATE ? { format: 'pdf', extension: 'html' } : { format: 'docx', extension: 'docx' };
+export function documentDownloadSpec(templateName: string | null | undefined): { format: 'pdf' | null; extension: 'html' | 'docx' } {
+  return templateName === PROPOSAL_TEMPLATE ? { format: 'pdf', extension: 'html' } : { format: null, extension: 'docx' };
 }
 
 // 서버가 저장 원본(PDF·HWPX 등)을 그대로 내려줄 때가 있어 요청 형식이 아니라 '받은 응답'으로 확장자를 정한다
@@ -37,7 +38,8 @@ export function extensionFromResponse(contentDisposition: string | null, content
 export async function downloadDocumentFile(id: string, title: string, templateName: string | null | undefined): Promise<string | null> {
   const { format, extension } = documentDownloadSpec(templateName);
   try {
-    const res = await fetch(`/api/documents/${encodeURIComponent(id)}/download?format=${format}&font=${encodeURIComponent('맑은 고딕')}`);
+    const query = `${format ? `format=${format}&` : ''}font=${encodeURIComponent('맑은 고딕')}`;
+    const res = await fetch(`/api/documents/${encodeURIComponent(id)}/download?${query}`);
     if (!res.ok) return '다운로드 실패';
     const ext = extensionFromResponse(res.headers.get('content-disposition'), res.headers.get('content-type'), extension);
     const blob = await res.blob();

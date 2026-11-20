@@ -20,6 +20,7 @@ export type DownloadDoc = {
   template_id?: string | null;
   created_by?: string | null;
   input_values?: unknown; // 양식 입력값(059) — 미리보기 양식 판별·렌더가 쓴다(select 에서 빠지면 휴가원이 옛 경로로 떨어진다)
+  output_format?: string | null; // 형식 미지정 다운로드의 기본 형식(resolveDownloadFormat)
 };
 
 export type DownloadContext = {
@@ -47,7 +48,7 @@ export async function loadDownloadDocument(
     const admin = createAdminSupabaseClient();
     const { data: accessibleDoc } = await admin
       .from('documents')
-      .select('id, title, content, input_values, storage_path, parent_id, template_id, created_by')
+      .select('id, title, content, input_values, storage_path, parent_id, template_id, created_by, output_format')
       .eq('id', id)
       .single();
     doc = accessibleDoc;
@@ -63,7 +64,7 @@ export async function loadDownloadDocument(
     if (approval) {
       const { data: adminDoc } = await admin
         .from('documents')
-        .select('id, title, content, input_values, storage_path, parent_id, template_id, created_by')
+        .select('id, title, content, input_values, storage_path, parent_id, template_id, created_by, output_format')
         .eq('id', id)
         .single();
       doc = adminDoc;
@@ -72,7 +73,7 @@ export async function loadDownloadDocument(
       // overview 조회와 동일 판별(isWeeklyReportDocument + template_id NULL)이라 접근 권한이 일관된다.
       const { data: wr } = await admin
         .from('documents')
-        .select('id, title, content, input_values, storage_path, parent_id, template_id, created_by')
+        .select('id, title, content, input_values, storage_path, parent_id, template_id, created_by, output_format')
         .eq('id', id)
         .single();
       if (wr && wr.template_id === null && isWeeklyReportDocument({ title: wr.title ?? '', content: wr.content, input_values: wr.input_values })) {

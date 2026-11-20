@@ -93,7 +93,7 @@ export async function POST(
     // 문서 조회
     const { data: doc } = await admin
       .from('documents')
-      .select('id, title, content, input_values, status, parent_id, version_number, created_by, storage_path, template_id, source_file_ids, instructions')
+      .select('id, title, content, input_values, status, parent_id, version_number, created_by, storage_path, template_id, source_file_ids, instructions, output_format')
       .eq('id', documentId)
       .single();
 

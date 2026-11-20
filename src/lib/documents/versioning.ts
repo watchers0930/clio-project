@@ -12,6 +12,7 @@ type DocumentSnapshotInsert = {
   origin_document_id?: string | null;
   origin_context?: string | null;
   input_values?: Record<string, string> | null;
+  output_format?: string | null;
 };
 
 export interface VersionedDocumentRow {
@@ -29,6 +30,7 @@ export interface VersionedDocumentRow {
   origin_document_id?: string | null;
   origin_context?: string | null;
   input_values?: Record<string, string> | null;
+  output_format?: string | null;
 }
 
 export function resolveDocumentRootId(doc: Pick<VersionedDocumentRow, 'id' | 'parent_id'>) {
@@ -53,6 +55,8 @@ export function buildSnapshotInsertPayload(doc: VersionedDocumentRow) {
   if ('origin_context' in doc) payload.origin_context = doc.origin_context ?? null;
   // 입력값은 본문이 아니라 칸에 있으므로 버전 스냅샷에도 함께 복사(없으면 그 버전의 다운로드·미리보기 입력값이 빈다)
   if ('input_values' in doc) payload.input_values = doc.input_values ?? null;
+  // 출력 형식도 복사 — 없으면 그 버전 다운로드가 docx 기본값으로 떨어져 PDF 문서의 낡은 저장 파일을 받는다
+  if ('output_format' in doc) payload.output_format = doc.output_format ?? null;
 
   return payload;
 }
