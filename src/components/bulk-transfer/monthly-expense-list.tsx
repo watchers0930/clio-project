@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, FileSpreadsheet } from 'lucide-react';
 import type { MonthlyExpense } from '@/lib/bulk-transfer/types';
 import { ExpenseDetailModal } from './expense-detail-modal';
 import { currentMonth, monthLabel } from '@/lib/bulk-transfer/month-utils';
@@ -11,9 +11,11 @@ interface Props {
   onAdd: (month: string) => void;
   onEdit: (e: MonthlyExpense) => void;
   onDelete: (e: MonthlyExpense) => void;
+  /** 거래내역 엑셀 불러오기 */
+  onImport: () => void;
 }
 
-export function MonthlyExpenseList({ expenses, onAdd, onEdit, onDelete }: Props) {
+export function MonthlyExpenseList({ expenses, onAdd, onEdit, onDelete, onImport }: Props) {
   const [month, setMonth] = useState(currentMonth());
   const [detail, setDetail] = useState<MonthlyExpense | null>(null);
 
@@ -33,13 +35,20 @@ export function MonthlyExpenseList({ expenses, onAdd, onEdit, onDelete }: Props)
         <div className="text-[13px] text-foreground-secondary">
           그 달에만 발생한 변동 지출을 월별로 기록합니다. 당월 총지출 = 고정지출 + 해당 월 월지출.
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <input
             type="month"
             value={month}
             onChange={(e) => setMonth(e.target.value || currentMonth())}
             className="h-9 rounded-xl border border-border bg-white px-3 text-[13px] text-foreground"
           />
+          <button
+            onClick={onImport}
+            className="flex items-center justify-center gap-1.5 h-9 rounded-xl border border-border px-4 text-[13px] font-medium text-foreground hover:bg-surface-secondary transition-colors"
+          >
+            <FileSpreadsheet size={15} strokeWidth={1.5} />
+            거래내역 불러오기
+          </button>
           <button
             onClick={() => onAdd(month)}
             className="flex items-center justify-center gap-1.5 h-9 rounded-xl border border-border px-4 text-[13px] font-medium text-foreground hover:bg-surface-secondary transition-colors"

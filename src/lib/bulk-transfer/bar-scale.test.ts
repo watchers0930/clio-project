@@ -12,9 +12,9 @@ test('이상치 없으면 최댓값 기준 비례, 끊김 없음', () => {
 });
 
 test('중앙값의 3배를 넘는 달은 최대 높이 + broken, 나머지는 나머지 최댓값 기준 140px', () => {
-  // 실제 8~11월 데이터
-  const totals = [16_606_899, 249_964_849, 22_990_439, 16_877_999];
-  const r = layoutBars(totals, 16_590_399, 200);
+  // 한 달만 유난히 큰 경우
+  const totals = [16_000_000, 250_000_000, 23_000_000, 17_000_000];
+  const r = layoutBars(totals, 16_000_000, 200);
   assert.equal(r[1].broken, true);
   assert.equal(r[1].heightPx, 200);
   assert.equal(r[2].heightPx, 140);

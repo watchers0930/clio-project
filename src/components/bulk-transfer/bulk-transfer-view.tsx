@@ -25,6 +25,7 @@ import { FixedExpenseModal } from './fixed-expense-modal';
 import { MonthlyExpenseList } from './monthly-expense-list';
 import { MonthlyExpenseModal } from './monthly-expense-modal';
 import { ExpenseComparison } from './expense-comparison';
+import { StatementImportModal } from './statement-import-modal';
 import { currentMonth } from '@/lib/bulk-transfer/month-utils';
 
 type Tab = 'items' | 'payees' | 'fixed' | 'monthly' | 'compare';
@@ -76,6 +77,7 @@ export function BulkTransferView() {
   const [itemModal, setItemModal] = useState(false);
   const [editingItem, setEditingItem] = useState<TransferItem | null>(null);
   const [pdfModal, setPdfModal] = useState(false);
+  const [statementModal, setStatementModal] = useState(false);
   const [expenseModal, setExpenseModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<FixedExpense | null>(null);
   const [monthlyModal, setMonthlyModal] = useState(false);
@@ -255,12 +257,23 @@ export function BulkTransferView() {
             onAdd={openAddMonthly}
             onEdit={openEditMonthly}
             onDelete={(e) => void handleDeleteMonthly(e)}
+            onImport={() => setStatementModal(true)}
           />
         )}
         {tab === 'compare' && (
           <ExpenseComparison fixedExpenses={fixedExpenses} monthlyExpenses={monthlyExpenses} />
         )}
       </div>
+
+      <StatementImportModal
+        open={statementModal}
+        onClose={() => setStatementModal(false)}
+        fixedExpenses={fixedExpenses}
+        monthlyExpenses={monthlyExpenses}
+        createMonthly={createMonthly}
+        updateMonthly={updateMonthly}
+        onDone={(msg) => toast.success(msg)}
+      />
 
       <PdfImportModal
         open={pdfModal}
