@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import type { FixedExpense, MonthlyExpense } from '@/lib/bulk-transfer/types';
 import { currentMonth, monthLabel, monthRange } from '@/lib/bulk-transfer/month-utils';
+import { layoutBars } from '@/lib/bulk-transfer/bar-scale';
 
 interface Props {
   fixedExpenses: FixedExpense[];
@@ -55,9 +56,12 @@ export function ExpenseComparison({ fixedExpenses, monthlyExpenses }: Props) {
     return { cur, fixedTotal, rows, sumTotal, sumMonthly, avgTotal, peak, curRow };
   }, [fixedExpenses, monthlyExpenses]);
 
-  const max = Math.max(...data.rows.map((r) => r.total), 1);
-  const barPx = (v: number) => Math.max(v > 0 ? 4 : 0, Math.round((v / max) * BAR_MAX_PX));
-  const fixedPx = (r: MonthRow) => (r.total > 0 ? Math.round((data.fixedTotal / r.total) * barPx(r.total)) : 0);
+  const bars = layoutBars(
+    data.rows.map((r) => r.total),
+    data.fixedTotal,
+    BAR_MAX_PX,
+  );
+  const anyBroken = bars.some((b) => b.broken);
 
   return (
     <div className="flex flex-col gap-5">
@@ -87,8 +91,9 @@ export function ExpenseComparison({ fixedExpenses, monthlyExpenses }: Props) {
       <div className="rounded-xl border border-border bg-white px-6 py-6">
         <div className="overflow-x-auto">
           <div className="mx-auto flex w-max items-end gap-6" style={{ height: `${BAR_MAX_PX + 36}px` }}>
-            {data.rows.map((r) => {
+            {data.rows.map((r, i) => {
               const isCur = r.month === data.cur;
+              const bar = bars[i];
               return (
                 <div key={r.month} className="flex w-[84px] flex-col items-center justify-end">
                   <span
@@ -97,12 +102,17 @@ export function ExpenseComparison({ fixedExpenses, monthlyExpenses }: Props) {
                     {r.total.toLocaleString('ko-KR')}
                   </span>
                   <div
-                    className="flex w-[56px] flex-col justify-end overflow-hidden rounded-t-lg"
-                    style={{ height: `${barPx(r.total)}px` }}
-                    title={`${monthLabel(r.month)} 총지출 ${won(r.total)} (고정 ${won(data.fixedTotal)} + 월지출 ${won(r.monthly)})`}
+                    className="relative"
+                    title={`${monthLabel(r.month)} 총지출 ${won(r.total)} (고정 ${won(data.fixedTotal)} + 월지출 ${won(r.monthly)})${bar.broken ? ' · 막대 중간 생략' : ''}`}
                   >
-                    <div className={`flex-1 ${isCur ? 'bg-sidebar/60' : 'bg-gray-200'}`} />
-                    <div className={isCur ? 'bg-sidebar' : 'bg-gray-400'} style={{ height: `${fixedPx(r)}px` }} />
+                    <div
+                      className="flex w-[56px] flex-col justify-end overflow-hidden rounded-t-lg"
+                      style={{ height: `${bar.heightPx}px` }}
+                    >
+                      <div className={`flex-1 ${isCur ? 'bg-sidebar/60' : 'bg-gray-200'}`} />
+                      <div className={isCur ? 'bg-sidebar' : 'bg-gray-400'} style={{ height: `${bar.fixedPx}px` }} />
+                    </div>
+                    {bar.broken && <BarBreak top={Math.round((bar.heightPx - bar.fixedPx) * 0.4)} />}
                   </div>
                 </div>
               );
@@ -129,6 +139,14 @@ export function ExpenseComparison({ fixedExpenses, monthlyExpenses }: Props) {
           <span className="flex items-center gap-1">
             <span className="inline-block h-2.5 w-2.5 rounded-sm bg-sidebar" /> 당월
           </span>
+          {anyBroken && (
+            <span className="flex items-center gap-1 text-foreground-quaternary">
+              <svg width="14" height="10" viewBox="0 0 14 10" aria-hidden="true">
+                <path d="M0 4 L14 0 M0 10 L14 6" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+              유난히 큰 달은 막대 중간 생략
+            </span>
+          )}
         </div>
       </div>
 
@@ -184,6 +202,24 @@ export function ExpenseComparison({ fixedExpenses, monthlyExpenses }: Props) {
         </table>
       </div>
     </div>
+  );
+}
+
+/** 막대 중간 생략 표시: 막대보다 살짝 넓은 흰 사선 띠 + 테두리 선 */
+function BarBreak({ top }: { top: number }) {
+  return (
+    <svg
+      className="pointer-events-none absolute -left-[6px]"
+      style={{ top: `${top}px` }}
+      width="68"
+      height="14"
+      viewBox="0 0 68 14"
+      aria-hidden="true"
+    >
+      <polygon points="0,6 68,0 68,8 0,14" fill="white" />
+      <line x1="0" y1="6" x2="68" y2="0" stroke="#9ca3af" strokeWidth="1.5" />
+      <line x1="0" y1="14" x2="68" y2="8" stroke="#9ca3af" strokeWidth="1.5" />
+    </svg>
   );
 }
 
