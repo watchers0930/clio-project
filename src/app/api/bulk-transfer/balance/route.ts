@@ -4,7 +4,7 @@ import { getAuthUserId } from '@/lib/auth-helper';
 import { requireAdminOrCeo } from '@/lib/http/admin-guard';
 import { bulkTransferMutationGate } from '@/lib/bulk-transfer/route-guard';
 
-// GET — 본인 현재 잔고
+// GET — 보증금 잔고 (고정지출 탭)
 export async function GET() {
   const supabase = await createServerSupabaseClient();
   if (!supabase) return NextResponse.json({ error: '서버 오류' }, { status: 500 });
@@ -29,7 +29,7 @@ export async function GET() {
   return NextResponse.json({ data: { balance: data ? Number(data.balance) : 0 } });
 }
 
-// PUT — 현재 잔고 저장(upsert)
+// PUT — 보증금 잔고 저장(upsert)
 export async function PUT(request: NextRequest) {
   // 변이 요청: 인증 + 출처 + CSRF 토큰 + 활성 사용자 + 대표/관리자
   const gate = await bulkTransferMutationGate(request);

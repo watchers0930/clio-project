@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import type { MonthlyExpense } from '@/lib/bulk-transfer/types';
+import { ExpenseDetailModal } from './expense-detail-modal';
 import { currentMonth, monthLabel } from '@/lib/bulk-transfer/month-utils';
 
 interface Props {
@@ -14,6 +15,7 @@ interface Props {
 
 export function MonthlyExpenseList({ expenses, onAdd, onEdit, onDelete }: Props) {
   const [month, setMonth] = useState(currentMonth());
+  const [detail, setDetail] = useState<MonthlyExpense | null>(null);
 
   const monthItems = useMemo(
     () =>
@@ -64,17 +66,17 @@ export function MonthlyExpenseList({ expenses, onAdd, onEdit, onDelete }: Props)
           </div>
         ) : (
           monthItems.map((e) => (
-            <div key={e.id} className="rounded-xl border border-border bg-white p-4">
+            <div key={e.id} onClick={() => setDetail(e)} className="cursor-pointer rounded-xl border border-border bg-white p-4 active:bg-surface-secondary/50">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="break-words text-[14px] font-medium text-foreground">{e.label}</p>
                   {e.memo && <p className="mt-0.5 text-[12px] text-foreground-secondary">{e.memo}</p>}
                 </div>
                 <div className="flex flex-shrink-0 items-center gap-4">
-                  <button onClick={() => onEdit(e)} className="text-foreground-secondary hover:text-primary transition-colors" title="수정">
+                  <button onClick={(ev) => { ev.stopPropagation(); onEdit(e); }} className="text-foreground-secondary hover:text-primary transition-colors" title="수정">
                     <Pencil size={16} strokeWidth={1.5} />
                   </button>
-                  <button onClick={() => onDelete(e)} className="text-foreground-secondary hover:text-red-500 transition-colors" title="삭제">
+                  <button onClick={(ev) => { ev.stopPropagation(); onDelete(e); }} className="text-foreground-secondary hover:text-red-500 transition-colors" title="삭제">
                     <Trash2 size={16} strokeWidth={1.5} />
                   </button>
                 </div>
@@ -114,16 +116,16 @@ export function MonthlyExpenseList({ expenses, onAdd, onEdit, onDelete }: Props)
               </tr>
             ) : (
               monthItems.map((e) => (
-                <tr key={e.id} className="hover:bg-surface-secondary/50 transition-colors">
+                <tr key={e.id} onClick={() => setDetail(e)} className="cursor-pointer hover:bg-surface-secondary/50 transition-colors" title="눌러서 세부 내용 보기">
                   <td className="px-4 py-3 font-medium text-foreground truncate">{e.label}</td>
                   <td className="px-4 py-3 text-right font-mono text-foreground">{Number(e.amount).toLocaleString('ko-KR')}</td>
                   <td className="px-4 py-3 text-foreground-secondary truncate">{e.memo || '—'}</td>
                   <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-2">
-                      <button onClick={() => onEdit(e)} className="text-foreground-secondary hover:text-primary transition-colors" title="수정">
+                      <button onClick={(ev) => { ev.stopPropagation(); onEdit(e); }} className="text-foreground-secondary hover:text-primary transition-colors" title="수정">
                         <Pencil size={14} strokeWidth={1.5} />
                       </button>
-                      <button onClick={() => onDelete(e)} className="text-foreground-secondary hover:text-red-500 transition-colors" title="삭제">
+                      <button onClick={(ev) => { ev.stopPropagation(); onDelete(e); }} className="text-foreground-secondary hover:text-red-500 transition-colors" title="삭제">
                         <Trash2 size={14} strokeWidth={1.5} />
                       </button>
                     </div>
@@ -143,6 +145,22 @@ export function MonthlyExpenseList({ expenses, onAdd, onEdit, onDelete }: Props)
           )}
         </table>
       </div>
+
+      <ExpenseDetailModal
+        expense={detail}
+        kind={detail ? `${monthLabel(detail.month)} 월지출` : '월지출'}
+        onClose={() => setDetail(null)}
+        onEdit={() => {
+          const d = detail;
+          setDetail(null);
+          if (d) onEdit(d);
+        }}
+        onDelete={() => {
+          const d = detail;
+          setDetail(null);
+          if (d) onDelete(d);
+        }}
+      />
     </div>
   );
 }

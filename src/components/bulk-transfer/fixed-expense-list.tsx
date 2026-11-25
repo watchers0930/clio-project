@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Plus, Pencil, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import type { FixedExpense } from '@/lib/bulk-transfer/types';
+import { ExpenseDetailModal } from './expense-detail-modal';
 
 interface Props {
   expenses: FixedExpense[];
@@ -26,9 +27,9 @@ export function FixedExpenseList({ expenses, balance, onSaveBalance, onAdd, onEd
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [balanceInput, setBalanceInput] = useState('');
   const [savingBal, setSavingBal] = useState(false);
+  const [detail, setDetail] = useState<FixedExpense | null>(null);
 
   const total = useMemo(() => expenses.reduce((s, e) => s + Number(e.amount), 0), [expenses]);
-  const remaining = balance - total;
 
   useEffect(() => {
     setBalanceInput(balance ? balance.toLocaleString('ko-KR') : '');
@@ -107,10 +108,12 @@ export function FixedExpenseList({ expenses, balance, onSaveBalance, onAdd, onEd
         </div>
       </div>
 
-      {/* 잔고·지출·잔액 카드 */}
+      {/* 보증금 잔고·고정지출 합계 카드 */}
       <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface-secondary px-5 py-4">
         <div className="flex items-center justify-between gap-3">
-          <label className="text-[13px] font-medium text-foreground-secondary" htmlFor="fe-balance">현재 잔고</label>
+          <label className="text-[13px] font-medium text-foreground-secondary" htmlFor="fe-balance">
+            보증금 잔고 {savingBal && <span className="font-normal text-foreground-quaternary">(저장 중…)</span>}
+          </label>
           <div className="flex items-center gap-1.5">
             <input
               id="fe-balance"
@@ -130,15 +133,9 @@ export function FixedExpenseList({ expenses, balance, onSaveBalance, onAdd, onEd
             <span className="text-[13px] text-foreground-secondary">원</span>
           </div>
         </div>
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[13px] font-medium text-foreground-secondary">고정지출 합계 ({expenses.length}건)</span>
-          <span className="font-mono text-[15px] text-foreground">− {total.toLocaleString('ko-KR')}원</span>
-        </div>
         <div className="flex items-end justify-between gap-3 border-t border-border pt-3">
-          <span className="text-[13px] font-semibold text-foreground">잔액 {savingBal && <span className="font-normal text-foreground-quaternary">(저장 중…)</span>}</span>
-          <span className={`font-mono text-[20px] font-semibold ${remaining < 0 ? 'text-red-500' : 'text-foreground'}`}>
-            {remaining.toLocaleString('ko-KR')}원
-          </span>
+          <span className="text-[13px] font-semibold text-foreground">고정지출 합계 ({expenses.length}건)</span>
+          <span className="font-mono text-[20px] font-semibold text-foreground">{total.toLocaleString('ko-KR')}원</span>
         </div>
       </div>
 
@@ -150,17 +147,17 @@ export function FixedExpenseList({ expenses, balance, onSaveBalance, onAdd, onEd
           </div>
         ) : (
           sorted.map((e) => (
-            <div key={e.id} className="rounded-xl border border-border bg-white p-4">
+            <div key={e.id} onClick={() => setDetail(e)} className="cursor-pointer rounded-xl border border-border bg-white p-4 active:bg-surface-secondary/50">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="break-words text-[14px] font-medium text-foreground">{e.label}</p>
                   {e.memo && <p className="mt-0.5 text-[12px] text-foreground-secondary">{e.memo}</p>}
                 </div>
                 <div className="flex flex-shrink-0 items-center gap-4">
-                  <button onClick={() => onEdit(e)} className="text-foreground-secondary hover:text-primary transition-colors" title="수정">
+                  <button onClick={(ev) => { ev.stopPropagation(); onEdit(e); }} className="text-foreground-secondary hover:text-primary transition-colors" title="수정">
                     <Pencil size={16} strokeWidth={1.5} />
                   </button>
-                  <button onClick={() => onDelete(e)} className="text-foreground-secondary hover:text-red-500 transition-colors" title="삭제">
+                  <button onClick={(ev) => { ev.stopPropagation(); onDelete(e); }} className="text-foreground-secondary hover:text-red-500 transition-colors" title="삭제">
                     <Trash2 size={16} strokeWidth={1.5} />
                   </button>
                 </div>
@@ -200,16 +197,16 @@ export function FixedExpenseList({ expenses, balance, onSaveBalance, onAdd, onEd
               </tr>
             ) : (
               sorted.map((e) => (
-                <tr key={e.id} className="hover:bg-surface-secondary/50 transition-colors">
+                <tr key={e.id} onClick={() => setDetail(e)} className="cursor-pointer hover:bg-surface-secondary/50 transition-colors" title="눌러서 세부 내용 보기">
                   <td className="px-4 py-3 font-medium text-foreground truncate">{e.label}</td>
                   <td className="px-4 py-3 text-right font-mono text-foreground">{Number(e.amount).toLocaleString('ko-KR')}</td>
                   <td className="px-4 py-3 text-foreground-secondary truncate">{e.memo || '—'}</td>
                   <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-2">
-                      <button onClick={() => onEdit(e)} className="text-foreground-secondary hover:text-primary transition-colors" title="수정">
+                      <button onClick={(ev) => { ev.stopPropagation(); onEdit(e); }} className="text-foreground-secondary hover:text-primary transition-colors" title="수정">
                         <Pencil size={14} strokeWidth={1.5} />
                       </button>
-                      <button onClick={() => onDelete(e)} className="text-foreground-secondary hover:text-red-500 transition-colors" title="삭제">
+                      <button onClick={(ev) => { ev.stopPropagation(); onDelete(e); }} className="text-foreground-secondary hover:text-red-500 transition-colors" title="삭제">
                         <Trash2 size={14} strokeWidth={1.5} />
                       </button>
                     </div>
@@ -233,6 +230,22 @@ export function FixedExpenseList({ expenses, balance, onSaveBalance, onAdd, onEd
       <p className="text-[11px] text-foreground-quaternary">
         정렬: {SORT_LABELS[sortKey]} {sortDir === 'asc' ? '오름차순' : '내림차순'} · 총 {expenses.length}건
       </p>
+
+      <ExpenseDetailModal
+        expense={detail}
+        kind={'고정지출'}
+        onClose={() => setDetail(null)}
+        onEdit={() => {
+          const d = detail;
+          setDetail(null);
+          if (d) onEdit(d);
+        }}
+        onDelete={() => {
+          const d = detail;
+          setDetail(null);
+          if (d) onDelete(d);
+        }}
+      />
     </div>
   );
 }

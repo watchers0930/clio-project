@@ -162,7 +162,7 @@ export function BulkTransferView() {
   const handleSaveBalance = async (value: number) => {
     try {
       await saveBalance(value);
-      toast.success('잔고가 저장되었습니다.');
+      toast.success('보증금 잔고가 저장되었습니다.');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '잔고 저장에 실패했습니다.');
       throw err; // 목록에서 입력값 원복
