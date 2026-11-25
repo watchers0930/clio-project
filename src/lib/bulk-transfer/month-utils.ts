@@ -24,3 +24,20 @@ export function monthLabel(m: string): string {
 export function isValidMonth(m: unknown): m is string {
   return typeof m === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(m);
 }
+
+/** from~to('YYYY-MM') 사이의 모든 달을 오름차순으로 (양끝 포함). 잘못된 입력·역순이면 빈 배열 */
+export function monthRange(from: string, to: string): string[] {
+  if (!isValidMonth(from) || !isValidMonth(to) || from > to) return [];
+  const out: string[] = [];
+  let [y, m] = from.split('-').map(Number);
+  for (;;) {
+    const cur = `${y}-${String(m).padStart(2, '0')}`;
+    out.push(cur);
+    if (cur === to) return out;
+    m += 1;
+    if (m > 12) {
+      m = 1;
+      y += 1;
+    }
+  }
+}

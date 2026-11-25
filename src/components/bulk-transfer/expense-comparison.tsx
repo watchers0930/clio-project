@@ -2,125 +2,197 @@
 
 import { useMemo } from 'react';
 import type { FixedExpense, MonthlyExpense } from '@/lib/bulk-transfer/types';
-import { currentMonth, prevMonth, monthLabel } from '@/lib/bulk-transfer/month-utils';
+import { currentMonth, monthLabel, monthRange } from '@/lib/bulk-transfer/month-utils';
 
 interface Props {
   fixedExpenses: FixedExpense[];
   monthlyExpenses: MonthlyExpense[];
 }
 
+interface MonthRow {
+  month: string;
+  monthly: number;
+  total: number;
+  /** 전월 대비 증감 (첫 달은 비교 대상이 없어 null) */
+  diff: number | null;
+}
+
 const BAR_MAX_PX = 200;
+
+const won = (n: number) => `${n.toLocaleString('ko-KR')}원`;
+const diffCls = (d: number) =>
+  d > 0 ? 'text-red-500' : d < 0 ? 'text-blue-600' : 'text-foreground-quaternary';
+const signed = (d: number) => `${d > 0 ? '+' : ''}${won(d)}`;
 
 export function ExpenseComparison({ fixedExpenses, monthlyExpenses }: Props) {
   const data = useMemo(() => {
     const cur = currentMonth();
-    const prev = prevMonth(cur);
     const fixedTotal = fixedExpenses.reduce((s, e) => s + Number(e.amount), 0);
-    const sumMonth = (m: string) =>
-      monthlyExpenses.filter((e) => e.month === m).reduce((s, e) => s + Number(e.amount), 0);
-    const prevMonthly = sumMonth(prev);
-    const curMonthly = sumMonth(cur);
-    const prevTotal = fixedTotal + prevMonthly;
-    const curTotal = fixedTotal + curMonthly;
-    return { cur, prev, fixedTotal, prevMonthly, curMonthly, prevTotal, curTotal };
+
+    const byMonth = new Map<string, number>();
+    for (const e of monthlyExpenses) {
+      byMonth.set(e.month, (byMonth.get(e.month) ?? 0) + Number(e.amount));
+    }
+
+    // 월지출이 처음 등록된 달 ~ 마지막 달(당월 포함)까지 빈 달 없이 모두 표시
+    const keys = [...byMonth.keys(), cur].sort();
+    const months = monthRange(keys[0], keys[keys.length - 1]);
+
+    const rows: MonthRow[] = months.map((month) => {
+      const monthly = byMonth.get(month) ?? 0;
+      return { month, monthly, total: fixedTotal + monthly, diff: null };
+    });
+    rows.forEach((r, i) => {
+      if (i > 0) r.diff = r.total - rows[i - 1].total;
+    });
+
+    const sumTotal = rows.reduce((s, r) => s + r.total, 0);
+    const sumMonthly = rows.reduce((s, r) => s + r.monthly, 0);
+    const avgTotal = rows.length ? Math.round(sumTotal / rows.length) : 0;
+    const peak = rows.reduce<MonthRow | null>((p, r) => (!p || r.total > p.total ? r : p), null);
+    const curRow = rows.find((r) => r.month === cur) ?? null;
+
+    return { cur, fixedTotal, rows, sumTotal, sumMonthly, avgTotal, peak, curRow };
   }, [fixedExpenses, monthlyExpenses]);
 
-  const max = Math.max(data.prevTotal, data.curTotal, 1);
+  const max = Math.max(...data.rows.map((r) => r.total), 1);
   const barPx = (v: number) => Math.max(v > 0 ? 4 : 0, Math.round((v / max) * BAR_MAX_PX));
-  const diff = data.curTotal - data.prevTotal;
-  const diffCls = diff > 0 ? 'text-red-500' : diff < 0 ? 'text-blue-600' : 'text-foreground-quaternary';
-  const won = (n: number) => `${n.toLocaleString('ko-KR')}원`;
+  const fixedPx = (r: MonthRow) => (r.total > 0 ? Math.round((data.fixedTotal / r.total) * barPx(r.total)) : 0);
 
   return (
     <div className="flex flex-col gap-5">
       <div className="text-[13px] text-foreground-secondary">
-        전월과 당월의 총지출(고정지출 + 해당 월 월지출)을 비교합니다.
+        월별 총지출(고정지출 + 해당 월 월지출)을 전체 기간으로 비교합니다. 고정지출은 현재 등록된 금액을 모든 달에
+        동일하게 적용합니다.
       </div>
 
-      {/* 막대 그래프 */}
+      {/* 요약 */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <SummaryCard label={`기간 총지출 (${data.rows.length}개월)`} value={won(data.sumTotal)} />
+        <SummaryCard label="월평균 총지출" value={won(data.avgTotal)} />
+        <SummaryCard
+          label="최대 지출 월"
+          value={data.peak ? won(data.peak.total) : '—'}
+          sub={data.peak ? monthLabel(data.peak.month) : undefined}
+        />
+        <SummaryCard
+          label="당월 전월 대비"
+          value={data.curRow?.diff != null ? signed(data.curRow.diff) : '—'}
+          valueCls={data.curRow?.diff != null ? diffCls(data.curRow.diff) : undefined}
+          sub={monthLabel(data.cur)}
+        />
+      </div>
+
+      {/* 막대 그래프 (월이 많으면 가로 스크롤) */}
       <div className="rounded-xl border border-border bg-white px-6 py-6">
-        <div className="flex items-end justify-center gap-10" style={{ height: `${BAR_MAX_PX + 36}px` }}>
-          {/* 전월 */}
-          <div className="flex flex-col items-center justify-end">
-            <span className="mb-2 font-mono text-[13px] font-medium text-foreground">{won(data.prevTotal)}</span>
-            <div
-              className="rounded-t-lg bg-gray-300"
-              style={{ width: '72px', height: `${barPx(data.prevTotal)}px` }}
-              title={`전월 ${won(data.prevTotal)}`}
-            />
+        <div className="overflow-x-auto">
+          <div className="mx-auto flex w-max items-end gap-6" style={{ height: `${BAR_MAX_PX + 36}px` }}>
+            {data.rows.map((r) => {
+              const isCur = r.month === data.cur;
+              return (
+                <div key={r.month} className="flex w-[84px] flex-col items-center justify-end">
+                  <span
+                    className={`mb-2 whitespace-nowrap font-mono text-[11px] ${isCur ? 'font-semibold text-foreground' : 'text-foreground-secondary'}`}
+                  >
+                    {r.total.toLocaleString('ko-KR')}
+                  </span>
+                  <div
+                    className="flex w-[56px] flex-col justify-end overflow-hidden rounded-t-lg"
+                    style={{ height: `${barPx(r.total)}px` }}
+                    title={`${monthLabel(r.month)} 총지출 ${won(r.total)} (고정 ${won(data.fixedTotal)} + 월지출 ${won(r.monthly)})`}
+                  >
+                    <div className={`flex-1 ${isCur ? 'bg-sidebar/60' : 'bg-gray-200'}`} />
+                    <div className={isCur ? 'bg-sidebar' : 'bg-gray-400'} style={{ height: `${fixedPx(r)}px` }} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          {/* 당월 */}
-          <div className="flex flex-col items-center justify-end">
-            <span className="mb-2 font-mono text-[13px] font-semibold text-foreground">{won(data.curTotal)}</span>
-            <div
-              className="rounded-t-lg bg-sidebar"
-              style={{ width: '72px', height: `${barPx(data.curTotal)}px` }}
-              title={`당월 ${won(data.curTotal)}`}
-            />
+          <div className="mx-auto mt-3 flex w-max gap-6">
+            {data.rows.map((r) => (
+              <span
+                key={r.month}
+                className={`w-[84px] text-center text-[11px] ${r.month === data.cur ? 'font-semibold text-foreground' : 'text-foreground-quaternary'}`}
+              >
+                {monthLabel(r.month)}
+              </span>
+            ))}
           </div>
         </div>
-        {/* 범례(월 라벨) */}
-        <div className="mt-3 flex justify-center gap-10">
-          <div className="flex w-[72px] flex-col items-center">
-            <span className="flex items-center gap-1 text-[12px] text-foreground-secondary">
-              <span className="inline-block h-2.5 w-2.5 rounded-sm bg-gray-300" /> 전월
-            </span>
-            <span className="text-[11px] text-foreground-quaternary">{monthLabel(data.prev)}</span>
-          </div>
-          <div className="flex w-[72px] flex-col items-center">
-            <span className="flex items-center gap-1 text-[12px] font-medium text-foreground">
-              <span className="inline-block h-2.5 w-2.5 rounded-sm bg-sidebar" /> 당월
-            </span>
-            <span className="text-[11px] text-foreground-quaternary">{monthLabel(data.cur)}</span>
-          </div>
+        <div className="mt-4 flex justify-center gap-5 text-[12px] text-foreground-secondary">
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-2.5 w-2.5 rounded-sm bg-gray-400" /> 고정지출
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-2.5 w-2.5 rounded-sm bg-gray-200" /> 월지출
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-2.5 w-2.5 rounded-sm bg-sidebar" /> 당월
+          </span>
         </div>
       </div>
 
-      {/* 증감 요약 */}
-      <div className="flex items-center justify-between rounded-xl border border-border bg-surface-secondary px-5 py-4">
-        <span className="text-[13px] font-medium text-foreground-secondary">전월 대비 증감</span>
-        <span className={`font-mono text-[18px] font-semibold ${diffCls}`}>
-          {diff > 0 ? '+' : ''}
-          {won(diff)}
-        </span>
-      </div>
-
-      {/* 세부 내역 */}
+      {/* 월별 세부 내역 */}
       <div className="overflow-x-auto rounded-xl border border-border">
-        <table className="w-full table-fixed text-[13px]">
+        <table className="w-full min-w-[560px] table-fixed text-[13px]">
           <colgroup>
-            <col className="w-[40%]" />
-            <col className="w-[30%]" />
-            <col className="w-[30%]" />
+            <col className="w-[20%]" />
+            <col className="w-[20%]" />
+            <col className="w-[20%]" />
+            <col className="w-[20%]" />
+            <col className="w-[20%]" />
           </colgroup>
           <thead>
             <tr className="bg-surface-secondary">
-              <th className="px-4 py-3 text-left font-semibold text-foreground-secondary">구분</th>
-              <th className="px-4 py-3 text-right font-semibold text-foreground-secondary">{monthLabel(data.prev)}</th>
-              <th className="px-4 py-3 text-right font-semibold text-foreground">{monthLabel(data.cur)}</th>
+              <th className="px-4 py-3 text-left font-semibold text-foreground-secondary">월</th>
+              <th className="px-4 py-3 text-right font-semibold text-foreground-secondary">고정지출</th>
+              <th className="px-4 py-3 text-right font-semibold text-foreground-secondary">월지출</th>
+              <th className="px-4 py-3 text-right font-semibold text-foreground">총지출</th>
+              <th className="px-4 py-3 text-right font-semibold text-foreground-secondary">전월 대비</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border bg-white">
-            <tr>
-              <td className="px-4 py-3 text-foreground-secondary">고정지출</td>
-              <td className="px-4 py-3 text-right font-mono text-foreground">{won(data.fixedTotal)}</td>
-              <td className="px-4 py-3 text-right font-mono text-foreground">{won(data.fixedTotal)}</td>
-            </tr>
-            <tr>
-              <td className="px-4 py-3 text-foreground-secondary">월지출</td>
-              <td className="px-4 py-3 text-right font-mono text-foreground">{won(data.prevMonthly)}</td>
-              <td className="px-4 py-3 text-right font-mono text-foreground">{won(data.curMonthly)}</td>
-            </tr>
+            {[...data.rows].reverse().map((r) => {
+              const isCur = r.month === data.cur;
+              return (
+                <tr key={r.month} className={isCur ? 'bg-surface-secondary/40' : undefined}>
+                  <td className={`px-4 py-3 ${isCur ? 'font-semibold text-foreground' : 'text-foreground-secondary'}`}>
+                    {monthLabel(r.month)}
+                    {isCur && <span className="ml-1.5 text-[11px] font-normal text-foreground-quaternary">당월</span>}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono text-foreground">{won(data.fixedTotal)}</td>
+                  <td className="px-4 py-3 text-right font-mono text-foreground">{won(r.monthly)}</td>
+                  <td className="px-4 py-3 text-right font-mono font-semibold text-foreground">{won(r.total)}</td>
+                  <td className={`px-4 py-3 text-right font-mono ${r.diff != null ? diffCls(r.diff) : 'text-foreground-quaternary'}`}>
+                    {r.diff != null ? signed(r.diff) : '—'}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
           <tfoot>
             <tr className="border-t border-border bg-surface-secondary/60">
-              <td className="px-4 py-3 text-left font-semibold text-foreground">총지출</td>
-              <td className="px-4 py-3 text-right font-mono font-semibold text-foreground">{won(data.prevTotal)}</td>
-              <td className="px-4 py-3 text-right font-mono font-semibold text-foreground">{won(data.curTotal)}</td>
+              <td className="px-4 py-3 text-left font-semibold text-foreground">합계</td>
+              <td className="px-4 py-3 text-right font-mono font-semibold text-foreground">
+                {won(data.fixedTotal * data.rows.length)}
+              </td>
+              <td className="px-4 py-3 text-right font-mono font-semibold text-foreground">{won(data.sumMonthly)}</td>
+              <td className="px-4 py-3 text-right font-mono font-semibold text-foreground">{won(data.sumTotal)}</td>
+              <td className="px-4 py-3" />
             </tr>
           </tfoot>
         </table>
       </div>
+    </div>
+  );
+}
+
+function SummaryCard({ label, value, sub, valueCls }: { label: string; value: string; sub?: string; valueCls?: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-surface-secondary px-4 py-3">
+      <div className="text-[12px] text-foreground-secondary">{label}</div>
+      <div className={`mt-1 font-mono text-[16px] font-semibold ${valueCls ?? 'text-foreground'}`}>{value}</div>
+      {sub && <div className="mt-0.5 text-[11px] text-foreground-quaternary">{sub}</div>}
     </div>
   );
 }
